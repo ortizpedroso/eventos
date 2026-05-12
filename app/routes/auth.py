@@ -1,0 +1,288 @@
+import logging
+from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import timedelta
+import stripe
+
+from app.models import Usuario, get_db
+from app.schemas.usuario import (
+    AtualizarPerfilRequest,
+    UsuarioCreate,
+    UsuarioLogin,
+    UsuarioResponse,
+    Token,
+)
+from app.services.auth import hash_password, verify_password, create_access_token, decode_token
+from config.settings import settings
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl="/api/auth/login",
+    auto_error=False,
+)
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+def _stripe_error_all_text(err: Exception) -> str:
+    """Junta mensagens do SDK Stripe (string, user_message, JSON error.*)."""
+    parts: list[str] = [str(err)]
+    if isinstance(err, stripe.error.StripeError):
+        um = getattr(err, "user_message", None)
+        if um:
+            parts.append(str(um))
+        body = getattr(err, "json_body", None)
+        if isinstance(body, dict):
+            sub = body.get("error")
+            if isinstance(sub, dict):
+                for key in ("message", "type", "code", "param", "doc_url"):
+                    v = sub.get(key)
+                    if v:
+                        parts.append(str(v))
+    return " ".join(parts).lower()
+
+
+def _stripe_connect_platform_terms_missing(err: Exception) -> bool:
+    """Stripe Connect: plataforma precisa aceitar termos (loss liability) antes de criar contas Express."""
+    text = _stripe_error_all_text(err)
+    if "managing losses" in text or "loss liability" in text:
+        return True
+    if "responsibilities" in text and "losses" in text:
+        return True
+    if "connected account agreement" in text or "stripe connected account" in text:
+        if "accept" in text or "must" in text or "aceitar" in text or "precisa" in text:
+            return True
+    if "responsabilidade" in text and ("perda" in text or "perdas" in text):
+        return True
+    if "aceitar" in text and ("conect" in text or "connect" in text) and ("termo" in text or "terms" in text or "perda" in text):
+        return True
+    if "platform" in text and "loss" in text and ("accept" in text or "agreement" in text):
+        return True
+    return False
+
+
+@router.post("/registrar", response_model=Token)
+async def registrar(usuario_data: UsuarioCreate, db: Session = Depends(get_db)):
+    """Registra novo usuário"""
+
+    logger.info(f"Registrando usuário: {usuario_data.email}")
+
+    # Verifica se email já existe
+    usuario_existente = db.query(Usuario).filter(
+        Usuario.email == usuario_data.email
+    ).first()
+
+    if usuario_existente:
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
+
+    stripe_customer_id: str | None = None
+    stripe_account_id: str | None = None
+
+    if not settings.STRIPE_DISABLED:
+        try:
+            customer = stripe.Customer.create(
+                email=usuario_data.email,
+                name=usuario_data.nome,
+            )
+            stripe_customer_id = customer.id
+            logger.info("Cliente Stripe criado: %s", stripe_customer_id)
+
+            if usuario_data.tipo == "organizador":
+                if settings.STRIPE_SKIP_CONNECT_ON_REGISTER:
+                    logger.info(
+                        "STRIPE_SKIP_CONNECT_ON_REGISTER: organizador %s cadastrado sem Account.create",
+                        usuario_data.email,
+                    )
+                    stripe_account_id = None
+                else:
+                    try:
+                        account = stripe.Account.create(
+                            type="express",
+                            country="BR",
+                            email=usuario_data.email,
+                        )
+                        stripe_account_id = account.id
+                        logger.info("Conta conectada Stripe criada: %s", stripe_account_id)
+                    except stripe.error.StripeError as conn_err:
+                        if _stripe_connect_platform_terms_missing(conn_err):
+                            logger.warning(
+                                "Conta Connect não criada no cadastro (termos Connect no Stripe pendentes ou erro equivalente). "
+                                "Organizador %s segue sem stripe_account_id. Stripe: %s",
+                                usuario_data.email,
+                                conn_err,
+                            )
+                            stripe_account_id = None
+                        else:
+                            logger.error(
+                                "Erro Stripe ao criar conta Connect (texto completo para diagnóstico): %s",
+                                _stripe_error_all_text(conn_err),
+                            )
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Erro Stripe: {str(conn_err)}",
+                            ) from conn_err
+        except stripe.error.StripeError as e:
+            logger.error("Erro Stripe: %s", e)
+            raise HTTPException(status_code=400, detail=f"Erro Stripe: {str(e)}") from e
+    else:
+        logger.warning(
+            "STRIPE_DISABLED: registro de %s (%s) sem Customer/Connect Stripe",
+            usuario_data.email,
+            usuario_data.tipo,
+        )
+
+    novo_usuario = Usuario(
+        email=usuario_data.email,
+        nome=usuario_data.nome,
+        senha_hash=hash_password(usuario_data.senha),
+        tipo=usuario_data.tipo,
+        stripe_customer_id=stripe_customer_id,
+        stripe_account_id=stripe_account_id,
+    )
+
+    db.add(novo_usuario)
+    db.commit()
+    db.refresh(novo_usuario)
+
+    logger.info("Usuário criado: %s", novo_usuario.id)
+
+    access_token = create_access_token(
+        data={"sub": novo_usuario.id},
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "usuario": UsuarioResponse.model_validate(novo_usuario),
+    }
+
+@router.post("/login", response_model=Token)
+async def login(credenciais: UsuarioLogin, db: Session = Depends(get_db)):
+    """Login de usuário"""
+
+    logger.info(f"Tentativa de login: {credenciais.email}")
+
+    usuario = db.query(Usuario).filter(
+        Usuario.email == credenciais.email
+    ).first()
+
+    if not usuario or not verify_password(credenciais.senha, usuario.senha_hash):
+        raise HTTPException(status_code=401, detail="Email ou senha incorretos")
+
+    access_token = create_access_token(
+        data={"sub": usuario.id},
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "usuario": UsuarioResponse.model_validate(usuario)
+    }
+
+
+async def get_usuario_atual(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """Obtém usuário autenticado"""
+    usuario_id = decode_token(token)
+    if not usuario_id:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    usuario = db.get(Usuario, usuario_id)
+    if not usuario:
+        raise HTTPException(status_code=401, detail="Usuário não encontrado")
+
+    return usuario
+
+
+@router.get("/me", response_model=UsuarioResponse)
+async def usuario_me(
+    response: Response,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Dados do utilizador: nova leitura na tabela `usuarios` (evita cache de sessão)."""
+    u = db.get(Usuario, usuario.id)
+    if not u:
+        raise HTTPException(status_code=401, detail="Usuário não encontrado")
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    return UsuarioResponse.model_validate(u)
+
+
+@router.patch("/me", response_model=UsuarioResponse)
+async def atualizar_perfil(
+    body: AtualizarPerfilRequest,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Atualiza nome, email (login) e/ou senha. Email ou senha exigem a senha atual correta."""
+
+    new_email = str(body.email).strip().lower()
+    atual_email = (usuario.email or "").strip().lower()
+    email_mudou = new_email != atual_email
+
+    if email_mudou:
+        existente = (
+            db.query(Usuario)
+            .filter(func.lower(Usuario.email) == new_email, Usuario.id != usuario.id)
+            .first()
+        )
+        if existente:
+            raise HTTPException(status_code=400, detail="Este email já está cadastrado.")
+
+    precisa_senha = email_mudou or bool(body.nova_senha)
+    if precisa_senha:
+        if not body.senha_atual or not verify_password(body.senha_atual, usuario.senha_hash):
+            raise HTTPException(
+                status_code=400,
+                detail="Senha atual incorreta ou em falta. Informe-a para alterar o email ou a senha.",
+            )
+
+    usuario.nome = body.nome.strip()
+    if email_mudou:
+        usuario.email = new_email
+
+    if body.nova_senha:
+        usuario.senha_hash = hash_password(body.nova_senha)
+
+    db.commit()
+    db.refresh(usuario)
+
+    if not settings.STRIPE_DISABLED and usuario.stripe_customer_id:
+        try:
+            stripe.Customer.modify(
+                usuario.stripe_customer_id,
+                name=usuario.nome,
+                email=usuario.email,
+            )
+        except stripe.error.StripeError as e:
+            logger.warning("Não foi possível sincronizar dados no Stripe Customer: %s", e)
+
+    if not settings.STRIPE_DISABLED and usuario.stripe_account_id and email_mudou:
+        try:
+            stripe.Account.modify(usuario.stripe_account_id, email=usuario.email)
+        except stripe.error.StripeError as e:
+            logger.warning("Não foi possível sincronizar o email na conta Stripe Connect: %s", e)
+
+    return UsuarioResponse.model_validate(usuario)
+
+
+async def get_usuario_atual_opcional(
+    token: str | None = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db),
+):
+    """Igual a get_usuario_atual, mas devolve None se não houver token (para rotas públicas)."""
+    if not token:
+        return None
+    usuario_id = decode_token(token)
+    if not usuario_id:
+        return None
+    return db.get(Usuario, usuario_id)

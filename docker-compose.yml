@@ -1,0 +1,78 @@
+# Configuração limpa do Docker Compose - EventosBR
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://eventosbr:eventosbr@db:5432/eventosbr
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_DISABLED=${STRIPE_DISABLED:-false}
+      - STRIPE_SKIP_CONNECT_ON_REGISTER=${STRIPE_SKIP_CONNECT_ON_REGISTER:-false}
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=False
+      - REDIS_URL=redis://redis:6379
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    # Evita scripts/start.sh com CRLF no Windows a partir do bind mount (.:/app)
+    command:
+      - /bin/sh
+      - -c
+      - "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    networks:
+      - eventosbr_network
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=eventosbr
+      - POSTGRES_PASSWORD=eventosbr
+      - POSTGRES_DB=eventosbr
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - eventosbr_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - eventosbr_network
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+    environment:
+      - INTERNAL_API_URL=http://api:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - eventosbr_network
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  eventosbr_network:
+    driver: bridge
