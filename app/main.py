@@ -121,6 +121,7 @@ async def ready(db: Session = Depends(get_db)):
             },
         )
     except Exception:
+        logger.error("Readiness falhou: base de dados indisponível", exc_info=True)
         return JSONResponse(
             status_code=503,
             content={

@@ -99,3 +99,24 @@ def test_moderar_publicacao_evento(monkeypatch):
     assert lista.status_code == 200
     ids = {e["id"] for e in lista.json()["eventos"]}
     assert ev["id"] in ids
+
+
+def test_desativar_usuario_impede_login(monkeypatch):
+    monkeypatch.setattr(settings, "PLATFORM_ADMIN_API_KEY", "chave-admin-teste")
+    email = f"bloq_{uuid.uuid4().hex[:8]}@test.com"
+    r = client.post(
+        "/api/auth/registrar",
+        json={"email": email, "nome": "Bloq", "senha": "senha12345", "tipo": "cliente"},
+    )
+    assert r.status_code == 200
+    uid = r.json()["usuario"]["id"]
+
+    off = client.patch(
+        f"/api/admin/usuarios/{uid}/ativo",
+        headers=ADMIN_HEADERS,
+        json={"ativo": False},
+    )
+    assert off.status_code == 200
+
+    login = client.post("/api/auth/login", json={"email": email, "senha": "senha12345"})
+    assert login.status_code == 403

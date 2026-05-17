@@ -32,7 +32,17 @@ type Campanha = {
   disparado_em: string | null;
 };
 
-type Tab = "setup" | "eventos" | "contatos" | "campanhas";
+type Tab = "setup" | "eventos" | "usuarios" | "contatos" | "campanhas";
+
+type UsuarioAdmin = {
+  id: string;
+  email: string;
+  nome: string;
+  tipo: string;
+  ativo: boolean;
+  telefone: string | null;
+  data_criacao: string | null;
+};
 
 type SetupStatus = {
   environment: string;
@@ -58,6 +68,10 @@ export function AdminDashboardClient() {
   const [eventos, setEventos] = useState<EventoAdmin[]>([]);
   const [filtroPublicado, setFiltroPublicado] = useState<"" | "true" | "false">("");
   const [buscaEvento, setBuscaEvento] = useState("");
+  const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([]);
+  const [buscaUsuario, setBuscaUsuario] = useState("");
+  const [filtroUsuarioAtivo, setFiltroUsuarioAtivo] = useState<"" | "true" | "false">("");
+  const [filtroUsuarioTipo, setFiltroUsuarioTipo] = useState<"" | "cliente" | "organizador">("");
 
   const [busca, setBusca] = useState("");
   const [filtroCanal, setFiltroCanal] = useState<"qualquer" | "email" | "whatsapp">("qualquer");
@@ -180,6 +194,25 @@ export function AdminDashboardClient() {
     }
   }, [buscaEvento, filtroPublicado]);
 
+  const carregarUsuarios = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const p = new URLSearchParams({ limit: "50", offset: "0" });
+      if (filtroUsuarioAtivo) p.set("ativo", filtroUsuarioAtivo);
+      if (filtroUsuarioTipo) p.set("tipo", filtroUsuarioTipo);
+      if (buscaUsuario.trim()) p.set("q", buscaUsuario.trim());
+      const r = await adminFetch<{ usuarios: UsuarioAdmin[]; total: number }>(
+        `/api/admin/usuarios?${p}`,
+      );
+      setUsuarios(r.usuarios);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao listar usuários");
+    } finally {
+      setBusy(false);
+    }
+  }, [buscaUsuario, filtroUsuarioAtivo, filtroUsuarioTipo]);
+
   async function alternarPublicacao(ev: EventoAdmin) {
     setBusy(true);
     setError(null);
@@ -209,6 +242,29 @@ export function AdminDashboardClient() {
     if (!authed || tab !== "eventos") return;
     void carregarEventos();
   }, [authed, tab, carregarEventos]);
+
+  useEffect(() => {
+    if (!authed || tab !== "usuarios") return;
+    void carregarUsuarios();
+  }, [authed, tab, carregarUsuarios]);
+
+  async function alternarUsuarioAtivo(u: UsuarioAdmin) {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminFetch(`/api/admin/usuarios/${u.id}/ativo`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ativo: !u.ativo }),
+      });
+      setMsg(u.ativo ? "Conta desativada." : "Conta reativada.");
+      await carregarUsuarios();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao atualizar usuário");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const todosSelecionados = useMemo(
     () => contatos.length > 0 && contatos.every((c) => selecionados.has(c.id)),
@@ -338,6 +394,7 @@ export function AdminDashboardClient() {
           [
             ["setup", "Produção"],
             ["eventos", "Eventos"],
+            ["usuarios", "Usuários"],
             ["contatos", "Contatos"],
             ["campanhas", "Campanhas"],
           ] as const
@@ -473,6 +530,80 @@ export function AdminDashboardClient() {
                         onClick={() => void alternarPublicacao(ev)}
                       >
                         {ev.publicado ? "Ocultar" : "Publicar"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {tab === "usuarios" ? (
+        <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={buscaUsuario}
+              onChange={(e) => setBuscaUsuario(e.target.value)}
+              placeholder="Buscar nome, e-mail ou telefone…"
+              className="min-w-[200px] flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm"
+            />
+            <select
+              value={filtroUsuarioTipo}
+              onChange={(e) => setFiltroUsuarioTipo(e.target.value as typeof filtroUsuarioTipo)}
+              className="rounded-md border border-zinc-300 px-2 py-2 text-sm"
+            >
+              <option value="">Todos os tipos</option>
+              <option value="cliente">Cliente</option>
+              <option value="organizador">Organizador</option>
+            </select>
+            <select
+              value={filtroUsuarioAtivo}
+              onChange={(e) => setFiltroUsuarioAtivo(e.target.value as typeof filtroUsuarioAtivo)}
+              className="rounded-md border border-zinc-300 px-2 py-2 text-sm"
+            >
+              <option value="">Todos</option>
+              <option value="true">Ativos</option>
+              <option value="false">Desativados</option>
+            </select>
+            <button type="button" className="btn-outline" disabled={busy} onClick={() => void carregarUsuarios()}>
+              Pesquisar
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-xs">
+              <thead>
+                <tr className="border-b border-zinc-200 text-zinc-500">
+                  <th className="py-2 pr-2">Usuário</th>
+                  <th className="py-2 pr-2">Tipo</th>
+                  <th className="py-2 pr-2">Status</th>
+                  <th className="py-2">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr key={u.id} className="border-b border-zinc-100">
+                    <td className="py-2 pr-2">
+                      <p className="font-medium text-zinc-900">{u.nome}</p>
+                      <p className="text-zinc-500">{u.email}</p>
+                    </td>
+                    <td className="py-2 pr-2 capitalize text-zinc-600">{u.tipo}</td>
+                    <td className="py-2 pr-2">
+                      {u.ativo ? (
+                        <span className="text-emerald-700">Ativo</span>
+                      ) : (
+                        <span className="text-red-700">Desativado</span>
+                      )}
+                    </td>
+                    <td className="py-2">
+                      <button
+                        type="button"
+                        className={u.ativo ? "text-red-700 underline" : "text-emerald-700 underline"}
+                        disabled={busy}
+                        onClick={() => void alternarUsuarioAtivo(u)}
+                      >
+                        {u.ativo ? "Desativar" : "Reativar"}
                       </button>
                     </td>
                   </tr>

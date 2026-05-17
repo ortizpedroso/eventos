@@ -8,11 +8,13 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app.deps.platform_admin import require_platform_admin
-from app.models import CampanhaMarketing, Evento, get_db
+from sqlalchemy import func
+
+from app.models import CampanhaMarketing, Evento, Usuario, get_db
 from app.services.production_checks import build_setup_status
 from app.schemas.campanha_marketing import CampanhaCreate, CampanhaDetalheResponse, CampanhaResponse
 from app.services.marketing_campanha import criar_campanha, disparar_campanha
@@ -28,6 +30,10 @@ router = APIRouter(dependencies=[Depends(require_platform_admin)])
 
 class EventoPublicadoUpdate(BaseModel):
     publicado: bool
+
+
+class UsuarioAtivoUpdate(BaseModel):
+    ativo: bool
 
 
 @router.get("/setup")
@@ -88,6 +94,70 @@ async def atualizar_publicacao_evento(
         "slug": evento.slug,
         "nome": evento.nome,
         "publicado": bool(evento.publicado),
+    }
+
+
+@router.get("/usuarios")
+async def listar_usuarios_plataforma(
+    ativo: bool | None = Query(None),
+    tipo: Literal["cliente", "organizador"] | None = Query(None),
+    q: str | None = Query(None, max_length=120),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Usuario)
+    if ativo is not None:
+        query = query.filter(Usuario.ativo == ativo)
+    if tipo:
+        query = query.filter(Usuario.tipo == tipo)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            Usuario.nome.ilike(like)
+            | Usuario.email.ilike(like)
+            | func.coalesce(Usuario.telefone, "").ilike(like)
+        )
+    total = query.count()
+    rows = query.order_by(Usuario.data_criacao.desc()).offset(offset).limit(limit).all()
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "usuarios": [
+            {
+                "id": u.id,
+                "email": u.email,
+                "nome": u.nome,
+                "tipo": u.tipo,
+                "ativo": bool(u.ativo),
+                "telefone": u.telefone,
+                "aceita_comunicacao_email": bool(u.aceita_comunicacao_email),
+                "aceita_comunicacao_whatsapp": bool(u.aceita_comunicacao_whatsapp),
+                "data_criacao": u.data_criacao.isoformat() if u.data_criacao else None,
+            }
+            for u in rows
+        ],
+    }
+
+
+@router.patch("/usuarios/{usuario_id}/ativo")
+async def atualizar_status_usuario(
+    usuario_id: str,
+    body: UsuarioAtivoUpdate,
+    db: Session = Depends(get_db),
+):
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    usuario.ativo = body.ativo
+    db.commit()
+    db.refresh(usuario)
+    return {
+        "id": usuario.id,
+        "email": usuario.email,
+        "nome": usuario.nome,
+        "ativo": bool(usuario.ativo),
     }
 
 

@@ -237,6 +237,12 @@ async def login(
     if not usuario or not verify_password(credenciais.senha, usuario.senha_hash):
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
 
+    if not usuario.ativo:
+        raise HTTPException(
+            status_code=403,
+            detail="Conta desativada. Entre em contato com o suporte da plataforma.",
+        )
+
     access_token = create_access_token(
         data={"sub": usuario.id},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -261,6 +267,8 @@ async def get_usuario_atual(
     usuario = db.get(Usuario, usuario_id)
     if not usuario:
         raise HTTPException(status_code=401, detail="Usuário não encontrado")
+    if not usuario.ativo:
+        raise HTTPException(status_code=403, detail="Conta desativada")
 
     return usuario
 

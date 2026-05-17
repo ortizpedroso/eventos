@@ -5,7 +5,7 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 ## Produção e operação
 
 - [x] Commit/tag de release e CI verde no remoto
-- [ ] Webhook Stripe com `STRIPE_WEBHOOK_SECRET` real em produção
+- [ ] Webhook Stripe com `STRIPE_WEBHOOK_SECRET` real em produção (`scripts/stripe-webhook-dev.ps1` em dev)
 - [ ] SMTP validado (SPF/DKIM) para ingressos e campanhas
 - [ ] Stripe Connect ativo (`STRIPE_SKIP_CONNECT_ON_REGISTER=false` após termos)
 - [x] `.dockerignore` e imagens enxutas (build rápido)
@@ -25,7 +25,7 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 
 - [x] Moderação de eventos (publicar/ocultar na vitrine + aba no painel admin)
 - [x] Checklist de produção (`GET /api/admin/setup` + aba Produção)
-- [ ] Moderação de usuários (bloquear conta)
+- [x] Moderação de usuários (desativar conta + bloqueio no login)
 - [ ] `MARKETING_WHATSAPP_WEBHOOK_URL` em produção (opcional)
 - [ ] Restringir acesso ao painel (lista de operadores ou SSO)
 
