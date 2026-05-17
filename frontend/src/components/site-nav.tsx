@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
@@ -13,7 +13,6 @@ const TOKEN_KEY = "eventosbr_token";
 
 export function SiteNav() {
   const router = useRouter();
-  const pathname = usePathname();
   const [loggedIn, setLoggedIn] = useState(false);
   const [userTipo, setUserTipo] = useState<string | null>(null);
 
@@ -30,7 +29,7 @@ export function SiteNav() {
       window.removeEventListener("storage", syncFromStorage);
       window.removeEventListener(AUTH_SYNC_EVENT, syncFromStorage);
     };
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     if (!loggedIn) {
@@ -49,7 +48,7 @@ export function SiteNav() {
     return () => {
       cancelled = true;
     };
-  }, [loggedIn, pathname]);
+  }, [loggedIn]);
 
   function logout() {
     window.localStorage.removeItem(TOKEN_KEY);

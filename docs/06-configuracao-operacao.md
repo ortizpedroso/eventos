@@ -1,0 +1,69 @@
+# 06 — Configuração, ambientes e operação
+
+## Ficheiros de ambiente
+
+| Local | Uso |
+|-------|-----|
+| **Raiz `.env`** | API FastAPI (`config/settings.py` lê `env_file=".env"`) |
+| **Raiz `.env.example`** | Modelo para Postgres, Stripe, JWT, CORS, Redis, email |
+| **`frontend/.env.local`** | `NEXT_PUBLIC_*`, `INTERNAL_API_URL` em Docker |
+| **`frontend/.env.local.example`** | Documentação das variáveis do Next |
+
+## Variáveis críticas (API)
+
+| Variável | Notas |
+|----------|--------|
+| `DATABASE_URL` | Postgres em produção; SQLite possível em dev |
+| `SECRET_KEY` | Obrigatória se `ENVIRONMENT` ≠ `development` |
+| `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | Modo live vs test (`sk_live_` / `sk_test_`) |
+| `STRIPE_DISABLED` | Só desenvolvimento / emergência |
+| `STRIPE_SKIP_CONNECT_ON_REGISTER` | Contorna criação de conta Connect no registo |
+| `CORS_ORIGINS` | Lista separada por vírgulas; necessário se o front não usar proxy same-origin |
+| `ENVIRONMENT` | `development` ativa `create_tables()` no startup da API |
+| `DEBUG` | Influencia webhook Stripe (ver `webhooks.py`) |
+
+## Docker Compose (raiz)
+
+Serviços típicos:
+
+- **`api`**: build raiz, porta 8000, comando `alembic upgrade head && uvicorn ...`; volume `.:/app`; `healthcheck` em `GET /ready`
+- **`db`**: Postgres 16; `healthcheck` com `pg_isready`
+- **`redis`**: Redis 7; `healthcheck` com `redis-cli ping`
+- **`web`**: build `frontend/`, porta 3000, `INTERNAL_API_URL=http://api:8000`; arranca só com **`api` healthy**
+
+**Importante:** no Windows, volumes com CRLF podem quebrar scripts; o compose usa `command` inline para a API evitar `start.sh` com problemas de fim de linha.
+
+## Migrações de base de dados
+
+```bash
+# Na raiz, com venv e DATABASE_URL apontando para a mesma BD da API
+alembic upgrade head
+```
+
+O histórico está em **`alembic/versions/`**. Em CI/produção, preferir **sempre** Alembic em vez de confiar em `create_tables()`.
+
+## Testes
+
+```bash
+python -m pytest tests/ -q
+```
+
+Usam SQLite em memória e **não** chamam Stripe real (mocks).
+
+## Observabilidade e saúde
+
+- **`GET /health`**: liveness (processo HTTP vivo; não toca na BD).
+- **`GET /ready`**: readiness (inclui BD); **503** se a base falhar — usar em balanceadores e no `healthcheck` do Compose.
+- Logs: módulos usam `logging.getLogger(__name__)`; ajustar nível/handlers conforme ambiente.
+
+## Documentação OpenAPI
+
+Com a API a correr: **`/docs`** e **`/redoc`** — útil para experimentar corpos JSON (incl. `ingresso_lotes`).
+
+## Checklist de deploy (sugestão)
+
+1. Definir `ENVIRONMENT=production`, `DEBUG=False`, `SECRET_KEY` forte.
+2. `DATABASE_URL` persistente; correr **`alembic upgrade head`**.
+3. Stripe: chaves live, webhook apontando para `https://<domínio>/api/webhooks/stripe`, secret correto.
+4. Frontend: `NEXT_PUBLIC_API_URL` ou proxy reverso coerente; `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` live.
+5. `CORS_ORIGINS` alinhado aos domínios reais do site.

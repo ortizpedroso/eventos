@@ -12,11 +12,20 @@ services:
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       - STRIPE_DISABLED=${STRIPE_DISABLED:-false}
       - STRIPE_SKIP_CONNECT_ON_REGISTER=${STRIPE_SKIP_CONNECT_ON_REGISTER:-false}
+      - PLATFORM_ADMIN_API_KEY=${PLATFORM_ADMIN_API_KEY:-}
+      - EMAIL_SERVER=${EMAIL_SERVER:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_USER=${EMAIL_USER:-}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD:-}
+      - FRONTEND_PUBLIC_URL=${FRONTEND_PUBLIC_URL:-http://localhost:3000}
+      - MARKETING_WHATSAPP_WEBHOOK_URL=${MARKETING_WHATSAPP_WEBHOOK_URL:-}
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=False
       - REDIS_URL=redis://redis:6379
       - ENVIRONMENT=production
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - RATE_LIMIT_USE_REDIS=${RATE_LIMIT_USE_REDIS:-true}
+      - TRUST_FORWARDED_HEADERS=${TRUST_FORWARDED_HEADERS:-false}
     # Evita scripts/start.sh com CRLF no Windows a partir do bind mount (.:/app)
     command:
       - /bin/sh
@@ -25,8 +34,22 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=8)",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     networks:
       - eventosbr_network
 
@@ -40,6 +63,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventosbr -d eventosbr"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - eventosbr_network
 
@@ -49,6 +78,12 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     networks:
       - eventosbr_network
 
@@ -57,15 +92,16 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
     environment:
       - INTERNAL_API_URL=http://api:8000
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     ports:
       - "3000:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - eventosbr_network
 

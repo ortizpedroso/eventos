@@ -7,7 +7,7 @@ import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-r
 export const metadata: Metadata = {
   title: "Funcionalidades | EventosBR",
   description:
-    "O que o EventosBR oferece para organizadores e participantes: eventos, ingressos, pagamentos Stripe e reembolsos.",
+    "O que o EventosBR oferece para organizadores e participantes: eventos, ingressos, pagamentos seguros e reembolsos.",
 };
 
 const iconClass = "h-6 w-6 shrink-0 text-emerald-700";
@@ -127,87 +127,194 @@ const icones: Record<string, ReactNode> = {
   ),
 };
 
-const blocos = [
+// Destaques principais (Zigue-zague com Cards Visuais)
+const destaques = [
   {
-    icone: "calendario",
-    titulo: "Eventos e página pública",
-    texto:
-      "Crie eventos com nome, data, local e descrição. Cada evento ganha uma página para divulgação e venda de ingressos.",
+    id: "venda",
+    titulo: "Da ideia à venda em minutos",
+    texto: "Seja uma feijoada comunitária, um torneio de beach tennis ou um show internacional: crie sua página de evento, defina lotes e preços, e comece a vender no mesmo dia.",
     itens: [
-      "Cadastro e edição pelo organizador",
-      "URL amigável para compartilhar",
-      "Listagem para explorar o que está rolando",
+      "Página exclusiva e otimizada para converter",
+      "URL amigável para compartilhar no Instagram e WhatsApp",
+      "Acompanhamento de vendas em tempo real",
     ],
+    visual: (
+      <div className="relative flex h-full min-h-[320px] w-full overflow-hidden rounded-2xl ring-1 ring-zinc-200 lg:min-h-[400px]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80"
+          alt="Multidão animada em um evento com luzes"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+        />
+        {/* Overlay escuro para destacar o texto flutuante */}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 via-zinc-900/20 to-transparent" />
+        
+        {/* Selo flutuante premium */}
+        <div className="absolute bottom-6 left-6">
+          <div className="flex w-fit items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 backdrop-blur-md">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+            </span>
+            <span className="text-sm font-medium tracking-wide text-white">Vendas a todo vapor</span>
+          </div>
+        </div>
+      </div>
+    ),
   },
   {
-    icone: "ingresso",
-    titulo: "Ingressos",
-    texto:
-      "Venda ou distribua ingressos com registro claro de quem comprou e em qual status está cada pedido.",
+    id: "pagamento",
+    titulo: "Segurança de nível global",
+    texto: "O dinheiro do seu evento não pode correr riscos. Pagamentos processados com tecnologia de ponta, o padrão ouro do mercado em segurança antifraude.",
     itens: [
-      "Ingressos gratuitos ou pagos",
-      "Acompanhamento de status (pendente, pago, cancelado)",
-      "Fluxo preparado para check-in na entrada",
+      "Aceite cartões, PIX e outras modalidades com proteção total",
+      "Menos estornos e proteção robusta contra fraudes",
+      "Recebimento direto na sua conta, sem dor de cabeça",
     ],
+    visual: (
+      <div className="relative flex h-full min-h-[320px] w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-emerald-50 p-6 shadow-xl ring-1 ring-emerald-200 lg:min-h-[400px]">
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-10" />
+        <div className="relative w-full max-w-[280px] rounded-xl bg-white p-5 shadow-lg ring-1 ring-zinc-200/50">
+          <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">Pagamento aprovado</p>
+              <p className="text-xs text-zinc-500">R$ 150,00 via Cartão</p>
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="h-2 w-full rounded bg-zinc-100" />
+            <div className="h-2 w-4/5 rounded bg-zinc-100" />
+            <div className="h-2 w-2/3 rounded bg-zinc-100" />
+          </div>
+        </div>
+      </div>
+    ),
   },
   {
-    icone: "pagamento",
-    titulo: "Pagamentos com Stripe",
-    texto:
-      "Cartão e métodos habilitados pelo Stripe, com ambiente seguro e confirmação automática quando o pagamento é concluído.",
+    id: "checkin",
+    titulo: "Check-in sem filas na porta",
+    texto: "A experiência do seu público começa na entrada. Controle os acessos de forma ágil com validação inteligente de QR Code.",
     itens: [
-      "Payment Intents integrados à compra",
-      "Repasse para conta do organizador (Connect), quando configurado",
-      "Webhooks para manter status sincronizado",
+      "Ingressos únicos e à prova de falsificação",
+      "Status instantâneo: válido, já utilizado ou cancelado",
+      "Organize múltiplas portarias simultaneamente",
     ],
+    visual: (
+      <div className="relative flex h-full min-h-[320px] w-full overflow-hidden rounded-2xl ring-1 ring-zinc-200 lg:min-h-[400px]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80"
+          alt="Público em um evento noturno"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+        />
+        {/* Overlay escuro para destacar o elemento flutuante */}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/20 to-transparent" />
+        
+        {/* Selo flutuante de Check-in de Sucesso */}
+        <div className="absolute bottom-6 left-6 right-6 sm:right-auto">
+          <div className="flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-black/50 p-4 backdrop-blur-md sm:w-auto">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-bold tracking-wide text-white">Acesso Liberado</p>
+              <p className="mt-0.5 text-xs font-medium text-zinc-300">TKT-8A9F • Ingresso VIP</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
   },
+];
+
+// Outros recursos (Grid Menor)
+const outrosRecursos = [
   {
     icone: "reembolso",
-    titulo: "Reembolsos e cancelamentos",
-    texto:
-      "Regras de prazo para o participante solicitar cancelamento, com processamento de reembolso alinhado ao Stripe.",
-    itens: [
-      "Política com data limite por ingresso",
-      "Registro de cancelamento e valor reembolsado",
-      "Menos trabalho manual para o produtor",
-    ],
+    titulo: "Reembolsos automatizados",
+    texto: "Regras de prazo claras para cancelamento. O sistema sincroniza diretamente com o provedor de pagamentos, reduzindo o trabalho manual do produtor.",
   },
   {
     icone: "conta",
-    titulo: "Conta e acesso",
-    texto:
-      "Perfis para quem organiza e para quem participa, com sessão por token e área logada para ingressos e pagamentos.",
-    itens: [
-      "Cadastro e login seguros",
-      "Cliente e organizador no mesmo produto",
-      "Painel para ver ingressos e histórico de pagamentos",
-    ],
+    titulo: "Área do Participante",
+    texto: "Seu público tem acesso fácil a um painel onde ficam salvos todos os ingressos, faturas e históricos de eventos.",
   },
   {
     icone: "api",
     titulo: "API documentada",
-    texto:
-      "Backend em FastAPI com documentação interativa para quem quiser integrar ou evoluir o sistema.",
-    itens: ["OpenAPI / Swagger na API", "Endpoints REST consistentes", "Pronto para evoluir com o seu time"],
+    texto: "Precisa de uma integração específica? Nosso backend em FastAPI possui documentação interativa completa (OpenAPI).",
   },
 ] as const;
 
 export default function FuncionalidadesPage() {
   return (
-    <div className="py-16 sm:py-24 lg:py-32">
+    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
-          Tudo o que você precisa para <span className="text-emerald-700">viver o evento.</span>
+          Tudo o que você precisa para <span className="text-emerald-700">fazer acontecer.</span>
         </h1>
         <p className="mt-6 text-lg text-zinc-600 sm:text-xl">
-          Da divulgação à venda, do pagamento ao reembolso — fluxos pensados para organizadores e
-          participantes, sem excesso de telas.
+          Uma estrutura completa de vendas, pagamentos e check-in. Esqueça as planilhas e 
+          foque no que realmente importa: a experiência do seu público.
         </p>
       </div>
 
-      <div className="mx-auto mt-16 max-w-5xl sm:mt-20">
+      {/* Seção Zigue-Zague */}
+      <div className="mx-auto mt-16 max-w-7xl px-4 sm:mt-24 sm:px-6 lg:px-8">
+        <div className="space-y-24">
+          {destaques.map((item, index) => {
+            const isReversed = index % 2 !== 0;
+            return (
+              <ScrollReveal key={item.id} delayMs={100}>
+                <div className={`flex flex-col gap-12 lg:items-center ${isReversed ? 'lg:flex-row-reverse' : 'lg:flex-row'}`}>
+                  
+                  {/* Texto */}
+                  <div className="flex-1 lg:max-w-xl">
+                    <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">
+                      {item.titulo}
+                    </h2>
+                    <p className="mt-4 text-lg text-zinc-600 text-justify">
+                      {item.texto}
+                    </p>
+                    <ul className="mt-8 space-y-4 text-zinc-600">
+                      {item.itens.map((li) => (
+                        <li key={li} className="flex gap-x-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                          </span>
+                          <span className="leading-6">{li}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Visual UI Mock */}
+                  <div className="flex-1 w-full lg:max-w-none">
+                    {item.visual}
+                  </div>
+                </div>
+              </ScrollReveal>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Grid Menor de Outros Recursos */}
+      <div className="mx-auto mt-24 max-w-7xl px-4 sm:mt-32 sm:px-6 lg:px-8">
+        <div className="mb-12 text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900">E não para por aí</h2>
+        </div>
         <div className="grid grid-cols-1 gap-6 text-left sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
-          {blocos.map((b, i) => (
+          {outrosRecursos.map((b, i) => (
             <ScrollReveal key={b.titulo} className="h-full" delayMs={i * 75}>
             <div
               className="h-full rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
@@ -216,17 +323,7 @@ export default function FuncionalidadesPage() {
                 {icones[b.icone]}
                 <h2 className="text-lg font-semibold leading-tight text-zinc-900">{b.titulo}</h2>
               </div>
-              <p className="mt-3 text-justify text-sm leading-6 text-zinc-600">{b.texto}</p>
-              <ul className="mt-6 space-y-3 text-sm text-zinc-600">
-                {b.itens.map((item) => (
-                  <li key={item} className="flex gap-x-3">
-                    <span className="shrink-0" aria-hidden>
-                      ✅
-                    </span>
-                    <span className="min-w-0 flex-1 text-justify">{item}</span>
-                  </li>
-                ))}
-              </ul>
+              <p className="mt-4 text-justify text-sm leading-6 text-zinc-600">{b.texto}</p>
             </div>
             </ScrollReveal>
           ))}
@@ -241,9 +338,9 @@ export default function FuncionalidadesPage() {
               <h2 className="text-lg font-semibold leading-tight text-emerald-700">Resumo</h2>
             </div>
             <p className="mt-3 text-justify text-sm leading-6 text-zinc-600">
-              O EventosBR concentra criação de eventos, venda de ingressos, cobrança via Stripe e
-              tratamento de cancelamentos em um fluxo único — ideal para quem quer menos planilha e
-              mais tempo produzindo experiência ao vivo.
+              O EventosBR concentra criação de eventos, venda de ingressos, cobrança automatizada 
+              e tratamento de cancelamentos em um fluxo único — ideal para quem quer menos planilha 
+              e mais tempo focando em produzir a experiência ao vivo.
             </p>
           </div>
         </ScrollReveal>

@@ -20,13 +20,23 @@ class Usuario(Base):
     # Status
     ativo = Column(Boolean, default=True)
 
+    # Marketing EventosBR (opt-in LGPD)
+    aceita_comunicacao_email = Column(Boolean, default=False, nullable=False)
+    aceita_comunicacao_whatsapp = Column(Boolean, default=False, nullable=False)
+    telefone = Column(String(20), nullable=True)
+    comunicacao_consentimento_em = Column(DateTime, nullable=True)
+
     # Datas
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     data_atualizacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relacionamentos
     eventos = relationship("Evento", back_populates="organizador")
-    ingressos = relationship("Ingresso", back_populates="usuario")
+    ingressos = relationship(
+        "Ingresso",
+        back_populates="usuario",
+        foreign_keys="Ingresso.usuario_id",
+    )
 
     def __repr__(self):
         return f"<Usuario {self.email}>"

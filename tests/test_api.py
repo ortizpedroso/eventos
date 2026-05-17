@@ -58,10 +58,44 @@ def _mock_stripe_calls():
 
 class TestHealth:
     def test_health_check(self):
-        """Testa endpoint de health check"""
+        """Liveness: responde 200 sem depender da BD."""
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json()["status"] == "ok"
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data.get("role") == "liveness"
+
+    def test_ready_ok(self):
+        """Readiness com BD disponível."""
+        response = client.get("/ready")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["database"] == "up"
+        assert data.get("role") == "readiness"
+
+    def test_ready_unavailable_when_db_fails(self):
+        """Readiness devolve 503 se a sessão não consegue consultar a BD."""
+
+        def override_get_db_broken():
+            class _Broken:
+                def execute(self, *_a, **_kw):
+                    raise RuntimeError("database unavailable")
+
+                def close(self):
+                    pass
+
+            yield _Broken()
+
+        app.dependency_overrides[get_db] = override_get_db_broken
+        try:
+            response = client.get("/ready")
+            assert response.status_code == 503
+            data = response.json()
+            assert data["status"] == "unavailable"
+            assert data["database"] == "down"
+        finally:
+            app.dependency_overrides[get_db] = override_get_db
 
     def test_root(self):
         """Testa endpoint raiz"""
@@ -124,6 +158,18 @@ class TestAuth:
         )
         assert response.status_code == 400
         assert "Email já cadastrado" in response.json()["detail"]
+
+    def test_registrar_senha_curta_rejeitada(self):
+        response = client.post(
+            "/api/auth/registrar",
+            json={
+                "email": "curta@exemplo.com",
+                "nome": "Curta",
+                "senha": "1234567",
+                "tipo": "cliente",
+            },
+        )
+        assert response.status_code == 422
 
     def test_login_sucesso(self):
         """Testa login bem-sucedido"""
@@ -209,7 +255,53 @@ class TestEventos:
         assert response.status_code == 200
         assert response.json()["nome"] == "Evento Teste"
         assert response.json()["preco_ingresso"] == 75.5
+        assert len(response.json().get("ingresso_lotes") or []) >= 1
         assert "slug" in response.json()
+
+    def test_criar_evento_com_dois_lotes(self):
+        """Lotes com preços distintos: resposta inclui ambos e preço mínimo sincronizado."""
+        response = client.post(
+            "/api/eventos/criar",
+            headers=self.headers,
+            json={
+                "nome": "Evento dois lotes",
+                "descricao": "Teste lotes",
+                "data_inicio": "2025-09-01T10:00:00",
+                "data_fim": "2025-09-01T22:00:00",
+                "local": "Centro",
+                "imagem_url": None,
+                "preco_ingresso": 100,
+                "categoria": "Outros",
+                "ingresso_lotes": [
+                    {"nome": "1º lote", "preco": 40, "ordem": 1, "ativo": True},
+                    {"nome": "2º lote", "preco": 80, "ordem": 2, "ativo": True},
+                ],
+            },
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body["ingresso_lotes"]) == 2
+        assert body["preco_ingresso"] == 40
+        assert body["preco_compra"] == 40
+
+    def test_criar_evento_sem_data_fim(self):
+        """Evento de um dia: data_fim omitida replica início."""
+        response = client.post(
+            "/api/eventos/criar",
+            headers=self.headers,
+            json={
+                "nome": "Show um dia",
+                "descricao": "Só início",
+                "data_inicio": "2025-08-01T20:00:00",
+                "local": "Teatro",
+                "imagem_url": None,
+                "preco_ingresso": 50,
+                "categoria": "Música",
+            },
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data_fim"] == body["data_inicio"]
 
     def test_listar_eventos(self):
         """Testa listagem de eventos"""

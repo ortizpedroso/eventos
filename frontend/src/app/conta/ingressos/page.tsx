@@ -35,7 +35,7 @@ export default function MeusIngressosPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Meus ingressos</h1>
-        <Link href="/" className="text-sm text-zinc-600 hover:underline">
+        <Link href="/eventos" className="text-sm text-zinc-600 hover:underline">
           ← Eventos
         </Link>
       </div>
@@ -64,9 +64,7 @@ export default function MeusIngressosPage() {
             >
               <div className="font-medium">{it.evento.nome}</div>
               <div className="mt-1 text-zinc-600">
-                {new Date(it.evento.data).toLocaleString("pt-BR")} até{" "}
-                {new Date(it.evento.data_fim).toLocaleString("pt-BR")} •{" "}
-                {it.evento.local}
+                {new Date(it.evento.data).toLocaleString("pt-BR")} • {it.evento.local}
               </div>
               {it.participante_nome ? (
                 <div className="mt-2 text-xs text-zinc-600">
@@ -87,6 +85,14 @@ export default function MeusIngressosPage() {
                 <span>
                   Compra: {new Date(it.data_compra).toLocaleString("pt-BR")}
                 </span>
+              </div>
+              <div className="mt-3">
+                <Link
+                  href={`/conta/ingressos/${it.id}`}
+                  className="text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"
+                >
+                  Opções do ingresso (PDF / e-mail) →
+                </Link>
               </div>
             </li>
           ))}

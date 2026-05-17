@@ -26,12 +26,25 @@ class Settings(BaseSettings):
     EMAIL_PORT: int = 587
     EMAIL_USER: str = ""
     EMAIL_PASSWORD: str = ""
+    EMAIL_FROM_NAME: str = "EventosBR"
+    # Links em e-mails e QR (ex.: http://localhost:3000)
+    FRONTEND_PUBLIC_URL: str = "http://localhost:3000"
 
-    # Redis
+    # Redis (rate limit distribuído; opcional se indisponível)
     REDIS_URL: str = "redis://localhost:6379"
+    # Em produção/staging: tentar Redis para rate limit; se falhar, usa memória do processo.
+    RATE_LIMIT_USE_REDIS: bool = True
 
-    # CORS (ex: "https://app.meudominio.com,https://admin.meudominio.com")
-    CORS_ORIGINS: str = "*"
+    # CORS — evitar "*" por defeito (defina origens reais em produção).
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173"
+
+    # Só confiar em X-Forwarded-For quando a API estiver atrás de reverse proxy fidedigno.
+    TRUST_FORWARDED_HEADERS: bool = False
+
+    # Admin plataforma (exportação opt-in marketing; cabeçalho X-Platform-Admin-Key)
+    PLATFORM_ADMIN_API_KEY: str = ""
+    # Opcional: POST {telefone, nome, mensagem} para cada destinatário WhatsApp
+    MARKETING_WHATSAPP_WEBHOOK_URL: str = ""
 
     # Ambiente
     DEBUG: bool = False

@@ -2,6 +2,14 @@
 
 Plataforma de eventos com reembolsos automáticos usando FastAPI, SQLAlchemy e Stripe.
 
+## 📖 Documentação do sistema (técnica)
+
+Descrição da arquitetura, módulos backend, modelos de dados, frontend Next.js, pagamentos/lotes/webhooks Stripe e operação (env, Docker, Alembic):
+
+**→ [docs/README.md](docs/README.md)** (índice completo em Markdown no repositório)
+
+No site (Next.js), a mesma informação está resumida na página pública **`/documentacao`**.
+
 ## 🚀 Características
 
 - ✅ Autenticação com JWT
@@ -221,6 +229,7 @@ eventosbr/
 ├── config/
 │   ├── settings.py          # Configurações
 │   └── database.py          # Configuração do banco
+├── docs/                    # Documentação técnica do sistema (Markdown)
 ├── frontend/                # Next.js (UI)
 ├── alembic/                 # Migrações do banco
 ├── tests/                   # Testes

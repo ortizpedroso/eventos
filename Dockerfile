@@ -2,6 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+RUN useradd --create-home --shell /bin/sh --uid 1000 appuser
+
 # Instala dependências do sistema
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -15,6 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia código
 COPY . .
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 # Expõe porta
 EXPOSE 8000

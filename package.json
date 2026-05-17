@@ -1,0 +1,11 @@
+{
+  "name": "eventosbr",
+  "version": "0.0.0",
+  "private": true,
+  "description": "EventosBR — API FastAPI + frontend Next.js",
+  "scripts": {
+    "dev:web": "npm run dev --prefix frontend",
+    "build:web": "npm run build --prefix frontend",
+    "lint:web": "npm run lint --prefix frontend"
+  }
+}

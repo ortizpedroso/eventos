@@ -14,6 +14,8 @@ const nav = [
   { href: "/organizador/novo", label: "Criar novo evento" },
   { href: "/organizador/perfil", label: "Perfil" },
   { href: "/organizador/relatorios", label: "Relatórios" },
+  { href: "/organizador/comunicados", label: "Comunicados" },
+  { href: "/organizador/checkin", label: "Check-in" },
   { href: "/organizador/financeiro", label: "Financeiro" },
 ] as const;
 

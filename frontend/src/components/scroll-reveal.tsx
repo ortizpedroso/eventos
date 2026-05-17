@@ -23,17 +23,50 @@ export function ScrollReveal({ children, className = "", delayMs = 0 }: Props) {
     const el = ref.current;
     if (!el) return;
 
+    const show = () => setVisible(true);
+
+    /* prefers-reduced-motion: mostrar já (evita conteúdo invisível). */
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      show();
+      return;
+    }
+
+    /* Se já está visível no primeiro layout, não depender só do observer (Safari / contentores). */
+    const checkImmediate = () => {
+      const r = el.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const overlap = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+      if (overlap > 8 && r.width > 0) {
+        show();
+        return true;
+      }
+      return false;
+    };
+
+    if (checkImmediate()) {
+      return;
+    }
+
     const obs = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
-          setVisible(true);
+          show();
           obs.disconnect();
         }
       },
-      { rootMargin: "0px 0px -10% 0px", threshold: 0.06 },
+      { rootMargin: "0px 0px 8% 0px", threshold: 0.01 },
     );
     obs.observe(el);
-    return () => obs.disconnect();
+
+    const t = window.setTimeout(() => {
+      show();
+      obs.disconnect();
+    }, 4500);
+
+    return () => {
+      window.clearTimeout(t);
+      obs.disconnect();
+    };
   }, []);
 
   const style: CSSProperties | undefined =

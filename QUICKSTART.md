@@ -171,7 +171,8 @@ curl -X POST "http://localhost:8000/api/auth/login" \
 |--------|----------|------|-----------|
 | POST | `/api/auth/registrar` | ❌ | Registrar novo usuário |
 | POST | `/api/auth/login` | ❌ | Fazer login |
-| GET | `/health` | ❌ | Verificar saúde da API |
+| GET | `/health` | ❌ | Liveness (processo vivo) |
+| GET | `/ready` | ❌ | Readiness (inclui BD; 503 se falhar) |
 | POST | `/api/eventos/criar` | ✅ | Criar evento (organizador) |
 | GET | `/api/eventos/` | ❌ | Listar eventos |
 | GET | `/api/eventos/{slug}` | ❌ | Obter evento específico |
@@ -204,8 +205,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 DATABASE_URL=sqlite:///./eventos.db
 
 # Desenvolvimento
-DEBUG=True
-ENVIRONMENT=development
+DEBUG=False
+ENVIRONMENT=production
 ```
 
 ## ❌ Troubleshooting

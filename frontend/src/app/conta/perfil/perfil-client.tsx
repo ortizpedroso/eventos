@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { apiFetch } from "@/lib/api";
 import type { Usuario } from "@/lib/types";
+import { onlyDigits } from "@/lib/cpf";
+import { formatTelefoneBrMask } from "@/lib/telefone-br";
 
 function normalizarEmail(s: string) {
   return s.trim().toLowerCase();
@@ -20,6 +23,9 @@ export function PerfilClient() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [aceitaComEmail, setAceitaComEmail] = useState(false);
+  const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
+  const [telefonePerfil, setTelefonePerfil] = useState("");
 
   const carregarDoBanco = useCallback(async () => {
     setLoadError(null);
@@ -30,6 +36,9 @@ export function PerfilClient() {
         headers: { "cache-control": "no-cache" },
       });
       setUser(u);
+      setAceitaComEmail(Boolean(u.aceita_comunicacao_email));
+      setAceitaComWhatsapp(Boolean(u.aceita_comunicacao_whatsapp));
+      setTelefonePerfil(u.telefone ?? "");
     } catch (e) {
       setUser(null);
       setLoadError(
@@ -90,8 +99,8 @@ export function PerfilClient() {
     }
 
     if (novaSenha) {
-      if (novaSenha.length < 6) {
-        setSaveError("A nova senha deve ter pelo menos 6 caracteres.");
+      if (novaSenha.length < 8) {
+        setSaveError("A nova senha deve ter pelo menos 8 caracteres.");
         setSaving(false);
         return;
       }
@@ -107,7 +116,16 @@ export function PerfilClient() {
       email: string;
       senha_atual?: string;
       nova_senha?: string;
-    } = { nome, email };
+      aceita_comunicacao_email: boolean;
+      aceita_comunicacao_whatsapp: boolean;
+      telefone: string | null;
+    } = {
+      nome,
+      email,
+      aceita_comunicacao_email: aceitaComEmail,
+      aceita_comunicacao_whatsapp: aceitaComWhatsapp,
+      telefone: telefonePerfil.trim() ? onlyDigits(telefonePerfil, 13) : null,
+    };
     if (emailMudou || novaSenha) {
       payload.senha_atual = senhaAtual;
     }
@@ -214,6 +232,14 @@ export function PerfilClient() {
             <dt className="text-zinc-500">Cadastro em</dt>
             <dd className="mt-0.5 font-medium text-zinc-900">{dataCadastro}</dd>
           </div>
+          <div>
+            <dt className="text-zinc-500">Comunicações EventosBR</dt>
+            <dd className="mt-0.5 text-zinc-900">
+              E-mail: {user.aceita_comunicacao_email ? "sim" : "não"} · WhatsApp:{" "}
+              {user.aceita_comunicacao_whatsapp ? "sim" : "não"}
+              {user.telefone ? ` · ${formatTelefoneBrMask(user.telefone)}` : ""}
+            </dd>
+          </div>
         </dl>
       </section>
 
@@ -304,7 +330,7 @@ export function PerfilClient() {
                 name="nova_senha"
                 type="password"
                 autoComplete="new-password"
-                minLength={6}
+                minLength={8}
                 className="h-10 rounded-md border border-zinc-300 px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
@@ -317,10 +343,35 @@ export function PerfilClient() {
                 name="nova_senha_repita"
                 type="password"
                 autoComplete="new-password"
+                minLength={8}
                 className="h-10 rounded-md border border-zinc-300 px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
               <p className="text-xs text-zinc-500">Deixe em branco para manter a senha atual.</p>
             </div>
+          </div>
+
+          <div className="space-y-4 border-t border-zinc-100 pt-6">
+            <h3 className="text-sm font-semibold text-zinc-800">Preferências de comunicação</h3>
+            <div className="grid gap-2 max-w-sm">
+              <label className="text-sm font-medium text-zinc-800" htmlFor="telefone_perfil">
+                Telefone (opcional)
+              </label>
+              <input
+                id="telefone_perfil"
+                inputMode="tel"
+                value={formatTelefoneBrMask(telefonePerfil)}
+                onChange={(e) => setTelefonePerfil(onlyDigits(e.target.value, 11))}
+                className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            <ComunicacaoMarketingOptIn
+              email={aceitaComEmail}
+              whatsapp={aceitaComWhatsapp}
+              onEmailChange={setAceitaComEmail}
+              onWhatsappChange={setAceitaComWhatsapp}
+              telefoneInformado={telefonePerfil.replace(/\D/g, "").length >= 10}
+            />
           </div>
 
           <div className="flex justify-end border-t border-zinc-100 pt-4">

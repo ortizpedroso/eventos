@@ -5,8 +5,11 @@ from typing import Optional
 class UsuarioCreate(BaseModel):
     email: EmailStr
     nome: str
-    senha: str
+    senha: str = Field(min_length=8, max_length=128)
     tipo: str
+    aceita_comunicacao_email: bool = False
+    aceita_comunicacao_whatsapp: bool = False
+    telefone: str | None = Field(default=None, max_length=20)
 
     @field_validator("tipo", mode="before")
     @classmethod
@@ -28,6 +31,10 @@ class UsuarioResponse(BaseModel):
     nome: str
     tipo: str
     data_criacao: datetime
+    aceita_comunicacao_email: bool = False
+    aceita_comunicacao_whatsapp: bool = False
+    telefone: str | None = None
+    comunicacao_consentimento_em: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,7 +43,10 @@ class AtualizarPerfilRequest(BaseModel):
     nome: str = Field(min_length=1, max_length=200)
     email: EmailStr
     senha_atual: Optional[str] = None
-    nova_senha: Optional[str] = Field(default=None, min_length=6, max_length=128)
+    nova_senha: Optional[str] = Field(default=None, min_length=8, max_length=128)
+    aceita_comunicacao_email: Optional[bool] = None
+    aceita_comunicacao_whatsapp: Optional[bool] = None
+    telefone: Optional[str] = Field(default=None, max_length=20)
 
     @field_validator("nova_senha", "senha_atual", mode="before")
     @classmethod

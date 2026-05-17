@@ -9,10 +9,14 @@ from datetime import date, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models import Evento, Ingresso, Usuario, get_db
 from app.routes.auth import get_usuario_atual
+from app.services.export_presenca import gerar_pdf_participantes, gerar_xlsx_participantes
+from app.services.metricas_evento import taxa_conversao_por_status, vagas_restantes_evento
+from app.services.tarifas_plataforma import liquido_organizador, taxa_ingresso
+from app.utils.privacy import mask_cpf, mask_telefone_br
 
 router = APIRouter()
 
@@ -61,13 +65,20 @@ async def relatorio_organizador(
     evento_ids = {i.evento_id for i in ingressos}
     eventos_map: dict[str, Evento] = {}
     if evento_ids:
-        for e in db.query(Evento).filter(Evento.id.in_(evento_ids)).all():
+        for e in (
+            db.query(Evento)
+            .options(joinedload(Evento.ingresso_lotes))
+            .filter(Evento.id.in_(evento_ids))
+            .all()
+        ):
             eventos_map[e.id] = e
 
     by_status: dict[str, int] = {s: 0 for s in STATUSES}
     by_status_outros = 0
     receita_paga = 0.0
     receita_pendente = 0.0
+    taxa_plataforma = 0.0
+    liquido_estimado = 0.0
 
     por_evento: dict[str, dict] = {}
 
@@ -82,6 +93,8 @@ async def relatorio_organizador(
                 "por_status": {s: 0 for s in STATUSES},
                 "receita_paga": 0.0,
                 "total_ingressos": 0,
+                "vagas_restantes": vagas_restantes_evento(db, evo) if evo else None,
+                "conversao_pct": None,
             }
         return por_evento[eid]
 
@@ -111,6 +124,8 @@ async def relatorio_organizador(
         if st == "pago":
             receita_paga += val
             pe["receita_paga"] += val
+            taxa_plataforma += taxa_ingresso(val)
+            liquido_estimado += liquido_organizador(val)
         elif st == "pendente":
             receita_pendente += val
 
@@ -140,6 +155,7 @@ async def relatorio_organizador(
 
     full_ev = (
         db.query(Evento)
+        .options(joinedload(Evento.ingresso_lotes))
         .filter(Evento.organizador_id == usuario_atual.id)
         .order_by(Evento.nome.asc())
         .all()
@@ -165,6 +181,8 @@ async def relatorio_organizador(
             }
         base = dict(base)
         base["receita_paga"] = round(float(base["receita_paga"]), 2)
+        base["vagas_restantes"] = vagas_restantes_evento(db, ev)
+        base["conversao_pct"] = taxa_conversao_por_status(base["por_status"])
         por_evento_list.append(base)
 
     por_evento_list.sort(key=lambda x: (-int(x["total_ingressos"]), str(x["nome"]).lower()))
@@ -179,6 +197,12 @@ async def relatorio_organizador(
             "por_status": resumo_status,
             "receita_confirmada": round(receita_paga, 2),
             "receita_em_aberto": round(receita_pendente, 2),
+        },
+        "financeiro": {
+            "receita_bruta": round(receita_paga, 2),
+            "taxa_plataforma_estimada": round(taxa_plataforma, 2),
+            "liquido_estimado": round(liquido_estimado, 2),
+            "nota": "Taxa estimada (10% + R$ 2/ingresso pago), alinhada à página de planos.",
         },
         "mes_atual": {
             "referencia": today.strftime("%Y-%m"),
@@ -198,7 +222,11 @@ async def participantes_organizador(
     db: Session = Depends(get_db),
     evento_id: str | None = Query(None),
     limite: int = Query(2000, ge=1, le=5000),
-    formato: Literal["json", "csv"] = Query("json"),
+    formato: Literal["json", "csv", "pdf", "xlsx"] = Query("json"),
+    mascarar_sensiveis: bool = Query(
+        False,
+        description="Se true, mascara CPF e telefone na exportação (útil para partilhar ficheiros).",
+    ),
 ):
     """
     Lista participantes (nome/e-mail informados na compra) dos eventos do organizador.
@@ -221,19 +249,58 @@ async def participantes_organizador(
 
     rows_out: list[dict] = []
     for ing in rows_db:
+        cpf_raw = ing.participante_cpf or ""
+        tel_raw = ing.participante_telefone or ""
         rows_out.append(
             {
                 "evento_nome": ing.evento.nome,
                 "participante_nome": ing.participante_nome or "",
                 "participante_email": ing.participante_email or "",
+                "participante_cpf": (mask_cpf(ing.participante_cpf) or "")
+                if mascarar_sensiveis
+                else cpf_raw,
+                "participante_telefone": (mask_telefone_br(ing.participante_telefone) or "")
+                if mascarar_sensiveis
+                else tel_raw,
                 "status": ing.status or "",
                 "valor": float(ing.valor or 0),
                 "data_compra": ing.data_compra.isoformat() if ing.data_compra else None,
+                "checkin_em": ing.checkin_em.isoformat() if ing.checkin_em else None,
             }
         )
 
     if formato == "json":
         return {"participantes": rows_out, "total": len(rows_out)}
+
+    titulo = "Lista de presença — EventosBR"
+    if evento_id and rows_db:
+        titulo = f"Lista — {rows_db[0].evento.nome}"
+
+    if formato == "pdf":
+        pdf_bytes = gerar_pdf_participantes(rows_out, titulo)
+        filename = "lista_presenca.pdf"
+        if evento_id and rows_db:
+            safe = "".join(c for c in rows_db[0].evento.nome if c.isalnum() or c in " -_")[:40].strip()
+            if safe:
+                filename = f"lista_{safe.replace(' ', '_')}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    if formato == "xlsx":
+        xlsx_bytes = gerar_xlsx_participantes(rows_out)
+        filename = "lista_presenca.xlsx"
+        if evento_id and rows_db:
+            safe = "".join(c for c in rows_db[0].evento.nome if c.isalnum() or c in " -_")[:40].strip()
+            if safe:
+                filename = f"lista_{safe.replace(' ', '_')}.xlsx"
+        return Response(
+            content=xlsx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";", lineterminator="\n")
@@ -242,9 +309,12 @@ async def participantes_organizador(
             "evento",
             "participante_nome",
             "participante_email",
+            "participante_cpf",
+            "participante_telefone",
             "status",
             "valor",
             "data_compra",
+            "checkin_em",
         ]
     )
     for r in rows_out:
@@ -253,9 +323,12 @@ async def participantes_organizador(
                 r["evento_nome"],
                 r["participante_nome"],
                 r["participante_email"],
+                r["participante_cpf"],
+                r["participante_telefone"],
                 r["status"],
                 str(r["valor"]).replace(".", ","),
                 r["data_compra"] or "",
+                r.get("checkin_em") or "",
             ]
         )
     body = buf.getvalue()

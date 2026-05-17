@@ -241,6 +241,55 @@ pip install -r requirements.txt
 
 ---
 
+## Site “fora do ar” / lista de eventos vazia / erros ao fazer login
+
+O **Next** (porta **3000**) e a **API FastAPI** (porta **8000**) são **dois processos**. O site precisa dos **dois** a correr (ou Docker com `web` + `api`).
+
+### 1) Confirme que a API responde
+
+No PowerShell:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -Method Get   # liveness (sempre 200 se a API ouvir)
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/ready" -Method Get   # readiness (503 se a BD falhar)
+```
+
+- **Falha (ligação recusada)** em ambos → a API não está a ouvir. Arranque-a antes do front (ou use `docker compose up`).
+- **`/ready` com 503** ou corpo com **`database": "down"`** → Postgres/SQLite inacessível: confira `DATABASE_URL` no `.env` e se o Postgres do Docker está `healthy` (`docker compose ps`).
+
+### 2) Confirme o front e o proxy `/api`
+
+```powershell
+Invoke-WebRequest -Uri "http://127.0.0.1:3000/" -UseBasicParsing | Select-Object StatusCode
+```
+
+Se o front abrir mas **dados não carregam**, abra as **Ferramentas de programador (F12) → Rede** e veja pedidos a `/api/...` (erro **502/504/ECONNREFUSED** = o Next não consegue falar com a API).
+
+- **Desenvolvimento local:** na pasta `frontend`, crie `frontend/.env.local` se ainda não existir, com por exemplo:
+
+  ```env
+  INTERNAL_API_URL=http://127.0.0.1:8000
+  ```
+
+  Reinicie `npm run dev` (o Next lê isto para o *rewrite* de `/api`).
+
+### 3) Docker Compose
+
+```powershell
+docker compose ps
+docker compose logs api --tail 80
+docker compose logs web --tail 40
+```
+
+- API a **reiniciar em loop** → veja o fim dos logs (`SECRET_KEY`, `DATABASE_URL`, falha do `alembic`).
+- Garanta `.env` na raiz com **`SECRET_KEY`** definida em **produção real** (o compose já tem um valor por defeito só para testes locais).
+
+### 4) Produção (`ENVIRONMENT=production`)
+
+A documentação **`/docs`** fica **desligada** por segurança. Use **`/health`** (liveness) ou **`/ready`** (BD + HTTP 200/503) para testar a API.
+
+---
+
 ## ✨ Verificação Final
 
 Após seguir uma das soluções acima, verifique:
@@ -274,4 +323,4 @@ Se ainda tiver problemas, compartilhe a mensagem de erro completa!
 
 ---
 
-**Última atualização:** 07/05/2026
+**Última atualização:** 14/05/2026

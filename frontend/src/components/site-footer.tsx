@@ -3,9 +3,15 @@ import Link from "next/link";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 
 function apiLabel() {
+  const custom = process.env.NEXT_PUBLIC_API_DISPLAY?.trim();
+  if (custom) return custom;
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (!raw) return "mesma origem / proxy";
-  return raw.replace(/\/+$/, "").replace(/^https?:\/\//, "");
+  if (!raw) return "Mesma origem (proxy)";
+  const host = raw.replace(/\/+$/, "").replace(/^https?:\/\//, "").split("/")[0];
+  if (/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host)) {
+    return "Ambiente local";
+  }
+  return host;
 }
 
 /** Defina no `.env` as URLs reais; até lá os ícones apontam para `#`. */
@@ -100,6 +106,11 @@ export function SiteFooter() {
                 <li>
                   <Link href="/funcionalidades" className="text-zinc-400 transition-colors hover:text-emerald-300">
                     Funcionalidades
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/documentacao" className="text-zinc-400 transition-colors hover:text-emerald-300">
+                    Documentação
                   </Link>
                 </li>
                 <li>

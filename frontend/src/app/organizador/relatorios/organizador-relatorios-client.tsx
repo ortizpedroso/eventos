@@ -12,6 +12,12 @@ type RelatorioOrganizador = {
     receita_confirmada: number;
     receita_em_aberto: number;
   };
+  financeiro?: {
+    receita_bruta: number;
+    taxa_plataforma_estimada: number;
+    liquido_estimado: number;
+    nota: string;
+  };
   mes_atual: {
     referencia: string;
     por_status: Record<string, number>;
@@ -25,6 +31,8 @@ type RelatorioOrganizador = {
     por_status: Record<string, number>;
     receita_paga: number;
     total_ingressos: number;
+    vagas_restantes: number | null;
+    conversao_pct: number | null;
   }>;
   serie_diaria: Array<{ dia: string; ingressos_pagos: number; receita: number }>;
   periodo_grafico_dias: number;
@@ -85,6 +93,7 @@ export function OrganizadorRelatoriosClient() {
   const [data, setData] = useState<RelatorioOrganizador | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [csvBusy, setCsvBusy] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
 
   const query = useMemo(() => {
     const p = new URLSearchParams();
@@ -93,27 +102,31 @@ export function OrganizadorRelatoriosClient() {
     return p.toString();
   }, [dias, eventoFiltro]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setError(null);
-      try {
-        const r = await apiFetch<RelatorioOrganizador>(
-          `/api/relatorios/organizador?${query}`,
-          { cache: "no-store" },
-        );
-        if (!cancelled) setData(r);
-      } catch (e) {
-        if (!cancelled) {
-          setData(null);
-          setError(e instanceof Error ? e.message : "Não foi possível carregar os relatórios.");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const carregar = useCallback(async () => {
+    setError(null);
+    try {
+      const r = await apiFetch<RelatorioOrganizador>(
+        `/api/relatorios/organizador?${query}`,
+        { cache: "no-store" },
+      );
+      setData(r);
+    } catch (e) {
+      setData(null);
+      setError(e instanceof Error ? e.message : "Não foi possível carregar os relatórios.");
+    }
   }, [query]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const id = window.setInterval(() => {
+      void carregar();
+    }, 60_000);
+    return () => window.clearInterval(id);
+  }, [autoRefresh, carregar]);
 
   const pagos = data?.resumo.por_status.pago ?? 0;
   const pendentes = data?.resumo.por_status.pendente ?? 0;
@@ -139,14 +152,21 @@ export function OrganizadorRelatoriosClient() {
 
   const maxBarraDia = useMemo(() => Math.max(...barrasDia.map((b) => b.receita), 1), [barrasDia]);
 
-  const downloadCsv = useCallback(async () => {
+  const downloadArquivo = useCallback(
+    async (formato: "csv" | "pdf" | "xlsx") => {
     setCsvBusy(true);
     try {
-      const params = new URLSearchParams({ formato: "csv" });
+      const params = new URLSearchParams({ formato });
       if (eventoFiltro) params.set("evento_id", eventoFiltro);
       const base = getApiBaseUrl();
       const headers = new Headers();
-      headers.set("accept", "text/csv");
+      const accept =
+        formato === "pdf"
+          ? "application/pdf"
+          : formato === "xlsx"
+            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            : "text/csv";
+      headers.set("accept", accept);
       const token =
         typeof window !== "undefined" ? window.localStorage.getItem("eventosbr_token") : null;
       if (token) headers.set("authorization", `Bearer ${token}`);
@@ -165,7 +185,7 @@ export function OrganizadorRelatoriosClient() {
       }
       const blob = await res.blob();
       const cd = res.headers.get("Content-Disposition");
-      let filename = "participantes_eventosbr.csv";
+      let filename = `participantes_eventosbr.${formato}`;
       const m = cd?.match(/filename="([^"]+)"/);
       if (m?.[1]) filename = m[1];
       const url = URL.createObjectURL(blob);
@@ -179,7 +199,9 @@ export function OrganizadorRelatoriosClient() {
     } finally {
       setCsvBusy(false);
     }
-  }, [eventoFiltro]);
+  },
+    [eventoFiltro],
+  );
 
   return (
     <div className="space-y-10">
@@ -238,18 +260,44 @@ export function OrganizadorRelatoriosClient() {
             ))}
           </select>
         </div>
-        <button
-          type="button"
-          onClick={() => void downloadCsv()}
-          disabled={csvBusy}
-          className="h-10 shrink-0 rounded-lg border border-emerald-700 bg-emerald-700 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-60"
-        >
-          {csvBusy ? "Gerando…" : "Baixar lista (CSV)"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void downloadArquivo("csv")}
+            disabled={csvBusy}
+            className="h-10 shrink-0 rounded-lg border border-emerald-700 bg-emerald-700 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-60"
+          >
+            {csvBusy ? "Gerando…" : "CSV"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void downloadArquivo("xlsx")}
+            disabled={csvBusy}
+            className="h-10 shrink-0 rounded-lg border border-emerald-300 bg-white px-4 text-sm font-medium text-emerald-900 shadow-sm hover:bg-emerald-50 disabled:opacity-60"
+          >
+            Excel
+          </button>
+          <button
+            type="button"
+            onClick={() => void downloadArquivo("pdf")}
+            disabled={csvBusy}
+            className="h-10 shrink-0 rounded-lg border border-emerald-300 bg-white px-4 text-sm font-medium text-emerald-900 shadow-sm hover:bg-emerald-50 disabled:opacity-60"
+          >
+            PDF
+          </button>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-zinc-600 sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={autoRefresh}
+            onChange={(e) => setAutoRefresh(e.target.checked)}
+            className="rounded border-zinc-300"
+          />
+          Atualizar números automaticamente a cada 1 minuto
+        </label>
       </div>
       <p className="-mt-6 text-xs text-zinc-500">
-        O arquivo abre no Excel ou Planilhas; colunas separadas por ponto e vírgula. Use o filtro de
-        evento para listas menores e mais claras.
+        Exporte lista de presença (CSV, Excel ou PDF). Use o filtro de evento para listas menores.
       </p>
 
       {error ? (
@@ -305,6 +353,36 @@ export function OrganizadorRelatoriosClient() {
               </div>
             </div>
           </section>
+
+          {data.financeiro ? (
+            <section
+              className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-5 shadow-sm sm:p-6"
+              aria-labelledby="financeiro-heading"
+            >
+              <h2 id="financeiro-heading" className="text-sm font-semibold text-zinc-900">
+                Resumo financeiro (estimado)
+              </h2>
+              <p className="mt-1 text-xs text-zinc-500">{data.financeiro.nota}</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-zinc-500">Receita bruta (pagos)</p>
+                  <p className="text-xl font-bold text-zinc-900">{fmtBRL(data.financeiro.receita_bruta)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500">Taxa plataforma</p>
+                  <p className="text-xl font-bold text-amber-900">
+                    {fmtBRL(data.financeiro.taxa_plataforma_estimada)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500">Líquido estimado</p>
+                  <p className="text-xl font-bold text-emerald-800">
+                    {fmtBRL(data.financeiro.liquido_estimado)}
+                  </p>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           <section
             className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm ring-1 ring-emerald-200/50 sm:p-6"
@@ -394,6 +472,8 @@ export function OrganizadorRelatoriosClient() {
                   </div>
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {e.total_ingressos} pedido(s) no total · {e.por_status.pago ?? 0} pago(s)
+                    {e.vagas_restantes != null ? ` · ${e.vagas_restantes} vaga(s) restante(s)` : ""}
+                    {e.conversao_pct != null ? ` · conversão ${e.conversao_pct}%` : ""}
                   </p>
                 </li>
               ))}

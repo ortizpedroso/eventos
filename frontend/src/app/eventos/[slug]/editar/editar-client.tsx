@@ -5,7 +5,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { EVENTO_CATEGORIAS, isoToDatetimeLocalValue, slugFromNome } from "@/lib/eventos";
+import { EventoCuponsEditor } from "@/components/evento-cupons-editor";
+import {
+  EventoLotesEditor,
+  eventoLotesToRows,
+  lotesRowsToApiPayload,
+  precoMinimoDosLotes,
+  type LoteFormRow,
+} from "@/components/evento-lotes-editor";
 import { EventoImagemField } from "@/components/evento-imagem-field";
+import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
 import { apiFetch } from "@/lib/api";
 import type { Evento, Usuario } from "@/lib/types";
 
@@ -19,9 +28,11 @@ type SalvarPayload = {
   local: string;
   imagem_url?: string | null;
   preco_ingresso: number;
+  ingresso_lotes: ReturnType<typeof lotesRowsToApiPayload>;
   categoria: string;
   mensagem_confirmacao?: string | null;
   publicado: boolean;
+  limite_ingressos_por_cpf?: number | null;
 };
 
 export function EditarEventoClient({ slug }: Props) {
@@ -35,6 +46,7 @@ export function EditarEventoClient({ slug }: Props) {
   const [nomeParaSlug, setNomeParaSlug] = useState("");
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
+  const [loteRows, setLoteRows] = useState<LoteFormRow[]>([]);
 
   useEffect(() => {
     setOrigin(typeof window !== "undefined" ? window.location.origin : "");
@@ -57,6 +69,7 @@ export function EditarEventoClient({ slug }: Props) {
           setEvento(ev);
           setNomeParaSlug(ev.nome);
           setImagemUrl(ev.imagem_url ?? "");
+          setLoteRows(eventoLotesToRows(ev));
         }
       } catch (e) {
         if (!cancelled) {
@@ -77,41 +90,50 @@ export function EditarEventoClient({ slug }: Props) {
     setSaving(true);
     setError(null);
 
-    const precoRaw = String(formData.get("preco_ingresso") ?? "").replace(",", ".");
-    const preco_ingresso = Number.parseFloat(precoRaw);
-    if (!Number.isFinite(preco_ingresso) || preco_ingresso < 0.5) {
-      setError("Informe um valor de ingresso válido (mínimo R$ 0,50).");
+    const preco_ingresso = precoMinimoDosLotes(loteRows);
+    const lotesPayload = lotesRowsToApiPayload(loteRows);
+    for (const l of lotesPayload) {
+      if (l.tipo === "cortesia") continue;
+      if (!Number.isFinite(l.preco) || l.preco < 0.5) {
+        setError("Cada lote pago precisa de preço válido (mínimo R$ 0,50).");
+        setSaving(false);
+        return;
+      }
+    }
+    const temPago = lotesPayload.some((l) => l.tipo !== "cortesia");
+    if (temPago && (!Number.isFinite(preco_ingresso) || preco_ingresso < 0.5)) {
+      setError("Informe pelo menos um lote pago com preço mínimo de R$ 0,50.");
       setSaving(false);
       return;
     }
 
-    const di = new Date(String(formData.get("data_inicio") ?? ""));
-    const df = new Date(String(formData.get("data_fim") ?? ""));
-    if (!Number.isFinite(di.getTime()) || !Number.isFinite(df.getTime())) {
-      setError("Datas inválidas.");
-      setSaving(false);
-      return;
-    }
-    if (df < di) {
-      setError("A data de fim deve ser igual ou posterior à data de início.");
+    const rawIni = String(formData.get("data_inicio") ?? "").trim();
+    const di = new Date(rawIni);
+    if (!Number.isFinite(di.getTime())) {
+      setError("Data de início inválida.");
       setSaving(false);
       return;
     }
 
     const msg = String(formData.get("mensagem_confirmacao") ?? "").trim();
     const publicado = String(formData.get("publicado") ?? "true") !== "false";
+    const limiteRaw = String(formData.get("limite_ingressos_por_cpf") ?? "").trim();
+    const limite_ingressos_por_cpf = limiteRaw ? Number.parseInt(limiteRaw, 10) : null;
 
     const payload: SalvarPayload = {
       nome: String(formData.get("nome") ?? ""),
       descricao: String(formData.get("descricao") ?? ""),
-      data_inicio: String(formData.get("data_inicio") ?? ""),
-      data_fim: String(formData.get("data_fim") ?? ""),
+      data_inicio: rawIni,
+      data_fim: rawIni,
       local: String(formData.get("local") ?? ""),
       imagem_url: imagemUrl.trim() || null,
       preco_ingresso,
+      ingresso_lotes: lotesPayload,
       categoria: String(formData.get("categoria") ?? "Outros"),
       mensagem_confirmacao: msg || null,
       publicado,
+      limite_ingressos_por_cpf:
+        limite_ingressos_por_cpf && limite_ingressos_por_cpf >= 1 ? limite_ingressos_por_cpf : null,
     };
 
     try {
@@ -120,7 +142,7 @@ export function EditarEventoClient({ slug }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
-      router.push(`/eventos/${slug}`);
+      router.push(`/eventos/${slug}?atualizado=1`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao guardar");
@@ -259,7 +281,7 @@ export function EditarEventoClient({ slug }: Props) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
+            <div className="grid gap-2 sm:col-span-2 sm:max-w-md">
               <label className="text-sm font-medium text-zinc-800" htmlFor="data_inicio">
                 Data e hora de início
               </label>
@@ -268,22 +290,13 @@ export function EditarEventoClient({ slug }: Props) {
                 id="data_inicio"
                 name="data_inicio"
                 type="datetime-local"
+                step={60}
                 required
                 defaultValue={isoToDatetimeLocalValue(evento.data_inicio)}
               />
-            </div>
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-zinc-800" htmlFor="data_fim">
-                Data e hora de fim
-              </label>
-              <input
-                className="h-10 rounded-md border border-zinc-300 px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-                id="data_fim"
-                name="data_fim"
-                type="datetime-local"
-                required
-                defaultValue={isoToDatetimeLocalValue(evento.data_fim)}
-              />
+              <p className="text-xs text-zinc-500">
+                Sem horário de fim: o evento pode durar várias horas (show, feijoada, etc.).
+              </p>
             </div>
           </div>
 
@@ -301,18 +314,22 @@ export function EditarEventoClient({ slug }: Props) {
           </div>
 
           <div className="grid gap-2">
-            <label className="text-sm font-medium text-zinc-800" htmlFor="preco_ingresso">
-              Valor do ingresso (R$)
+            <EventoLotesEditor rows={loteRows} onChange={setLoteRows} />
+          </div>
+
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-zinc-800" htmlFor="limite_ingressos_por_cpf">
+              Limite por CPF (opcional)
             </label>
             <input
-              className="h-10 rounded-md border border-zinc-300 px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-              id="preco_ingresso"
-              name="preco_ingresso"
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+              id="limite_ingressos_por_cpf"
+              name="limite_ingressos_por_cpf"
               type="number"
-              min={0.5}
-              step={0.01}
-              required
-              defaultValue={evento.preco_ingresso}
+              min={1}
+              max={50}
+              defaultValue={evento.limite_ingressos_por_cpf ?? ""}
+              placeholder="Vazio = sem limite"
             />
           </div>
 
@@ -355,6 +372,7 @@ export function EditarEventoClient({ slug }: Props) {
                 <strong className="font-semibold">Pausar</strong> — fora da vitrine; sem venda.
               </span>
             </label>
+            <EventoVisibilidadeAvisosLegais />
           </div>
 
           <EventoImagemField value={imagemUrl} onChange={setImagemUrl} />
@@ -365,6 +383,13 @@ export function EditarEventoClient({ slug }: Props) {
             </button>
           </div>
         </form>
+
+        <div className="mt-6 border-t border-zinc-100 pt-6">
+          <EventoCuponsEditor eventoId={evento.id} />
+          <p className="mt-2 text-xs text-zinc-500">
+            Cupons são salvos na hora em &quot;Adicionar&quot;. O botão acima guarda só os dados do evento.
+          </p>
+        </div>
       </div>
     </div>
   );

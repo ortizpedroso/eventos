@@ -12,6 +12,7 @@ ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ENV NEXT_DOCKER_STANDALONE=1
 
 RUN npm run build
 
@@ -29,4 +30,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# Standalone plano (Docker) vs aninhado em frontend/ (monorepo no host) — evita imagem antiga em cache.
+CMD ["sh", "-c", "if [ -f ./server.js ]; then exec node ./server.js; elif [ -f ./frontend/server.js ]; then exec node ./frontend/server.js; else echo 'server.js não encontrado'; ls -la .; exit 1; fi"]

@@ -4,13 +4,15 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 load_dotenv()
 
-from app.routes import auth, eventos, ingressos, pagamentos, relatorios, webhooks
+from app.routes import admin, auth, checkin, eventos, ingressos, organizador, pagamentos, relatorios, webhooks
 from app.models import create_tables, get_db
+from app.middleware.request_id import RequestIdMiddleware
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -43,14 +45,25 @@ async def lifespan(app: FastAPI):
         )
     if settings.ENVIRONMENT == "development":
         create_tables()
+    if settings.ENVIRONMENT == "production":
+        cors = (settings.CORS_ORIGINS or "").strip()
+        if not cors or cors == "*":
+            logger.warning(
+                "CORS_ORIGINS está vazio ou '*' em produção — defina origens explícitas (URLs do front)."
+            )
     yield
 
+
+_docs_on = settings.ENVIRONMENT == "development"
 
 app = FastAPI(
     title="EventosBR API",
     description="Plataforma de eventos com reembolsos automáticos",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if _docs_on else None,
+    redoc_url="/redoc" if _docs_on else None,
+    openapi_url="/openapi.json" if _docs_on else None,
 )
 
 _origins = _cors_allow_origins()
@@ -62,34 +75,61 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(RequestIdMiddleware)
+
 app.include_router(auth.router, prefix="/api/auth", tags=["Autenticação"])
 app.include_router(eventos.router, prefix="/api/eventos", tags=["Eventos"])
 app.include_router(ingressos.router, prefix="/api/ingressos", tags=["Ingressos"])
 app.include_router(pagamentos.router, prefix="/api/pagamentos", tags=["Pagamentos"])
 app.include_router(relatorios.router, prefix="/api/relatorios", tags=["Relatórios"])
+app.include_router(checkin.router, prefix="/api/checkin", tags=["Check-in"])
+app.include_router(organizador.router, prefix="/api/organizador", tags=["Organizador"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 
 
 @app.get("/health")
-async def health(db: Session = Depends(get_db)):
+async def health():
+    """Liveness: o processo HTTP responde (orquestradores não devem reiniciar por falha de BD)."""
+    return {
+        "status": "ok",
+        "role": "liveness",
+        "message": "EventosBR API",
+    }
+
+
+@app.get("/ready")
+async def ready(db: Session = Depends(get_db)):
+    """Readiness: aplicação aceita tráfego (inclui verificação à base de dados)."""
     try:
         db.execute(text("SELECT 1"))
-        return {
-            "status": "ok",
-            "database": "up",
-            "message": "EventosBR API",
-        }
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "ok",
+                "role": "readiness",
+                "database": "up",
+                "message": "EventosBR API",
+            },
+        )
     except Exception:
-        return {
-            "status": "degraded",
-            "database": "down",
-            "message": "EventosBR API",
-        }
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unavailable",
+                "role": "readiness",
+                "database": "down",
+                "message": "EventosBR API",
+            },
+        )
 
 
 @app.get("/")
 async def root():
-    return {"message": "Bem-vindo à EventosBR API", "docs": "/docs"}
+    msg = "Bem-vindo à EventosBR API"
+    if _docs_on:
+        return {"message": msg, "docs": "/docs"}
+    return {"message": msg}
 
 
 if __name__ == "__main__":

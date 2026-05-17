@@ -5,6 +5,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 import { EventoImagemField } from "@/components/evento-imagem-field";
+import {
+  defaultLoteRows,
+  EventoLotesEditor,
+  lotesRowsToApiPayload,
+  precoMinimoDosLotes,
+  type LoteFormRow,
+} from "@/components/evento-lotes-editor";
+import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
 import { EVENTO_CATEGORIAS, slugFromNome } from "@/lib/eventos";
 import { apiFetch } from "@/lib/api";
 
@@ -23,9 +31,11 @@ type CriarEventoPayload = {
   local: string;
   imagem_url?: string | null;
   preco_ingresso: number;
+  ingresso_lotes: ReturnType<typeof lotesRowsToApiPayload>;
   categoria: string;
   mensagem_confirmacao?: string | null;
   publicado: boolean;
+  limite_ingressos_por_cpf?: number | null;
 };
 
 function SectionTitle({ children }: { children: ReactNode }) {
@@ -49,6 +59,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [nomeParaSlug, setNomeParaSlug] = useState("");
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
+  const [loteRows, setLoteRows] = useState<LoteFormRow[]>(() => defaultLoteRows());
 
   useEffect(() => {
     setOrigin(typeof window !== "undefined" ? window.location.origin : "");
@@ -61,41 +72,50 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
     setLoading(true);
     setError(null);
 
-    const precoRaw = String(formData.get("preco_ingresso") ?? "").replace(",", ".");
-    const preco_ingresso = Number.parseFloat(precoRaw);
-    if (!Number.isFinite(preco_ingresso) || preco_ingresso < 0.5) {
-      setError("Informe um valor de ingresso válido (mínimo R$ 0,50).");
+    const preco_ingresso = precoMinimoDosLotes(loteRows);
+    const lotesPayload = lotesRowsToApiPayload(loteRows);
+    for (const l of lotesPayload) {
+      if (l.tipo === "cortesia") continue;
+      if (!Number.isFinite(l.preco) || l.preco < 0.5) {
+        setError("Cada lote pago precisa de preço válido (mínimo R$ 0,50). Cortesia usa R$ 0.");
+        setLoading(false);
+        return;
+      }
+    }
+    const temPago = lotesPayload.some((l) => l.tipo !== "cortesia");
+    if (temPago && (!Number.isFinite(preco_ingresso) || preco_ingresso < 0.5)) {
+      setError("Informe pelo menos um lote pago com preço mínimo de R$ 0,50.");
       setLoading(false);
       return;
     }
 
-    const di = new Date(String(formData.get("data_inicio") ?? ""));
-    const df = new Date(String(formData.get("data_fim") ?? ""));
-    if (!Number.isFinite(di.getTime()) || !Number.isFinite(df.getTime())) {
-      setError("Datas inválidas.");
-      setLoading(false);
-      return;
-    }
-    if (df < di) {
-      setError("A data de fim deve ser igual ou posterior à data de início.");
+    const rawIni = String(formData.get("data_inicio") ?? "").trim();
+    const di = new Date(rawIni);
+    if (!Number.isFinite(di.getTime())) {
+      setError("Data de início inválida.");
       setLoading(false);
       return;
     }
 
     const msg = String(formData.get("mensagem_confirmacao") ?? "").trim();
     const publicado = String(formData.get("publicado") ?? "true") !== "false";
+    const limiteRaw = String(formData.get("limite_ingressos_por_cpf") ?? "").trim();
+    const limite_ingressos_por_cpf = limiteRaw ? Number.parseInt(limiteRaw, 10) : null;
 
     const payload: CriarEventoPayload = {
       nome: String(formData.get("nome") ?? ""),
       descricao: String(formData.get("descricao") ?? ""),
-      data_inicio: String(formData.get("data_inicio") ?? ""),
-      data_fim: String(formData.get("data_fim") ?? ""),
+      data_inicio: rawIni,
+      data_fim: rawIni,
       local: String(formData.get("local") ?? ""),
       imagem_url: imagemUrl.trim() || null,
       preco_ingresso,
+      ingresso_lotes: lotesPayload,
       categoria: String(formData.get("categoria") ?? "Outros"),
       mensagem_confirmacao: msg || null,
       publicado,
+      limite_ingressos_por_cpf:
+        limite_ingressos_por_cpf && limite_ingressos_por_cpf >= 1 ? limite_ingressos_por_cpf : null,
     };
 
     try {
@@ -228,29 +248,22 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
             <section className="space-y-4">
               <SectionTitle>Data e local</SectionTitle>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
+                <div className="grid gap-2 sm:col-span-2 sm:max-w-md">
                   <label className="text-sm font-medium text-zinc-800" htmlFor="data_inicio">
-                    Início
+                    Data e hora de início
                   </label>
                   <input
                     className={inputClass}
                     id="data_inicio"
                     name="data_inicio"
                     type="datetime-local"
+                    step={60}
                     required
                   />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-zinc-800" htmlFor="data_fim">
-                    Fim
-                  </label>
-                  <input
-                    className={inputClass}
-                    id="data_fim"
-                    name="data_fim"
-                    type="datetime-local"
-                    required
-                  />
+                  <p className="text-xs text-zinc-500">
+                    Não pedimos horário de fim: o evento pode durar o tempo que for (show, feijoada,
+                    etc.).
+                  </p>
                 </div>
               </div>
               <div className="grid gap-2">
@@ -271,22 +284,22 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
 
             <section className="space-y-4">
               <SectionTitle>Ingresso</SectionTitle>
+              <EventoLotesEditor rows={loteRows} onChange={setLoteRows} />
               <div className="grid gap-2">
-                <label className="text-sm font-medium text-zinc-800" htmlFor="preco_ingresso">
-                  Valor do ingresso (R$)
+                <label className="text-sm font-medium text-zinc-800" htmlFor="limite_ingressos_por_cpf">
+                  Limite por CPF <span className="font-normal text-zinc-500">(opcional)</span>
                 </label>
                 <input
-                  className={`${inputClass} max-w-xs`}
-                  id="preco_ingresso"
-                  name="preco_ingresso"
+                  className={inputClass}
+                  id="limite_ingressos_por_cpf"
+                  name="limite_ingressos_por_cpf"
                   type="number"
-                  min={0.5}
-                  step={0.01}
-                  defaultValue={49.9}
-                  required
+                  min={1}
+                  max={50}
+                  placeholder="Ex.: 2 (vazio = sem limite)"
                 />
                 <p className="text-xs text-zinc-500">
-                  Preço por ingresso em reais. Mínimo R$ 0,50 (exigência do pagamento online).
+                  Máximo de ingressos ativos com o mesmo CPF neste evento.
                 </p>
               </div>
               <div className="grid gap-2">
@@ -336,6 +349,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     vitrine; só o organizador logado acessa o link. Venda desativada até republicar.
                   </span>
                 </label>
+                <EventoVisibilidadeAvisosLegais />
               </div>
             </section>
 

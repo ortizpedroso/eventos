@@ -63,7 +63,7 @@ export function PagamentosClient() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Meus pagamentos</h1>
-        <Link href="/" className="text-sm text-zinc-600 hover:underline">
+        <Link href="/eventos" className="text-sm text-zinc-600 hover:underline">
           ← Eventos
         </Link>
       </div>
@@ -124,9 +124,7 @@ export function PagamentosClient() {
             >
               <div className="font-medium">{it.evento.nome}</div>
               <div className="mt-1 text-zinc-600">
-                {new Date(it.evento.data).toLocaleString("pt-BR")} até{" "}
-                {new Date(it.evento.data_fim).toLocaleString("pt-BR")} •{" "}
-                {it.evento.local}
+                {new Date(it.evento.data).toLocaleString("pt-BR")} • {it.evento.local}
               </div>
               {it.participante_nome ? (
                 <div className="mt-2 text-xs text-zinc-600">

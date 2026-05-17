@@ -1,0 +1,48 @@
+# Git e ambiente local
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+venv
+.venv
+*.egg-info
+htmlcov
+.coverage
+
+# Banco / dados locais
+*.db
+eventos.db
+postgres_data
+
+# Frontend (build da imagem web usa contexto ./frontend)
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/.turbo
+
+# IDE e OS
+.idea
+.vscode
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs e artefactos
+*.log
+npm-debug.log*
+dist
+build
+
+# Documentação e scripts não necessários na imagem API
+docs
+*.md
+!README.md
+scripts/check-stack.ps1

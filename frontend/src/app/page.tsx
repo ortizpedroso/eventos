@@ -4,15 +4,15 @@ import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 
 export default function Home() {
   return (
-    <div className="py-16 sm:py-24 lg:py-32">
+    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
       {/* Hero Section */}
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-5xl font-extrabold tracking-tight text-zinc-900 sm:text-6xl">
           A plataforma minimalista para <span className="text-emerald-700">seus eventos.</span>
         </h1>
         <p className="mt-6 text-lg text-zinc-600 sm:text-xl">
-          Crie, gerencie e venda ingressos com uma experiência fluida e moderna. 
-          Receba pagamentos via Stripe com reembolsos automatizados. Sem complicação.
+          De shows e festivais a feijoadas e torneios esportivos: crie, gerencie e venda ingressos com uma experiência fluida. 
+          Receba pagamentos com tecnologia antifraude de nível global. Simples para você, seguro para o seu público.
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -41,7 +41,7 @@ export default function Home() {
           <ScrollReveal className="h-full" delayMs={0}>
           <div className="h-full rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
             <h3 className="text-xl font-semibold text-zinc-900">Eventos Gratuitos</h3>
-            <p className="mt-2 text-sm text-zinc-500">Perfeito para meetups e eventos comunitários.</p>
+            <p className="mt-2 text-sm text-zinc-500">Perfeito para eventos comunitários, ações solidárias e encontros.</p>
             <div className="mt-6 flex items-baseline gap-x-1">
               <span className="text-4xl font-bold tracking-tight text-zinc-900">R$ 0</span>
               <span className="text-sm font-semibold text-zinc-600">/ingresso</span>
@@ -61,7 +61,7 @@ export default function Home() {
           <ScrollReveal className="h-full" delayMs={90}>
           <div className="h-full rounded-2xl border border-emerald-600 bg-white p-8 shadow-md ring-1 ring-emerald-600">
             <h3 className="text-xl font-semibold text-emerald-700">Eventos Pagos</h3>
-            <p className="mt-2 text-sm text-zinc-500">Para produtores profissionais e conferências.</p>
+            <p className="mt-2 text-sm text-zinc-500">Para shows, feijoadas, torneios, festas e produtores profissionais.</p>
             <div className="mt-6 flex flex-wrap items-baseline gap-x-1 gap-y-1">
               <span className="text-4xl font-bold tracking-tight text-zinc-900">10%</span>
               <span className="text-sm font-semibold text-zinc-600">
@@ -69,7 +69,7 @@ export default function Home() {
               </span>
             </div>
             <ul className="mt-8 space-y-3 text-sm text-zinc-600">
-              <li className="flex gap-x-3">✅ Pagamentos via Cartão (Stripe)</li>
+              <li className="flex gap-x-3">✅ Cartão, PIX e pagamentos seguros</li>
               <li className="flex gap-x-3">✅ Reembolso automatizado</li>
               <li className="flex gap-x-3">✅ Recebimento direto na conta</li>
             </ul>
@@ -126,8 +126,8 @@ export default function Home() {
           <h2 className="text-lg font-semibold text-emerald-700">Transparência e segurança</h2>
           <p className="mt-3 text-justify text-sm leading-6 text-zinc-600">
             Abrir conta no EventosBR é gratuito e sem mensalidade obrigatória. Quando você vende
-            ingressos pagos, as taxas aplicam-se só sobre o que realmente entra no caixa: o
-            pagamento é processado pelo Stripe com padrão de mercado, e cancelamentos e reembolsos
+            ingressos pagos, as taxas aplicam-se só sobre o que realmente entra no caixa. O
+            pagamento é processado por gateways com padrão de segurança internacional, e os cancelamentos 
             respeitam os prazos e condições que você configurar para cada evento.
           </p>
           <p className="mt-4 text-justify text-sm leading-6 text-zinc-600">

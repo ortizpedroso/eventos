@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Boolean, Float
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Boolean, Float, Integer
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import uuid
@@ -18,13 +18,16 @@ class Evento(Base):
     data_inicio = Column(DateTime)
     data_fim = Column(DateTime, nullable=False)
     local = Column(String)
-    imagem_url = Column(String, nullable=True)
+    imagem_url = Column(Text, nullable=True)
 
     categoria = Column(String(80), nullable=False, default="Outros")
     mensagem_confirmacao = Column(Text, nullable=True)
 
     # Preço sugerido do ingresso (reais); usado na página pública e na compra.
     preco_ingresso = Column(Float, nullable=False, default=10.0)
+
+    # Máximo de ingressos ativos por CPF neste evento (null = sem limite).
+    limite_ingressos_por_cpf = Column(Integer, nullable=True)
 
     # Stripe
     stripe_account_id = Column(String)
@@ -39,6 +42,17 @@ class Evento(Base):
     # Relacionamentos
     organizador = relationship("Usuario", back_populates="eventos")
     ingressos = relationship("Ingresso", back_populates="evento", cascade="all, delete-orphan")
+    ingresso_lotes = relationship(
+        "EventoIngressoLote",
+        back_populates="evento",
+        order_by="EventoIngressoLote.ordem",
+        cascade="all, delete-orphan",
+    )
+    cupons = relationship(
+        "EventoCupom",
+        back_populates="evento",
+        cascade="all, delete-orphan",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

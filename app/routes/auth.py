@@ -1,9 +1,9 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import stripe
 
 from app.models import Usuario, get_db
@@ -14,7 +14,9 @@ from app.schemas.usuario import (
     UsuarioResponse,
     Token,
 )
-from app.services.auth import hash_password, verify_password, create_access_token, decode_token
+from app.deps.rate_limit import rate_limit_login, rate_limit_register
+from app.services.auth import create_access_token, decode_token, hash_password, verify_password
+from app.utils.public_errors import STRIPE_CLIENTE
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -26,6 +28,44 @@ oauth2_scheme_optional = OAuth2PasswordBearer(
 )
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+def _normalizar_telefone_usuario(valor: str | None) -> str | None:
+    if valor is None:
+        return None
+    digits = "".join(c for c in str(valor) if c.isdigit())
+    if not digits:
+        return None
+    if len(digits) < 10 or len(digits) > 13:
+        raise HTTPException(
+            status_code=400,
+            detail="Telefone inválido. Use DDD + número (10 a 13 dígitos).",
+        )
+    return digits
+
+
+def _aplicar_preferencias_comunicacao(
+    usuario: Usuario,
+    *,
+    aceita_email: bool,
+    aceita_whatsapp: bool,
+    telefone: str | None,
+) -> None:
+    if aceita_whatsapp and not telefone:
+        raise HTTPException(
+            status_code=400,
+            detail="Informe um telefone válido para receber comunicações por WhatsApp.",
+        )
+    mudou = (
+        bool(usuario.aceita_comunicacao_email) != aceita_email
+        or bool(usuario.aceita_comunicacao_whatsapp) != aceita_whatsapp
+        or (usuario.telefone or None) != (telefone or None)
+    )
+    usuario.aceita_comunicacao_email = aceita_email
+    usuario.aceita_comunicacao_whatsapp = aceita_whatsapp
+    usuario.telefone = telefone
+    if mudou:
+        usuario.comunicacao_consentimento_em = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _stripe_error_all_text(err: Exception) -> str:
@@ -66,14 +106,20 @@ def _stripe_connect_platform_terms_missing(err: Exception) -> bool:
 
 
 @router.post("/registrar", response_model=Token)
-async def registrar(usuario_data: UsuarioCreate, db: Session = Depends(get_db)):
+async def registrar(
+    usuario_data: UsuarioCreate,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_register),
+):
     """Registra novo usuário"""
 
     logger.info(f"Registrando usuário: {usuario_data.email}")
 
+    email = str(usuario_data.email).strip().lower()
+
     # Verifica se email já existe
     usuario_existente = db.query(Usuario).filter(
-        Usuario.email == usuario_data.email
+        func.lower(Usuario.email) == email
     ).first()
 
     if usuario_existente:
@@ -121,13 +167,11 @@ async def registrar(usuario_data: UsuarioCreate, db: Session = Depends(get_db)):
                                 "Erro Stripe ao criar conta Connect (texto completo para diagnóstico): %s",
                                 _stripe_error_all_text(conn_err),
                             )
-                            raise HTTPException(
-                                status_code=400,
-                                detail=f"Erro Stripe: {str(conn_err)}",
-                            ) from conn_err
+                            logger.exception("Erro Stripe ao criar conta Connect")
+                            raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from conn_err
         except stripe.error.StripeError as e:
-            logger.error("Erro Stripe: %s", e)
-            raise HTTPException(status_code=400, detail=f"Erro Stripe: {str(e)}") from e
+            logger.exception("Erro Stripe no registo: %s", e)
+            raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
     else:
         logger.warning(
             "STRIPE_DISABLED: registro de %s (%s) sem Customer/Connect Stripe",
@@ -135,14 +179,28 @@ async def registrar(usuario_data: UsuarioCreate, db: Session = Depends(get_db)):
             usuario_data.tipo,
         )
 
+    tel = _normalizar_telefone_usuario(usuario_data.telefone)
+    aceita_email = bool(usuario_data.aceita_comunicacao_email)
+    aceita_whatsapp = bool(usuario_data.aceita_comunicacao_whatsapp)
+    if aceita_whatsapp and not tel:
+        raise HTTPException(
+            status_code=400,
+            detail="Para WhatsApp, informe um telefone com DDD no cadastro ou ative depois no perfil.",
+        )
+
     novo_usuario = Usuario(
-        email=usuario_data.email,
+        email=email,
         nome=usuario_data.nome,
         senha_hash=hash_password(usuario_data.senha),
         tipo=usuario_data.tipo,
         stripe_customer_id=stripe_customer_id,
         stripe_account_id=stripe_account_id,
+        aceita_comunicacao_email=aceita_email,
+        aceita_comunicacao_whatsapp=aceita_whatsapp,
+        telefone=tel,
     )
+    if aceita_email or aceita_whatsapp:
+        novo_usuario.comunicacao_consentimento_em = datetime.now(timezone.utc).replace(tzinfo=None)
 
     db.add(novo_usuario)
     db.commit()
@@ -162,13 +220,18 @@ async def registrar(usuario_data: UsuarioCreate, db: Session = Depends(get_db)):
     }
 
 @router.post("/login", response_model=Token)
-async def login(credenciais: UsuarioLogin, db: Session = Depends(get_db)):
+async def login(
+    credenciais: UsuarioLogin,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_login),
+):
     """Login de usuário"""
 
-    logger.info(f"Tentativa de login: {credenciais.email}")
+    email = str(credenciais.email).strip().lower()
+    logger.info("Tentativa de login: %s", email)
 
     usuario = db.query(Usuario).filter(
-        Usuario.email == credenciais.email
+        func.lower(Usuario.email) == email
     ).first()
 
     if not usuario or not verify_password(credenciais.senha, usuario.senha_hash):
@@ -252,6 +315,31 @@ async def atualizar_perfil(
 
     if body.nova_senha:
         usuario.senha_hash = hash_password(body.nova_senha)
+
+    if (
+        body.aceita_comunicacao_email is not None
+        or body.aceita_comunicacao_whatsapp is not None
+        or body.telefone is not None
+    ):
+        aceita_email = (
+            body.aceita_comunicacao_email
+            if body.aceita_comunicacao_email is not None
+            else bool(usuario.aceita_comunicacao_email)
+        )
+        aceita_whatsapp = (
+            body.aceita_comunicacao_whatsapp
+            if body.aceita_comunicacao_whatsapp is not None
+            else bool(usuario.aceita_comunicacao_whatsapp)
+        )
+        tel = usuario.telefone
+        if body.telefone is not None:
+            tel = _normalizar_telefone_usuario(body.telefone)
+        _aplicar_preferencias_comunicacao(
+            usuario,
+            aceita_email=aceita_email,
+            aceita_whatsapp=aceita_whatsapp,
+            telefone=tel,
+        )
 
     db.commit()
     db.refresh(usuario)

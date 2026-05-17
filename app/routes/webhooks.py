@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Ingresso, StripeEvent, get_db
+from app.services.ingresso_pago import marcar_ingresso_pago, notificar_ingresso_pago
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if existente:
             return {"status": "success", "idempotent": True}
 
+    ingresso_recém_pago_id: str | None = None
     try:
         if event_type == "payment_intent.succeeded":
             payment_intent = event["data"]["object"]
@@ -67,8 +69,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 .filter(Ingresso.stripe_payment_intent_id == payment_intent["id"])
                 .first()
             )
-            if ingresso:
-                ingresso.status = "pago"
+            if ingresso and marcar_ingresso_pago(db, ingresso):
+                ingresso_recém_pago_id = ingresso.id
                 logger.info("Ingresso %s pago via webhook", ingresso.id)
 
         elif event_type == "payment_intent.payment_failed":
@@ -85,6 +87,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if event_id:
             db.add(StripeEvent(id=event_id, tipo=event_type))
         db.commit()
+        if ingresso_recém_pago_id:
+            notificar_ingresso_pago(ingresso_recém_pago_id)
     except IntegrityError:
         db.rollback()
         logger.info("Webhook duplicado (race): %s", event_id)
@@ -105,8 +109,11 @@ async def mock_payment(ingresso_id: str, db: Session = Depends(get_db)):
     if not ingresso:
         raise HTTPException(status_code=404, detail="Ingresso não encontrado")
 
-    ingresso.status = "pago"
-    db.commit()
+    if marcar_ingresso_pago(db, ingresso):
+        db.commit()
+        notificar_ingresso_pago(ingresso.id)
+    else:
+        db.commit()
     logger.info(
         "Ingresso %s pago com sucesso via MOCK (Stripe CLI ignorado)!", ingresso.id
     )
