@@ -300,7 +300,9 @@ function ConfirmacaoIngresso({
       <p className="text-3xl" aria-hidden>
         ✓
       </p>
-      <h2 className="text-lg font-semibold text-emerald-900">Compra confirmada!</h2>
+      <h2 className="text-lg font-semibold text-emerald-900" data-testid="checkout-confirmacao">
+        Compra confirmada!
+      </h2>
       <p className="text-sm text-zinc-600">{eventoNome}</p>
       <p className="text-sm text-zinc-700">
         Enviamos o ingresso com QR Code para{" "}
@@ -748,6 +750,7 @@ export function ComprarIngresso({
           </p>
           <button
             type="button"
+            data-testid="checkout-continuar"
             onClick={() => void criarIntent()}
             disabled={creating}
             className="btn-primary w-full"

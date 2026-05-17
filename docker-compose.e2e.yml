@@ -1,0 +1,90 @@
+# Stack para testes E2E locais (compra sem Stripe real).
+# Projeto isolado (evita conflito de volume/senha com docker-compose.yml de dev).
+# Uso: docker compose -p eventosbr-e2e -f docker-compose.e2e.yml up -d --build --wait
+#      cd frontend && PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:e2e:compra
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: eventosbr
+      POSTGRES_PASSWORD: eventosbr_e2e
+      POSTGRES_DB: eventosbr
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventosbr -d eventosbr"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks:
+      - e2e
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - e2e
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://eventosbr:eventosbr_e2e@db:5432/eventosbr
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: e2e-secret-key-minimum-32-characters-long
+      ENVIRONMENT: development
+      DEBUG: "True"
+      STRIPE_DISABLED: "true"
+      STRIPE_SKIP_CONNECT_ON_REGISTER: "true"
+      CORS_ORIGINS: http://127.0.0.1:3000,http://localhost:3000
+      FRONTEND_PUBLIC_URL: http://127.0.0.1:3000
+      PLATFORM_ADMIN_API_KEY: e2e-admin-key-for-tests-only
+    command:
+      - /bin/sh
+      - -c
+      - "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=8)",
+        ]
+      interval: 5s
+      timeout: 8s
+      retries: 12
+      start_period: 90s
+    networks:
+      - e2e
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+    ports:
+      - "3000:3000"
+    environment:
+      INTERNAL_API_URL: http://api:8000
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - e2e
+
+networks:
+  e2e:
+    driver: bridge

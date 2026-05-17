@@ -180,6 +180,17 @@ Sem CLI: após criar o ingresso pendente, use `POST /api/webhooks/mock-payment?i
 
 Detalhes e erros comuns: [TROUBLESHOOTING.md](TROUBLESHOOTING.md#stripe--webhook-e-compra-de-teste).
 
+### E2E compra no browser (sem Stripe real)
+
+```powershell
+.\scripts\e2e-up.ps1          # projeto Docker eventosbr-e2e (isolado do dev)
+.\scripts\e2e-run-compra.ps1
+```
+
+### Deploy produção (Hostinger VPS)
+
+Ver [docs/08-deploy-hostinger.md](docs/08-deploy-hostinger.md) e `.env.production.example`.
+
 ## 📊 Endpoints Principais
 
 | Método | Endpoint | Auth | Descrição |

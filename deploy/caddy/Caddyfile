@@ -1,0 +1,22 @@
+# Reverse proxy — HTTPS automático (Let's Encrypt).
+# Defina no .env: DOMAIN=seudominio.com.br  ACME_EMAIL=admin@seudominio.com.br
+#
+# O Next.js (web) faz proxy de /api/* para a API interna (INTERNAL_API_URL).
+# Webhook Stripe: https://{$DOMAIN}/api/webhooks/stripe
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip zstd
+
+	@api path /api/*
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

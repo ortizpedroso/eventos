@@ -13,6 +13,7 @@ Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + Str
 | [05 — Pagamentos, lotes e webhooks](./05-pagamentos-lotes-webhooks-stripe.md) | Stripe, `PaymentIntent`, lotes, cancelamento, idempotência |
 | [06 — Configuração e operação](./06-configuracao-operacao.md) | Variáveis de ambiente, Docker, Alembic, testes |
 | [07 — Fase D (roadmap)](./07-fase-d-roadmap.md) | Produção, fiscal, E2E e admin ampliado |
+| [08 — Deploy Hostinger (VPS)](./08-deploy-hostinger.md) | Docker prod, Caddy, DNS, go-live |
 
 ## Documentação interativa da API
 

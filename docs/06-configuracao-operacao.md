@@ -60,10 +60,26 @@ Usam SQLite em memória e **não** chamam Stripe real (mocks).
 
 Com a API a correr: **`/docs`** e **`/redoc`** — útil para experimentar corpos JSON (incl. `ingresso_lotes`).
 
+## Deploy produção (VPS)
+
+Guia completo: **[08 — Deploy Hostinger](./08-deploy-hostinger.md)**.
+
+Ficheiros: `docker-compose.prod.yml`, `deploy/caddy/Caddyfile`, `.env.production.example`, `scripts/deploy-vps.sh`.
+
+## E2E compra (local / CI)
+
+```bash
+docker compose -p eventosbr-e2e -f docker-compose.e2e.yml up -d --build --wait
+cd frontend && PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e:compra
+```
+
+Windows: `.\scripts\e2e-up.ps1` e `.\scripts\e2e-run-compra.ps1`.
+
 ## Checklist de deploy (sugestão)
 
-1. Definir `ENVIRONMENT=production`, `DEBUG=False`, `SECRET_KEY` forte.
-2. `DATABASE_URL` persistente; correr **`alembic upgrade head`**.
+1. Definir `ENVIRONMENT=production`, `DEBUG=False`, `SECRET_KEY` forte (`scripts/generate-secrets.ps1`).
+2. `DATABASE_URL` persistente; correr **`alembic upgrade head`** (automático no entrypoint do compose prod).
 3. Stripe: chaves live, webhook apontando para `https://<domínio>/api/webhooks/stripe`, secret correto.
-4. Frontend: `NEXT_PUBLIC_API_URL` ou proxy reverso coerente; `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` live.
+4. Frontend: `NEXT_PUBLIC_API_URL` com HTTPS; `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` live.
 5. `CORS_ORIGINS` alinhado aos domínios reais do site.
+6. Backup agendado: `scripts/backup-postgres.sh`.

@@ -51,6 +51,9 @@ env/
 *.log
 logs/
 
+# Backups Postgres locais
+backups/
+
 # Testing
 .pytest_cache/
 .coverage

@@ -1,13 +1,33 @@
 #!/usr/bin/env sh
-# Backup lógico PostgreSQL (ex.: Docker Compose com serviço "db").
-# Uso típico a partir da raiz do repositório:
-#   docker compose exec -T db pg_dump -U eventosbr eventosbr > backup_eventosbr_$(date +%Y%m%d_%H%M).sql
+# Backup lógico PostgreSQL (Docker Compose prod ou dev).
+# Uso na raiz do repo:
+#   ./scripts/backup-postgres.sh
+#   COMPOSE_FILE=docker-compose.prod.yml ./scripts/backup-postgres.sh
 #
-# Ou com variáveis (host local, sem Docker):
-#   pg_dump "$DATABASE_URL" > backup.sql
-#
-# Agende com cron ou o scheduler do seu ambiente; teste restauração periodicamente.
+# Saída: ./backups/backup_eventosbr_YYYYMMDD_HHMM.sql.gz
 
 set -euo pipefail
-echo "Este ficheiro é um modelo — descomente e adapte o comando que corresponde ao seu ambiente."
-# docker compose exec -T db pg_dump -U eventosbr eventosbr | gzip -1 > "backup_eventosbr_$(date +%Y%m%d_%H%M).sql.gz"
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
+SERVICE="${PG_SERVICE:-db}"
+USER="${PG_USER:-eventosbr}"
+DB="${PG_DB:-eventosbr}"
+OUT_DIR="${BACKUP_DIR:-$ROOT/backups}"
+STAMP="$(date +%Y%m%d_%H%M%S)"
+OUT_FILE="$OUT_DIR/backup_${DB}_${STAMP}.sql.gz"
+
+mkdir -p "$OUT_DIR"
+
+if ! docker compose -f "$COMPOSE_FILE" ps --status running "$SERVICE" 2>/dev/null | grep -q "$SERVICE"; then
+  echo "ERRO: serviço '$SERVICE' não está rodando (compose: $COMPOSE_FILE)." >&2
+  exit 1
+fi
+
+echo "Backup $DB → $OUT_FILE"
+docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE" \
+  pg_dump -U "$USER" "$DB" | gzip -1 > "$OUT_FILE"
+
+echo "OK: $(wc -c < "$OUT_FILE" | tr -d ' ') bytes"
