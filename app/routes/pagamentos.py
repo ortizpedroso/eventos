@@ -64,7 +64,10 @@ def _criar_payment_intent_brl(
         logger.warning(
             "PIX não habilitado no Dashboard Stripe; PaymentIntent só com cartão (automatic_payment_methods)."
         )
-        so_cartao: dict = {**base, "automatic_payment_methods": {"enabled": True}}
+        so_cartao: dict = {
+            **base,
+            "automatic_payment_methods": {"enabled": True, "allow_redirects": "never"},
+        }
         return stripe.PaymentIntent.create(**so_cartao), False
 
 class CriarPagamentoRequest(BaseModel):

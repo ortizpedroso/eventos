@@ -323,4 +323,51 @@ Se ainda tiver problemas, compartilhe a mensagem de erro completa!
 
 ---
 
-**Última atualização:** 14/05/2026
+## Stripe — Webhook e compra de teste
+
+### Pré-requisitos
+
+1. [Stripe CLI](https://stripe.com/docs/stripe-cli) instalado e `stripe login`
+2. `STRIPE_SECRET_KEY=sk_test_...` no `.env`
+3. API rodando (`docker compose up -d` ou `uvicorn`)
+
+### Passo a passo (3 terminais)
+
+**Terminal 1 — configurar `whsec` no `.env` (uma vez por sessão do `stripe listen`):**
+
+```powershell
+.\scripts\stripe-webhook-setup.ps1
+docker compose up -d api
+```
+
+**Terminal 2 — encaminhar webhooks (deixar aberto):**
+
+```powershell
+.\scripts\stripe-webhook-dev.ps1
+```
+
+**Terminal 3 — compra automática de teste:**
+
+```powershell
+.\scripts\compra-teste-stripe.ps1
+```
+
+O script cria organizador, evento, PaymentIntent, confirma com cartão `pm_card_visa` e aguarda o ingresso ficar **pago** via webhook.
+
+### Compra manual no navegador
+
+1. Terminal com `stripe-webhook-dev.ps1` rodando
+2. Abra `http://localhost:3000/eventos/{slug}`
+3. Cartão de teste: `4242 4242 4242 4242`, validade qualquer futura, CVC `123`
+
+### Erros comuns
+
+| Sintoma | Causa | Solução |
+|--------|--------|---------|
+| Ingresso fica `pendente` | Webhook não chegou | `stripe-webhook-dev.ps1` ativo + `whsec` no `.env` |
+| `Invalid signature` | `STRIPE_WEBHOOK_SECRET` diferente do `stripe listen` | Rode `stripe-webhook-setup.ps1` de novo |
+| `404` em `/api/admin/setup` | Container API antigo | `docker compose up -d --build api` |
+
+---
+
+**Última atualização:** 15/05/2026

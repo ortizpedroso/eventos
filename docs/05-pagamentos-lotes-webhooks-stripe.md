@@ -17,7 +17,9 @@
 4. **`resolver_lote_compra(db, evento)`** (`app/services/ingresso_lotes.py`): percorre lotes por `ordem`, aplica `ativo`, datas `vendas_inicio`/`vendas_fim`, e capacidade (`quantidade_maxima` vs contagens `pendente`+`pago`).
 5. **`valor_centavos`** do pedido tem de coincidir com `round(lote.preco * 100)` — evita manipulação de preço no cliente.
 6. Criação de **`Ingresso`** com `lote_id`, `valor`, `status=pendente`, `stripe_payment_intent_id=intent.id`.
-7. **Stripe `PaymentIntent.create`**: `amount`, `currency=brl`, `customer`, `automatic_payment_methods`; **metadata** com ids e participante; se `evento.stripe_account_id`, **`transfer_data.destination`** para Connect.
+7. **Stripe `PaymentIntent.create`**: `amount`, `currency=brl`, `customer`, `automatic_payment_methods` (com `allow_redirects: never` quando só cartão); **metadata** com ids e participante; se `evento.stripe_account_id`, **`transfer_data.destination`** para Connect.
+
+**Dev local (webhook):** `scripts/stripe-webhook-setup.ps1` → `docker compose up -d api` → `stripe-webhook-dev.ps1` → `compra-teste-stripe.ps1`. Ver [TROUBLESHOOTING](../TROUBLESHOOTING.md).
 
 ## Fluxo no browser após `criar`
 

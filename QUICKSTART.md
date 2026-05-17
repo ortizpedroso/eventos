@@ -165,6 +165,21 @@ curl -X POST "http://localhost:8000/api/auth/login" \
    - Atualiza status do ingresso para "pago"
    - Confirma transação
 
+### Webhook em desenvolvimento (Windows)
+
+Requer [Stripe CLI](https://stripe.com/docs/stripe-cli) (`stripe login`).
+
+```powershell
+.\scripts\stripe-webhook-setup.ps1    # grava whsec no .env
+docker compose restart api
+.\scripts\stripe-webhook-dev.ps1      # terminal A — deixe aberto
+.\scripts\compra-teste-stripe.ps1     # terminal B — compra automática
+```
+
+Sem CLI: após criar o ingresso pendente, use `POST /api/webhooks/mock-payment?ingresso_id=...` (apenas `DEBUG` + `ENVIRONMENT=development`).
+
+Detalhes e erros comuns: [TROUBLESHOOTING.md](TROUBLESHOOTING.md#stripe--webhook-e-compra-de-teste).
+
 ## 📊 Endpoints Principais
 
 | Método | Endpoint | Auth | Descrição |

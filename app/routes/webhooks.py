@@ -54,6 +54,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
     event_id = event.get("id")
     event_type = event.get("type", "unknown")
+    logger.info("Webhook Stripe recebido: %s (%s)", event_type, event_id or "sem-id")
 
     if event_id:
         existente = db.get(StripeEvent, event_id)
