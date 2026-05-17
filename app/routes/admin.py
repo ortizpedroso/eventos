@@ -8,10 +8,12 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 
 from app.deps.platform_admin import require_platform_admin
-from app.models import CampanhaMarketing, get_db
+from app.models import CampanhaMarketing, Evento, get_db
+from app.services.production_checks import build_setup_status
 from app.schemas.campanha_marketing import CampanhaCreate, CampanhaDetalheResponse, CampanhaResponse
 from app.services.marketing_campanha import criar_campanha, disparar_campanha
 from app.services.marketing_contatos import (
@@ -22,6 +24,71 @@ from app.services.marketing_contatos import (
 )
 
 router = APIRouter(dependencies=[Depends(require_platform_admin)])
+
+
+class EventoPublicadoUpdate(BaseModel):
+    publicado: bool
+
+
+@router.get("/setup")
+async def status_setup():
+    """Checklist de produção (sem segredos)."""
+    return build_setup_status()
+
+
+@router.get("/eventos")
+async def listar_eventos_plataforma(
+    publicado: bool | None = Query(None),
+    q: str | None = Query(None, max_length=120),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Evento).options(joinedload(Evento.organizador))
+    if publicado is not None:
+        query = query.filter(Evento.publicado == publicado)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(Evento.nome.ilike(like) | Evento.slug.ilike(like))
+    total = query.count()
+    rows = query.order_by(Evento.data_criacao.desc()).offset(offset).limit(limit).all()
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "eventos": [
+            {
+                "id": e.id,
+                "slug": e.slug,
+                "nome": e.nome,
+                "publicado": bool(e.publicado),
+                "data_inicio": e.data_inicio.isoformat() if e.data_inicio else None,
+                "organizador_nome": e.organizador.nome if e.organizador else None,
+                "organizador_email": e.organizador.email if e.organizador else None,
+            }
+            for e in rows
+        ],
+    }
+
+
+@router.patch("/eventos/{evento_id}/publicado")
+async def atualizar_publicacao_evento(
+    evento_id: str,
+    body: EventoPublicadoUpdate,
+    db: Session = Depends(get_db),
+):
+    evento = db.query(Evento).filter(Evento.id == evento_id).first()
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+    evento.publicado = body.publicado
+    db.commit()
+    db.refresh(evento)
+    return {
+        "id": evento.id,
+        "slug": evento.slug,
+        "nome": evento.nome,
+        "publicado": bool(evento.publicado),
+    }
 
 
 @router.get("/marketing/contatos")

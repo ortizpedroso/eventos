@@ -32,12 +32,32 @@ type Campanha = {
   disparado_em: string | null;
 };
 
-type Tab = "contatos" | "campanhas";
+type Tab = "setup" | "eventos" | "contatos" | "campanhas";
+
+type SetupStatus = {
+  environment: string;
+  ready_for_production: boolean;
+  checks: Record<string, string>;
+};
+
+type EventoAdmin = {
+  id: string;
+  slug: string;
+  nome: string;
+  publicado: boolean;
+  data_inicio: string | null;
+  organizador_nome: string | null;
+  organizador_email: string | null;
+};
 
 export function AdminDashboardClient() {
   const [keyInput, setKeyInput] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<Tab>("contatos");
+  const [tab, setTab] = useState<Tab>("setup");
+  const [setup, setSetup] = useState<SetupStatus | null>(null);
+  const [eventos, setEventos] = useState<EventoAdmin[]>([]);
+  const [filtroPublicado, setFiltroPublicado] = useState<"" | "true" | "false">("");
+  const [buscaEvento, setBuscaEvento] = useState("");
 
   const [busca, setBusca] = useState("");
   const [filtroCanal, setFiltroCanal] = useState<"qualquer" | "email" | "whatsapp">("qualquer");
@@ -101,11 +121,62 @@ export function AdminDashboardClient() {
     }
   }, []);
 
+  const carregarSetup = useCallback(async () => {
+    try {
+      const r = await adminFetch<SetupStatus>("/api/admin/setup");
+      setSetup(r);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao carregar setup");
+    }
+  }, []);
+
+  const carregarEventos = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const p = new URLSearchParams({ limit: "50", offset: "0" });
+      if (filtroPublicado) p.set("publicado", filtroPublicado);
+      if (buscaEvento.trim()) p.set("q", buscaEvento.trim());
+      const r = await adminFetch<{ eventos: EventoAdmin[]; total: number }>(
+        `/api/admin/eventos?${p}`,
+      );
+      setEventos(r.eventos);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao listar eventos");
+    } finally {
+      setBusy(false);
+    }
+  }, [buscaEvento, filtroPublicado]);
+
+  async function alternarPublicacao(ev: EventoAdmin) {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminFetch(`/api/admin/eventos/${ev.id}/publicado`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ publicado: !ev.publicado }),
+      });
+      setMsg(ev.publicado ? "Evento ocultado da vitrine." : "Evento publicado na vitrine.");
+      await carregarEventos();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao atualizar evento");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   useEffect(() => {
     if (!authed) return;
+    void carregarSetup();
     void carregarContatos();
     void carregarCampanhas();
-  }, [authed, carregarContatos, carregarCampanhas]);
+  }, [authed, carregarSetup, carregarContatos, carregarCampanhas]);
+
+  useEffect(() => {
+    if (!authed || tab !== "eventos") return;
+    void carregarEventos();
+  }, [authed, tab, carregarEventos]);
 
   const todosSelecionados = useMemo(
     () => contatos.length > 0 && contatos.every((c) => selecionados.has(c.id)),
@@ -196,7 +267,7 @@ export function AdminDashboardClient() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-zinc-900">Marketing EventosBR</h1>
+        <h1 className="text-2xl font-bold text-zinc-900">Painel EventosBR</h1>
         <button
           type="button"
           className="text-xs text-zinc-500 underline"
@@ -209,21 +280,24 @@ export function AdminDashboardClient() {
         </button>
       </div>
 
-      <nav className="flex gap-2 border-b border-zinc-200 pb-2">
-        <button
-          type="button"
-          className={`rounded-md px-3 py-1.5 text-sm font-medium ${tab === "contatos" ? "bg-emerald-100 text-emerald-900" : "text-zinc-600"}`}
-          onClick={() => setTab("contatos")}
-        >
-          Contatos
-        </button>
-        <button
-          type="button"
-          className={`rounded-md px-3 py-1.5 text-sm font-medium ${tab === "campanhas" ? "bg-emerald-100 text-emerald-900" : "text-zinc-600"}`}
-          onClick={() => setTab("campanhas")}
-        >
-          Campanhas
-        </button>
+      <nav className="flex flex-wrap gap-2 border-b border-zinc-200 pb-2">
+        {(
+          [
+            ["setup", "Produção"],
+            ["eventos", "Eventos"],
+            ["contatos", "Contatos"],
+            ["campanhas", "Campanhas"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-emerald-100 text-emerald-900" : "text-zinc-600"}`}
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
 
       {error ? (
@@ -235,6 +309,110 @@ export function AdminDashboardClient() {
         <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           {msg}
         </p>
+      ) : null}
+
+      {tab === "setup" && setup ? (
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <p className="text-sm font-medium text-zinc-900">
+            Ambiente: <span className="font-mono">{setup.environment}</span>
+            {setup.ready_for_production ? (
+              <span className="ml-2 rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">
+                Pronto para produção
+              </span>
+            ) : (
+              <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+                Ajustes pendentes
+              </span>
+            )}
+          </p>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+            {Object.entries(setup.checks).map(([k, v]) => (
+              <li
+                key={k}
+                className={`flex justify-between rounded-md border px-3 py-2 text-sm ${
+                  v === "ok" || v === "desativado" || v === "desativado_stripe" || v === "dev_sem_assinatura"
+                    ? "border-emerald-100 bg-emerald-50/50"
+                    : "border-amber-100 bg-amber-50/50"
+                }`}
+              >
+                <span className="text-zinc-700">{k.replace(/_/g, " ")}</span>
+                <span className="font-mono text-xs text-zinc-600">{v}</span>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="btn-outline mt-4 text-sm" onClick={() => void carregarSetup()}>
+            Atualizar checklist
+          </button>
+        </section>
+      ) : null}
+
+      {tab === "eventos" ? (
+        <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={buscaEvento}
+              onChange={(e) => setBuscaEvento(e.target.value)}
+              placeholder="Buscar nome ou slug…"
+              className="min-w-[200px] flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm"
+            />
+            <select
+              value={filtroPublicado}
+              onChange={(e) => setFiltroPublicado(e.target.value as typeof filtroPublicado)}
+              className="rounded-md border border-zinc-300 px-2 py-2 text-sm"
+            >
+              <option value="">Todos</option>
+              <option value="true">Publicados</option>
+              <option value="false">Ocultos</option>
+            </select>
+            <button type="button" className="btn-outline" disabled={busy} onClick={() => void carregarEventos()}>
+              Pesquisar
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-xs">
+              <thead>
+                <tr className="border-b border-zinc-200 text-zinc-500">
+                  <th className="py-2 pr-2">Evento</th>
+                  <th className="py-2 pr-2">Organizador</th>
+                  <th className="py-2 pr-2">Status</th>
+                  <th className="py-2">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eventos.map((ev) => (
+                  <tr key={ev.id} className="border-b border-zinc-100">
+                    <td className="py-2 pr-2">
+                      <p className="font-medium text-zinc-900">{ev.nome}</p>
+                      <p className="text-zinc-500">/eventos/{ev.slug}</p>
+                    </td>
+                    <td className="py-2 pr-2 text-zinc-600">
+                      {ev.organizador_nome}
+                      <br />
+                      {ev.organizador_email}
+                    </td>
+                    <td className="py-2 pr-2">
+                      {ev.publicado ? (
+                        <span className="text-emerald-700">Na vitrine</span>
+                      ) : (
+                        <span className="text-amber-700">Oculto</span>
+                      )}
+                    </td>
+                    <td className="py-2">
+                      <button
+                        type="button"
+                        className="text-emerald-700 underline"
+                        disabled={busy}
+                        onClick={() => void alternarPublicacao(ev)}
+                      >
+                        {ev.publicado ? "Ocultar" : "Publicar"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       ) : null}
 
       {tab === "contatos" ? (

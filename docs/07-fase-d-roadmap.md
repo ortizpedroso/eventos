@@ -23,7 +23,9 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 
 ## Admin plataforma
 
-- [ ] Moderação de eventos/usuários além de campanhas marketing
+- [x] Moderação de eventos (publicar/ocultar na vitrine + aba no painel admin)
+- [x] Checklist de produção (`GET /api/admin/setup` + aba Produção)
+- [ ] Moderação de usuários (bloquear conta)
 - [ ] `MARKETING_WHATSAPP_WEBHOOK_URL` em produção (opcional)
 - [ ] Restringir acesso ao painel (lista de operadores ou SSO)
 
@@ -31,4 +33,5 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 
 - [x] Testes E2E smoke (Playwright — home, eventos, documentação, alias)
 - [ ] Teste E2E fluxo completo de compra (Stripe test)
+- [x] Avisos de config incompleta no arranque (`production_checks`)
 - [ ] Monitoramento (logs estruturados, alertas em `/ready` 503)
