@@ -25,6 +25,8 @@ services:
       - ENVIRONMENT=production
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       - RATE_LIMIT_USE_REDIS=${RATE_LIMIT_USE_REDIS:-true}
+      - TICKET_EMAIL_USE_REDIS=${TICKET_EMAIL_USE_REDIS:-true}
+      - TICKET_EMAIL_MAX_ATTEMPTS=${TICKET_EMAIL_MAX_ATTEMPTS:-3}
       - TRUST_FORWARDED_HEADERS=${TRUST_FORWARDED_HEADERS:-false}
     # Evita scripts/start.sh com CRLF no Windows a partir do bind mount (.:/app)
     command:

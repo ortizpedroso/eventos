@@ -51,7 +51,13 @@ async def lifespan(app: FastAPI):
             logger.warning(
                 "CORS_ORIGINS está vazio ou '*' em produção — defina origens explícitas (URLs do front)."
             )
-    yield
+    from app.services.ticket_email import start_ticket_email_worker, stop_ticket_email_worker
+
+    start_ticket_email_worker()
+    try:
+        yield
+    finally:
+        stop_ticket_email_worker()
 
 
 _docs_on = settings.ENVIRONMENT == "development"

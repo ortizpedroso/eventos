@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
     # Em produção/staging: tentar Redis para rate limit; se falhar, usa memória do processo.
     RATE_LIMIT_USE_REDIS: bool = True
+    # Fila de e-mail de ingresso via Redis (reinício da API não perde jobs); fallback em memória.
+    TICKET_EMAIL_USE_REDIS: bool = True
+    TICKET_EMAIL_MAX_ATTEMPTS: int = 3
 
     # CORS — evitar "*" por defeito (defina origens reais em produção).
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173"

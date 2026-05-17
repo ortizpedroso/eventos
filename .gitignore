@@ -69,3 +69,6 @@ frontend/dist/
 frontend/.nuxt/
 frontend/build/
 frontend/.next/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/

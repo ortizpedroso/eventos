@@ -38,3 +38,30 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: web
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm ci
+        run: npm ci
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+      - name: Instalar browsers Playwright
+        run: npx playwright install chromium --with-deps
+      - name: Testes E2E
+        run: npm run test:e2e
+        env:
+          CI: true

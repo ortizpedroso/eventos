@@ -14,14 +14,19 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models import Ingresso
 from app.services.ingresso_qr import gerar_qr_png_bytes, ingresso_qr_payload
+from app.services.redis_conn import get_redis_optional
 from config.database import SessionLocal
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
-_queue: Queue[str] = Queue()
+_REDIS_QUEUE_KEY = "eventosbr:q:ticket_email"
+_REDIS_ATTEMPTS_PREFIX = "eventosbr:email:att:"
+
+_memory_queue: Queue[str] = Queue()
 _worker_lock = threading.Lock()
 _worker_started = False
+_stop_worker = threading.Event()
 
 
 def _smtp_configured() -> bool:
@@ -116,32 +121,100 @@ def _send_sync(ingresso_id: str) -> bool:
         db.close()
 
 
+def _use_redis_queue() -> bool:
+    return bool(settings.TICKET_EMAIL_USE_REDIS and get_redis_optional())
+
+
+def _enqueue_redis(ingresso_id: str) -> bool:
+    r = get_redis_optional()
+    if not r:
+        return False
+    try:
+        r.lpush(_REDIS_QUEUE_KEY, ingresso_id)
+        return True
+    except Exception:
+        logger.exception("Falha ao enfileirar e-mail no Redis (%s)", ingresso_id)
+        return False
+
+
+def _dequeue_next() -> str | None:
+    r = get_redis_optional()
+    if _use_redis_queue() and r:
+        try:
+            item = r.brpop(_REDIS_QUEUE_KEY, timeout=2)
+            if item:
+                return item[1]
+        except Exception:
+            logger.exception("Falha ao ler fila Redis de e-mail")
+    try:
+        return _memory_queue.get(timeout=0.5)
+    except Empty:
+        return None
+
+
+def _schedule_retry(ingresso_id: str) -> None:
+    r = get_redis_optional()
+    max_attempts = max(1, int(settings.TICKET_EMAIL_MAX_ATTEMPTS))
+    if r and _use_redis_queue():
+        key = f"{_REDIS_ATTEMPTS_PREFIX}{ingresso_id}"
+        try:
+            attempts = int(r.incr(key))
+            r.expire(key, 86_400)
+            if attempts < max_attempts:
+                import time
+
+                time.sleep(min(attempts * 2, 15))
+                r.lpush(_REDIS_QUEUE_KEY, ingresso_id)
+                logger.warning(
+                    "E-mail ingresso %s reenfileirado (tentativa %s/%s)",
+                    ingresso_id,
+                    attempts,
+                    max_attempts,
+                )
+            else:
+                logger.error(
+                    "E-mail ingresso %s abandonado após %s tentativas",
+                    ingresso_id,
+                    attempts,
+                )
+            return
+        except Exception:
+            logger.exception("Falha ao reenfileirar e-mail %s", ingresso_id)
+    logger.error("E-mail ingresso %s não enviado (sem retry em memória)", ingresso_id)
+
+
 def _worker_loop() -> None:
-    while True:
-        try:
-            ingresso_id = _queue.get(timeout=2.0)
-        except Empty:
+    while not _stop_worker.is_set():
+        ingresso_id = _dequeue_next()
+        if not ingresso_id:
             continue
-        try:
-            _send_sync(ingresso_id)
-        finally:
-            _queue.task_done()
+        ok = _send_sync(ingresso_id)
+        if not ok:
+            _schedule_retry(ingresso_id)
 
 
-def _ensure_worker() -> None:
+def start_ticket_email_worker() -> None:
     global _worker_started
     with _worker_lock:
         if _worker_started:
             return
+        _stop_worker.clear()
         t = threading.Thread(target=_worker_loop, name="ticket-email-worker", daemon=True)
         t.start()
         _worker_started = True
+        backend = "redis" if _use_redis_queue() else "memória"
+        logger.info("Worker de e-mail de ingressos iniciado (%s)", backend)
+
+
+def stop_ticket_email_worker() -> None:
+    _stop_worker.set()
 
 
 def enqueue_ticket_email(ingresso_id: str) -> None:
     """Enfileira envio assíncrono (não bloqueia request/webhook)."""
-    _ensure_worker()
-    _queue.put(ingresso_id)
+    start_ticket_email_worker()
+    if not _enqueue_redis(ingresso_id):
+        _memory_queue.put(ingresso_id)
 
 
 def _send_comunicado_sync(evento_id: str, assunto: str, mensagem: str) -> int:

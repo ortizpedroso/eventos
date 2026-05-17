@@ -4,16 +4,17 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 
 ## Produção e operação
 
-- [ ] Commit/tag de release e CI verde no remoto
+- [x] Commit/tag de release e CI verde no remoto
 - [ ] Webhook Stripe com `STRIPE_WEBHOOK_SECRET` real em produção
 - [ ] SMTP validado (SPF/DKIM) para ingressos e campanhas
 - [ ] Stripe Connect ativo (`STRIPE_SKIP_CONNECT_ON_REGISTER=false` após termos)
-- [ ] `.dockerignore` e imagens enxutas (build rápido)
+- [x] `.dockerignore` e imagens enxutas (build rápido)
 
 ## Comprador
 
-- [ ] Teste E2E: compra PIX/cartão → e-mail → ingresso na conta
-- [ ] Fila de e-mail resiliente (Redis/worker) em vez de só thread
+- [x] Teste API: compra (STRIPE_DISABLED) → ingresso pago → e-mail enfileirado (`test_fase_d.py`)
+- [ ] Teste E2E: compra PIX/cartão real no browser (Stripe test)
+- [x] Fila de e-mail resiliente (Redis com retry; fallback em memória)
 
 ## Organizador / financeiro Brasil
 
@@ -28,5 +29,6 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 
 ## Qualidade
 
-- [ ] Testes E2E (Playwright)
+- [x] Testes E2E smoke (Playwright — home, eventos, documentação, alias)
+- [ ] Teste E2E fluxo completo de compra (Stripe test)
 - [ ] Monitoramento (logs estruturados, alertas em `/ready` 503)
