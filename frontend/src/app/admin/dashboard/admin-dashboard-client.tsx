@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { adminFetch, getAdminKey, setAdminKey } from "@/lib/admin-api";
+import { adminFetch, clearAdminKey, getAdminKey, setAdminKey, validateAdminKey } from "@/lib/admin-api";
 
 type Contato = {
   id: string;
@@ -75,20 +75,42 @@ export function AdminDashboardClient() {
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupUnavailable, setSetupUnavailable] = useState(false);
 
   useEffect(() => {
     const k = getAdminKey();
-    if (k) {
-      setKeyInput(k);
-      setAuthed(true);
-    }
+    if (!k) return;
+    setKeyInput(k);
+    setLoginBusy(true);
+    void validateAdminKey(k)
+      .then(() => setAuthed(true))
+      .catch((e) => {
+        clearAdminKey();
+        setError(e instanceof Error ? e.message : "Sessão expirada ou chave inválida.");
+      })
+      .finally(() => setLoginBusy(false));
   }, []);
 
-  const entrar = () => {
-    if (!keyInput.trim()) return;
-    setAdminKey(keyInput);
-    setAuthed(true);
+  const entrar = async () => {
+    const key = keyInput.trim();
+    if (!key) {
+      setError("Informe a chave de administrador.");
+      return;
+    }
+    setLoginBusy(true);
     setError(null);
+    try {
+      await validateAdminKey(key);
+      setAdminKey(key);
+      setAuthed(true);
+    } catch (e) {
+      clearAdminKey();
+      setError(e instanceof Error ? e.message : "Não foi possível validar a chave.");
+    } finally {
+      setLoginBusy(false);
+    }
   };
 
   const carregarContatos = useCallback(async () => {
@@ -122,11 +144,21 @@ export function AdminDashboardClient() {
   }, []);
 
   const carregarSetup = useCallback(async () => {
+    setSetupLoading(true);
+    setSetupUnavailable(false);
     try {
       const r = await adminFetch<SetupStatus>("/api/admin/setup");
       setSetup(r);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar setup");
+      const msg = e instanceof Error ? e.message : "Erro ao carregar setup";
+      if (msg.includes("404") || msg.toLowerCase().includes("not found")) {
+        setSetupUnavailable(true);
+        setSetup(null);
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setSetupLoading(false);
     }
   }, []);
 
@@ -249,16 +281,35 @@ export function AdminDashboardClient() {
     return (
       <div className="mx-auto max-w-md px-4 py-12">
         <h1 className="text-xl font-bold text-zinc-900">Painel admin</h1>
-        <p className="mt-2 text-sm text-zinc-600">Chave definida em PLATFORM_ADMIN_API_KEY</p>
+        <p className="mt-2 text-sm text-zinc-600">
+          Use o mesmo valor de <code className="rounded bg-zinc-100 px-1">PLATFORM_ADMIN_API_KEY</code> no{" "}
+          <code className="rounded bg-zinc-100 px-1">.env</code> da API (Docker: reinicie o container{" "}
+          <code className="rounded bg-zinc-100 px-1">api</code> após alterar).
+        </p>
         <input
           type="password"
           value={keyInput}
           onChange={(e) => setKeyInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void entrar();
+          }}
+          disabled={loginBusy}
           className="mt-4 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-mono"
           placeholder="Chave de administrador"
+          autoComplete="off"
         />
-        <button type="button" className="btn-primary mt-3 w-full" onClick={entrar}>
-          Entrar
+        {error ? (
+          <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          className="btn-primary mt-3 w-full disabled:opacity-60"
+          disabled={loginBusy || !keyInput.trim()}
+          onClick={() => void entrar()}
+        >
+          {loginBusy ? "Validando…" : "Entrar"}
         </button>
       </div>
     );
@@ -272,8 +323,10 @@ export function AdminDashboardClient() {
           type="button"
           className="text-xs text-zinc-500 underline"
           onClick={() => {
-            sessionStorage.removeItem("eventosbr_platform_admin_key");
+            clearAdminKey();
             setAuthed(false);
+            setSetup(null);
+            setError(null);
           }}
         >
           Sair do painel
@@ -309,6 +362,21 @@ export function AdminDashboardClient() {
         <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           {msg}
         </p>
+      ) : null}
+
+      {tab === "setup" && setupLoading ? (
+        <p className="text-sm text-zinc-500">Carregando checklist de produção…</p>
+      ) : null}
+
+      {tab === "setup" && setupUnavailable ? (
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-medium">Checklist indisponível nesta versão da API</p>
+          <p className="mt-2">
+            Atualize o container Docker:{" "}
+            <code className="rounded bg-white px-1">docker compose up -d --build api</code>
+          </p>
+          <p className="mt-2 text-xs">Enquanto isso, use as abas Contatos, Campanhas e Eventos.</p>
+        </section>
       ) : null}
 
       {tab === "setup" && setup ? (
