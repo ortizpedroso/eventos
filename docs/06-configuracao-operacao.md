@@ -31,7 +31,7 @@ Serviços típicos:
 - **`redis`**: Redis 7; `healthcheck` com `redis-cli ping`
 - **`web`**: build `frontend/`, porta 3000, `INTERNAL_API_URL=http://api:8000`; arranca só com **`api` healthy**
 
-**Importante:** no Windows, volumes com CRLF podem quebrar scripts; o compose usa `command` inline para a API evitar `start.sh` com problemas de fim de linha.
+**Importante:** no Windows, volumes com CRLF podem quebrar scripts shell; o compose usa `command` inline (`alembic` + `uvicorn`) na API.
 
 ## Migrações de base de dados
 

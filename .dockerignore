@@ -45,4 +45,3 @@ build
 docs
 *.md
 !README.md
-scripts/check-stack.ps1

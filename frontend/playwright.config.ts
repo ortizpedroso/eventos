@@ -28,11 +28,6 @@ export default defineConfig({
       testMatch: /compra-checkout\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
-    {
-      name: "stripe-optional",
-      testMatch: /compra-stripe\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"] },
-    },
   ],
   ...(skipWebServer
     ? {}

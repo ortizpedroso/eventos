@@ -24,5 +24,5 @@ USER appuser
 # Expõe porta
 EXPOSE 8000
 
-# Comando padrão da imagem (Compose sobrescreve com `command:` para evitar CRLF em start.sh no mount Windows)
+# Comando padrão da imagem (Compose sobrescreve com `command:` inline no mount Windows)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

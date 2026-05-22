@@ -28,7 +28,7 @@ services:
       - TICKET_EMAIL_USE_REDIS=${TICKET_EMAIL_USE_REDIS:-true}
       - TICKET_EMAIL_MAX_ATTEMPTS=${TICKET_EMAIL_MAX_ATTEMPTS:-3}
       - TRUST_FORWARDED_HEADERS=${TRUST_FORWARDED_HEADERS:-false}
-    # Evita scripts/start.sh com CRLF no Windows a partir do bind mount (.:/app)
+    # Comando inline evita CRLF em scripts shell no bind mount Windows (.:/app)
     command:
       - /bin/sh
       - -c
