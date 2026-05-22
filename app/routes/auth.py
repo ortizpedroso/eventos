@@ -9,12 +9,21 @@ import stripe
 from app.models import Usuario, get_db
 from app.schemas.usuario import (
     AtualizarPerfilRequest,
+    OAuthLoginRequest,
     UsuarioCreate,
     UsuarioLogin,
     UsuarioResponse,
     Token,
 )
-from app.deps.rate_limit import rate_limit_login, rate_limit_register
+from app.deps.rate_limit import rate_limit_login, rate_limit_oauth, rate_limit_register
+from app.services.oauth_verify import (
+    OAuthTokenInvalid,
+    oauth_apple_enabled,
+    oauth_google_enabled,
+    verify_apple_id_token,
+    verify_google_id_token,
+)
+from app.services.oauth_usuario import obter_ou_criar_usuario_oauth
 from app.services.auth import create_access_token, decode_token, hash_password, verify_password
 from app.utils.public_errors import STRIPE_CLIENTE
 from config.settings import settings
@@ -234,7 +243,19 @@ async def login(
         func.lower(Usuario.email) == email
     ).first()
 
-    if not usuario or not verify_password(credenciais.senha, usuario.senha_hash):
+    if not usuario:
+        raise HTTPException(status_code=401, detail="Email ou senha incorretos")
+    if not usuario.senha_hash:
+        prov = (usuario.auth_provider or "social").capitalize()
+        if usuario.auth_provider == "google":
+            prov = "Google"
+        elif usuario.auth_provider == "apple":
+            prov = "Apple"
+        raise HTTPException(
+            status_code=401,
+            detail=f"Esta conta usa login com {prov}. Use o botão correspondente abaixo.",
+        )
+    if not verify_password(credenciais.senha, usuario.senha_hash):
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
 
     if not usuario.ativo:
@@ -253,6 +274,98 @@ async def login(
         "token_type": "bearer",
         "usuario": UsuarioResponse.model_validate(usuario)
     }
+
+
+def _token_response(usuario: Usuario) -> dict:
+    access_token = create_access_token(
+        data={"sub": usuario.id},
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "usuario": UsuarioResponse.model_validate(usuario),
+    }
+
+
+def _nome_from_oauth_claims(payload: dict, fallback_email: str) -> str:
+    name = (payload.get("name") or "").strip()
+    if name:
+        return name
+    given = (payload.get("given_name") or "").strip()
+    family = (payload.get("family_name") or "").strip()
+    if given or family:
+        return f"{given} {family}".strip()
+    return fallback_email.split("@")[0] or "Usuário"
+
+
+@router.post("/google", response_model=Token)
+async def login_google(
+    body: OAuthLoginRequest,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_oauth),
+):
+    if not oauth_google_enabled():
+        raise HTTPException(status_code=503, detail="Login com Google não está configurado.")
+    try:
+        claims = verify_google_id_token(body.id_token)
+    except OAuthTokenInvalid as e:
+        raise HTTPException(status_code=401, detail=str(e)) from e
+
+    email = str(claims.get("email", "")).strip().lower()
+    sub = str(claims.get("sub", "")).strip()
+    nome = _nome_from_oauth_claims(claims, email)
+    tel = _normalizar_telefone_usuario(body.telefone) if body.telefone else None
+
+    usuario = obter_ou_criar_usuario_oauth(
+        db,
+        provider="google",
+        provider_id=sub,
+        email=email,
+        nome=nome,
+        tipo=body.tipo,
+        aceita_comunicacao_email=body.aceita_comunicacao_email,
+        aceita_comunicacao_whatsapp=body.aceita_comunicacao_whatsapp,
+        telefone=tel,
+    )
+    return _token_response(usuario)
+
+
+@router.post("/apple", response_model=Token)
+async def login_apple(
+    body: OAuthLoginRequest,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_oauth),
+):
+    if not oauth_apple_enabled():
+        raise HTTPException(status_code=503, detail="Login com Apple não está configurado.")
+    try:
+        claims = verify_apple_id_token(body.id_token)
+    except OAuthTokenInvalid as e:
+        raise HTTPException(status_code=401, detail=str(e)) from e
+
+    sub = str(claims.get("sub", "")).strip()
+    email = str(claims.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(
+            status_code=400,
+            detail="Apple não enviou email. Remova o app da lista em Ajustes → Apple ID → Senha e Segurança → Apps e tente de novo.",
+        )
+    nome = _nome_from_oauth_claims(claims, email)
+    tel = _normalizar_telefone_usuario(body.telefone) if body.telefone else None
+
+    usuario = obter_ou_criar_usuario_oauth(
+        db,
+        provider="apple",
+        provider_id=sub,
+        email=email,
+        nome=nome,
+        tipo=body.tipo,
+        aceita_comunicacao_email=body.aceita_comunicacao_email,
+        aceita_comunicacao_whatsapp=body.aceita_comunicacao_whatsapp,
+        telefone=tel,
+    )
+    return _token_response(usuario)
 
 
 async def get_usuario_atual(
@@ -309,8 +422,13 @@ async def atualizar_perfil(
         if existente:
             raise HTTPException(status_code=400, detail="Este email já está cadastrado.")
 
-    precisa_senha = email_mudou or bool(body.nova_senha)
-    if precisa_senha:
+    if email_mudou and not usuario.senha_hash and not body.nova_senha:
+        raise HTTPException(
+            status_code=400,
+            detail="Conta social: defina uma senha em «Nova senha» antes de alterar o email, ou continue usando Google/Apple.",
+        )
+
+    if (email_mudou or body.nova_senha) and usuario.senha_hash:
         if not body.senha_atual or not verify_password(body.senha_atual, usuario.senha_hash):
             raise HTTPException(
                 status_code=400,

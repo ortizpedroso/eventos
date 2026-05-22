@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # true = cadastro de organizador sem criar conta Connect (só Customer). Até aceitar termos em Settings > Connect.
     STRIPE_SKIP_CONNECT_ON_REGISTER: bool = False
 
+    # OAuth (Google / Apple Sign In)
+    GOOGLE_OAUTH_CLIENT_ID: str = ""
+    APPLE_OAUTH_CLIENT_ID: str = ""
+
     # JWT
     SECRET_KEY: str | None = None
     ALGORITHM: str = "HS256"

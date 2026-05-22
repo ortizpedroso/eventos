@@ -43,9 +43,15 @@ function contentSecurityPolicy(): string {
     "img-src 'self' data: https: http: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
     "style-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline' https://js.stripe.com",
-    `connect-src ${[...connect].join(" ")}`,
-    "frame-src https://js.stripe.com https://hooks.stripe.com",
+    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://accounts.google.com https://appleid.cdn-apple.com",
+    "connect-src "
+      + [
+        ...connect,
+        "https://accounts.google.com",
+        "https://appleid.apple.com",
+        "https://appleid.cdn-apple.com",
+      ].join(" "),
+    "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://appleid.apple.com",
   ].join("; ");
 }
 

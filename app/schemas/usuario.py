@@ -25,6 +25,24 @@ class UsuarioLogin(BaseModel):
     email: EmailStr
     senha: str
 
+
+class OAuthLoginRequest(BaseModel):
+    """ID token emitido pelo Google ou Apple no browser."""
+
+    id_token: str = Field(min_length=20, max_length=8192)
+    tipo: str = "cliente"
+    aceita_comunicacao_email: bool = False
+    aceita_comunicacao_whatsapp: bool = False
+    telefone: str | None = Field(default=None, max_length=20)
+
+    @field_validator("tipo", mode="before")
+    @classmethod
+    def normalizar_tipo_oauth(cls, v: object) -> str:
+        if not isinstance(v, str):
+            return "cliente"
+        s = v.strip().lower()
+        return s if s in ("cliente", "organizador") else "cliente"
+
 class UsuarioResponse(BaseModel):
     id: str
     email: str

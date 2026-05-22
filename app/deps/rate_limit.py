@@ -127,5 +127,9 @@ def rate_limit_register(request: Request) -> None:
     enforce_rate_limit(request, "auth_register")
 
 
+def rate_limit_oauth(request: Request) -> None:
+    enforce_rate_limit(request, "auth_login")
+
+
 def rate_limit_checkout(request: Request) -> None:
     enforce_rate_limit(request, "checkout_criar")

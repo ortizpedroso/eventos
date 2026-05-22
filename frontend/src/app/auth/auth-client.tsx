@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
+import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
 import type { TokenResponse, Usuario } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
@@ -94,6 +95,20 @@ export default function AuthClient() {
     router.replace(qs ? `/auth?${qs}` : "/auth");
   }
 
+  function finishAuth(data: TokenResponse) {
+    setToken(data.access_token);
+    dispatchAuthSync();
+    const next = searchParams.get("next");
+    if (isSafeInternalNext(next) && data.usuario.tipo !== "organizador") {
+      window.localStorage.removeItem(TOKEN_KEY);
+      dispatchAuthSync();
+      router.replace(authHrefPrecisaContaOrganizador(next));
+      return;
+    }
+    setChecandoSessao(true);
+    redirecionar(destinoPosAuth(data.usuario, next));
+  }
+
   async function onSubmit(formData: FormData) {
     setLoading(true);
     setError(null);
@@ -133,19 +148,7 @@ export default function AuthClient() {
         },
       );
 
-      setToken(data.access_token);
-      dispatchAuthSync();
-
-      const next = searchParams.get("next");
-      if (isSafeInternalNext(next) && data.usuario.tipo !== "organizador") {
-        window.localStorage.removeItem(TOKEN_KEY);
-        dispatchAuthSync();
-        router.replace(authHrefPrecisaContaOrganizador(next));
-        return;
-      }
-
-      setChecandoSessao(true);
-      redirecionar(destinoPosAuth(data.usuario, next));
+      finishAuth(data);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Erro";
       const lower = message.toLowerCase();
@@ -324,6 +327,19 @@ export default function AuthClient() {
             {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Cadastrar"}
           </button>
         </form>
+
+        <div className="mt-6">
+          <OAuthLoginButtons
+            mode={mode}
+            tipoRegistro={defaultTipoRegistro}
+            aceitaComEmail={aceitaComEmail}
+            aceitaComWhatsapp={aceitaComWhatsapp}
+            telefoneCadastro={telefoneCadastro}
+            disabled={loading}
+            onSuccess={finishAuth}
+            onError={setError}
+          />
+        </div>
 
         <div className="mt-6 text-center text-sm text-zinc-600">
           {mode === "login" ? "Não tem uma conta?" : "Já possui conta?"}{" "}

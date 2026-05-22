@@ -10,7 +10,10 @@ class Usuario(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String, unique=True, index=True)
     nome = Column(String)
-    senha_hash = Column(String)
+    senha_hash = Column(String, nullable=True)
+    # email | google | apple
+    auth_provider = Column(String(20), default="email", nullable=False)
+    auth_provider_id = Column(String(255), nullable=True, index=True)
     tipo = Column(String)  # "cliente" ou "organizador"
 
     # Stripe

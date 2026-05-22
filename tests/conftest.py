@@ -2,5 +2,17 @@
 
 import os
 
+import pytest
+
 os.environ["ENVIRONMENT"] = "test"
 os.environ["RATE_LIMIT_USE_REDIS"] = "false"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _sync_test_db_schema():
+    """Recria o schema em memória quando o modelo SQLAlchemy muda (ex.: colunas OAuth)."""
+    from config.database import Base
+    from tests import test_api
+
+    Base.metadata.drop_all(bind=test_api.engine)
+    Base.metadata.create_all(bind=test_api.engine)
