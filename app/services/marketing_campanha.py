@@ -135,11 +135,16 @@ def _enviar_whatsapp_webhook(destino_tel: str, nome: str, mensagem: str) -> tupl
     url = (settings.MARKETING_WHATSAPP_WEBHOOK_URL or "").strip()
     if not url:
         return False, "Webhook WhatsApp não configurado (MARKETING_WHATSAPP_WEBHOOK_URL)."
+    headers: dict[str, str] = {}
+    token = (settings.MARKETING_WHATSAPP_WEBHOOK_TOKEN or "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     try:
         with httpx.Client(timeout=20.0) as client:
             r = client.post(
                 url,
                 json={"telefone": destino_tel, "nome": nome, "mensagem": mensagem},
+                headers=headers,
             )
         if r.status_code >= 400:
             return False, f"Webhook HTTP {r.status_code}"

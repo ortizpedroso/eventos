@@ -253,7 +253,7 @@ eventosbr/
 - **SQLAlchemy** - ORM para banco de dados
 - **Pydantic** - Validação de dados
 - **Stripe** - Processamento de pagamentos
-- **PyJWT** - Autenticação com JWT
+- **python-jose** - Autenticação com JWT
 - **python-slugify** - Geração de slugs
 
 ## 🐛 Troubleshooting

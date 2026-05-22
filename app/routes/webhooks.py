@@ -19,7 +19,8 @@ def _parse_stripe_webhook_event(payload: bytes, sig_header: str | None) -> dict:
     """Valida assinatura em produção; em dev permite JSON sem whsec configurado."""
     whsec = (settings.STRIPE_WEBHOOK_SECRET or "").strip()
     dev_sem_secret = (
-        settings.DEBUG
+        settings.ENVIRONMENT != "production"
+        and settings.DEBUG
         and settings.ENVIRONMENT == "development"
         and (not whsec or whsec == _WEBHOOK_PLACEHOLDER)
     )
@@ -101,7 +102,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 @router.post("/mock-payment")
 async def mock_payment(ingresso_id: str, db: Session = Depends(get_db)):
     """(Apenas para Desenvolvimento) Simula a aprovação de um pagamento sem precisar do Stripe CLI"""
-    if not settings.DEBUG or getattr(settings, "ENVIRONMENT", "") != "development":
+    if (
+        settings.ENVIRONMENT == "production"
+        or not settings.DEBUG
+        or settings.ENVIRONMENT != "development"
+    ):
         raise HTTPException(
             status_code=403, detail="Apenas permitido em ambiente de desenvolvimento"
         )

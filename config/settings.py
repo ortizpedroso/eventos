@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     PLATFORM_ADMIN_API_KEY: str = ""
     # Opcional: POST {telefone, nome, mensagem} para cada destinatário WhatsApp
     MARKETING_WHATSAPP_WEBHOOK_URL: str = ""
+    # Opcional: Bearer enviado no header Authorization ao chamar o webhook acima
+    MARKETING_WHATSAPP_WEBHOOK_TOKEN: str = ""
 
     # Ambiente
     DEBUG: bool = False

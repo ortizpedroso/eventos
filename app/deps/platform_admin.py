@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 from fastapi import Header, HTTPException
 
 from config.settings import settings
@@ -17,5 +19,5 @@ async def require_platform_admin(
             detail="Exportação administrativa desativada. Defina PLATFORM_ADMIN_API_KEY no .env da API.",
         )
     received = (x_platform_admin_key or "").strip()
-    if not received or received != expected:
+    if not received or not secrets.compare_digest(received, expected):
         raise HTTPException(status_code=401, detail="Chave de administrador inválida.")
