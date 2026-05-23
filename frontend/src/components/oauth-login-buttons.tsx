@@ -82,7 +82,7 @@ export function OAuthLoginButtons({
   onSuccess,
   onError,
 }: OAuthLoginButtonsProps) {
-  const googleRef = useRef<HTMLDivElement>(null);
+  const [googleHost, setGoogleHost] = useState<HTMLDivElement | null>(null);
   const onSuccessRef = useRef(onSuccess);
   const onErrorRef = useRef(onError);
   const gsiInitClientRef = useRef<string | null>(null);
@@ -147,7 +147,7 @@ export function OAuthLoginButtons({
   }, [oauthBody]);
 
   useEffect(() => {
-    if (!googleEnabled || !googleRef.current) {
+    if (!googleEnabled || !googleHost) {
       return;
     }
 
@@ -161,7 +161,7 @@ export function OAuthLoginButtons({
     void (async () => {
       try {
         await loadScript("https://accounts.google.com/gsi/client", "google-gsi");
-        if (cancelled || !window.google?.accounts?.id || !googleRef.current) return;
+        if (cancelled || !window.google?.accounts?.id || !googleHost) return;
 
         if (gsiInitClientRef.current !== googleClientId) {
           window.google.accounts.id.initialize({
@@ -178,10 +178,9 @@ export function OAuthLoginButtons({
           gsiInitClientRef.current = googleClientId;
         }
 
-        const host = googleRef.current;
-        host.replaceChildren();
-        const width = clampGoogleWidth(host.offsetWidth || 300);
-        window.google.accounts.id.renderButton(host, {
+        googleHost.replaceChildren();
+        const width = clampGoogleWidth(googleHost.offsetWidth || 300);
+        window.google.accounts.id.renderButton(googleHost, {
           theme: "outline",
           size: "large",
           width,
@@ -201,7 +200,7 @@ export function OAuthLoginButtons({
     return () => {
       cancelled = true;
     };
-  }, [googleClientId, googleEnabled, mode, postGoogle]);
+  }, [googleClientId, googleEnabled, googleHost, mode, postGoogle]);
 
   const isDisabled = disabled || busy;
   const googleLabel = mode === "register" ? "Cadastrar com Google" : "Continuar com Google";
@@ -221,8 +220,8 @@ export function OAuthLoginButtons({
 
       {googleEnabled ? (
         <div
-          ref={googleRef}
-          className={`flex min-h-[44px] w-full justify-center overflow-hidden ${isDisabled ? "pointer-events-none opacity-50" : ""}`}
+          ref={setGoogleHost}
+          className={`flex h-11 w-full max-w-[400px] items-center justify-center overflow-hidden ${isDisabled ? "pointer-events-none opacity-50" : ""}`}
           aria-hidden={!googleReady}
         />
       ) : (

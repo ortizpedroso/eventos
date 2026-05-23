@@ -33,6 +33,9 @@ type Props = {
   precoIngresso: number;
   limiteIngressosPorCpf?: number | null;
   embedded?: boolean;
+  /** Sessão já obtida pela página pai — evita refetch e layout shift. */
+  usuarioInicial?: Usuario | null;
+  sessaoInicialResolvida?: boolean;
 };
 
 type CheckoutStep = 1 | 2 | 3;
@@ -344,6 +347,8 @@ export function ComprarIngresso({
   precoIngresso,
   limiteIngressosPorCpf = null,
   embedded = false,
+  usuarioInicial = null,
+  sessaoInicialResolvida = false,
 }: Props) {
   const authLoginHref = authHrefParaComprarIngresso(eventoSlug);
   const authRegisterHref = authHrefParaComprarIngresso(eventoSlug, "register");
@@ -375,10 +380,14 @@ export function ComprarIngresso({
   } | null>(null);
   const [cupomBusy, setCupomBusy] = useState(false);
   const [cupomMsg, setCupomMsg] = useState<string | null>(null);
-  const [sessaoUsuario, setSessaoUsuario] = useState<Usuario | null>(null);
-  const [temToken, setTemToken] = useState(false);
-  const [checandoSessao, setChecandoSessao] = useState(true);
-  const sessaoCarregadaRef = useRef(false);
+  const [sessaoUsuario, setSessaoUsuario] = useState<Usuario | null>(
+    sessaoInicialResolvida ? usuarioInicial : null,
+  );
+  const [temToken, setTemToken] = useState(
+    sessaoInicialResolvida ? Boolean(usuarioInicial) : false,
+  );
+  const [checandoSessao, setChecandoSessao] = useState(!sessaoInicialResolvida);
+  const sessaoCarregadaRef = useRef(sessaoInicialResolvida);
 
   const stripePromise = useMemo(() => getStripe(), []);
 
@@ -398,6 +407,26 @@ export function ComprarIngresso({
   }, [reservadoAte, step]);
 
   useEffect(() => {
+    if (!sessaoInicialResolvida) return;
+    setSessaoUsuario(usuarioInicial);
+    setTemToken(Boolean(usuarioInicial));
+    setChecandoSessao(false);
+    sessaoCarregadaRef.current = true;
+  }, [sessaoInicialResolvida, usuarioInicial]);
+
+  useEffect(() => {
+    if (sessaoInicialResolvida) {
+      const onSync = () => {
+        void (async () => {
+          const u = await fetchSession();
+          setSessaoUsuario(u);
+          setTemToken(Boolean(u));
+        })();
+      };
+      window.addEventListener(AUTH_SYNC_EVENT, onSync);
+      return () => window.removeEventListener(AUTH_SYNC_EVENT, onSync);
+    }
+
     async function carregarSessao(silencioso = false) {
       if (!silencioso && !sessaoCarregadaRef.current) {
         setChecandoSessao(true);
@@ -414,7 +443,7 @@ export function ComprarIngresso({
     return () => {
       window.removeEventListener(AUTH_SYNC_EVENT, onSync);
     };
-  }, []);
+  }, [sessaoInicialResolvida]);
 
   const logado = temToken || Boolean(sessaoUsuario);
   const devCheckout = isDevCheckoutWarning();
@@ -699,9 +728,8 @@ export function ComprarIngresso({
             </div>
           )}
 
-          {checandoSessao ? (
-            <div className="min-h-[280px] rounded-lg border border-zinc-200 bg-zinc-100/80" aria-hidden />
-          ) : !logado ? (
+          <div className="min-h-[300px]">
+          {checandoSessao ? null : !logado ? (
             <CheckoutAuthPanel
               authLoginHref={authLoginHref}
               authRegisterHref={authRegisterHref}
@@ -857,6 +885,7 @@ export function ComprarIngresso({
               ) : null}
             </>
           )}
+          </div>
         </div>
       ) : step === 2 && clientSecret && stripePubOk ? (
         <div className="space-y-4">

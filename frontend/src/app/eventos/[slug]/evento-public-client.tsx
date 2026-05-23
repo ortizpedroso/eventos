@@ -8,6 +8,7 @@ import { CompraInfoConfianca } from "@/components/compra-info-confianca";
 import { EventoHeroBanner } from "@/components/evento-hero-banner";
 import { EventoPoliticaReembolso } from "@/components/evento-politica-reembolso";
 import { EventoResumoRapido } from "@/components/evento-resumo-rapido";
+import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { apiFetch, fetchSession } from "@/lib/api";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { formatEventoDataHora } from "@/lib/eventos";
@@ -80,6 +81,17 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
       cancelled = true;
     };
   }, [slug]);
+
+  useEffect(() => {
+    const onSync = () => {
+      void (async () => {
+        const u = await fetchSession();
+        setMe(u);
+      })();
+    };
+    window.addEventListener(AUTH_SYNC_EVENT, onSync);
+    return () => window.removeEventListener(AUTH_SYNC_EVENT, onSync);
+  }, []);
 
   const precoFmt = useMemo(() => {
     if (!evento) return "";
@@ -196,6 +208,8 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
                   eventoNome={evento.nome}
                   precoIngresso={Number(evento.preco_compra ?? evento.preco_ingresso)}
                   limiteIngressosPorCpf={evento.limite_ingressos_por_cpf ?? null}
+                  usuarioInicial={me}
+                  sessaoInicialResolvida
                 />
               </div>
             </aside>

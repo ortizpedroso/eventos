@@ -1,13 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 
-import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
 import { apiFetch } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import { mapCheckoutError } from "@/lib/checkout-errors";
 import type { TokenResponse } from "@/lib/types";
+
+const OAuthLoginButtons = dynamic(
+  () =>
+    import("@/components/oauth-login-buttons").then((m) => ({
+      default: m.OAuthLoginButtons,
+    })),
+  {
+    ssr: false,
+    loading: () => <div className="h-11 w-full max-w-[400px] rounded-md bg-sky-100/60" aria-hidden />,
+  },
+);
 
 type Props = {
   authLoginHref: string;
@@ -21,6 +32,12 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  const [mostrarOAuth, setMostrarOAuth] = useState(false);
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => setMostrarOAuth(true));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
 
   const onOAuthSuccess = useCallback(
     (_data: TokenResponse) => {
@@ -70,18 +87,22 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
         Leva cerca de 1 minuto. Você permanece neste evento — sem perder o ingresso.
       </p>
 
-      <div className="mt-4">
-        <OAuthLoginButtons
-          mode="register"
-          tipoRegistro="cliente"
-          aceitaComEmail={false}
-          aceitaComWhatsapp={false}
-          telefoneCadastro=""
-          disabled={busy}
-          variant="checkout"
-          onSuccess={onOAuthSuccess}
-          onError={onOAuthError}
-        />
+      <div className="mt-4 min-h-[44px]">
+        {mostrarOAuth ? (
+          <OAuthLoginButtons
+            mode="register"
+            tipoRegistro="cliente"
+            aceitaComEmail={false}
+            aceitaComWhatsapp={false}
+            telefoneCadastro=""
+            disabled={busy}
+            variant="checkout"
+            onSuccess={onOAuthSuccess}
+            onError={onOAuthError}
+          />
+        ) : (
+          <div className="h-11 w-full max-w-[400px] rounded-md bg-sky-100/60" aria-hidden />
+        )}
       </div>
 
       <form onSubmit={(e) => void compraRapida(e)} className="mt-4 space-y-3 border-t border-sky-200/80 pt-4">
