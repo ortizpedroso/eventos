@@ -21,9 +21,10 @@ const ComprarIngressoLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">
-        Carregando área de pagamento…
-      </div>
+      <div
+        className="min-h-[360px] rounded-lg border border-zinc-200 bg-zinc-100/80"
+        aria-label="Carregando área de pagamento"
+      />
     ),
   },
 );
@@ -183,7 +184,7 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
           <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start">
             <aside
               id="comprar"
-              className="order-1 scroll-mt-24 rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm lg:sticky lg:top-24 lg:order-2"
+              className="order-1 scroll-mt-24 rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm lg:order-2 lg:self-start"
               aria-label="Compra de ingresso"
             >
               <EventoPoliticaReembolso />
@@ -348,14 +349,17 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
       )}
 
       {evento.publicado ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm lg:hidden">
-          <a
-            href="#comprar"
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] lg:hidden">
+          <button
+            type="button"
             className="btn-success flex w-full items-center justify-center gap-2 text-white"
+            onClick={() => {
+              document.getElementById("comprar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
           >
             <span>Comprar ingresso</span>
             <span className="font-semibold">{precoFmt}</span>
-          </a>
+          </button>
         </div>
       ) : null}
     </div>

@@ -7,7 +7,7 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CheckoutStepper } from "@/components/checkout-stepper";
 import { CheckoutAuthPanel } from "@/components/checkout-auth-panel";
@@ -378,6 +378,7 @@ export function ComprarIngresso({
   const [sessaoUsuario, setSessaoUsuario] = useState<Usuario | null>(null);
   const [temToken, setTemToken] = useState(false);
   const [checandoSessao, setChecandoSessao] = useState(true);
+  const sessaoCarregadaRef = useRef(false);
 
   const stripePromise = useMemo(() => getStripe(), []);
 
@@ -397,14 +398,17 @@ export function ComprarIngresso({
   }, [reservadoAte, step]);
 
   useEffect(() => {
-    async function carregarSessao() {
-      setChecandoSessao(true);
+    async function carregarSessao(silencioso = false) {
+      if (!silencioso && !sessaoCarregadaRef.current) {
+        setChecandoSessao(true);
+      }
       const u = await fetchSession();
       setSessaoUsuario(u);
       setTemToken(Boolean(u));
       setChecandoSessao(false);
+      sessaoCarregadaRef.current = true;
     }
-    const onSync = () => void carregarSessao();
+    const onSync = () => void carregarSessao(true);
     void carregarSessao();
     window.addEventListener(AUTH_SYNC_EVENT, onSync);
     return () => {
@@ -414,6 +418,14 @@ export function ComprarIngresso({
 
   const logado = temToken || Boolean(sessaoUsuario);
   const devCheckout = isDevCheckoutWarning();
+
+  const recarregarSessaoPosAuth = useCallback(() => {
+    void (async () => {
+      const u = await fetchSession();
+      setSessaoUsuario(u);
+      setTemToken(Boolean(u));
+    })();
+  }, []);
 
   const ehCortesia = Number.isFinite(precoIngresso) && precoIngresso < 0.5;
   const precoCentavosBase = ehCortesia ? 0 : Math.round(precoIngresso * 100);
@@ -688,18 +700,12 @@ export function ComprarIngresso({
           )}
 
           {checandoSessao ? (
-            <p className="text-xs text-zinc-500">Verificando sessão…</p>
+            <div className="min-h-[280px] rounded-lg border border-zinc-200 bg-zinc-100/80" aria-hidden />
           ) : !logado ? (
             <CheckoutAuthPanel
               authLoginHref={authLoginHref}
               authRegisterHref={authRegisterHref}
-              onAuthenticated={() => {
-                void (async () => {
-                  const u = await fetchSession();
-                  setSessaoUsuario(u);
-                  setTemToken(Boolean(u));
-                })();
-              }}
+              onAuthenticated={recarregarSessaoPosAuth}
             />
           ) : (
             <>

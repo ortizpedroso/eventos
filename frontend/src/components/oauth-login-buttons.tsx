@@ -67,6 +67,10 @@ function GoogleIcon() {
   );
 }
 
+function clampGoogleWidth(px: number): number {
+  return Math.min(400, Math.max(200, Math.round(px)));
+}
+
 export function OAuthLoginButtons({
   mode,
   tipoRegistro,
@@ -79,9 +83,21 @@ export function OAuthLoginButtons({
   onError,
 }: OAuthLoginButtonsProps) {
   const googleRef = useRef<HTMLDivElement>(null);
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  const gsiInitClientRef = useRef<string | null>(null);
+  const gsiRenderedKeyRef = useRef<string | null>(null);
   const [oauthConfig, setOauthConfig] = useState<OAuthConfig | null>(null);
   const [googleReady, setGoogleReady] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   const googleClientId = ENV_GOOGLE || oauthConfig?.google_client_id?.trim() || "";
   const googleEnabled = Boolean(googleClientId);
@@ -114,71 +130,78 @@ export function OAuthLoginButtons({
     [tipoRegistro, aceitaComEmail, aceitaComWhatsapp, telefoneCadastro],
   );
 
-  const postGoogle = useCallback(
-    async (idToken: string) => {
-      setBusy(true);
-      try {
-        const data = await apiFetch<TokenResponse>("/api/auth/google", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ id_token: idToken, ...oauthBody() }),
-        });
-        onSuccess(data);
-      } catch (e) {
-        onError(e instanceof Error ? e.message : "Erro no login social");
-      } finally {
-        setBusy(false);
-      }
-    },
-    [oauthBody, onSuccess, onError],
-  );
-
-  const handleGoogleCredential = useCallback(
-    (response: GoogleCredentialResponse) => {
-      const token = response.credential?.trim();
-      if (!token) {
-        onError("Google não devolveu credencial.");
-        return;
-      }
-      void postGoogle(token);
-    },
-    [postGoogle, onError],
-  );
+  const postGoogle = useCallback(async (idToken: string) => {
+    setBusy(true);
+    try {
+      const data = await apiFetch<TokenResponse>("/api/auth/google", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id_token: idToken, ...oauthBody() }),
+      });
+      onSuccessRef.current(data);
+    } catch (e) {
+      onErrorRef.current(e instanceof Error ? e.message : "Erro no login social");
+    } finally {
+      setBusy(false);
+    }
+  }, [oauthBody]);
 
   useEffect(() => {
     if (!googleEnabled || !googleRef.current) {
-      setGoogleReady(false);
       return;
     }
+
+    const renderKey = `${googleClientId}:${mode}`;
+    if (gsiRenderedKeyRef.current === renderKey) {
+      return;
+    }
+
     let cancelled = false;
-    setGoogleReady(false);
 
     void (async () => {
       try {
         await loadScript("https://accounts.google.com/gsi/client", "google-gsi");
         if (cancelled || !window.google?.accounts?.id || !googleRef.current) return;
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: handleGoogleCredential,
-        });
-        googleRef.current.replaceChildren();
-        window.google.accounts.id.renderButton(googleRef.current, {
+
+        if (gsiInitClientRef.current !== googleClientId) {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: (response: GoogleCredentialResponse) => {
+              const token = response.credential?.trim();
+              if (!token) {
+                onErrorRef.current("Google não devolveu credencial.");
+                return;
+              }
+              void postGoogle(token);
+            },
+          });
+          gsiInitClientRef.current = googleClientId;
+        }
+
+        const host = googleRef.current;
+        host.replaceChildren();
+        const width = clampGoogleWidth(host.offsetWidth || 300);
+        window.google.accounts.id.renderButton(host, {
           theme: "outline",
           size: "large",
-          width: "100%",
+          width,
           text: mode === "register" ? "signup_with" : "signin_with",
           locale: "pt-BR",
         });
-        if (!cancelled) setGoogleReady(true);
+
+        if (!cancelled) {
+          gsiRenderedKeyRef.current = renderKey;
+          setGoogleReady(true);
+        }
       } catch {
-        if (!cancelled) onError("Não foi possível carregar o login Google.");
+        if (!cancelled) onErrorRef.current("Não foi possível carregar o login Google.");
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [googleClientId, googleEnabled, handleGoogleCredential, mode, onError]);
+  }, [googleClientId, googleEnabled, mode, postGoogle]);
 
   const isDisabled = disabled || busy;
   const googleLabel = mode === "register" ? "Cadastrar com Google" : "Continuar com Google";
@@ -199,7 +222,7 @@ export function OAuthLoginButtons({
       {googleEnabled ? (
         <div
           ref={googleRef}
-          className={`flex min-h-[44px] justify-center ${isDisabled ? "pointer-events-none opacity-50" : ""}`}
+          className={`flex min-h-[44px] w-full justify-center overflow-hidden ${isDisabled ? "pointer-events-none opacity-50" : ""}`}
           aria-hidden={!googleReady}
         />
       ) : (
@@ -207,7 +230,7 @@ export function OAuthLoginButtons({
           type="button"
           disabled={isDisabled}
           title={MSG_NAO_CONFIGURADO}
-          onClick={() => onError(MSG_NAO_CONFIGURADO)}
+          onClick={() => onErrorRef.current(MSG_NAO_CONFIGURADO)}
           className="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
         >
           <GoogleIcon />

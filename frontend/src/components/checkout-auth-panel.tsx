@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useState } from "react";
 
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
 import { apiFetch } from "@/lib/api";
@@ -22,12 +22,19 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
-  function onOAuthSuccess(_data: TokenResponse) {
-    dispatchAuthSync();
-    setSucesso("Conta conectada! Pode continuar a compra abaixo.");
-    setErro(null);
-    onAuthenticated();
-  }
+  const onOAuthSuccess = useCallback(
+    (_data: TokenResponse) => {
+      dispatchAuthSync();
+      setSucesso("Conta conectada! Pode continuar a compra abaixo.");
+      setErro(null);
+      onAuthenticated();
+    },
+    [onAuthenticated],
+  );
+
+  const onOAuthError = useCallback((m: string) => {
+    setErro(mapCheckoutError(m));
+  }, []);
 
   async function compraRapida(e: FormEvent) {
     e.preventDefault();
@@ -73,7 +80,7 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
           disabled={busy}
           variant="checkout"
           onSuccess={onOAuthSuccess}
-          onError={(m) => setErro(mapCheckoutError(m))}
+          onError={onOAuthError}
         />
       </div>
 
