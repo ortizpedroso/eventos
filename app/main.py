@@ -72,6 +72,7 @@ app = FastAPI(
     description="Plataforma de eventos com reembolsos automáticos",
     version="1.0.0",
     lifespan=lifespan,
+    redirect_slashes=False,
     docs_url="/docs" if _docs_on else None,
     redoc_url="/redoc" if _docs_on else None,
     openapi_url="/openapi.json" if _docs_on else None,

@@ -19,14 +19,19 @@ function normalizeApiOrigin(raw: string): string {
 /** No browser: vazio = mesma origem (Next reescreve `/api/*` para o backend). */
 function getPublicApiUrl(): string {
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (typeof window === "undefined") {
+    return raw ? normalizeApiOrigin(raw) : "";
+  }
   if (!raw) return "";
   const normalized = normalizeApiOrigin(raw);
-  if (typeof window === "undefined") return normalized;
   const pageHost = window.location.hostname;
-  const pageIsLoopback = pageHost === "localhost" || pageHost === "127.0.0.1";
   const apiHost = normalized.replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+  const pageIsLoopback = pageHost === "localhost" || pageHost === "127.0.0.1";
   const apiIsLoopback = apiHost === "localhost" || apiHost === "127.0.0.1";
-  if (process.env.NODE_ENV === "development" && pageIsLoopback) {
+  // Hostnames internos Docker nunca resolvem no browser — usar proxy `/api` do Next.
+  if (apiHost === "api") return "";
+  // Dev local ou Docker (localhost:3000 → proxy): evitar fetch direto à porta 8000.
+  if (pageIsLoopback && (apiIsLoopback || process.env.NODE_ENV === "development")) {
     return "";
   }
   if (apiIsLoopback && !pageIsLoopback) {

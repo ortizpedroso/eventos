@@ -322,7 +322,7 @@ class TestEventos:
         )
         
         # Lista eventos
-        response = client.get("/api/eventos/")
+        response = client.get("/api/eventos")
         assert response.status_code == 200
         assert len(response.json()) > 0
 
