@@ -25,13 +25,33 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-def decode_token(token: str):
-    """Decodifica token JWT"""
+def decode_token_payload(token: str) -> dict | None:
+    """Decodifica JWT e devolve o payload ou None."""
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        usuario_id: str = payload.get("sub")
-        if usuario_id is None:
-            return None
-        return usuario_id
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     except JWTError:
+        return None
+
+
+def decode_token(token: str):
+    """Decodifica token JWT e devolve o user id (sub)."""
+    payload = decode_token_payload(token)
+    if not payload:
+        return None
+    usuario_id: str | None = payload.get("sub")
+    if usuario_id is None:
+        return None
+    return usuario_id
+
+
+def token_version_from_payload(token: str) -> int | None:
+    payload = decode_token_payload(token)
+    if not payload:
+        return None
+    ver = payload.get("tv")
+    if ver is None:
+        return 0
+    try:
+        return int(ver)
+    except (TypeError, ValueError):
         return None

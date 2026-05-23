@@ -151,6 +151,8 @@ async def atualizar_status_usuario(
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     usuario.ativo = body.ativo
+    if not body.ativo:
+        usuario.token_version = int(usuario.token_version or 0) + 1
     db.commit()
     db.refresh(usuario)
     return {

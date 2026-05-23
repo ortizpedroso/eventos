@@ -39,19 +39,13 @@ function contentSecurityPolicy(): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'self'",
-    /* http: — imagens de evento em URLs http (comum em dev ou legado) */
-    "img-src 'self' data: https: http: blob:",
+    /* Imagens: https/data/blob; evita http arbitrário em produção */
+    "img-src 'self' https: data: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
     "style-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://accounts.google.com https://appleid.cdn-apple.com",
-    "connect-src "
-      + [
-        ...connect,
-        "https://accounts.google.com",
-        "https://appleid.apple.com",
-        "https://appleid.cdn-apple.com",
-      ].join(" "),
-    "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://appleid.apple.com",
+    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://accounts.google.com https://cdn.jsdelivr.net",
+    "connect-src " + [...connect, "https://accounts.google.com"].join(" "),
+    "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com",
   ].join("; ");
 }
 
@@ -69,12 +63,18 @@ const nextConfig: NextConfig = {
     const security = [
       { key: "X-Frame-Options", value: "SAMEORIGIN" },
       { key: "X-Content-Type-Options", value: "nosniff" },
-      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Referrer-Policy", value: "no-referrer" },
       {
         key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=()",
+        value: "camera=(self), microphone=(), geolocation=()",
       },
     ];
+    if (process.env.NODE_ENV === "production") {
+      security.push({
+        key: "Strict-Transport-Security",
+        value: "max-age=31536000; includeSubDomains",
+      });
+    }
     /* CSP estrita quebra o `next dev` (eval / HMR / chunks). Só enviar em produção (`next build` + `next start`). */
     if (process.env.NODE_ENV === "production") {
       security.push({ key: "Content-Security-Policy", value: contentSecurityPolicy() });

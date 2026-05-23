@@ -2,7 +2,7 @@
 
 Itens planejados após as fases A–C e o painel admin de marketing.
 
-**Última revisão:** 17/05/2026
+**Última revisão:** 22/05/2026
 
 ## Status geral do projeto
 
@@ -17,6 +17,11 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 **Testes automatizados:** 42 passed (`pytest tests/`).
 
 **Pré-produção (implementado no repo):** `docker-compose.prod.yml`, Caddy, `.env.production.example`, deploy Hostinger, backup/restore, secrets, E2E compra (`docker compose -p eventosbr-e2e` + Playwright).
+
+**Funcionalidades pós-fase C implementadas:**
+- [x] Login social OAuth (Google) — backend + frontend
+- [x] Link de portaria sem conta (`checkin_token` + `/api/portaria`)
+- [x] Repasse / venda de ingresso (`POST /api/ingressos/{id}/repassar` + UI no painel do comprador)
 
 ---
 
@@ -43,6 +48,10 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 - [x] Teste E2E browser: checkout com `STRIPE_DISABLED` (`e2e/compra-checkout.spec.ts`, `docker-compose.e2e.yml`)
 - [ ] Teste E2E browser com Stripe Elements (`4242…`, `E2E_STRIPE=1`)
 - [x] Fila de e-mail resiliente (Redis)
+
+## Comprador
+
+- [x] Repasse / transferência de ingresso para terceiros (dados do novo participante; histórico gravado)
 
 ## Organizador / financeiro Brasil
 

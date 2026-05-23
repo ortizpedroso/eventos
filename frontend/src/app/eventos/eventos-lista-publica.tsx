@@ -23,7 +23,7 @@ export function EventosListaPublica() {
     (async () => {
       setFetchError(null);
       try {
-        const data = await apiFetch<Evento[]>("/api/eventos/?limit=50", { cache: "no-store" });
+        const data = await apiFetch<Evento[]>("/api/eventos?limit=50", { cache: "no-store" });
         if (!cancelled) setEventos(data);
       } catch {
         if (!cancelled) {

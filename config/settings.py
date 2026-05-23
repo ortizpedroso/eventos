@@ -16,9 +16,8 @@ class Settings(BaseSettings):
     # true = cadastro de organizador sem criar conta Connect (só Customer). Até aceitar termos em Settings > Connect.
     STRIPE_SKIP_CONNECT_ON_REGISTER: bool = False
 
-    # OAuth (Google / Apple Sign In)
+    # OAuth (Google Sign In)
     GOOGLE_OAUTH_CLIENT_ID: str = ""
-    APPLE_OAUTH_CLIENT_ID: str = ""
 
     # JWT
     SECRET_KEY: str | None = None
@@ -74,3 +73,22 @@ if settings.STRIPE_DISABLED:
 
 if settings.ENVIRONMENT != "development" and not settings.SECRET_KEY:
     raise RuntimeError("SECRET_KEY é obrigatório fora de development")
+
+
+def _secret_key_strong() -> bool:
+    v = (settings.SECRET_KEY or "").strip()
+    weak = {
+        "sua-chave-secreta-muito-segura-aqui-min32chars",
+        "dev-insecure-checkin",
+        "changeme",
+    }
+    return len(v) >= 32 and v not in weak
+
+
+if settings.ENVIRONMENT not in ("development", "test") and not _secret_key_strong():
+    raise RuntimeError(
+        "SECRET_KEY fraca ou curta (mínimo 32 caracteres aleatórios fora de development/test)"
+    )
+
+# Força assinatura EBR1 no check-in fora de development/test.
+CHECKIN_REQUIRE_SIGNED: bool = settings.ENVIRONMENT not in ("development", "test")

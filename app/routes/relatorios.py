@@ -224,7 +224,7 @@ async def participantes_organizador(
     limite: int = Query(2000, ge=1, le=5000),
     formato: Literal["json", "csv", "pdf", "xlsx"] = Query("json"),
     mascarar_sensiveis: bool = Query(
-        False,
+        True,
         description="Se true, mascara CPF e telefone na exportação (útil para partilhar ficheiros).",
     ),
 ):

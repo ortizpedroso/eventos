@@ -4,12 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { apiFetch } from "@/lib/api";
-import { AUTH_SYNC_EVENT, dispatchAuthSync } from "@/lib/auth-sync";
+import { apiFetch, fetchSession, logoutSession } from "@/lib/api";
+import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 import type { Usuario } from "@/lib/types";
-
-const TOKEN_KEY = "eventosbr_token";
 
 function UserIcon({ className }: { className?: string }) {
   return (
@@ -57,20 +55,19 @@ export function Navbar() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function syncFromStorage() {
-      const hasToken = Boolean(window.localStorage.getItem(TOKEN_KEY));
-      setLoggedIn(hasToken);
-      if (!hasToken) {
+    async function syncSession() {
+      const u = await fetchSession();
+      setLoggedIn(Boolean(u));
+      if (!u) {
         setUserNome(null);
         setUserTipo(null);
       }
     }
-    syncFromStorage();
-    window.addEventListener("storage", syncFromStorage);
-    window.addEventListener(AUTH_SYNC_EVENT, syncFromStorage);
+    const onSync = () => void syncSession();
+    void syncSession();
+    window.addEventListener(AUTH_SYNC_EVENT, onSync);
     return () => {
-      window.removeEventListener("storage", syncFromStorage);
-      window.removeEventListener(AUTH_SYNC_EVENT, syncFromStorage);
+      window.removeEventListener(AUTH_SYNC_EVENT, onSync);
     };
   }, []);
 
@@ -105,12 +102,15 @@ export function Navbar() {
   }, [loggedIn]);
 
   const logout = useCallback(() => {
-    window.localStorage.removeItem(TOKEN_KEY);
-    dispatchAuthSync();
-    setMenuOpen(false);
-    setMobileNavOpen(false);
-    router.push("/");
-    router.refresh();
+    void logoutSession().finally(() => {
+      setLoggedIn(false);
+      setUserNome(null);
+      setUserTipo(null);
+      setMenuOpen(false);
+      setMobileNavOpen(false);
+      router.push("/");
+      router.refresh();
+    });
   }, [router]);
 
   useEffect(() => {

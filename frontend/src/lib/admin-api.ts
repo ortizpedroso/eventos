@@ -1,35 +1,17 @@
-import { getApiBaseUrl } from "@/lib/api";
-
-export const ADMIN_KEY_STORAGE = "eventosbr_platform_admin_key";
-
-export function getAdminKey(): string {
-  if (typeof window === "undefined") return "";
-  return sessionStorage.getItem(ADMIN_KEY_STORAGE)?.trim() ?? "";
-}
-
-export function setAdminKey(key: string) {
-  sessionStorage.setItem(ADMIN_KEY_STORAGE, key.trim());
-}
-
-export function clearAdminKey() {
-  sessionStorage.removeItem(ADMIN_KEY_STORAGE);
-}
-
-/** Valida a chave contra a API antes de liberar o painel. */
 export async function validateAdminKey(key: string): Promise<void> {
   const trimmed = key.trim();
   if (!trimmed) throw new Error("Informe a chave de administrador.");
-  const headers = new Headers({ accept: "application/json" });
-  headers.set("X-Platform-Admin-Key", trimmed);
-  const res = await fetch(`${getApiBaseUrl()}/api/admin/marketing/contatos?limit=1`, {
-    headers,
-    cache: "no-store",
+  const res = await fetch("/api/admin/session", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ key: trimmed }),
+    credentials: "include",
   });
   if (res.status === 401) {
     throw new Error("Chave de administrador inválida. Confira PLATFORM_ADMIN_API_KEY no .env da API.");
   }
   if (!res.ok) {
-    let msg = `API respondeu ${res.status}. A API está rodando?`;
+    let msg = `API respondeu ${res.status}.`;
     try {
       const j = (await res.json()) as { detail?: string };
       if (j.detail) msg = String(j.detail);
@@ -40,16 +22,27 @@ export async function validateAdminKey(key: string): Promise<void> {
   }
 }
 
-export async function adminFetch<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
-  const key = getAdminKey();
-  if (!key) throw new Error("Informe a chave de administrador.");
+export async function clearAdminSession(): Promise<void> {
+  await fetch("/api/admin/session", { method: "DELETE", credentials: "include" });
+}
+
+export async function adminSessionActive(): Promise<boolean> {
+  const res = await fetch("/api/admin/session", { credentials: "include", cache: "no-store" });
+  if (!res.ok) return false;
+  const j = (await res.json()) as { unlocked?: boolean };
+  return Boolean(j.unlocked);
+}
+
+export async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  headers.set("X-Platform-Admin-Key", key);
   if (!headers.has("accept")) headers.set("accept", "application/json");
-  const res = await fetch(`${getApiBaseUrl()}${path}`, { ...init, headers, cache: "no-store" });
+  const clean = path.startsWith("/api/admin/") ? path.slice("/api/admin/".length) : path.replace(/^\//, "");
+  const res = await fetch(`/api/admin/proxy/${clean}`, {
+    ...init,
+    headers,
+    credentials: "include",
+    cache: "no-store",
+  });
   if (!res.ok) {
     let msg = `Erro ${res.status}`;
     try {
@@ -60,5 +53,7 @@ export async function adminFetch<T>(
     }
     throw new Error(msg);
   }
-  return (await res.json()) as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }

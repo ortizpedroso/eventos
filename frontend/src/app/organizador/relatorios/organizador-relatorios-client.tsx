@@ -167,11 +167,9 @@ export function OrganizadorRelatoriosClient() {
             ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             : "text/csv";
       headers.set("accept", accept);
-      const token =
-        typeof window !== "undefined" ? window.localStorage.getItem("eventosbr_token") : null;
-      if (token) headers.set("authorization", `Bearer ${token}`);
       const res = await fetch(`${base}/api/relatorios/organizador/participantes?${params}`, {
         headers,
+        credentials: "include",
       });
       if (!res.ok) {
         let msg = `Erro ${res.status}`;

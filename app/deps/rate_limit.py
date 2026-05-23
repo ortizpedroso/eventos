@@ -24,6 +24,9 @@ _LIMITS: dict[str, tuple[int, int]] = {
     "auth_login": (30, 60),
     "auth_register": (10, 60),
     "checkout_criar": (25, 60),
+    "checkin_validar": (120, 60),
+    "portaria_validar": (120, 60),
+    "portaria_info": (60, 60),
 }
 
 
@@ -32,7 +35,11 @@ def _rate_limit_active() -> bool:
 
 
 def _client_ip(request: Request) -> str:
+    """IP do cliente. Com proxy fidedigno, X-Real-IP ou primeiro X-Forwarded-For."""
     if settings.TRUST_FORWARDED_HEADERS:
+        real = (request.headers.get("x-real-ip") or "").strip()
+        if real:
+            return real.split(",")[0].strip() or "unknown"
         fwd = request.headers.get("x-forwarded-for")
         if fwd:
             return fwd.split(",")[0].strip() or "unknown"
@@ -133,3 +140,15 @@ def rate_limit_oauth(request: Request) -> None:
 
 def rate_limit_checkout(request: Request) -> None:
     enforce_rate_limit(request, "checkout_criar")
+
+
+def rate_limit_checkin(request: Request) -> None:
+    enforce_rate_limit(request, "checkin_validar")
+
+
+def rate_limit_portaria_validar(request: Request) -> None:
+    enforce_rate_limit(request, "portaria_validar")
+
+
+def rate_limit_portaria_info(request: Request) -> None:
+    enforce_rate_limit(request, "portaria_info")

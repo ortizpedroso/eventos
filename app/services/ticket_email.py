@@ -13,6 +13,7 @@ from queue import Empty, Queue
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import Ingresso
+from app.utils.html_escape import esc
 from app.services.ingresso_qr import gerar_qr_png_bytes, ingresso_qr_payload
 from app.services.redis_conn import get_redis_optional
 from config.database import SessionLocal
@@ -240,13 +241,15 @@ def _send_comunicado_sync(evento_id: str, assunto: str, mensagem: str) -> int:
                 continue
             vistos.add(key)
 
-            corpo = mensagem.replace("\n", "<br/>")
+            corpo = esc(mensagem).replace("\n", "<br/>")
+            ev_nome = esc(ing.evento.nome)
+            part_nome = esc(ing.participante_nome or "participante")
             html = (
                 '<div style="font-family:sans-serif;max-width:560px;color:#18181b">'
-                f"<h2 style=\"color:#047857\">{ing.evento.nome}</h2>"
-                f"<p>Olá, <strong>{ing.participante_nome or 'participante'}</strong>!</p>"
-                f"<div style=\"margin:16px 0;line-height:1.5\">{corpo}</div>"
-                f'<p><a href="{base}/conta/ingressos/{ing.id}" style="color:#047857">Ver meu ingresso</a></p>'
+                f'<h2 style="color:#047857">{ev_nome}</h2>'
+                f"<p>Olá, <strong>{part_nome}</strong>!</p>"
+                f'<div style="margin:16px 0;line-height:1.5">{corpo}</div>'
+                f'<p><a href="{base}/conta/ingressos/{esc(ing.id)}" style="color:#047857">Ver meu ingresso</a></p>'
                 f'<p style="font-size:11px;color:#a1a1aa">Mensagem enviada pelo organizador do evento.</p>'
                 "</div>"
             )

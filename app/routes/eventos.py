@@ -13,6 +13,7 @@ from app.services.ingresso_lotes import (
     sincronizar_preco_ingresso_evento,
     substituir_lotes_evento,
 )
+from app.services.evento_portaria import garantir_checkin_token, gerar_checkin_token, url_portaria
 from app.utils.public_errors import LISTA_EVENTOS_CLIENTE
 
 logger = logging.getLogger(__name__)
@@ -63,6 +64,7 @@ async def criar_evento(
         slug=slug,
         publicado=evento_data.publicado,
         limite_ingressos_por_cpf=evento_data.limite_ingressos_por_cpf,
+        checkin_token=gerar_checkin_token(),
     )
 
     db.add(novo_evento)
@@ -210,6 +212,43 @@ def _evento_do_organizador(db: Session, evento_id: str, usuario: Usuario) -> Eve
     if not evento or evento.organizador_id != usuario.id:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
     return evento
+
+
+@router.get("/id/{evento_id}/link-portaria")
+async def link_portaria_evento(
+    evento_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """URL e token para colaboradores validarem ingressos (câmera ou digitação)."""
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    token = garantir_checkin_token(db, evento)
+    return {
+        "evento_id": evento.id,
+        "evento_nome": evento.nome,
+        "token": token,
+        "url": url_portaria(evento.id, token),
+    }
+
+
+@router.post("/id/{evento_id}/link-portaria/regenerar")
+async def regenerar_link_portaria(
+    evento_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Invalida o link anterior e gera um novo (se vazou o link antigo)."""
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    evento.checkin_token = gerar_checkin_token()
+    db.commit()
+    db.refresh(evento)
+    token = evento.checkin_token
+    return {
+        "evento_id": evento.id,
+        "evento_nome": evento.nome,
+        "token": token,
+        "url": url_portaria(evento.id, token),
+    }
 
 
 @router.get("/id/{evento_id}/cupons", response_model=list[CupomResponse])

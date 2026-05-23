@@ -1,4 +1,4 @@
-"""Encontra ou cria usuário a partir de login social (Google / Apple)."""
+"""Encontra ou cria usuário a partir de login social (Google)."""
 
 from __future__ import annotations
 
@@ -65,16 +65,15 @@ def obter_ou_criar_usuario_oauth(
             elif existente_email.auth_provider_id != provider_id:
                 raise HTTPException(status_code=400, detail="Conta social já vinculada a outro perfil.")
             return existente_email
-        label = _PROVIDER_LABEL.get(existente_email.auth_provider, existente_email.auth_provider)
         if existente_email.auth_provider == "email" and existente_email.senha_hash:
-            existente_email.auth_provider = provider
-            existente_email.auth_provider_id = provider_id
-            if nome_limpo and existente_email.nome != nome_limpo:
-                existente_email.nome = nome_limpo
-            db.commit()
-            db.refresh(existente_email)
-            logger.info("Conta %s vinculada ao login %s", email_norm, provider)
-            return existente_email
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Este email já tem conta com senha. Entre com email e senha, "
+                    "ou vincule o Google em Perfil informando a senha atual."
+                ),
+            )
+        label = _PROVIDER_LABEL.get(existente_email.auth_provider, existente_email.auth_provider)
         raise HTTPException(
             status_code=400,
             detail=f"Este email já está cadastrado. Entre com {label}.",

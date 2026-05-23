@@ -4,15 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { NovoEventoForm } from "./novo-evento-client";
-import { apiFetch } from "@/lib/api";
-import { dispatchAuthSync } from "@/lib/auth-sync";
+import { fetchSession, logoutSession } from "@/lib/api";
 import {
   authHrefParaCriarEvento,
   authHrefPrecisaContaOrganizador,
 } from "@/lib/criar-evento-routes";
-import type { Usuario } from "@/lib/types";
-
-const TOKEN_KEY = "eventosbr_token";
 
 export function NovoEventoGate() {
   const router = useRouter();
@@ -20,24 +16,19 @@ export function NovoEventoGate() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      if (!window.localStorage.getItem(TOKEN_KEY)) {
+    void (async () => {
+      const u = await fetchSession();
+      if (cancelled) return;
+      if (!u) {
         router.replace(authHrefParaCriarEvento());
         return;
       }
-      try {
-        const u = await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
-        if (cancelled) return;
-        if (u.tipo !== "organizador") {
-          window.localStorage.removeItem(TOKEN_KEY);
-          dispatchAuthSync();
-          router.replace(authHrefPrecisaContaOrganizador());
-          return;
-        }
-        setOk(true);
-      } catch {
-        if (!cancelled) router.replace(authHrefParaCriarEvento());
+      if (u.tipo !== "organizador") {
+        await logoutSession();
+        router.replace(authHrefPrecisaContaOrganizador());
+        return;
       }
+      setOk(true);
     })();
     return () => {
       cancelled = true;

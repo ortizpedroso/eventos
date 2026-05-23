@@ -8,12 +8,10 @@ import { CompraInfoConfianca } from "@/components/compra-info-confianca";
 import { EventoHeroBanner } from "@/components/evento-hero-banner";
 import { EventoPoliticaReembolso } from "@/components/evento-politica-reembolso";
 import { EventoResumoRapido } from "@/components/evento-resumo-rapido";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, fetchSession } from "@/lib/api";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { formatEventoDataHora } from "@/lib/eventos";
 import type { Evento, Usuario } from "@/lib/types";
-
-const TOKEN_KEY = "eventosbr_token";
 
 const ComprarIngressoLazy = dynamic(
   () =>
@@ -53,14 +51,9 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
     setLoading(true);
     setErr(null);
 
-    const hasToken =
-      typeof window !== "undefined" && Boolean(window.localStorage.getItem(TOKEN_KEY));
-
     void (async () => {
       const eventPromise = apiFetch<Evento>(`/api/eventos/${slug}`, { cache: "no-store" });
-      const mePromise: Promise<Usuario | null> = hasToken
-        ? apiFetch<Usuario>("/api/auth/me", { cache: "no-store" })
-        : Promise.resolve(null);
+      const mePromise = fetchSession();
 
       const [evRes, meRes] = await Promise.allSettled([eventPromise, mePromise]);
       if (cancelled) return;
@@ -197,6 +190,7 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
                 <ComprarIngressoLazy
                   embedded
                   eventoId={evento.id}
+                  eventoSlug={evento.slug}
                   eventoNome={evento.nome}
                   precoIngresso={Number(evento.preco_compra ?? evento.preco_ingresso)}
                   limiteIngressosPorCpf={evento.limite_ingressos_por_cpf ?? null}

@@ -35,6 +35,9 @@ class Evento(Base):
     # Status
     publicado = Column(Boolean, default=True)
 
+    # Link secreto para colaboradores validarem ingressos na portaria (/portaria/{id}?k=...)
+    checkin_token = Column(String(64), nullable=True, unique=True, index=True)
+
     # Datas
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     data_atualizacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

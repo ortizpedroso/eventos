@@ -6,28 +6,17 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
 import type { TokenResponse, Usuario } from "@/lib/types";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, fetchSession } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import { onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask } from "@/lib/telefone-br";
 import {
   authHrefPrecisaContaOrganizador,
   CRIAR_EVENTO_DESTINO,
+  destinoPosAuth,
   isSafeInternalNext,
+  nextRequerContaOrganizador,
 } from "@/lib/criar-evento-routes";
-
-const TOKEN_KEY = "eventosbr_token";
-
-function setToken(token: string) {
-  window.localStorage.setItem(TOKEN_KEY, token);
-}
-
-function destinoPosAuth(usuario: Usuario, next: string | null): string {
-  if (isSafeInternalNext(next) && usuario.tipo === "organizador") {
-    return next;
-  }
-  return usuario.tipo === "organizador" ? "/organizador/eventos" : "/";
-}
 
 export default function AuthClient() {
   const router = useRouter();
@@ -52,7 +41,6 @@ export default function AuthClient() {
   const redirecionar = useCallback(
     (destino: string) => {
       router.replace(destino);
-      /* Fallback: em alguns builds o App Router não troca a rota após login na mesma página. */
       window.setTimeout(() => {
         if (window.location.pathname.startsWith("/auth")) {
           window.location.assign(destino);
@@ -63,21 +51,16 @@ export default function AuthClient() {
   );
 
   useEffect(() => {
-    const token = window.localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setChecandoSessao(false);
-      return;
-    }
     let cancelled = false;
     void (async () => {
-      try {
-        const u = await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
-        if (cancelled) return;
+      const u = await fetchSession();
+      if (cancelled) return;
+      if (u) {
         const next = searchParams.get("next");
         redirecionar(destinoPosAuth(u, next));
-      } catch {
-        if (!cancelled) setChecandoSessao(false);
+        return;
       }
+      setChecandoSessao(false);
     })();
     return () => {
       cancelled = true;
@@ -96,13 +79,17 @@ export default function AuthClient() {
   }
 
   function finishAuth(data: TokenResponse) {
-    setToken(data.access_token);
     dispatchAuthSync();
     const next = searchParams.get("next");
-    if (isSafeInternalNext(next) && data.usuario.tipo !== "organizador") {
-      window.localStorage.removeItem(TOKEN_KEY);
-      dispatchAuthSync();
-      router.replace(authHrefPrecisaContaOrganizador(next));
+    if (
+      isSafeInternalNext(next) &&
+      data.usuario.tipo !== "organizador" &&
+      (precisaOrganizador || nextRequerContaOrganizador(next))
+    ) {
+      void apiFetch("/api/auth/logout", { method: "POST" }).finally(() => {
+        dispatchAuthSync();
+        router.replace(authHrefPrecisaContaOrganizador(next));
+      });
       return;
     }
     setChecandoSessao(true);

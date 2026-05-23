@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { EventoLinkPortaria } from "@/components/evento-link-portaria";
 import { apiFetch } from "@/lib/api";
 import { formatEventoDataHora } from "@/lib/eventos";
 import type { Evento } from "@/lib/types";
@@ -195,6 +196,7 @@ export default function OrganizadorMeusEventosPage() {
                       </button>
                     </div>
                   ) : null}
+                  <EventoLinkPortaria eventoId={e.id} />
                   <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-100 pt-4">
                     <Link href={`/eventos/${e.slug}`} className="btn-outline flex-1 px-3 py-2 text-center text-sm sm:flex-none">
                       Ver página

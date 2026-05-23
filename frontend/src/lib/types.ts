@@ -74,6 +74,9 @@ export type IngressoListItem = {
   valor: number;
   status: string;
   data_compra: string;
+  repassado_para_nome: string | null;
+  repassado_para_email: string | null;
+  repassado_em: string | null;
 };
 
 export type PagamentoListItem = {

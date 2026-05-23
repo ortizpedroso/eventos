@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Usuario, get_db
 from app.routes.auth import get_usuario_atual
+from app.deps.rate_limit import rate_limit_checkin
 from app.services.ingresso_checkin import realizar_checkin
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ async def validar_checkin(
     body: CheckinRequest,
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_checkin),
 ):
     _require_organizador(usuario_atual)
     try:

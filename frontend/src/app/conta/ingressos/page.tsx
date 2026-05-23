@@ -73,6 +73,14 @@ export default function MeusIngressosPage() {
                   {it.participante_email ? ` (${it.participante_email})` : ""}
                 </div>
               ) : null}
+              {it.repassado_em ? (
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 3M21 7.5H7.5" />
+                  </svg>
+                  Repassado para {it.repassado_para_nome}
+                </div>
+              ) : null}
               <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500">
                 <span>
                   Valor:{" "}

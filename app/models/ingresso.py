@@ -27,6 +27,14 @@ class Ingresso(Base):
     cupom_id = Column(String, ForeignKey("evento_cupons.id", ondelete="SET NULL"), nullable=True)
     cortesia_responsavel = Column(String(200), nullable=True)
 
+    # Repasse / transferência para outro participante
+    repassado_para_nome = Column(String(200), nullable=True)
+    repassado_para_cpf = Column(String(14), nullable=True)
+    repassado_para_email = Column(String(255), nullable=True)
+    repassado_para_telefone = Column(String(20), nullable=True)
+    repassado_para_data_nascimento = Column(String(10), nullable=True)
+    repassado_em = Column(DateTime, nullable=True)
+
     # Check-in na portaria
     checkin_em = Column(DateTime, nullable=True)
     checkin_por_id = Column(String, ForeignKey("usuarios.id"), nullable=True)

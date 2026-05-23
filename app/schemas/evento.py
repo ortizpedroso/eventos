@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.utils.imagem_url import validar_imagem_url
 from app.utils.ingresso_tipos import TIPO_PADRAO, normalizar_tipo_ingresso, lote_e_cortesia
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
@@ -60,7 +61,7 @@ class CriarEventoRequest(BaseModel):
     # Opcional: eventos de um dia (show, feijoada) usam só início; se omitido, replica data_inicio.
     data_fim: datetime | None = None
     local: str
-    imagem_url: Optional[str] = Field(default=None, max_length=2_000_000)
+    imagem_url: Optional[str] = Field(default=None, max_length=2048)
     # Reais (ex.: 49.9). Mínimo alinhado ao Stripe para ingressos pagos.
     preco_ingresso: float = Field(ge=0, le=500_000)
     categoria: str = Field(default="Outros", min_length=1, max_length=80)
@@ -69,6 +70,11 @@ class CriarEventoRequest(BaseModel):
     publicado: bool = True
     limite_ingressos_por_cpf: int | None = Field(default=None, ge=1, le=50)
     ingresso_lotes: list[IngressoLoteWrite] | None = None
+
+    @field_validator("imagem_url", mode="before")
+    @classmethod
+    def _imagem_url(cls, v: object) -> str | None:
+        return validar_imagem_url(v)
 
     @model_validator(mode="after")
     def validar_datas(self):

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Boolean
+from sqlalchemy import Column, String, DateTime, Boolean, Integer
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import uuid
@@ -22,6 +22,8 @@ class Usuario(Base):
 
     # Status
     ativo = Column(Boolean, default=True)
+    # Incrementado ao desativar conta ou alterar senha — invalida JWTs antigos.
+    token_version = Column(Integer, default=0, nullable=False)
 
     # Marketing EventosBR (opt-in LGPD)
     aceita_comunicacao_email = Column(Boolean, default=False, nullable=False)

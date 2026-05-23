@@ -21,7 +21,6 @@ services:
       - MARKETING_WHATSAPP_WEBHOOK_URL=${MARKETING_WHATSAPP_WEBHOOK_URL:-}
       - SECRET_KEY=${SECRET_KEY}
       - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID:-}
-      - APPLE_OAUTH_CLIENT_ID=${APPLE_OAUTH_CLIENT_ID:-}
       - DEBUG=False
       - REDIS_URL=redis://redis:6379
       - ENVIRONMENT=production
@@ -97,11 +96,12 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        API_PROXY_TARGET: http://api:8000
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
         NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-        NEXT_PUBLIC_APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
     environment:
       - INTERNAL_API_URL=http://api:8000
+      - API_PROXY_TARGET=http://api:8000
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     ports:
       - "3000:3000"

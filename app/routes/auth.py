@@ -1,6 +1,7 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
@@ -9,6 +10,7 @@ import stripe
 from app.models import Usuario, get_db
 from app.schemas.usuario import (
     AtualizarPerfilRequest,
+    OAuthConfigResponse,
     OAuthLoginRequest,
     UsuarioCreate,
     UsuarioLogin,
@@ -18,19 +20,25 @@ from app.schemas.usuario import (
 from app.deps.rate_limit import rate_limit_login, rate_limit_oauth, rate_limit_register
 from app.services.oauth_verify import (
     OAuthTokenInvalid,
-    oauth_apple_enabled,
     oauth_google_enabled,
-    verify_apple_id_token,
     verify_google_id_token,
 )
 from app.services.oauth_usuario import obter_ou_criar_usuario_oauth
-from app.services.auth import create_access_token, decode_token, hash_password, verify_password
+from app.services.oauth_vincular import vincular_google_a_conta_email
+from app.services.auth import (
+    create_access_token,
+    decode_token,
+    decode_token_payload,
+    hash_password,
+    verify_password,
+)
+from app.utils.auth_cookie import AUTH_COOKIE_NAME, clear_auth_cookie, set_auth_cookie
 from app.utils.public_errors import STRIPE_CLIENTE
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 oauth2_scheme_optional = OAuth2PasswordBearer(
     tokenUrl="/api/auth/login",
     auto_error=False,
@@ -117,12 +125,13 @@ def _stripe_connect_platform_terms_missing(err: Exception) -> bool:
 @router.post("/registrar", response_model=Token)
 async def registrar(
     usuario_data: UsuarioCreate,
+    response: Response,
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_register),
 ):
     """Registra novo usuário"""
 
-    logger.info(f"Registrando usuário: {usuario_data.email}")
+    logger.info("Registrando novo usuário (tipo=%s)", usuario_data.tipo)
 
     email = str(usuario_data.email).strip().lower()
 
@@ -217,10 +226,8 @@ async def registrar(
 
     logger.info("Usuário criado: %s", novo_usuario.id)
 
-    access_token = create_access_token(
-        data={"sub": novo_usuario.id},
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
-    )
+    access_token = _issue_token(novo_usuario)
+    set_auth_cookie(response, access_token)
 
     return {
         "access_token": access_token,
@@ -231,13 +238,14 @@ async def registrar(
 @router.post("/login", response_model=Token)
 async def login(
     credenciais: UsuarioLogin,
+    response: Response,
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_login),
 ):
     """Login de usuário"""
 
     email = str(credenciais.email).strip().lower()
-    logger.info("Tentativa de login: %s", email)
+    logger.info("Tentativa de login")
 
     usuario = db.query(Usuario).filter(
         func.lower(Usuario.email) == email
@@ -264,10 +272,8 @@ async def login(
             detail="Conta desativada. Entre em contato com o suporte da plataforma.",
         )
 
-    access_token = create_access_token(
-        data={"sub": usuario.id},
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
+    access_token = _issue_token(usuario)
+    set_auth_cookie(response, access_token)
 
     return {
         "access_token": access_token,
@@ -276,16 +282,52 @@ async def login(
     }
 
 
-def _token_response(usuario: Usuario) -> dict:
-    access_token = create_access_token(
-        data={"sub": usuario.id},
+def _issue_token(usuario: Usuario) -> str:
+    return create_access_token(
+        data={"sub": usuario.id, "tv": int(usuario.token_version or 0)},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
+
+
+def _token_from_request(request: Request, bearer: str | None) -> str | None:
+    if bearer:
+        return bearer
+    cookie = request.cookies.get(AUTH_COOKIE_NAME)
+    if cookie and cookie.strip():
+        return cookie.strip()
+    return None
+
+
+def _token_response(usuario: Usuario, response: Response) -> dict:
+    access_token = _issue_token(usuario)
+    set_auth_cookie(response, access_token)
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "usuario": UsuarioResponse.model_validate(usuario),
     }
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """Encerra sessão (remove cookie HttpOnly)."""
+    clear_auth_cookie(response)
+    return {"ok": True}
+
+
+class VincularGoogleRequest(BaseModel):
+    id_token: str = Field(min_length=20, max_length=8192)
+    senha_atual: str = Field(min_length=1, max_length=128)
+
+
+@router.get("/oauth-config", response_model=OAuthConfigResponse)
+async def oauth_config():
+    """Client ID Google — o frontend usa para exibir login social."""
+    google_id = (settings.GOOGLE_OAUTH_CLIENT_ID or "").strip()
+    return OAuthConfigResponse(
+        google_enabled=oauth_google_enabled(),
+        google_client_id=google_id,
+    )
 
 
 def _nome_from_oauth_claims(payload: dict, fallback_email: str) -> str:
@@ -302,6 +344,7 @@ def _nome_from_oauth_claims(payload: dict, fallback_email: str) -> str:
 @router.post("/google", response_model=Token)
 async def login_google(
     body: OAuthLoginRequest,
+    response: Response,
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_oauth),
 ):
@@ -328,52 +371,24 @@ async def login_google(
         aceita_comunicacao_whatsapp=body.aceita_comunicacao_whatsapp,
         telefone=tel,
     )
-    return _token_response(usuario)
-
-
-@router.post("/apple", response_model=Token)
-async def login_apple(
-    body: OAuthLoginRequest,
-    db: Session = Depends(get_db),
-    _rate: None = Depends(rate_limit_oauth),
-):
-    if not oauth_apple_enabled():
-        raise HTTPException(status_code=503, detail="Login com Apple não está configurado.")
-    try:
-        claims = verify_apple_id_token(body.id_token)
-    except OAuthTokenInvalid as e:
-        raise HTTPException(status_code=401, detail=str(e)) from e
-
-    sub = str(claims.get("sub", "")).strip()
-    email = str(claims.get("email") or "").strip().lower()
-    if not email:
-        raise HTTPException(
-            status_code=400,
-            detail="Apple não enviou email. Remova o app da lista em Ajustes → Apple ID → Senha e Segurança → Apps e tente de novo.",
-        )
-    nome = _nome_from_oauth_claims(claims, email)
-    tel = _normalizar_telefone_usuario(body.telefone) if body.telefone else None
-
-    usuario = obter_ou_criar_usuario_oauth(
-        db,
-        provider="apple",
-        provider_id=sub,
-        email=email,
-        nome=nome,
-        tipo=body.tipo,
-        aceita_comunicacao_email=body.aceita_comunicacao_email,
-        aceita_comunicacao_whatsapp=body.aceita_comunicacao_whatsapp,
-        telefone=tel,
-    )
-    return _token_response(usuario)
+    return _token_response(usuario, response)
 
 
 async def get_usuario_atual(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    request: Request,
+    bearer: str | None = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
 ):
-    """Obtém usuário autenticado"""
-    usuario_id = decode_token(token)
+    """Obtém usuário autenticado (cookie HttpOnly ou Bearer)."""
+    token = _token_from_request(request, bearer)
+    if not token:
+        raise HTTPException(status_code=401, detail="Não autenticado")
+
+    payload = decode_token_payload(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    usuario_id = payload.get("sub")
     if not usuario_id:
         raise HTTPException(status_code=401, detail="Token inválido")
 
@@ -383,7 +398,44 @@ async def get_usuario_atual(
     if not usuario.ativo:
         raise HTTPException(status_code=403, detail="Conta desativada")
 
+    tv_token = int(payload.get("tv", 0) or 0)
+    if tv_token != int(usuario.token_version or 0):
+        raise HTTPException(status_code=401, detail="Sessão expirada. Faça login novamente.")
+
     return usuario
+
+
+@router.post("/vincular-google", response_model=UsuarioResponse)
+async def vincular_google(
+    body: VincularGoogleRequest,
+    response: Response,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Vincula Google à conta com senha (perfil)."""
+    if not oauth_google_enabled():
+        raise HTTPException(status_code=503, detail="Login com Google não está configurado.")
+    try:
+        claims = verify_google_id_token(body.id_token)
+    except OAuthTokenInvalid as e:
+        raise HTTPException(status_code=401, detail=str(e)) from e
+
+    email_claim = str(claims.get("email", "")).strip().lower()
+    if email_claim and email_claim != (usuario.email or "").strip().lower():
+        raise HTTPException(status_code=400, detail="O Google deve usar o mesmo email da conta.")
+
+    sub = str(claims.get("sub", "")).strip()
+    nome = _nome_from_oauth_claims(claims, usuario.email or "")
+    u = vincular_google_a_conta_email(
+        db,
+        usuario,
+        provider_id=sub,
+        senha_atual=body.senha_atual,
+        nome=nome,
+    )
+    access_token = _issue_token(u)
+    set_auth_cookie(response, access_token)
+    return UsuarioResponse.model_validate(u)
 
 
 @router.get("/me", response_model=UsuarioResponse)
@@ -425,7 +477,7 @@ async def atualizar_perfil(
     if email_mudou and not usuario.senha_hash and not body.nova_senha:
         raise HTTPException(
             status_code=400,
-            detail="Conta social: defina uma senha em «Nova senha» antes de alterar o email, ou continue usando Google/Apple.",
+            detail="Conta social: defina uma senha em «Nova senha» antes de alterar o email, ou continue usando Google.",
         )
 
     if (email_mudou or body.nova_senha) and usuario.senha_hash:
@@ -441,6 +493,7 @@ async def atualizar_perfil(
 
     if body.nova_senha:
         usuario.senha_hash = hash_password(body.nova_senha)
+        usuario.token_version = int(usuario.token_version or 0) + 1
 
     if (
         body.aceita_comunicacao_email is not None
@@ -490,13 +543,24 @@ async def atualizar_perfil(
 
 
 async def get_usuario_atual_opcional(
-    token: str | None = Depends(oauth2_scheme_optional),
+    request: Request,
+    bearer: str | None = Depends(oauth2_scheme_optional),
     db: Session = Depends(get_db),
 ):
     """Igual a get_usuario_atual, mas devolve None se não houver token (para rotas públicas)."""
+    token = _token_from_request(request, bearer)
     if not token:
         return None
-    usuario_id = decode_token(token)
+    payload = decode_token_payload(token)
+    if not payload:
+        return None
+    usuario_id = payload.get("sub")
     if not usuario_id:
         return None
-    return db.get(Usuario, usuario_id)
+    usuario = db.get(Usuario, usuario_id)
+    if not usuario or not usuario.ativo:
+        return None
+    tv_token = int(payload.get("tv", 0) or 0)
+    if tv_token != int(usuario.token_version or 0):
+        return None
+    return usuario

@@ -6,12 +6,11 @@ import hashlib
 import hmac
 import re
 from datetime import datetime, timezone
-from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
-from config.settings import settings
+from config.settings import CHECKIN_REQUIRE_SIGNED, settings
 
 _PREFIX = "EBR1"
 _UUID_RE = re.compile(
@@ -21,8 +20,12 @@ _UUID_RE = re.compile(
 
 
 def _secret() -> bytes:
-    key = (settings.SECRET_KEY or "dev-insecure-checkin").encode("utf-8")
-    return key
+    key = (settings.SECRET_KEY or "").strip()
+    if not key:
+        if CHECKIN_REQUIRE_SIGNED:
+            raise RuntimeError("SECRET_KEY é obrigatória para check-in assinado")
+        key = "dev-insecure-checkin"
+    return key.encode("utf-8")
 
 
 def assinatura_ingresso(ingresso_id: str) -> str:
@@ -52,11 +55,16 @@ def extrair_ingresso_id(codigo: str) -> str | None:
                 return iid
         return None
 
+    if CHECKIN_REQUIRE_SIGNED:
+        return None
+
     m = _UUID_RE.search(raw)
     if m:
         return m.group(0)
 
     try:
+        from uuid import UUID
+
         UUID(raw)
         return raw
     except ValueError:
@@ -109,4 +117,57 @@ def realizar_checkin(
         "evento_nome": evento.nome,
         "checkin_em": agora.isoformat(),
         "mensagem": "Check-in realizado com sucesso.",
+    }
+
+
+def realizar_checkin_portaria(
+    db: Session,
+    evento_id: str,
+    codigo: str,
+) -> dict:
+    """Validação via link da portaria (sem login do colaborador)."""
+    evento = db.get(Evento, evento_id)
+    if not evento:
+        raise ValueError("Evento não encontrado.")
+
+    ingresso_id = extrair_ingresso_id(codigo)
+    if not ingresso_id:
+        raise ValueError("Código inválido ou ingresso não reconhecido.")
+
+    ingresso = db.get(Ingresso, ingresso_id)
+    if not ingresso:
+        raise ValueError("Ingresso não encontrado.")
+
+    if ingresso.evento_id != evento.id:
+        raise ValueError("Este ingresso é de outro evento.")
+
+    st = (ingresso.status or "").lower()
+    if st == "usado":
+        return {
+            "ok": True,
+            "ja_utilizado": True,
+            "ingresso_id": ingresso.id,
+            "participante_nome": ingresso.participante_nome,
+            "evento_nome": evento.nome,
+            "checkin_em": ingresso.checkin_em.isoformat() if ingresso.checkin_em else None,
+            "mensagem": "Ingresso já validado na entrada.",
+        }
+    if st != "pago":
+        raise ValueError(f"Ingresso com status «{st}» não pode entrar (aguardando pagamento ou cancelado).")
+
+    agora = datetime.now(timezone.utc).replace(tzinfo=None)
+    ingresso.status = "usado"
+    ingresso.checkin_em = agora
+    ingresso.checkin_por_id = evento.organizador_id
+    db.commit()
+    db.refresh(ingresso)
+
+    return {
+        "ok": True,
+        "ja_utilizado": False,
+        "ingresso_id": ingresso.id,
+        "participante_nome": ingresso.participante_nome,
+        "evento_nome": evento.nome,
+        "checkin_em": agora.isoformat(),
+        "mensagem": "Entrada liberada.",
     }

@@ -1,4 +1,5 @@
 import { dispatchAuthSync } from "@/lib/auth-sync";
+import type { Usuario } from "@/lib/types";
 
 export type ApiError = {
   detail?: unknown;
@@ -6,7 +7,6 @@ export type ApiError = {
 
 /**
  * Origem da API sem barra final e sem sufixo `/api`.
- * Evita URLs como `http://host:8000/api` + `/api/auth/me` → 404 (path duplicado).
  */
 function normalizeApiOrigin(raw: string): string {
   let u = raw.trim().replace(/\/+$/, "");
@@ -26,18 +26,15 @@ function getPublicApiUrl(): string {
   const pageIsLoopback = pageHost === "localhost" || pageHost === "127.0.0.1";
   const apiHost = normalized.replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
   const apiIsLoopback = apiHost === "localhost" || apiHost === "127.0.0.1";
-  /* Em dev no PC, usar proxy /api do Next (evita CORS e liga à INTERNAL_API_URL). */
   if (process.env.NODE_ENV === "development" && pageIsLoopback) {
     return "";
   }
-  /* Telemóvel em 192.168.x.x + API em localhost:8000 quebraria (localhost = o próprio telemóvel). */
   if (apiIsLoopback && !pageIsLoopback) {
     return "";
   }
   return normalized;
 }
 
-/** No servidor Next: prioriza INTERNAL (ex.: Docker `http://api:8000`). */
 function getServerApiUrl(): string {
   const internal = process.env.INTERNAL_API_URL?.trim();
   if (internal) return normalizeApiOrigin(internal);
@@ -53,14 +50,27 @@ function getBaseUrl(): string {
   return getServerApiUrl();
 }
 
-/** Base da API (sem `/api` final). Útil para `fetch` manual (ex.: download CSV). */
 export function getApiBaseUrl(): string {
   return getBaseUrl();
 }
 
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("eventosbr_token");
+export async function fetchSession(): Promise<Usuario | null> {
+  try {
+    return await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
+  } catch {
+    return null;
+  }
+}
+
+export async function logoutSession(): Promise<void> {
+  try {
+    await apiFetch<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
+  } catch {
+    /* ignore */
+  }
+  if (typeof window !== "undefined") {
+    dispatchAuthSync();
+  }
 }
 
 export async function apiFetch<T>(
@@ -70,9 +80,6 @@ export async function apiFetch<T>(
   const headers = new Headers(init.headers);
   headers.set("accept", "application/json");
 
-  const token = getToken();
-  if (token) headers.set("authorization", `Bearer ${token}`);
-
   const base = getBaseUrl();
   const url = `${base}${path}`;
   let res: Response;
@@ -80,6 +87,7 @@ export async function apiFetch<T>(
     res = await fetch(url, {
       ...init,
       headers,
+      credentials: "include",
     });
   } catch {
     throw new Error(
@@ -88,8 +96,7 @@ export async function apiFetch<T>(
     );
   }
 
-  if (res.status === 401 && token && typeof window !== "undefined") {
-    window.localStorage.removeItem("eventosbr_token");
+  if (res.status === 401 && typeof window !== "undefined") {
     dispatchAuthSync();
   }
 
@@ -126,6 +133,12 @@ export async function apiFetch<T>(
     throw new Error(message);
   }
 
-  return (await res.json()) as T;
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  const text = await res.text();
+  if (!text) {
+    return undefined as T;
+  }
+  return JSON.parse(text) as T;
 }
-

@@ -26,8 +26,15 @@ class UsuarioLogin(BaseModel):
     senha: str
 
 
+class OAuthConfigResponse(BaseModel):
+    """Configuração pública de login com Google (Client ID é público no browser)."""
+
+    google_enabled: bool
+    google_client_id: str = ""
+
+
 class OAuthLoginRequest(BaseModel):
-    """ID token emitido pelo Google ou Apple no browser."""
+    """ID token emitido pelo Google no browser."""
 
     id_token: str = Field(min_length=20, max_length=8192)
     tipo: str = "cliente"
@@ -39,9 +46,11 @@ class OAuthLoginRequest(BaseModel):
     @classmethod
     def normalizar_tipo_oauth(cls, v: object) -> str:
         if not isinstance(v, str):
-            return "cliente"
+            raise ValueError('tipo deve ser "cliente" ou "organizador"')
         s = v.strip().lower()
-        return s if s in ("cliente", "organizador") else "cliente"
+        if s in ("cliente", "organizador"):
+            return s
+        raise ValueError('tipo deve ser "cliente" ou "organizador"')
 
 class UsuarioResponse(BaseModel):
     id: str

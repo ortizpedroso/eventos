@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { adminFetch, clearAdminKey, getAdminKey, setAdminKey, validateAdminKey } from "@/lib/admin-api";
+import { adminFetch, adminSessionActive, clearAdminSession, validateAdminKey } from "@/lib/admin-api";
 
 type Contato = {
   id: string;
@@ -94,17 +94,9 @@ export function AdminDashboardClient() {
   const [setupUnavailable, setSetupUnavailable] = useState(false);
 
   useEffect(() => {
-    const k = getAdminKey();
-    if (!k) return;
-    setKeyInput(k);
-    setLoginBusy(true);
-    void validateAdminKey(k)
-      .then(() => setAuthed(true))
-      .catch((e) => {
-        clearAdminKey();
-        setError(e instanceof Error ? e.message : "Sessão expirada ou chave inválida.");
-      })
-      .finally(() => setLoginBusy(false));
+    void adminSessionActive().then((active) => {
+      if (active) setAuthed(true);
+    });
   }, []);
 
   const entrar = async () => {
@@ -117,10 +109,9 @@ export function AdminDashboardClient() {
     setError(null);
     try {
       await validateAdminKey(key);
-      setAdminKey(key);
       setAuthed(true);
     } catch (e) {
-      clearAdminKey();
+      await clearAdminSession();
       setError(e instanceof Error ? e.message : "Não foi possível validar a chave.");
     } finally {
       setLoginBusy(false);
@@ -379,7 +370,7 @@ export function AdminDashboardClient() {
           type="button"
           className="text-xs text-zinc-500 underline"
           onClick={() => {
-            clearAdminKey();
+            clearAdminSession();
             setAuthed(false);
             setSetup(null);
             setError(null);

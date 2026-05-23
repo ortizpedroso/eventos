@@ -1,4 +1,4 @@
-"""Login social Google / Apple."""
+"""Login social Google."""
 
 from unittest.mock import patch
 
@@ -14,7 +14,6 @@ client = TestClient(app)
 @pytest.fixture
 def oauth_env(monkeypatch):
     monkeypatch.setattr(settings, "GOOGLE_OAUTH_CLIENT_ID", "google-test-client.apps.googleusercontent.com")
-    monkeypatch.setattr(settings, "APPLE_OAUTH_CLIENT_ID", "com.eventosbr.web")
 
 
 def test_google_login_cria_usuario(oauth_env):
@@ -56,19 +55,21 @@ def test_google_login_idempotente(oauth_env):
     assert r1.json()["usuario"]["id"] == r2.json()["usuario"]["id"]
 
 
-def test_apple_login_cria_usuario(oauth_env):
-    claims = {
-        "sub": "apple-sub-789",
-        "email": "oauth.apple@exemplo.com",
-        "email_verified": True,
-    }
-    with patch("app.routes.auth.verify_apple_id_token", return_value=claims):
-        r = client.post(
-            "/api/auth/apple",
-            json={"id_token": "fake-apple-jwt-token-for-tests-only", "tipo": "cliente"},
-        )
-    assert r.status_code == 200, r.text
-    assert r.json()["usuario"]["email"] == "oauth.apple@exemplo.com"
+def test_oauth_config_sem_client_id(monkeypatch):
+    monkeypatch.setattr(settings, "GOOGLE_OAUTH_CLIENT_ID", "")
+    r = client.get("/api/auth/oauth-config")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["google_enabled"] is False
+    assert data["google_client_id"] == ""
+
+
+def test_oauth_config_com_client_id(oauth_env):
+    r = client.get("/api/auth/oauth-config")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["google_enabled"] is True
+    assert "googleusercontent.com" in data["google_client_id"]
 
 
 def test_oauth_desabilitado_sem_client_id(monkeypatch):

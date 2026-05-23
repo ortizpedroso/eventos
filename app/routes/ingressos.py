@@ -1,14 +1,19 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
+import re
 
 from app.models import Ingresso, Usuario, Evento, get_db
 from app.routes.auth import get_usuario_atual
 from app.services.ingresso_qr import gerar_qr_png_bytes
 from app.services.ticket_email import enqueue_ticket_email
+from app.utils.cpf import cpf_valido
+from app.utils.html_escape import esc
 from app.utils.privacy import mask_cpf, mask_telefone_br
 
 router = APIRouter()
@@ -40,12 +45,87 @@ async def listar_meus_ingressos(
             "valor": ingresso.valor,
             "status": ingresso.status,
             "data_compra": ingresso.data_compra,
+            "repassado_para_nome": ingresso.repassado_para_nome,
+            "repassado_para_email": ingresso.repassado_para_email,
+            "repassado_em": ingresso.repassado_em,
         }
         for ingresso in ingressos
     ]
 
 class EmailRequest(BaseModel):
-    email: Optional[str] = None
+    pass
+
+
+class RepassarIngressoRequest(BaseModel):
+    nome: str
+    cpf: str
+    email: EmailStr
+    telefone: str
+    data_nascimento: str
+
+    @field_validator("cpf")
+    @classmethod
+    def _validar_cpf(cls, v: str) -> str:
+        digits = re.sub(r"\D", "", v)
+        if len(digits) != 11:
+            raise ValueError("CPF deve ter 11 dígitos")
+        if not cpf_valido(digits):
+            raise ValueError("CPF inválido")
+        return digits
+
+    @field_validator("data_nascimento")
+    @classmethod
+    def _validar_data(cls, v: str) -> str:
+        try:
+            datetime.strptime(v, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("data_nascimento deve estar no formato YYYY-MM-DD")
+        return v
+
+@router.post("/{ingresso_id}/repassar")
+async def repassar_ingresso(
+    ingresso_id: str,
+    request: RepassarIngressoRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Repassa (transfere) a titularidade do participante para outra pessoa."""
+    ingresso = db.query(Ingresso).filter(
+        Ingresso.id == ingresso_id,
+        Ingresso.usuario_id == usuario_atual.id,
+    ).first()
+
+    if not ingresso:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+
+    if ingresso.status != "pago":
+        raise HTTPException(
+            status_code=400,
+            detail="Só é possível repassar ingressos com pagamento confirmado.",
+        )
+
+    ingresso.participante_nome = request.nome
+    ingresso.participante_email = request.email
+    ingresso.participante_cpf = re.sub(r"\D", "", request.cpf)
+    ingresso.participante_telefone = request.telefone
+    ingresso.repassado_para_nome = request.nome
+    ingresso.repassado_para_cpf = re.sub(r"\D", "", request.cpf)
+    ingresso.repassado_para_email = request.email
+    ingresso.repassado_para_telefone = request.telefone
+    ingresso.repassado_para_data_nascimento = request.data_nascimento
+    ingresso.repassado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    db.commit()
+    db.refresh(ingresso)
+
+    return {
+        "id": ingresso.id,
+        "repassado_para_nome": ingresso.repassado_para_nome,
+        "repassado_para_email": ingresso.repassado_para_email,
+        "repassado_em": ingresso.repassado_em,
+        "message": f"Ingresso repassado para {ingresso.repassado_para_nome} com sucesso.",
+    }
+
 
 @router.get("/{ingresso_id}/download", response_class=HTMLResponse)
 async def download_ingresso(
@@ -63,7 +143,7 @@ async def download_ingresso(
         raise HTTPException(status_code=404, detail="Ingresso não encontrado")
 
     qr_b64 = ""
-    if ingresso.status == "pago":
+    if (ingresso.status or "").lower() in ("pago", "usado"):
         import base64
 
         qr_b64 = base64.b64encode(gerar_qr_png_bytes(ingresso.id)).decode("ascii")
@@ -74,11 +154,29 @@ async def download_ingresso(
         else ""
     )
 
+    repasse_block = ""
+    if ingresso.repassado_em and ingresso.repassado_para_nome:
+        data_repasse = ingresso.repassado_em.strftime("%d/%m/%Y às %H:%M")
+        repasse_block = f"""
+        <div style="margin:20px 0;padding:14px 18px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;font-size:14px;color:#78350f;">
+            <strong>Ingresso repassado</strong> — transferido para
+            <strong>{esc(ingresso.repassado_para_nome)}</strong> em {esc(data_repasse)}.
+        </div>"""
+
+    ev_nome = esc(ingresso.evento.nome)
+    part_nome = esc(ingresso.participante_nome)
+    part_email = esc(ingresso.participante_email)
+    ev_data = esc(ingresso.evento.data_inicio)
+    ev_local = esc(ingresso.evento.local)
+    status_txt = esc((ingresso.status or "").upper())
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Ingresso - {ingresso.evento.nome}</title>
+        <meta charset="utf-8"/>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline';"/>
+        <title>Ingresso - {ev_nome}</title>
         <style>
             body {{ font-family: sans-serif; padding: 40px; color: #333; }}
             .ticket {{ border: 2px dashed #10b981; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 12px; }}
@@ -100,17 +198,17 @@ async def download_ingresso(
         </div>
         <div class="ticket">
             <div class="header">
-                <h2>{ingresso.evento.nome}</h2>
+                <h2>{ev_nome}</h2>
                 <p style="margin-top: 5px; color: #666;">Ingresso Oficial</p>
             </div>
             <div class="details">
-                <p><strong>Participante:</strong> {ingresso.participante_nome}</p>
-                <p><strong>Email:</strong> {ingresso.participante_email}</p>
-                <p><strong>Data:</strong> {ingresso.evento.data_inicio}</p>
-                <p><strong>Local:</strong> {ingresso.evento.local}</p>
+                {repasse_block}
+                <p><strong>Participante:</strong> {part_nome}</p>
+                <p><strong>Email:</strong> {part_email}</p>
+                <p><strong>Data:</strong> {ev_data}</p>
+                <p><strong>Local:</strong> {ev_local}</p>
                 {qr_block}
-                <p><strong>Código do Ingresso:</strong> {ingresso.id}</p>
-                <div class="status">{ingresso.status.upper()}</div>
+                <div class="status">{status_txt}</div>
             </div>
         </div>
     </body>
@@ -131,8 +229,11 @@ async def qr_ingresso(
     ).first()
     if not ingresso:
         raise HTTPException(status_code=404, detail="Ingresso não encontrado")
-    if ingresso.status != "pago":
-        raise HTTPException(status_code=400, detail="QR disponível apenas para ingressos pagos")
+    if (ingresso.status or "").lower() not in ("pago", "usado"):
+        raise HTTPException(
+            status_code=400,
+            detail="QR disponível apenas para ingressos confirmados (pagos ou já utilizados na entrada).",
+        )
     return Response(content=gerar_qr_png_bytes(ingresso.id), media_type="image/png")
 
 
@@ -155,7 +256,9 @@ async def enviar_email_ingresso(
     if ingresso.status != "pago":
         raise HTTPException(status_code=400, detail="Ingresso ainda não está pago")
 
-    email_destino = (request.email or ingresso.participante_email or usuario_atual.email).strip()
+    email_destino = (ingresso.participante_email or usuario_atual.email or "").strip()
+    if not email_destino:
+        raise HTTPException(status_code=400, detail="Ingresso sem e-mail de destino.")
     enqueue_ticket_email(ingresso.id)
 
-    return {"message": f"Ingresso enviado para {email_destino} (verifique também o spam)."}
+    return {"message": f"Ingresso enfileirado para {email_destino} (verifique também o spam)."}

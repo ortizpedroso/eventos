@@ -16,7 +16,9 @@ import {
   type PixDisplayData,
 } from "@/components/checkout-pix-painel";
 import { CheckoutPrecoDetalhe } from "@/components/checkout-preco-detalhe";
-import { apiFetch, getApiBaseUrl } from "@/lib/api";
+import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
+import { authHrefParaComprarIngresso } from "@/lib/criar-evento-routes";
+import { apiFetch, fetchSession, getApiBaseUrl } from "@/lib/api";
 import { formatCpfMask, isValidCpf, onlyDigits } from "@/lib/cpf";
 import { getStripe } from "@/lib/stripe-client";
 import { formatTelefoneBrMask, isTelefoneBrasilOk } from "@/lib/telefone-br";
@@ -24,6 +26,7 @@ import type { CriarPagamentoResponse, Usuario } from "@/lib/types";
 
 type Props = {
   eventoId: string;
+  eventoSlug: string;
   eventoNome: string;
   precoIngresso: number;
   limiteIngressosPorCpf?: number | null;
@@ -270,15 +273,11 @@ function ConfirmacaoIngresso({
 
   useEffect(() => {
     let cancelled = false;
-    const token =
-      typeof window !== "undefined" ? window.localStorage.getItem("eventosbr_token") : null;
-    if (!token) return;
-
     void (async () => {
       try {
         const base = getApiBaseUrl();
         const res = await fetch(`${base}/api/ingressos/${ingressoId}/qr`, {
-          headers: { authorization: `Bearer ${token}` },
+          credentials: "include",
         });
         if (!res.ok) return;
         const blob = await res.blob();
@@ -329,11 +328,14 @@ function ConfirmacaoIngresso({
 
 export function ComprarIngresso({
   eventoId,
+  eventoSlug,
   eventoNome,
   precoIngresso,
   limiteIngressosPorCpf = null,
   embedded = false,
 }: Props) {
+  const authLoginHref = authHrefParaComprarIngresso(eventoSlug);
+  const authRegisterHref = authHrefParaComprarIngresso(eventoSlug, "register");
   const [step, setStep] = useState<CheckoutStep>(1);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [ingressoId, setIngressoId] = useState<string | null>(null);
@@ -360,8 +362,29 @@ export function ComprarIngresso({
   } | null>(null);
   const [cupomBusy, setCupomBusy] = useState(false);
   const [cupomMsg, setCupomMsg] = useState<string | null>(null);
+  const [sessaoUsuario, setSessaoUsuario] = useState<Usuario | null>(null);
+  const [temToken, setTemToken] = useState(false);
+  const [checandoSessao, setChecandoSessao] = useState(true);
 
   const stripePromise = useMemo(() => getStripe(), []);
+
+  useEffect(() => {
+    async function carregarSessao() {
+      setChecandoSessao(true);
+      const u = await fetchSession();
+      setSessaoUsuario(u);
+      setTemToken(Boolean(u));
+      setChecandoSessao(false);
+    }
+    const onSync = () => void carregarSessao();
+    void carregarSessao();
+    window.addEventListener(AUTH_SYNC_EVENT, onSync);
+    return () => {
+      window.removeEventListener(AUTH_SYNC_EVENT, onSync);
+    };
+  }, []);
+
+  const logado = temToken || Boolean(sessaoUsuario);
 
   const ehCortesia = Number.isFinite(precoIngresso) && precoIngresso < 0.5;
   const precoCentavosBase = ehCortesia ? 0 : Math.round(precoIngresso * 100);
@@ -516,7 +539,20 @@ export function ComprarIngresso({
       setPixDisponivel(data.pix_disponivel !== false);
       setStep(2);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível iniciar o pagamento");
+      const msg = e instanceof Error ? e.message : "Não foi possível iniciar o pagamento";
+      const lower = msg.toLowerCase();
+      if (
+        lower.includes("not authenticated") ||
+        lower.includes("não autenticado") ||
+        lower.includes("credenciais") ||
+        lower.includes("unauthorized")
+      ) {
+        setError(
+          `${msg} Entre ou cadastre-se para continuar a compra neste evento.`,
+        );
+      } else {
+        setError(msg);
+      }
     } finally {
       setCreating(false);
     }
@@ -742,12 +778,32 @@ export function ComprarIngresso({
             ) : null}
           </div>
 
-          <p className="text-xs text-zinc-500">
-            <Link href="/auth" className="underline">
-              Entrar
-            </Link>{" "}
-            antes de continuar, se ainda não tiver conta.
-          </p>
+          {logado ? (
+            <p className="text-xs text-zinc-600">
+              {sessaoUsuario ? (
+                <>
+                  Comprando como{" "}
+                  <strong className="font-medium text-zinc-800">{sessaoUsuario.nome}</strong>
+                  <span className="text-zinc-500"> ({sessaoUsuario.email})</span>
+                </>
+              ) : checandoSessao ? (
+                "Sessão ativa — carregando seus dados…"
+              ) : (
+                "Sessão ativa — pode continuar para o pagamento."
+              )}
+            </p>
+          ) : (
+            <p className="text-xs text-zinc-500">
+              <Link href={authLoginHref} className="underline">
+                Entrar
+              </Link>{" "}
+              ou{" "}
+              <Link href={authRegisterHref} className="underline">
+                cadastrar-se
+              </Link>{" "}
+              para comprar neste evento (você volta aqui após autenticar).
+            </p>
+          )}
           <button
             type="button"
             data-testid="checkout-continuar"
