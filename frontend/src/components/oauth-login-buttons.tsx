@@ -22,6 +22,8 @@ type OAuthLoginButtonsProps = {
   aceitaComWhatsapp: boolean;
   telefoneCadastro: string;
   disabled?: boolean;
+  /** checkout: sem divisor «ou continue com» */
+  variant?: "default" | "checkout";
   onSuccess: (data: TokenResponse) => void;
   onError: (message: string) => void;
 };
@@ -72,6 +74,7 @@ export function OAuthLoginButtons({
   aceitaComWhatsapp,
   telefoneCadastro,
   disabled,
+  variant = "default",
   onSuccess,
   onError,
 }: OAuthLoginButtonsProps) {
@@ -182,14 +185,16 @@ export function OAuthLoginButtons({
 
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-zinc-200" />
+      {variant === "default" ? (
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-zinc-200" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-zinc-500">ou continue com</span>
+          </div>
         </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-zinc-500">ou continue com</span>
-        </div>
-      </div>
+      ) : null}
 
       {googleEnabled ? (
         <div

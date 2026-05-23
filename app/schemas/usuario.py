@@ -26,6 +26,13 @@ class UsuarioLogin(BaseModel):
     senha: str
 
 
+class CompraRapidaRequest(BaseModel):
+    """Checkout convidado: cria conta cliente mínima e autentica via cookie."""
+
+    nome: str = Field(min_length=1, max_length=200)
+    email: EmailStr
+
+
 class OAuthConfigResponse(BaseModel):
     """Configuração pública de login com Google (Client ID é público no browser)."""
 

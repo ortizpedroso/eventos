@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.models import Evento, EventoIngressoLote, Ingresso
@@ -17,11 +17,18 @@ def agora_utc_naive() -> datetime:
 
 
 def contar_ocupacao_lote(db: Session, lote_id: str) -> int:
+    """Conta vagas ocupadas, excluindo reservas já expiradas."""
+    agora = agora_utc_naive()
     return (
         db.query(func.count(Ingresso.id))
         .filter(
             Ingresso.lote_id == lote_id,
             Ingresso.status.in_(("pendente", "pago")),
+            or_(
+                Ingresso.status == "pago",           # confirmados sempre contam
+                Ingresso.reservado_ate.is_(None),    # sem prazo = conta (legado)
+                Ingresso.reservado_ate > agora,      # prazo ainda válido = conta
+            ),
         )
         .scalar()
     ) or 0
@@ -31,12 +38,18 @@ def contar_ocupacao_por_lotes(db: Session, lote_ids: Sequence[str]) -> dict[str,
     """Uma consulta agregada para vários lotes (evita N+1 em listagens)."""
     if not lote_ids:
         return {}
+    agora = agora_utc_naive()
     ids = list(dict.fromkeys(lote_ids))
     rows = (
         db.query(Ingresso.lote_id, func.count(Ingresso.id))
         .filter(
             Ingresso.lote_id.in_(ids),
             Ingresso.status.in_(("pendente", "pago")),
+            or_(
+                Ingresso.status == "pago",
+                Ingresso.reservado_ate.is_(None),
+                Ingresso.reservado_ate > agora,
+            ),
         )
         .group_by(Ingresso.lote_id)
         .all()
@@ -46,6 +59,33 @@ def contar_ocupacao_por_lotes(db: Session, lote_ids: Sequence[str]) -> dict[str,
         if lid is not None:
             out[str(lid)] = int(c)
     return out
+
+
+def reservar_vaga_lote(db: Session, lote_id: str) -> EventoIngressoLote:
+    """Trava a linha do lote (SELECT FOR UPDATE) e verifica capacidade.
+
+    Deve ser chamado dentro da mesma transação que cria o Ingresso.
+    Lança ValueError se o lote estiver esgotado ou inativo.
+    O cadeado é liberado automaticamente no COMMIT seguinte.
+    """
+    lote = (
+        db.query(EventoIngressoLote)
+        .filter(EventoIngressoLote.id == lote_id)
+        .with_for_update()
+        .first()
+    )
+    if lote is None:
+        raise ValueError("Lote não encontrado.")
+    if not lote.ativo:
+        raise ValueError("Este lote não está mais disponível.")
+    if lote.quantidade_maxima is not None:
+        vendidos = contar_ocupacao_lote(db, lote.id)
+        if vendidos >= lote.quantidade_maxima:
+            raise ValueError(
+                "Ingressos esgotados para este lote. "
+                "Outro comprador acabou de reservar a última vaga."
+            )
+    return lote
 
 
 def lote_elegivel_compra(

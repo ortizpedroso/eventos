@@ -84,7 +84,22 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             )
             if ingresso and ingresso.status == "pendente":
                 ingresso.status = "cancelado"
+                ingresso.reservado_ate = None
                 logger.info("Ingresso %s cancelado (pagamento falhou)", ingresso.id)
+
+        elif event_type == "payment_intent.canceled":
+            # PI cancelado/expirado pelo Stripe (ex.: PIX não pago em 30 min).
+            # Libera a vaga imediatamente sem esperar o job de limpeza.
+            payment_intent = event["data"]["object"]
+            ingresso = (
+                db.query(Ingresso)
+                .filter(Ingresso.stripe_payment_intent_id == payment_intent["id"])
+                .first()
+            )
+            if ingresso and ingresso.status == "pendente":
+                ingresso.status = "cancelado"
+                ingresso.reservado_ate = None
+                logger.info("Ingresso %s cancelado (PI expirado/cancelado pelo Stripe)", ingresso.id)
 
         if event_id:
             db.add(StripeEvent(id=event_id, tipo=event_type))

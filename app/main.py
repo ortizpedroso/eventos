@@ -53,12 +53,15 @@ async def lifespan(app: FastAPI):
             )
     from app.services.production_checks import log_production_warnings
     from app.services.ticket_email import start_ticket_email_worker, stop_ticket_email_worker
+    from app.services.reserva_cleanup import start_reserva_cleanup_worker, stop_reserva_cleanup_worker
 
     log_production_warnings()
     start_ticket_email_worker()
+    start_reserva_cleanup_worker()
     try:
         yield
     finally:
+        stop_reserva_cleanup_worker()
         stop_ticket_email_worker()
 
 

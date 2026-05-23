@@ -27,6 +27,10 @@ class Ingresso(Base):
     cupom_id = Column(String, ForeignKey("evento_cupons.id", ondelete="SET NULL"), nullable=True)
     cortesia_responsavel = Column(String(200), nullable=True)
 
+    # Prazo da reserva: enquanto pendente, a vaga está bloqueada até este timestamp.
+    # Após o prazo, o job de limpeza cancela o ingresso e libera a vaga.
+    reservado_ate = Column(DateTime, nullable=True)
+
     # Repasse / transferência para outro participante
     repassado_para_nome = Column(String(200), nullable=True)
     repassado_para_cpf = Column(String(14), nullable=True)

@@ -80,7 +80,14 @@ def realizar_checkin(
     if not ingresso_id:
         raise ValueError("Código inválido ou ingresso não reconhecido.")
 
-    ingresso = db.get(Ingresso, ingresso_id)
+    # SELECT FOR UPDATE: evita dupla validação quando dois leitores de QR
+    # scanneiam o mesmo ingresso simultaneamente em portarias com filas paralelas.
+    ingresso = (
+        db.query(Ingresso)
+        .filter(Ingresso.id == ingresso_id)
+        .with_for_update()
+        .first()
+    )
     if not ingresso:
         raise ValueError("Ingresso não encontrado.")
 
@@ -134,7 +141,13 @@ def realizar_checkin_portaria(
     if not ingresso_id:
         raise ValueError("Código inválido ou ingresso não reconhecido.")
 
-    ingresso = db.get(Ingresso, ingresso_id)
+    # SELECT FOR UPDATE: evita dupla validação concorrente na portaria.
+    ingresso = (
+        db.query(Ingresso)
+        .filter(Ingresso.id == ingresso_id)
+        .with_for_update()
+        .first()
+    )
     if not ingresso:
         raise ValueError("Ingresso não encontrado.")
 

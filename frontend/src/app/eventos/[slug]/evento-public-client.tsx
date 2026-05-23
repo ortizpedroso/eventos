@@ -121,7 +121,7 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
   const fmtInicio = formatEventoDataHora(evento.data_inicio);
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6${evento.publicado ? " pb-24 lg:pb-0" : ""}`}>
       <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-600">
         <Link className="hover:underline" href="/">
           ← Voltar
@@ -182,7 +182,8 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
 
           <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start">
             <aside
-              className="order-1 rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm lg:sticky lg:top-24 lg:order-2"
+              id="comprar"
+              className="order-1 scroll-mt-24 rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm lg:sticky lg:top-24 lg:order-2"
               aria-label="Compra de ingresso"
             >
               <EventoPoliticaReembolso />
@@ -345,6 +346,18 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
           </p>
         </section>
       )}
+
+      {evento.publicado ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm lg:hidden">
+          <a
+            href="#comprar"
+            className="btn-success flex w-full items-center justify-center gap-2 text-white"
+          >
+            <span>Comprar ingresso</span>
+            <span className="font-semibold">{precoFmt}</span>
+          </a>
+        </div>
+      ) : null}
     </div>
   );
 }

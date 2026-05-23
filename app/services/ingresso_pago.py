@@ -2,18 +2,40 @@
 
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy.orm import Session
 
 from app.models import Ingresso
 from app.services.cupom_desconto import registrar_uso_cupom
 from app.services.ticket_email import enqueue_ticket_email
 
+logger = logging.getLogger(__name__)
+
 
 def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
-    """Marca como pago (sem commit). Retorna True se mudou de status."""
+    """Marca como pago (sem commit). Retorna True se o status mudou.
+
+    Casos tratados:
+    - já pago → idempotente, retorna False
+    - cancelado → o ingresso expirou antes do webhook chegar; não reativa
+      (o Stripe PI deveria ter sido cancelado pelo cleanup, mas em caso de
+      atraso de rede o webhook pode chegar depois — logamos e ignoramos)
+    - pendente → transição normal, limpa reservado_ate
+    """
     if ingresso.status == "pago":
         return False
+
+    if ingresso.status == "cancelado":
+        logger.warning(
+            "PI confirmado para ingresso já cancelado %s (reserva expirou antes do webhook). "
+            "Verifique se o reembolso foi processado pelo Stripe.",
+            ingresso.id,
+        )
+        return False
+
     ingresso.status = "pago"
+    ingresso.reservado_ate = None  # limpa o prazo de reserva
     registrar_uso_cupom(db, getattr(ingresso, "cupom_id", None))
     return True
 

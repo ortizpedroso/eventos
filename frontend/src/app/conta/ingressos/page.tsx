@@ -6,6 +6,39 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import type { IngressoListItem } from "@/lib/types";
 
+function PendenteBadge({ reservadoAte }: { reservadoAte: string }) {
+  const [secs, setSecs] = useState<number | null>(null);
+
+  useEffect(() => {
+    const expiry = new Date(reservadoAte).getTime();
+    const calc = () => setSecs(Math.max(0, Math.floor((expiry - Date.now()) / 1000)));
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, [reservadoAte]);
+
+  if (secs === null) return null;
+
+  const mm = String(Math.floor(secs / 60)).padStart(2, "0");
+  const ss = String(secs % 60).padStart(2, "0");
+
+  if (secs === 0) {
+    return (
+      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+        Reserva expirada
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+      <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
+      </svg>
+      Aguardando pagamento · {mm}:{ss}
+    </div>
+  );
+}
+
 export default function MeusIngressosPage() {
   const [items, setItems] = useState<IngressoListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +105,9 @@ export default function MeusIngressosPage() {
                   {it.participante_nome}
                   {it.participante_email ? ` (${it.participante_email})` : ""}
                 </div>
+              ) : null}
+              {it.status === "pendente" && it.reservado_ate ? (
+                <PendenteBadge reservadoAte={it.reservado_ate} />
               ) : null}
               {it.repassado_em ? (
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">

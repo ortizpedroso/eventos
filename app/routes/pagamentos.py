@@ -14,7 +14,7 @@ from app.routes.auth import get_usuario_atual
 from app.services.cpf_limite import validar_limite_cpf_evento
 from app.services.cupom_desconto import centavos_com_cupom, resolver_cupom_evento
 from app.services.ticket_email import enqueue_ticket_email
-from app.services.ingresso_lotes import resolver_lote_compra
+from app.services.ingresso_lotes import reservar_vaga_lote, resolver_lote_compra
 from app.utils.cpf import cpf_valido, normalizar_cpf
 from app.utils.ingresso_tipos import lote_e_cortesia
 from app.utils.privacy import mask_cpf, mask_telefone_br
@@ -31,16 +31,24 @@ def _stripe_erro_pix_inativo(err: stripe.error.StripeError) -> bool:
     return "pix" in msg and ("invalid" in msg or "not enabled" in msg or "not activated" in msg)
 
 
+# Janela do PIX: 30 minutos (1800s). A reserva do ingresso dura 35 min —
+# ligeiramente mais longa para cobrir latência de webhook no cancelamento do PI.
+_PIX_EXPIRY_SECONDS = 1800
+_RESERVA_MINUTOS = 35
+
+
 def _criar_payment_intent_brl(
     *,
     amount: int,
     customer_id: str,
     metadata: dict,
     transfer_destination: str | None,
+    idempotency_key: str,
 ) -> tuple[stripe.PaymentIntent, bool]:
-    """
-    Cria PaymentIntent com card+pix quando a conta Stripe tiver PIX ativo.
-    Retorna (intent, pix_disponivel).
+    """Cria PaymentIntent com card+pix. Retorna (intent, pix_disponivel).
+
+    idempotency_key garante que duplo clique ou retry de rede não cria
+    dois PaymentIntents distintos para o mesmo ingresso.
     """
     base: dict = {
         "amount": amount,
@@ -54,10 +62,10 @@ def _criar_payment_intent_brl(
     com_pix: dict = {
         **base,
         "payment_method_types": ["card", "pix"],
-        "payment_method_options": {"pix": {"expires_after_seconds": 3600}},
+        "payment_method_options": {"pix": {"expires_after_seconds": _PIX_EXPIRY_SECONDS}},
     }
     try:
-        return stripe.PaymentIntent.create(**com_pix), True
+        return stripe.PaymentIntent.create(**com_pix, idempotency_key=idempotency_key), True
     except stripe.error.InvalidRequestError as e:
         if not _stripe_erro_pix_inativo(e):
             raise
@@ -68,7 +76,7 @@ def _criar_payment_intent_brl(
             **base,
             "automatic_payment_methods": {"enabled": True, "allow_redirects": "never"},
         }
-        return stripe.PaymentIntent.create(**so_cartao), False
+        return stripe.PaymentIntent.create(**so_cartao, idempotency_key=idempotency_key), False
 
 class CriarPagamentoRequest(BaseModel):
     evento_id: str
@@ -275,10 +283,7 @@ async def criar_pagamento(
 
     resp_cortesia = (body.cortesia_responsavel or "").strip() or None
     if eh_cortesia and not resp_cortesia:
-        raise HTTPException(
-            status_code=400,
-            detail="Informe quem autorizou a cortesia (nome do responsável).",
-        )
+        resp_cortesia = "Ingresso cortesia"
 
     def _ingresso_gratis(fake_prefix: str = "cortesia") -> dict:
         agora = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -325,6 +330,35 @@ async def criar_pagamento(
             detail="Cliente Stripe não encontrado. Refaça o cadastro ou contate o suporte.",
         )
 
+    # ── Passo 1: travar o lote e criar a reserva ────────────────────────────
+    # SELECT FOR UPDATE garante que apenas uma transação por vez verifica e
+    # decrementa a capacidade. O COMMIT libera o cadeado antes da chamada Stripe.
+    try:
+        reservar_vaga_lote(db, lote.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    agora = datetime.now(timezone.utc).replace(tzinfo=None)
+    novo_ingresso = Ingresso(
+        evento_id=evento.id,
+        usuario_id=usuario_atual.id,
+        lote_id=lote.id,
+        participante_nome=pn,
+        participante_email=pe,
+        participante_cpf=p_cpf,
+        participante_telefone=p_tel,
+        cupom_id=cupom_id,
+        valor=valor_reais,
+        stripe_payment_intent_id=None,  # preenchido após a chamada Stripe
+        status="pendente",
+        reservado_ate=agora + timedelta(minutes=_RESERVA_MINUTOS),
+    )
+    db.add(novo_ingresso)
+    db.commit()  # reserva confirmada — cadeado liberado aqui
+    db.refresh(novo_ingresso)
+
+    # ── Passo 2: criar PaymentIntent no Stripe (fora de transação) ──────────
+    # idempotency_key por ingresso: duplo clique ou retry retorna o mesmo PI.
     try:
         intent, pix_disponivel = _criar_payment_intent_brl(
             amount=valor_centavos,
@@ -336,25 +370,10 @@ async def criar_pagamento(
                 "participante_email": (pe or "")[:450],
             },
             transfer_destination=evento.stripe_account_id,
+            idempotency_key=f"pi_{novo_ingresso.id}",
         )
-
-        # Cria o registro do Ingresso pendente no banco
-        novo_ingresso = Ingresso(
-            evento_id=evento.id,
-            usuario_id=usuario_atual.id,
-            lote_id=lote.id,
-            participante_nome=pn,
-            participante_email=pe,
-            participante_cpf=p_cpf,
-            participante_telefone=p_tel,
-            cupom_id=cupom_id,
-            valor=valor_reais,
-            stripe_payment_intent_id=intent.id,
-            status="pendente",
-        )
-        db.add(novo_ingresso)
+        novo_ingresso.stripe_payment_intent_id = intent.id
         db.commit()
-        db.refresh(novo_ingresso)
 
         return {
             "client_secret": intent.client_secret,
@@ -362,10 +381,15 @@ async def criar_pagamento(
             "pix_disponivel": pix_disponivel,
             "valor_centavos": valor_centavos,
             "cupom_aplicado": cupom_id is not None,
+            "reservado_ate": novo_ingresso.reservado_ate.isoformat() + "Z",
         }
-        
+
     except stripe.error.StripeError as e:
-        logger.exception("Erro Stripe ao criar pagamento")
+        # Stripe falhou — libera a reserva imediatamente para não bloquear a vaga
+        logger.exception("Erro Stripe ao criar pagamento; cancelando reserva %s", novo_ingresso.id)
+        novo_ingresso.status = "cancelado"
+        novo_ingresso.reservado_ate = None
+        db.commit()
         raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
 
 @router.get("/meus")

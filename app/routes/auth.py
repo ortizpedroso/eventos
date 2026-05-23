@@ -10,6 +10,7 @@ import stripe
 from app.models import Usuario, get_db
 from app.schemas.usuario import (
     AtualizarPerfilRequest,
+    CompraRapidaRequest,
     OAuthConfigResponse,
     OAuthLoginRequest,
     UsuarioCreate,
@@ -32,6 +33,7 @@ from app.services.auth import (
     hash_password,
     verify_password,
 )
+from app.services.usuario_stripe import criar_stripe_para_novo_usuario
 from app.utils.auth_cookie import AUTH_COOKIE_NAME, clear_auth_cookie, set_auth_cookie
 from app.utils.public_errors import STRIPE_CLIENTE
 from config.settings import settings
@@ -234,6 +236,80 @@ async def registrar(
         "token_type": "bearer",
         "usuario": UsuarioResponse.model_validate(novo_usuario),
     }
+
+
+@router.post("/compra-rapida", response_model=Token)
+async def compra_rapida(
+    body: CompraRapidaRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_register),
+):
+    """Checkout convidado: cria conta cliente mínima (sem senha) e autentica via cookie."""
+
+    email = str(body.email).strip().lower()
+    nome = body.nome.strip()
+    if not nome:
+        raise HTTPException(status_code=400, detail="Nome é obrigatório.")
+
+    existente = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
+    if existente:
+        if not existente.ativo:
+            raise HTTPException(
+                status_code=403,
+                detail="Conta desativada. Entre em contato com o suporte da plataforma.",
+            )
+        if existente.senha_hash:
+            raise HTTPException(
+                status_code=409,
+                detail="Este e-mail já tem conta. Use Entrar ou Continuar com Google.",
+            )
+        if existente.auth_provider and existente.auth_provider != "email":
+            prov = (
+                "Google"
+                if existente.auth_provider == "google"
+                else existente.auth_provider.capitalize()
+            )
+            raise HTTPException(
+                status_code=409,
+                detail=f"Este e-mail já tem conta com {prov}. Use o botão correspondente.",
+            )
+        if existente.nome != nome:
+            existente.nome = nome
+            db.commit()
+            db.refresh(existente)
+        logger.info("Compra rápida: sessão reutilizada para %s", email)
+        return _token_response(existente, response)
+
+    stripe_customer_id: str | None = None
+    if not settings.STRIPE_DISABLED:
+        try:
+            stripe_customer_id, _ = criar_stripe_para_novo_usuario(
+                email=email,
+                nome=nome,
+                tipo="cliente",
+            )
+        except stripe.error.StripeError as e:
+            logger.exception("Erro Stripe na compra rápida: %s", e)
+            raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
+    else:
+        logger.warning("STRIPE_DISABLED: compra rápida %s sem Customer Stripe", email)
+
+    novo_usuario = Usuario(
+        email=email,
+        nome=nome,
+        senha_hash=None,
+        tipo="cliente",
+        auth_provider="email",
+        stripe_customer_id=stripe_customer_id,
+    )
+    db.add(novo_usuario)
+    db.commit()
+    db.refresh(novo_usuario)
+
+    logger.info("Compra rápida: usuário criado %s", novo_usuario.id)
+    return _token_response(novo_usuario, response)
+
 
 @router.post("/login", response_model=Token)
 async def login(

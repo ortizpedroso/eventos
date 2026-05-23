@@ -10,6 +10,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { CheckoutStepper } from "@/components/checkout-stepper";
+import { CheckoutAuthPanel } from "@/components/checkout-auth-panel";
 import {
   CheckoutPixPainel,
   carregarPixDoIntent,
@@ -19,6 +20,7 @@ import { CheckoutPrecoDetalhe } from "@/components/checkout-preco-detalhe";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { authHrefParaComprarIngresso } from "@/lib/criar-evento-routes";
 import { apiFetch, fetchSession, getApiBaseUrl } from "@/lib/api";
+import { mapCheckoutError, isDevCheckoutWarning } from "@/lib/checkout-errors";
 import { formatCpfMask, isValidCpf, onlyDigits } from "@/lib/cpf";
 import { getStripe } from "@/lib/stripe-client";
 import { formatTelefoneBrMask, isTelefoneBrasilOk } from "@/lib/telefone-br";
@@ -97,7 +99,7 @@ function ConfirmForm({
     setBusy(false);
 
     if (pixResult.error) {
-      setMsg(pixResult.error.message ?? "Falha ao gerar o PIX.");
+      setMsg(mapCheckoutError(pixResult.error.message ?? "Falha ao gerar o PIX."));
       return;
     }
     const paymentIntent = pixResult.paymentIntent;
@@ -125,7 +127,7 @@ function ConfirmForm({
     const { error: submitError } = await elements.submit();
     if (submitError) {
       setBusy(false);
-      setMsg(submitError.message ?? "Revise os dados do cartão.");
+      setMsg(mapCheckoutError(submitError.message ?? "Revise os dados do cartão."));
       return;
     }
 
@@ -137,7 +139,7 @@ function ConfirmForm({
     setBusy(false);
 
     if (cardResult.error) {
-      setMsg(cardResult.error.message ?? "Falha no pagamento");
+      setMsg(mapCheckoutError(cardResult.error.message ?? "Falha no pagamento"));
       return;
     }
     const paymentIntent = cardResult.paymentIntent;
@@ -183,7 +185,7 @@ function ConfirmForm({
 
   return (
     <div className="space-y-4">
-      {!pixDisponivel ? (
+      {!pixDisponivel && isDevCheckoutWarning() ? (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
           PIX indisponível nesta conta Stripe (ative em{" "}
           <a
@@ -270,6 +272,7 @@ function ConfirmacaoIngresso({
   emailParticipante: string;
 }) {
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const downloadHref = `${getApiBaseUrl()}/api/ingressos/${ingressoId}/download`;
 
   useEffect(() => {
     let cancelled = false;
@@ -308,16 +311,24 @@ function ConfirmacaoIngresso({
         <strong className="text-zinc-900">{emailParticipante}</strong> (verifique o spam).
       </p>
       {qrUrl ? (
-        <div className="mx-auto inline-block rounded-lg border border-zinc-200 bg-white p-3">
+        <div className="mx-auto inline-block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrUrl} alt="QR Code do ingresso" width={180} height={180} className="mx-auto" />
-          <p className="mt-2 text-[11px] text-zinc-500">Apresente na entrada do evento</p>
+          <img src={qrUrl} alt="QR Code do ingresso" width={240} height={240} className="mx-auto" />
+          <p className="mt-2 text-xs text-zinc-500">Apresente na entrada do evento</p>
         </div>
       ) : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
         <Link href={`/conta/ingressos/${ingressoId}`} className="btn-success text-white">
           Ver meu ingresso
         </Link>
+        <a
+          href={downloadHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-outline"
+        >
+          Baixar / imprimir
+        </a>
         <Link href="/conta/pagamentos" className="btn-outline">
           Meus pagamentos
         </Link>
@@ -339,6 +350,8 @@ export function ComprarIngresso({
   const [step, setStep] = useState<CheckoutStep>(1);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [ingressoId, setIngressoId] = useState<string | null>(null);
+  const [reservadoAte, setReservadoAte] = useState<Date | null>(null);
+  const [segundosRestantes, setSegundosRestantes] = useState<number | null>(null);
   const [emailConfirmacao, setEmailConfirmacao] = useState("");
   const [pagamentoModoTeste, setPagamentoModoTeste] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -368,6 +381,21 @@ export function ComprarIngresso({
 
   const stripePromise = useMemo(() => getStripe(), []);
 
+  // Countdown do prazo de reserva
+  useEffect(() => {
+    if (!reservadoAte || step !== 2) {
+      setSegundosRestantes(null);
+      return;
+    }
+    const calcular = () => {
+      const diff = Math.floor((reservadoAte.getTime() - Date.now()) / 1000);
+      setSegundosRestantes(Math.max(0, diff));
+    };
+    calcular();
+    const id = setInterval(calcular, 1000);
+    return () => clearInterval(id);
+  }, [reservadoAte, step]);
+
   useEffect(() => {
     async function carregarSessao() {
       setChecandoSessao(true);
@@ -385,6 +413,7 @@ export function ComprarIngresso({
   }, []);
 
   const logado = temToken || Boolean(sessaoUsuario);
+  const devCheckout = isDevCheckoutWarning();
 
   const ehCortesia = Number.isFinite(precoIngresso) && precoIngresso < 0.5;
   const precoCentavosBase = ehCortesia ? 0 : Math.round(precoIngresso * 100);
@@ -431,7 +460,7 @@ export function ComprarIngresso({
       );
     } catch (e) {
       setCupomPreview(null);
-      setCupomMsg(e instanceof Error ? e.message : "Cupom inválido.");
+      setCupomMsg(mapCheckoutError(e instanceof Error ? e.message : "Cupom inválido."));
     } finally {
       setCupomBusy(false);
     }
@@ -496,11 +525,6 @@ export function ComprarIngresso({
       }
     }
 
-    if (ehCortesia && !cortesiaResponsavel.trim()) {
-      setError("Informe quem autorizou a cortesia (responsável).");
-      return;
-    }
-
     const body: Record<string, unknown> = {
       evento_id: eventoId,
       valor_centavos,
@@ -513,7 +537,7 @@ export function ComprarIngresso({
     } else if (exigeCpf) {
       body.participante_cpf = onlyDigits(participanteCpfDigits, 11);
     }
-    if (ehCortesia) {
+    if (ehCortesia && cortesiaResponsavel.trim()) {
       body.cortesia_responsavel = cortesiaResponsavel.trim();
     }
     const cupomCodigo = codigoCupom.trim();
@@ -537,30 +561,27 @@ export function ComprarIngresso({
       setClientSecret(data.client_secret);
       setIngressoId(data.ingresso_id);
       setPixDisponivel(data.pix_disponivel !== false);
+      if (data.reservado_ate) {
+        setReservadoAte(new Date(data.reservado_ate));
+      }
       setStep(2);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Não foi possível iniciar o pagamento";
-      const lower = msg.toLowerCase();
-      if (
-        lower.includes("not authenticated") ||
-        lower.includes("não autenticado") ||
-        lower.includes("credenciais") ||
-        lower.includes("unauthorized")
-      ) {
-        setError(
-          `${msg} Entre ou cadastre-se para continuar a compra neste evento.`,
-        );
-      } else {
-        setError(msg);
-      }
+      setError(mapCheckoutError(msg));
     } finally {
       setCreating(false);
     }
   }
 
   const stripePubOk = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+
+  const timerFmt =
+    segundosRestantes !== null
+      ? `${String(Math.floor(segundosRestantes / 60)).padStart(2, "0")}:${String(segundosRestantes % 60).padStart(2, "0")}`
+      : null;
+  const timerExpirou = segundosRestantes === 0;
   const avisoSemStripePub =
-    !stripePubOk && !process.env.NEXT_PUBLIC_STRIPE_DISABLED;
+    devCheckout && !stripePubOk && !process.env.NEXT_PUBLIC_STRIPE_DISABLED;
 
   const shellClass = embedded
     ? "mt-0 border-0 bg-transparent p-0 shadow-none [&_p]:text-justify"
@@ -589,7 +610,7 @@ export function ComprarIngresso({
     <div className={shellClass}>
       <CheckoutStepper current={step} />
 
-      {process.env.NEXT_PUBLIC_STRIPE_DISABLED === "true" ? (
+      {devCheckout && process.env.NEXT_PUBLIC_STRIPE_DISABLED === "true" ? (
         <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
           Modo de teste no site (STRIPE_DISABLED na API).
         </p>
@@ -605,7 +626,9 @@ export function ComprarIngresso({
       {step === 1 ? (
         <div className="space-y-4">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-900">1. Dados do participante</h2>
+            <h2 className="text-sm font-semibold text-zinc-900">
+              {logado ? "1. Dados do participante" : "1. Identifique-se para comprar"}
+            </h2>
             <p className="mt-1 text-xs text-zinc-600">{eventoNome}</p>
           </div>
 
@@ -619,39 +642,43 @@ export function ComprarIngresso({
                   aplicado com cupom <strong>{cupomPreview.codigo}</strong>.
                 </p>
               ) : null}
-              <div className="rounded-md border border-zinc-200 bg-white p-3 text-sm shadow-sm">
-                <p className="font-medium text-zinc-900">Cupom de desconto</p>
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                  <input
-                    value={codigoCupom}
-                    onChange={(e) => {
-                      setCodigoCupom(e.target.value.toUpperCase());
-                      setCupomPreview(null);
-                      setCupomMsg(null);
-                    }}
-                    placeholder="Ex.: PROMO10"
-                    className="min-w-0 flex-1 rounded-md border border-zinc-300 px-2 py-1.5 text-sm uppercase"
-                    maxLength={40}
-                    autoComplete="off"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void aplicarCupom()}
-                    disabled={cupomBusy || !codigoCupom.trim()}
-                    className="btn-outline shrink-0 px-4 py-1.5 text-sm"
-                  >
-                    {cupomBusy ? "Validando…" : "Aplicar"}
-                  </button>
+              <details className="rounded-md border border-zinc-200 bg-white text-sm shadow-sm">
+                <summary className="cursor-pointer px-3 py-2.5 font-medium text-zinc-900 hover:bg-zinc-50">
+                  Tem cupom de desconto?
+                </summary>
+                <div className="border-t border-zinc-100 px-3 pb-3 pt-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      value={codigoCupom}
+                      onChange={(e) => {
+                        setCodigoCupom(e.target.value.toUpperCase());
+                        setCupomPreview(null);
+                        setCupomMsg(null);
+                      }}
+                      placeholder="Ex.: PROMO10"
+                      className="min-w-0 flex-1 rounded-md border border-zinc-300 px-2 py-1.5 text-sm uppercase"
+                      maxLength={40}
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void aplicarCupom()}
+                      disabled={cupomBusy || !codigoCupom.trim()}
+                      className="btn-outline shrink-0 px-4 py-1.5 text-sm"
+                    >
+                      {cupomBusy ? "Validando…" : "Aplicar"}
+                    </button>
+                  </div>
+                  {cupomMsg ? (
+                    <p
+                      className={`mt-2 text-xs ${cupomPreview ? "text-emerald-800" : "text-red-600"}`}
+                      role="status"
+                    >
+                      {cupomMsg}
+                    </p>
+                  ) : null}
                 </div>
-                {cupomMsg ? (
-                  <p
-                    className={`mt-2 text-xs ${cupomPreview ? "text-emerald-800" : "text-red-600"}`}
-                    role="status"
-                  >
-                    {cupomMsg}
-                  </p>
-                ) : null}
-              </div>
+              </details>
             </>
           ) : (
             <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-3 py-3 text-sm">
@@ -660,164 +687,170 @@ export function ComprarIngresso({
             </div>
           )}
 
-          {ehCortesia ? (
-            <div className="rounded-md border border-violet-200 bg-violet-50/80 px-3 py-3 text-sm">
-              <label className="text-xs font-medium text-violet-900" htmlFor="cortesia_resp">
-                Responsável pela cortesia <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="cortesia_resp"
-                value={cortesiaResponsavel}
-                onChange={(e) => setCortesiaResponsavel(e.target.value)}
-                placeholder="Ex.: nome do organizador ou patrocinador"
-                className="mt-1 w-full rounded-md border border-violet-200 bg-white px-2 py-1.5 text-sm"
-                maxLength={200}
-              />
-              <p className="mt-1 text-[11px] text-violet-800/90">
-                Registro interno de quem autorizou o ingresso gratuito.
-              </p>
-            </div>
-          ) : null}
+          {checandoSessao ? (
+            <p className="text-xs text-zinc-500">Verificando sessão…</p>
+          ) : !logado ? (
+            <CheckoutAuthPanel
+              authLoginHref={authLoginHref}
+              authRegisterHref={authRegisterHref}
+              onAuthenticated={() => {
+                void (async () => {
+                  const u = await fetchSession();
+                  setSessaoUsuario(u);
+                  setTemToken(Boolean(u));
+                })();
+              }}
+            />
+          ) : (
+            <>
+              {ehCortesia ? (
+                <div className="rounded-md border border-violet-200 bg-violet-50/80 px-3 py-3 text-sm">
+                  <label className="text-xs font-medium text-violet-900" htmlFor="cortesia_resp">
+                    Responsável pela cortesia{" "}
+                    <span className="font-normal text-violet-700">(opcional)</span>
+                  </label>
+                  <input
+                    id="cortesia_resp"
+                    value={cortesiaResponsavel}
+                    onChange={(e) => setCortesiaResponsavel(e.target.value)}
+                    placeholder="Ex.: organizador ou patrocinador"
+                    className="mt-1 w-full rounded-md border border-violet-200 bg-white px-2 py-1.5 text-sm"
+                    maxLength={200}
+                  />
+                </div>
+              ) : null}
 
-          <div className="rounded-md border border-zinc-200 bg-white p-3 text-sm shadow-sm">
-            <p className="font-medium text-zinc-900">Quem vai ao evento</p>
-            <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
-              <input
-                type="checkbox"
-                checked={mesmoPagador}
-                onChange={(e) => {
-                  setMesmoPagador(e.target.checked);
-                  if (e.target.checked) {
-                    setParticipanteNome("");
-                    setParticipanteEmail("");
-                    setParticipanteCpfDigits("");
-                    setParticipanteTelDigits("");
-                  }
-                }}
-                className="rounded border-zinc-300"
-              />
-              Sou eu (mesmo e-mail da conta)
-            </label>
-            {!mesmoPagador ? (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs font-medium text-zinc-700" htmlFor="part_nome">
-                    Nome
-                  </label>
+              <div className="rounded-md border border-zinc-200 bg-white p-3 text-sm shadow-sm">
+                <p className="font-medium text-zinc-900">Quem vai ao evento</p>
+                <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
                   <input
-                    id="part_nome"
-                    value={participanteNome}
-                    onChange={(e) => setParticipanteNome(e.target.value)}
-                    className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
-                    autoComplete="name"
+                    type="checkbox"
+                    checked={mesmoPagador}
+                    onChange={(e) => {
+                      setMesmoPagador(e.target.checked);
+                      if (e.target.checked) {
+                        setParticipanteNome("");
+                        setParticipanteEmail("");
+                        setParticipanteCpfDigits("");
+                        setParticipanteTelDigits("");
+                      }
+                    }}
+                    className="rounded border-zinc-300"
                   />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-zinc-700" htmlFor="part_email">
-                    E-mail
-                  </label>
-                  <input
-                    id="part_email"
-                    type="email"
-                    value={participanteEmail}
-                    onChange={(e) => setParticipanteEmail(e.target.value)}
-                    className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
-                    autoComplete="email"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-zinc-700" htmlFor="part_cpf">
-                    CPF
-                  </label>
-                  <input
-                    id="part_cpf"
-                    inputMode="numeric"
-                    value={formatCpfMask(participanteCpfDigits)}
-                    onChange={(e) => setParticipanteCpfDigits(onlyDigits(e.target.value, 11))}
-                    maxLength={14}
-                    className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
-                  />
-                  {alertaCpfParticipante ? (
-                    <p className="mt-1 text-xs text-red-600">{alertaCpfParticipante}</p>
-                  ) : null}
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-zinc-700" htmlFor="part_tel">
-                    Telefone
-                  </label>
-                  <input
-                    id="part_tel"
-                    inputMode="tel"
-                    value={formatTelefoneBrMask(participanteTelDigits)}
-                    onChange={(e) => setParticipanteTelDigits(onlyDigits(e.target.value, 11))}
-                    className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
-                  />
-                </div>
-              </div>
-            ) : null}
-            {exigeCpf && mesmoPagador ? (
-              <div className="mt-3">
-                <label className="text-xs font-medium text-zinc-700" htmlFor="cpf_comprador">
-                  Seu CPF <span className="text-red-600">*</span>
+                  Sou eu (mesmo e-mail da conta)
                 </label>
-                <input
-                  id="cpf_comprador"
-                  inputMode="numeric"
-                  value={formatCpfMask(participanteCpfDigits)}
-                  onChange={(e) => setParticipanteCpfDigits(onlyDigits(e.target.value, 11))}
-                  maxLength={14}
-                  className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
-                />
-                <p className="mt-1 text-xs text-zinc-500">
-                  Limite de {limiteIngressosPorCpf} ingresso(s) por CPF neste evento.
-                </p>
-                {alertaCpfParticipante ? (
-                  <p className="mt-1 text-xs text-red-600">{alertaCpfParticipante}</p>
+                {!mesmoPagador ? (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-medium text-zinc-700" htmlFor="part_nome">
+                        Nome
+                      </label>
+                      <input
+                        id="part_nome"
+                        value={participanteNome}
+                        onChange={(e) => setParticipanteNome(e.target.value)}
+                        className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                        autoComplete="name"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-zinc-700" htmlFor="part_email">
+                        E-mail
+                      </label>
+                      <input
+                        id="part_email"
+                        type="email"
+                        value={participanteEmail}
+                        onChange={(e) => setParticipanteEmail(e.target.value)}
+                        className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                        autoComplete="email"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-zinc-700" htmlFor="part_cpf">
+                        CPF
+                      </label>
+                      <input
+                        id="part_cpf"
+                        inputMode="numeric"
+                        value={formatCpfMask(participanteCpfDigits)}
+                        onChange={(e) => setParticipanteCpfDigits(onlyDigits(e.target.value, 11))}
+                        maxLength={14}
+                        className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                      />
+                      {alertaCpfParticipante ? (
+                        <p className="mt-1 text-xs text-red-600">{alertaCpfParticipante}</p>
+                      ) : null}
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-zinc-700" htmlFor="part_tel">
+                        Telefone
+                      </label>
+                      <input
+                        id="part_tel"
+                        inputMode="tel"
+                        value={formatTelefoneBrMask(participanteTelDigits)}
+                        onChange={(e) => setParticipanteTelDigits(onlyDigits(e.target.value, 11))}
+                        className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                {exigeCpf && mesmoPagador ? (
+                  <div className="mt-3">
+                    <label className="text-xs font-medium text-zinc-700" htmlFor="cpf_comprador">
+                      Seu CPF <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      id="cpf_comprador"
+                      inputMode="numeric"
+                      value={formatCpfMask(participanteCpfDigits)}
+                      onChange={(e) => setParticipanteCpfDigits(onlyDigits(e.target.value, 11))}
+                      maxLength={14}
+                      className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                    />
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Limite de {limiteIngressosPorCpf} ingresso(s) por CPF neste evento.
+                    </p>
+                    {alertaCpfParticipante ? (
+                      <p className="mt-1 text-xs text-red-600">{alertaCpfParticipante}</p>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
-            ) : null}
-          </div>
 
-          {logado ? (
-            <p className="text-xs text-zinc-600">
-              {sessaoUsuario ? (
-                <>
-                  Comprando como{" "}
-                  <strong className="font-medium text-zinc-800">{sessaoUsuario.nome}</strong>
-                  <span className="text-zinc-500"> ({sessaoUsuario.email})</span>
-                </>
-              ) : checandoSessao ? (
-                "Sessão ativa — carregando seus dados…"
-              ) : (
-                "Sessão ativa — pode continuar para o pagamento."
-              )}
-            </p>
-          ) : (
-            <p className="text-xs text-zinc-500">
-              <Link href={authLoginHref} className="underline">
-                Entrar
-              </Link>{" "}
-              ou{" "}
-              <Link href={authRegisterHref} className="underline">
-                cadastrar-se
-              </Link>{" "}
-              para comprar neste evento (você volta aqui após autenticar).
-            </p>
+              <p className="text-xs text-zinc-600">
+                {sessaoUsuario ? (
+                  <>
+                    Comprando como{" "}
+                    <strong className="font-medium text-zinc-800">{sessaoUsuario.nome}</strong>
+                    <span className="text-zinc-500"> ({sessaoUsuario.email})</span>
+                  </>
+                ) : (
+                  "Sessão ativa — pode continuar."
+                )}
+              </p>
+
+              <button
+                type="button"
+                data-testid="checkout-continuar"
+                onClick={() => void criarIntent()}
+                disabled={creating}
+                className="btn-primary w-full"
+              >
+                {creating
+                  ? "Preparando…"
+                  : ehCortesia
+                    ? "Confirmar cortesia"
+                    : "Continuar para pagamento"}
+              </button>
+              {error ? (
+                <p className="text-sm text-red-600" role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </>
           )}
-          <button
-            type="button"
-            data-testid="checkout-continuar"
-            onClick={() => void criarIntent()}
-            disabled={creating}
-            className="btn-primary w-full"
-          >
-            {creating ? "Preparando…" : "Continuar para pagamento"}
-          </button>
-          {error ? (
-            <p className="text-sm text-red-600" role="alert">
-              {error}
-            </p>
-          ) : null}
         </div>
       ) : step === 2 && clientSecret && stripePubOk ? (
         <div className="space-y-4">
@@ -827,6 +860,37 @@ export function ComprarIngresso({
               PIX (QR com timer) ou cartão via Stripe · total {precoFmt}
             </p>
           </div>
+
+          {timerFmt && !timerExpirou ? (
+            <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+              <svg className="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
+              </svg>
+              <span>
+                Você tem{" "}
+                <span className="font-mono font-bold">{timerFmt}</span> para concluir — depois a reserva
+                é liberada.
+              </span>
+            </div>
+          ) : timerExpirou ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              <strong>O tempo de reserva expirou.</strong> Sua vaga foi liberada.{" "}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => { setStep(1); setClientSecret(null); setReservadoAte(null); }}
+              >
+                Tentar novamente
+              </button>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-500">
+            <span>🔒 Pagamento seguro via Stripe</span>
+            <span>Reembolso em até 10 dias</span>
+            <span>Ingresso por e-mail + QR Code</span>
+          </div>
+
           {!ehCortesia ? <CheckoutPrecoDetalhe precoIngresso={precoReaisCheckout} /> : null}
           <button
             type="button"
@@ -834,25 +898,28 @@ export function ComprarIngresso({
             onClick={() => {
               setStep(1);
               setClientSecret(null);
+              setReservadoAte(null);
             }}
           >
             ← Voltar aos dados
           </button>
-          <Elements
-            key={clientSecret}
-            stripe={stripePromise}
-            options={{ clientSecret, appearance: { theme: "stripe" } }}
-          >
-            {clientSecret && participanteCheckout ? (
-              <ConfirmForm
-                clientSecret={clientSecret}
-                valorFmt={precoFmt}
-                participante={participanteCheckout}
-                pixDisponivel={pixDisponivel}
-                onSuccess={() => setStep(3)}
-              />
-            ) : null}
-          </Elements>
+          {!timerExpirou ? (
+            <Elements
+              key={clientSecret}
+              stripe={stripePromise}
+              options={{ clientSecret, appearance: { theme: "stripe" } }}
+            >
+              {clientSecret && participanteCheckout ? (
+                <ConfirmForm
+                  clientSecret={clientSecret}
+                  valorFmt={precoFmt}
+                  participante={participanteCheckout}
+                  pixDisponivel={pixDisponivel}
+                  onSuccess={() => setStep(3)}
+                />
+              ) : null}
+            </Elements>
+          ) : null}
         </div>
       ) : (
         <p className="text-sm text-red-800" role="alert">

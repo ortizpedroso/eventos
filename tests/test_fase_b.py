@@ -151,7 +151,7 @@ class TestCortesia:
         assert data.get("stripe_disabled") is True
         assert data.get("cortesia") is True
 
-    def test_cortesia_exige_responsavel(self):
+    def test_cortesia_default_responsavel(self):
         org = _registrar_organizador("cort2")
         cli = _registrar_cliente("cort2")
         ev = _criar_evento(
@@ -165,8 +165,8 @@ class TestCortesia:
             headers={"Authorization": f"Bearer {cli}"},
             json={"evento_id": ev["id"], "valor_centavos": 0},
         )
-        assert r.status_code == 400
-        assert "cortesia" in r.json()["detail"].lower()
+        assert r.status_code == 200
+        assert r.json().get("cortesia") is True
 
 
 class TestCheckin:

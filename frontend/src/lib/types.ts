@@ -64,6 +64,8 @@ export type CriarPagamentoResponse = {
   cortesia?: boolean;
   /** False se a conta Stripe da plataforma não tiver PIX ativo no Dashboard. */
   pix_disponivel?: boolean;
+  /** ISO 8601 UTC — prazo até quando a reserva é válida (35 min). */
+  reservado_ate?: string | null;
 };
 
 export type IngressoListItem = {
@@ -77,6 +79,8 @@ export type IngressoListItem = {
   repassado_para_nome: string | null;
   repassado_para_email: string | null;
   repassado_em: string | null;
+  /** ISO 8601 UTC — prazo da reserva pendente. Nulo quando já pago/cancelado. */
+  reservado_ate: string | null;
 };
 
 export type PagamentoListItem = {

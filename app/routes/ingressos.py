@@ -48,6 +48,11 @@ async def listar_meus_ingressos(
             "repassado_para_nome": ingresso.repassado_para_nome,
             "repassado_para_email": ingresso.repassado_para_email,
             "repassado_em": ingresso.repassado_em,
+            "reservado_ate": (
+                ingresso.reservado_ate.isoformat() + "Z"
+                if ingresso.reservado_ate is not None
+                else None
+            ),
         }
         for ingresso in ingressos
     ]
