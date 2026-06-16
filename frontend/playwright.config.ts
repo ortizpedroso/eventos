@@ -28,6 +28,11 @@ export default defineConfig({
       testMatch: /compra-checkout\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "fluxo",
+      testMatch: /fluxo-org-cliente\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
   ...(skipWebServer
     ? {}
