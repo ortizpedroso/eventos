@@ -11,9 +11,8 @@ function internalApiOrigin(): string {
   return "http://127.0.0.1:8000";
 }
 
+/** Só usa a chave da sessão admin (cookie). Nunca a variável de ambiente — evita bypass sem autenticação. */
 async function adminKey(): Promise<string | null> {
-  const envKey = (process.env.PLATFORM_ADMIN_API_KEY ?? "").trim();
-  if (envKey) return envKey;
   const jar = await cookies();
   return jar.get(ADMIN_COOKIE)?.value?.trim() ?? null;
 }

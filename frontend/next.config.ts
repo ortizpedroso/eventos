@@ -43,7 +43,7 @@ function contentSecurityPolicy(): string {
     "img-src 'self' https: data: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
     "style-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://accounts.google.com https://cdn.jsdelivr.net",
+    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://accounts.google.com",
     "connect-src " + [...connect, "https://accounts.google.com"].join(" "),
     "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com",
   ].join("; ");

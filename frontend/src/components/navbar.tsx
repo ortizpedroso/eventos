@@ -157,6 +157,12 @@ export function Navbar() {
                 <Link href="/organizador/eventos" className={navLinkClass("/organizador")}>
                   Painel
                 </Link>
+                <Link href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")}>
+                  Pagamentos
+                </Link>
+                <Link href="/conta/ingressos" className={navLinkClass("/conta/ingressos")}>
+                  Ingressos
+                </Link>
                 <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
                   Funcionalidades
                 </Link>
@@ -312,6 +318,15 @@ export function Navbar() {
               </div>
             ) : isOrganizador ? (
               <div className="flex flex-col gap-0.5">
+                <Link href="/organizador/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Painel — Meus eventos
+                </Link>
+                <Link href="/conta/pagamentos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Pagamentos
+                </Link>
+                <Link href="/conta/ingressos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Ingressos
+                </Link>
                 <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Funcionalidades
                 </Link>
@@ -324,9 +339,6 @@ export function Navbar() {
                 <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
                 <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Sobre
-                </Link>
-                <Link href="/organizador/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Painel — Meus eventos
                 </Link>
               </div>
             ) : (

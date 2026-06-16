@@ -12,10 +12,16 @@ function internalApiOrigin(): string {
   return "http://127.0.0.1:8000";
 }
 
+function cookieSecure(): boolean {
+  if (process.env.NODE_ENV !== "production") return false;
+  const pub = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.FRONTEND_PUBLIC_URL ?? "").trim();
+  return pub.startsWith("https://");
+}
+
 function cookieOpts() {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     sameSite: "strict" as const,
     path: "/",
     maxAge: COOKIE_MAX_AGE,

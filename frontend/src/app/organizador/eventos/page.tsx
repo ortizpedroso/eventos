@@ -92,6 +92,27 @@ export default function OrganizadorMeusEventosPage() {
     }
   }
 
+  async function pausarNaVitrine(e: Evento) {
+    const ok = window.confirm(
+      `Pausar «${e.nome}»? O evento sai da vitrine pública e novas vendas ficam bloqueadas até republicar.`,
+    );
+    if (!ok) return;
+    setPublishErr(null);
+    setPublishBusyId(e.id);
+    try {
+      await apiFetch<Evento>(`/api/eventos/id/${e.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(corpoAtualizarEvento(e, { publicado: false })),
+      });
+      await recarregar();
+    } catch (err) {
+      setPublishErr(err instanceof Error ? err.message : "Não foi possível pausar");
+    } finally {
+      setPublishBusyId(null);
+    }
+  }
+
   const ordenados = useMemo(() => (items ? ordenarPorCriacaoDesc(items) : null), [items]);
   const qtdPausados = useMemo(
     () => (items ? items.filter((x) => !x.publicado).length : 0),
@@ -194,7 +215,16 @@ export default function OrganizadorMeusEventosPage() {
                         {publishBusyId === e.id ? "Publicando…" : "Publicar na vitrine agora"}
                       </button>
                     </div>
-                  ) : null}
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={publishBusyId === e.id}
+                      onClick={() => void pausarNaVitrine(e)}
+                      className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-center text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:opacity-60"
+                    >
+                      {publishBusyId === e.id ? "Pausando…" : "Pausar na vitrine"}
+                    </button>
+                  )}
                   <EventoLinkPortaria eventoId={e.id} />
                   <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-100 pt-4">
                     <Link href={`/eventos/${e.slug}`} className="btn-outline flex-1 px-3 py-2 text-center text-sm sm:flex-none">

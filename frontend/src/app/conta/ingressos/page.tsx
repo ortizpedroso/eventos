@@ -158,6 +158,14 @@ export default function MeusIngressosPage() {
                   reservadoAte={it.reservado_ate}
                   status={it.status}
                 />
+                {(it.status === "pago" || it.status === "usado") && (
+                  <Link
+                    href={`/conta/ingressos/${it.id}`}
+                    className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-800"
+                  >
+                    Ver QR Code
+                  </Link>
+                )}
                 <Link
                   href={`/conta/ingressos/${it.id}`}
                   className="text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"

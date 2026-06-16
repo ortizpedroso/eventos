@@ -106,7 +106,10 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
         }
         setAllowed(true);
       } catch {
-        if (!cancelled) router.replace("/auth");
+        if (!cancelled) {
+          const login = `/auth?next=${encodeURIComponent(pathname)}`;
+          router.replace(login);
+        }
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -114,12 +117,20 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, pathname]);
 
   if (!ready) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center px-4 py-16">
-        <p className="text-sm text-zinc-600">Carregando painel…</p>
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="hidden lg:block lg:w-56">
+          <div className="h-64 animate-pulse rounded-2xl border border-zinc-200 bg-zinc-100" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-4" role="status" aria-live="polite">
+          <div className="h-8 w-48 animate-pulse rounded-lg bg-zinc-200" />
+          <div className="h-4 w-full max-w-md animate-pulse rounded bg-zinc-100" />
+          <div className="h-4 w-2/3 max-w-sm animate-pulse rounded bg-zinc-100" />
+          <p className="sr-only">Carregando painel do organizador…</p>
+        </div>
       </div>
     );
   }
