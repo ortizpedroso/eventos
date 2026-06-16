@@ -16,20 +16,21 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 
 | Função | Comportamento |
 |--------|----------------|
-| `getPublicApiUrl()` | No browser: base vazia ou URL normalizada; se API é localhost e a página não é loopback, devolve `""` para forçar **proxy same-origin** |
+| `getPublicApiUrl()` | No browser: base vazia — chamadas usam o proxy same-origin `/api/*` do Next |
 | `getApiBaseUrl()` | Alias do `getPublicApiUrl` — usado para chamadas diretas com `fetch` (QR, download) |
 | `getServerApiUrl()` | SSR: prioriza `INTERNAL_API_URL` (Docker), senão `NEXT_PUBLIC_API_URL`, senão fallback `127.0.0.1:8000` |
-| `apiFetch(path, init)` | Junta base + `path`; envia `Authorization: Bearer` se `localStorage.eventosbr_token`; em **401** remove token e dispara `dispatchAuthSync` |
-| Erros 422 | Monta mensagem a partir de `detail[]` com `loc` + `msg` |
+| `apiFetch(path, init)` | Junta base + `path`; envia cookie `eventosbr_session` com `credentials: "include"`; em **401** dispara `dispatchAuthSync` e redireciona para `/auth?expirado=1` em rotas protegidas |
+| Erros HTTP | Mensagens em português via `lib/api-errors.ts` (401, 403, 404, 429, etc.) |
 
 ---
 
 ## Autenticação no browser
 
-- Token em **`localStorage`** chave `eventosbr_token`.
+- Sessão em **cookie HttpOnly** `eventosbr_session` (definido pela API no login/registo/compra rápida).
+- **`middleware.ts`**: valida sessão chamando `/api/auth/me`; bloqueia `/organizador/*` para não-organizadores; exige cookie admin em `/api/admin/proxy` e sub-rotas `/admin/*`.
 - **`lib/auth-sync`**: evento customizado para sincronizar estado de login entre componentes/abas.
-- **`auth-client.tsx`**: tela de login/registo + botões de login social OAuth (Google).
-- `GET /api/ingressos/{id}/qr` e `GET /api/ingressos/{id}/download` exigem token; o frontend usa `fetch` manual com `Authorization: Bearer` para essas chamadas binárias/HTML.
+- **`auth-client.tsx`**: tela de login/registo + botões OAuth Google; aviso quando `?expirado=1`.
+- `GET /api/ingressos/{id}/qr` usa `fetch` com `credentials: "include"` para o cookie de sessão.
 
 ---
 

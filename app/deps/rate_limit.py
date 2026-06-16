@@ -109,7 +109,7 @@ def _enforce_redis(r, redis_key: str, max_hits: int, window_sec: int) -> None:
         _enforce_memory(redis_key, max_hits, window_sec)
 
 
-def enforce_rate_limit(request: Request, bucket: str) -> None:
+def enforce_rate_limit(request: Request, bucket: str, key_suffix: str | None = None) -> None:
     if not _rate_limit_active():
         return
     spec = _LIMITS.get(bucket)
@@ -117,13 +117,14 @@ def enforce_rate_limit(request: Request, bucket: str) -> None:
         return
     max_hits, window_sec = spec
     ip = _client_ip(request)
-    redis_key = f"rl:v1:{bucket}:{ip}"
+    scope = key_suffix if key_suffix else ip
+    redis_key = f"rl:v1:{bucket}:{scope}"
 
     r = _get_redis()
     if r is not None:
         _enforce_redis(r, redis_key, max_hits, window_sec)
     else:
-        _enforce_memory(f"{bucket}:{ip}", max_hits, window_sec)
+        _enforce_memory(f"{bucket}:{scope}", max_hits, window_sec)
 
 
 def rate_limit_login(request: Request) -> None:
@@ -146,9 +147,13 @@ def rate_limit_checkin(request: Request) -> None:
     enforce_rate_limit(request, "checkin_validar")
 
 
-def rate_limit_portaria_validar(request: Request) -> None:
-    enforce_rate_limit(request, "portaria_validar")
+def rate_limit_portaria_validar(request: Request, evento_id: str = "", token: str = "") -> None:
+    ip = _client_ip(request)
+    tok = (token or "")[:12]
+    enforce_rate_limit(request, "portaria_validar", f"{ip}:{evento_id}:{tok}")
 
 
-def rate_limit_portaria_info(request: Request) -> None:
-    enforce_rate_limit(request, "portaria_info")
+def rate_limit_portaria_info(request: Request, evento_id: str = "", token: str = "") -> None:
+    ip = _client_ip(request)
+    tok = (token or "")[:12]
+    enforce_rate_limit(request, "portaria_info", f"{ip}:{evento_id}:{tok}")

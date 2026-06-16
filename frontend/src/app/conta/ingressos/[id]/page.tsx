@@ -353,6 +353,14 @@ export default function IngressoDetalhePage() {
       </div>
       <ContaNav />
       <h1 className="text-2xl font-semibold text-zinc-900">Seu ingresso</h1>
+      {(ingresso?.status === "pago" || ingresso?.status === "usado") && (
+        <a
+          href="#qr-ingresso"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 sm:w-auto"
+        >
+          Mostrar QR na entrada
+        </a>
+      )}
       <p className="text-sm text-zinc-600">
         <strong>{ingresso.evento.nome}</strong>
         {ingresso.participante_nome ? ` · ${ingresso.participante_nome}` : ""}
@@ -383,7 +391,10 @@ export default function IngressoDetalhePage() {
       ) : null}
 
       {(ingresso?.status === "pago" || ingresso?.status === "usado") && (
-        <section className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-6 text-center shadow-sm">
+        <section
+          id="qr-ingresso"
+          className="mb-8 scroll-mt-24 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-6 text-center shadow-sm"
+        >
           <h2 className="text-lg font-semibold text-emerald-950">QR Code único deste ingresso</h2>
           <p className="mt-1 text-sm text-emerald-900/80">
             Cada ingresso tem um código diferente. Na portaria, o organizador valida uma única vez.

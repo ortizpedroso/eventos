@@ -24,6 +24,8 @@
 
 ## Docker Compose (raiz)
 
+> **Segurança:** as credenciais padrão do Postgres no `docker-compose.yml` (`eventosbr` / `eventosbr`) servem **apenas para desenvolvimento local**. Nunca exponha esse compose em rede pública sem alterar usuário, senha e `SECRET_KEY` / `PLATFORM_ADMIN_API_KEY` fortes.
+
 Serviços típicos:
 
 - **`api`**: build raiz, porta 8000, comando `alembic upgrade head && uvicorn ...`; volume `.:/app`; `healthcheck` em `GET /ready`

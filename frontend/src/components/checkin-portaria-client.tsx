@@ -348,6 +348,12 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
           Leia o QR do ingresso ou cole o código <strong>EBR1:…</strong>. Cada ingresso só entra uma
           vez.
         </p>
+        {modo === "organizador" && !modoFesta ? (
+          <p className="mt-2 text-xs font-medium text-emerald-800">
+            No dia do evento, ative o <strong>Modo festa</strong> para tela cheia e leitura mais rápida na
+            portaria.
+          </p>
+        ) : null}
           </div>
           <label className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm ${modoFesta ? "border-zinc-700 bg-zinc-900" : "border-zinc-200 bg-white"}`}>
             <input

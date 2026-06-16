@@ -1091,6 +1091,7 @@ export function ComprarIngresso({
                 disabled={creating}
               />
 
+              <div className="sticky bottom-0 z-10 -mx-1 border-t border-zinc-200 bg-white/95 px-1 py-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:py-0 sm:backdrop-blur-none">
               <button
                 type="button"
                 data-testid="checkout-continuar"
@@ -1104,6 +1105,7 @@ export function ComprarIngresso({
                     ? "Confirmar cortesia"
                     : "Continuar para pagamento"}
               </button>
+              </div>
               {error ? (
                 <p className="text-sm text-red-600" role="alert">
                   {error}

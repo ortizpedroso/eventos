@@ -33,8 +33,8 @@ async def info_evento_portaria(
     evento_id: str = Query(..., min_length=8),
     k: str = Query(..., min_length=8),
     db: Session = Depends(get_db),
-    _rate: None = Depends(rate_limit_portaria_info),
 ):
+    rate_limit_portaria_info(request, evento_id, k)
     evento = evento_por_token_portaria(db, evento_id, k)
     if not evento:
         raise HTTPException(status_code=403, detail="Link da portaria inválido ou expirado.")
@@ -48,10 +48,11 @@ async def info_evento_portaria(
 
 @router.post("/validar")
 async def validar_portaria(
+    request: Request,
     body: PortariaValidarRequest,
     db: Session = Depends(get_db),
-    _rate: None = Depends(rate_limit_portaria_validar),
 ):
+    rate_limit_portaria_validar(request, body.evento_id, body.token)
     evento = evento_por_token_portaria(db, body.evento_id, body.token)
     if not evento:
         raise HTTPException(status_code=403, detail="Link da portaria inválido.")

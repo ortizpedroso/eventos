@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EventoLinkPortaria } from "@/components/evento-link-portaria";
 import { EventoCategoriaBadge } from "@/components/evento-categoria-badge";
+import { ListaSkeleton } from "@/components/lista-skeleton";
 import { apiFetch } from "@/lib/api";
 import { formatEventoDataHora } from "@/lib/eventos";
 import type { Evento } from "@/lib/types";
@@ -42,11 +43,21 @@ function corpoAtualizarEvento(e: Evento, overrides: { publicado?: boolean }): Re
   };
 }
 
+type ResumoEvento = {
+  ingressos_pagos: number;
+  ingressos_pendentes: number;
+  receita_bruta: number;
+};
+
+const ONBOARDING_KEY = "eventosbr_org_onboarding_v1";
+
 export default function OrganizadorMeusEventosPage() {
   const [items, setItems] = useState<Evento[] | null>(null);
+  const [resumos, setResumos] = useState<Record<string, ResumoEvento>>({});
   const [error, setError] = useState<string | null>(null);
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
   const [publishErr, setPublishErr] = useState<string | null>(null);
+  const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
 
   const recarregar = useCallback(async () => {
     const data = await apiFetch<Evento[]>("/api/eventos/meus", { cache: "no-store" });
@@ -74,6 +85,48 @@ export default function OrganizadorMeusEventosPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setMostrarOnboarding(!window.localStorage.getItem(ONBOARDING_KEY));
+  }, []);
+
+  useEffect(() => {
+    if (!items?.length) {
+      setResumos({});
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const pairs = await Promise.allSettled(
+        items.map(async (e) => {
+          const r = await apiFetch<ResumoEvento>(`/api/eventos/id/${e.id}/resumo`, {
+            cache: "no-store",
+          });
+          return [e.id, r] as const;
+        }),
+      );
+      if (cancelled) return;
+      const map: Record<string, ResumoEvento> = {};
+      for (const p of pairs) {
+        if (p.status === "fulfilled") {
+          const [id, r] = p.value;
+          map[id] = r;
+        }
+      }
+      setResumos(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
+
+  function dispensarOnboarding() {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(ONBOARDING_KEY, "1");
+    }
+    setMostrarOnboarding(false);
+  }
 
   async function publicarNaVitrine(e: Evento) {
     setPublishErr(null);
@@ -127,6 +180,29 @@ export default function OrganizadorMeusEventosPage() {
         aparecem na página <Link href="/eventos" className="font-medium text-emerald-800 underline-offset-2 hover:underline">Eventos</Link> para qualquer pessoa comprar ingresso.
       </p>
 
+      {mostrarOnboarding ? (
+        <div className="mt-6 rounded-2xl border border-emerald-300 bg-white p-4 shadow-sm ring-1 ring-emerald-200">
+          <p className="text-sm font-semibold text-emerald-950">Primeiros passos como organizador</p>
+          <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-zinc-700">
+            <li>Crie o evento com lotes e preços</li>
+            <li>Publique na vitrine para liberar vendas</li>
+            <li>Compartilhe o link público e use o check-in no dia</li>
+          </ol>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href="/organizador/novo" className="btn-success px-4 py-2 text-sm">
+              Criar evento
+            </Link>
+            <button
+              type="button"
+              onClick={dispensarOnboarding}
+              className="rounded-lg border border-zinc-300 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm leading-relaxed text-emerald-950 ring-1 ring-emerald-200/80 sm:px-5">
         <strong className="font-semibold">Pausado</strong> = continua na sua lista, mas{" "}
         <strong className="font-semibold">não</strong> entra na vitrine nem permite venda pública até republicar.
@@ -143,7 +219,9 @@ export default function OrganizadorMeusEventosPage() {
       ) : null}
 
       {ordenados === null ? (
-        <p className="mt-8 text-sm text-zinc-500">Carregando…</p>
+        <div className="mt-8">
+          <ListaSkeleton linhas={3} />
+        </div>
       ) : ordenados.length === 0 ? (
         error ? (
           <p className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -169,8 +247,17 @@ export default function OrganizadorMeusEventosPage() {
               style: "currency",
               currency: "BRL",
             });
-            const resumo =
+            const resumoTexto =
               e.descricao.length > 120 ? `${e.descricao.slice(0, 120).trim()}…` : e.descricao;
+
+            const stats = resumos[e.id];
+            const receitaFmt =
+              stats != null
+                ? stats.receita_bruta.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })
+                : null;
 
             return (
               <li key={e.id} className="flex min-h-0">
@@ -188,7 +275,7 @@ export default function OrganizadorMeusEventosPage() {
                     </span>
                   </div>
                   <EventoCategoriaBadge categoria={e.categoria} variant="inline" className="mt-2" />
-                  <p className="mt-3 line-clamp-3 flex-1 text-sm leading-6 text-zinc-600">{resumo}</p>
+                  <p className="mt-3 line-clamp-3 flex-1 text-sm leading-6 text-zinc-600">{resumoTexto}</p>
                   <div className="mt-4 space-y-1 text-xs text-zinc-500">
                     <p>
                       <span className="font-medium text-zinc-700">Início:</span> {fmtInicio}
@@ -202,6 +289,24 @@ export default function OrganizadorMeusEventosPage() {
                     </p>
                   </div>
                   <p className="mt-3 text-sm font-semibold text-emerald-800">Ingresso a partir de {preco}</p>
+                  {stats ? (
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-900">
+                        {stats.ingressos_pagos} vendido{stats.ingressos_pagos === 1 ? "" : "s"}
+                      </span>
+                      {stats.ingressos_pendentes > 0 ? (
+                        <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-900">
+                          {stats.ingressos_pendentes} pendente
+                          {stats.ingressos_pendentes === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
+                      {receitaFmt ? (
+                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-800">
+                          {receitaFmt} bruto
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {!e.publicado ? (
                     <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950">
                       Fora da vitrine: visitantes não veem na lista de eventos e não podem comprar até você

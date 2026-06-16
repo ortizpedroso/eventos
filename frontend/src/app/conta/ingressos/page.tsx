@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { ContaNav } from "@/components/conta-nav";
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
+import { ListaSkeleton } from "@/components/lista-skeleton";
 import { apiFetch } from "@/lib/api";
 import { classeBadgeStatus, labelStatusIngresso } from "@/lib/ingresso-status";
 import type { IngressoListItem } from "@/lib/types";
@@ -89,9 +90,7 @@ export default function MeusIngressosPage() {
         </div>
       ) : null}
 
-      {items === null && !error ? (
-        <p className="text-sm text-zinc-600">Carregando ingressos…</p>
-      ) : null}
+      {items === null && !error ? <ListaSkeleton linhas={3} /> : null}
 
       {items && !items.length ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm">

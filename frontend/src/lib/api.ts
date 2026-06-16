@@ -1,4 +1,5 @@
 import { dispatchAuthSync } from "@/lib/auth-sync";
+import { mensagemErroHttp } from "@/lib/api-errors";
 import type { Usuario } from "@/lib/types";
 
 export type ApiError = {
@@ -90,9 +91,18 @@ export async function apiFetch<T>(
 
   if (res.status === 401 && typeof window !== "undefined") {
     const pathOnly = path.split("?")[0];
-    // /me retorna 401 quando não há sessão — não disparar sync em loop.
     if (pathOnly !== "/api/auth/me") {
       dispatchAuthSync();
+      const here = window.location.pathname + window.location.search;
+      if (
+        (here.startsWith("/conta") || here.startsWith("/organizador")) &&
+        !here.startsWith("/auth")
+      ) {
+        const login = new URL("/auth", window.location.origin);
+        login.searchParams.set("next", here);
+        login.searchParams.set("expirado", "1");
+        window.location.assign(login.toString());
+      }
     }
   }
 
@@ -103,30 +113,7 @@ export async function apiFetch<T>(
     } catch {
       // ignore
     }
-    let message: string;
-    if (typeof data?.detail === "string") {
-      message = data.detail;
-    } else if (Array.isArray(data?.detail) && data.detail.length > 0) {
-      const items = data.detail as { loc?: unknown[]; msg?: string }[];
-      message = items
-        .map((e) => {
-          const loc = Array.isArray(e.loc)
-            ? e.loc
-                .filter((x) => x !== "body" && typeof x === "string")
-                .join(".")
-            : "";
-          const m = e.msg ?? "inválido";
-          return loc ? `${loc}: ${m}` : m;
-        })
-        .join("; ");
-    } else if (res.status >= 500) {
-      message =
-        "A API não respondeu corretamente. Confirme que o backend está a correr na porta 8000 " +
-        "(na raiz do projeto: `docker compose up -d db redis api`).";
-    } else {
-      message = `Request failed: ${res.status}`;
-    }
-    throw new Error(message);
+    throw new Error(mensagemErroHttp(res.status, data?.detail));
   }
 
   if (res.status === 204) {

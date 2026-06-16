@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ContaNav } from "@/components/conta-nav";
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
+import { ListaSkeleton } from "@/components/lista-skeleton";
 import { apiFetch } from "@/lib/api";
 import { urlPosCompraEvento } from "@/lib/checkout-return";
 import { classeBadgeStatus, labelStatusIngresso } from "@/lib/ingresso-status";
@@ -176,9 +177,7 @@ export function PagamentosClient() {
         </div>
       ) : null}
 
-      {items === null && !error ? (
-        <p className="text-sm text-zinc-600">Carregando pagamentos…</p>
-      ) : null}
+      {items === null && !error ? <ListaSkeleton linhas={4} /> : null}
 
       {items && !items.length ? (
         <p className="text-sm text-zinc-600">Nenhum pagamento ainda.</p>
