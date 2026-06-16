@@ -124,7 +124,7 @@ def realizar_checkin(
     st = (ingresso.status or "").lower()
     if st == "usado":
         return {
-            "ok": True,
+            "ok": False,
             "ja_utilizado": True,
             "ingresso_id": ingresso.id,
             "participante_nome": ingresso.participante_nome,
@@ -183,7 +183,7 @@ def realizar_checkin_portaria(
     st = (ingresso.status or "").lower()
     if st == "usado":
         return {
-            "ok": True,
+            "ok": False,
             "ja_utilizado": True,
             "ingresso_id": ingresso.id,
             "participante_nome": ingresso.participante_nome,

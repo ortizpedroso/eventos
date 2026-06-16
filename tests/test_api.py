@@ -424,73 +424,80 @@ class TestCompraRapidaPerfil:
 
 class TestRetomarPagamento:
     def test_retomar_pagamento_pendente(self):
-        org = client.post(
-            "/api/auth/registrar",
-            json={
-                "email": "org_ret@test.com",
-                "nome": "Org",
-                "senha": "senha12345",
-                "tipo": "organizador",
-            },
-        ).json()["access_token"]
-        cli = client.post(
-            "/api/auth/registrar",
-            json={
-                "email": "cli_ret@test.com",
-                "nome": "Cli",
-                "senha": "senha12345",
-                "tipo": "cliente",
-            },
-        ).json()["access_token"]
+        from config.settings import settings
 
-        ev = client.post(
-            "/api/eventos/criar",
-            headers={"Authorization": f"Bearer {org}"},
-            json={
-                "nome": "Evento Retomar",
-                "descricao": "d",
-                "data_inicio": "2026-12-01T10:00:00",
-                "data_fim": "2026-12-01T22:00:00",
-                "local": "SP",
-                "preco_ingresso": 50,
-                "categoria": "Outros",
-                "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
-            },
-        ).json()
-
-        pay = client.post(
-            "/api/pagamentos/criar",
-            headers={"Authorization": f"Bearer {cli}"},
-            json={
-                "evento_id": ev["id"],
-                "valor_centavos": 5000,
-                "termo_compra_aceito": True,
-            },
-        )
-        assert pay.status_code == 200, pay.text
-        ingresso_id = pay.json()["ingresso_id"]
-
-        with patch("stripe.PaymentIntent.retrieve") as retrieve:
-            retrieve.return_value = type(
-                "PaymentIntent",
-                (),
-                {
-                    "id": "pi_test_123",
-                    "client_secret": "pi_test_secret_123",
-                    "status": "requires_payment_method",
-                    "payment_method_types": ["card", "pix"],
+        prev = settings.STRIPE_DISABLED
+        settings.STRIPE_DISABLED = False
+        try:
+            org = client.post(
+                "/api/auth/registrar",
+                json={
+                    "email": "org_ret@test.com",
+                    "nome": "Org",
+                    "senha": "senha12345",
+                    "tipo": "organizador",
                 },
-            )()
-            ret = client.post(
-                "/api/pagamentos/retomar",
+            ).json()["access_token"]
+            cli = client.post(
+                "/api/auth/registrar",
+                json={
+                    "email": "cli_ret@test.com",
+                    "nome": "Cli",
+                    "senha": "senha12345",
+                    "tipo": "cliente",
+                },
+            ).json()["access_token"]
+
+            ev = client.post(
+                "/api/eventos/criar",
+                headers={"Authorization": f"Bearer {org}"},
+                json={
+                    "nome": "Evento Retomar",
+                    "descricao": "d",
+                    "data_inicio": "2026-12-01T10:00:00",
+                    "data_fim": "2026-12-01T22:00:00",
+                    "local": "SP",
+                    "preco_ingresso": 50,
+                    "categoria": "Outros",
+                    "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
+                },
+            ).json()
+
+            pay = client.post(
+                "/api/pagamentos/criar",
                 headers={"Authorization": f"Bearer {cli}"},
-                json={"ingresso_id": ingresso_id, "evento_id": ev["id"]},
+                json={
+                    "evento_id": ev["id"],
+                    "valor_centavos": 5000,
+                    "termo_compra_aceito": True,
+                },
             )
-        assert ret.status_code == 200, ret.text
-        body = ret.json()
-        assert body["ingresso_id"] == ingresso_id
-        assert body["client_secret"] == "pi_test_secret_123"
-        assert body.get("evento_slug")
+            assert pay.status_code == 200, pay.text
+            ingresso_id = pay.json()["ingresso_id"]
+
+            with patch("stripe.PaymentIntent.retrieve") as retrieve:
+                retrieve.return_value = type(
+                    "PaymentIntent",
+                    (),
+                    {
+                        "id": "pi_test_123",
+                        "client_secret": "pi_test_secret_123",
+                        "status": "requires_payment_method",
+                        "payment_method_types": ["card", "pix"],
+                    },
+                )()
+                ret = client.post(
+                    "/api/pagamentos/retomar",
+                    headers={"Authorization": f"Bearer {cli}"},
+                    json={"ingresso_id": ingresso_id, "evento_id": ev["id"]},
+                )
+            assert ret.status_code == 200, ret.text
+            body = ret.json()
+            assert body["ingresso_id"] == ingresso_id
+            assert body["client_secret"] == "pi_test_secret_123"
+            assert body.get("evento_slug")
+        finally:
+            settings.STRIPE_DISABLED = prev
 
 
 class TestRecuperacaoSenha:

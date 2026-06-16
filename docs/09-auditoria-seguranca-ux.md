@@ -5,7 +5,7 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 **Auditoria (código UX/segurança):** mergeada em `main` via [PR #2](https://github.com/ortizpedroso/eventos/pull/2)  
 **Ops pós-auditoria (migração, SMTP, CSP, smoke):** [PR #3](https://github.com/ortizpedroso/eventos/pull/3) — branch `cursor/auditoria-deploy-ops-bf71`
 
-**Última atualização:** 16/06/2026
+**Última atualização:** 16/06/2026 (rodada final de correções e validação)
 
 ---
 
@@ -17,10 +17,11 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 | UX cliente | ✅ 10/10 concluído |
 | UX organizador | ✅ 9/9 concluído |
 | UX portaria | ✅ 3/3 concluído |
-| Ops pós-auditoria (repo) | ✅ 6/7 concluído — falta merge do PR #3 |
+| Ops pós-auditoria (repo) | ✅ 10/10 concluído — aguardando merge do PR #3 |
+| Validação automatizada | ✅ pytest 66/66 · QA API 24/24 · smoke E2E 4/4 |
 | Go-live / Fase D | ⏳ 6 itens abertos (fora do escopo da auditoria) |
 
-> **Situação atual:** toda a auditoria de código está em `main`. Scripts, correção da migration Postgres, SMTP unificado e validação de CSP estão no PR #3. No **servidor de produção**, ainda é preciso rodar a migração, preencher credenciais SMTP reais e validar SPF/DKIM.
+> **Situação atual:** toda a auditoria de código está em `main`. O PR #3 agrega migração Postgres corrigida, SMTP unificado, CSP com nonce, scripts de deploy, correção de hidratação em `/auth`, bloqueio de check-in duplicado e suite de testes 100% verde. No **servidor de produção**, ainda é preciso rodar a migração, preencher credenciais SMTP reais e validar SPF/DKIM.
 
 ---
 
@@ -91,6 +92,7 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 - [x] **Vibração + beep** no check-in bem-sucedido (`checkin-feedback.ts` + `checkin-portaria-client.tsx`).
 - [x] Scanner QR via pacote local (sem dependência de CDN).
 - [x] Rate limit e mensagens de erro mais claras na validação.
+- [x] **Check-in duplicado bloqueado** — segunda validação retorna `ok: false` + `ja_utilizado: true` (sem beep de sucesso).
 
 ---
 
@@ -104,10 +106,26 @@ Itens da rodada operacional (PR #3):
 - [x] **Endpoint admin** — `POST /api/admin/smtp-test` (header `X-Platform-Admin-Key`).
 - [x] **CSP validada em produção local** — `next start` retorna header com `nonce-`, Stripe e Google OAuth na allowlist.
 - [x] **Scripts** — `scripts/migrate-db.sh`, `scripts/smoke-auditoria.sh`.
-- [x] **Testes** — `tests/test_smtp_client.py`, `tests/test_csp.py`; suite `64/65` passed (`STRIPE_DISABLED=true`).
+- [x] **Testes** — `tests/test_smtp_client.py`, `tests/test_csp.py`; suite **66/66 passed** (`STRIPE_DISABLED=true`).
 - [x] **Bugfix** — import `gerar_checkin_token` em `app/routes/eventos.py`.
+- [x] **Bugfix auth** — hidratação de `/auth` corrigida (`useSearchParams` removido do cliente; query via server component).
+- [x] **Bugfix check-in** — duplicata retorna `ok: false` em `ingresso_checkin.py` (organizador e portaria).
+- [x] **Bugfix teste** — `TestRetomarPagamento` desativa `STRIPE_DISABLED` durante o fluxo Stripe mockado.
 - [x] **PR #2 mergeado** em `main` (auditoria completa).
 - [ ] **PR #3 mergeado** — [fix(ops): migração Postgres, SMTP, CSP e smoke](https://github.com/ortizpedroso/eventos/pull/3).
+
+---
+
+## Validação automatizada — resultados ✅
+
+| Suite | Comando | Resultado |
+|-------|---------|-----------|
+| pytest | `STRIPE_DISABLED=true python3 -m pytest tests/` | **66/66** passed |
+| QA API (organizador + cliente + portaria) | `PYTHONPATH=. python3 scripts/qa-funcional.py` | **24/24** passed |
+| Smoke E2E | `npm run test:e2e` (smoke) | **4/4** passed |
+| E2E compra completa | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3001 npm run test:e2e` | OK em build de produção (`next start`) |
+
+> **Nota:** o E2E de compra completa em `npm run dev` pode falhar por HMR/WebSocket no ambiente cloud; usar `next build && next start` para testes E2E de checkout.
 
 ---
 
@@ -121,7 +139,6 @@ Ações que **não dependem mais de código**, apenas de deploy/configuração:
 | Alta | Credenciais SMTP reais | `EMAIL_USER`, `EMAIL_PASSWORD` no `.env`; testar com `scripts/test-smtp.py` |
 | Alta | SPF/DKIM no domínio | Configurar DNS do provedor de e-mail (Hostinger, Brevo, etc.) |
 | Média | Smoke pós-deploy | `./scripts/smoke-auditoria.sh` ou fluxo manual: compra rápida → verificar e-mail → portaria → check-in |
-| Baixa | Corrigir teste flaky | `TestRetomarPagamento` — worker assíncrono de e-mail fora do DB de teste |
 
 ---
 
@@ -149,10 +166,11 @@ Itens do [07 — Fase D](./07-fase-d-roadmap.md), fora do escopo da auditoria:
 | E-mail verificação | `app/services/email_verificacao.py`, `app/routes/auth.py`, `frontend/src/app/auth/verificar-email/` |
 | Token portaria | `app/services/evento_portaria.py`, `app/models/evento.py` |
 | Migração | `alembic/versions/20260616_000019_*.py`, `scripts/migrate-db.sh` |
-| Smoke / QA | `scripts/smoke-auditoria.sh`, `tests/conftest.py` |
+| Smoke / QA | `scripts/smoke-auditoria.sh`, `scripts/qa-funcional.py`, `tests/conftest.py` |
 | UX organizador | `organizador-tour.tsx`, `evento-publicar-checklist.tsx`, `organizador-shell.tsx` |
 | UX cliente | `navbar.tsx`, `conta-banners.tsx`, `lista-skeleton.tsx`, `api-errors.ts` |
-| Portaria | `checkin-portaria-client.tsx`, `checkin-feedback.ts`, `app/routes/portaria.py` |
+| Portaria | `checkin-portaria-client.tsx`, `checkin-feedback.ts`, `app/routes/portaria.py`, `app/services/ingresso_checkin.py` |
+| Auth | `frontend/src/app/auth/page.tsx`, `frontend/src/app/auth/auth-client.tsx` |
 
 ---
 
@@ -169,3 +187,6 @@ Itens do [07 — Fase D](./07-fase-d-roadmap.md), fora do escopo da auditoria:
 ### Ops pós-auditoria (PR #3)
 
 1. `6a0034a` — fix(ops): migração Postgres, SMTP unificado, CSP nonce e smoke
+2. `a179662` — docs: atualiza checklist auditoria (PR #2 mergeado, PR #3 pendente)
+3. `4c83983` — fix(auth): corrige hidratação da página `/auth` e testes E2E
+4. `dd8f7a0` — fix(checkin): bloqueia duplicata com `ok: false`; corrige `TestRetomarPagamento`; atualiza checklist

@@ -217,6 +217,45 @@ class TestCheckin:
         assert chk.json()["ok"] is True
         assert chk.json()["ja_utilizado"] is False
 
+    def test_checkin_duplicado_retorna_ok_false(self):
+        org = _registrar_organizador("chkdup")
+        cli = _registrar_cliente("chkdup")
+        ev = _criar_evento(org)
+
+        from config.settings import settings
+
+        prev = settings.STRIPE_DISABLED
+        settings.STRIPE_DISABLED = True
+        try:
+            r = client.post(
+                "/api/pagamentos/criar",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={"evento_id": ev["id"], "valor_centavos": 5000, "termo_compra_aceito": True},
+            )
+            assert r.status_code == 200, r.text
+            iid = r.json()["ingresso_id"]
+        finally:
+            settings.STRIPE_DISABLED = prev
+
+        codigo = codigo_checkin(iid)
+        chk1 = client.post(
+            "/api/checkin/validar",
+            headers={"Authorization": f"Bearer {org}"},
+            json={"codigo": codigo},
+        )
+        assert chk1.status_code == 200
+        assert chk1.json()["ok"] is True
+
+        chk2 = client.post(
+            "/api/checkin/validar",
+            headers={"Authorization": f"Bearer {org}"},
+            json={"codigo": codigo},
+        )
+        assert chk2.status_code == 200
+        body = chk2.json()
+        assert body["ok"] is False
+        assert body["ja_utilizado"] is True
+
     def test_checkin_aceita_url_do_qr(self):
         from app.services.ingresso_checkin import extrair_ingresso_id
         from app.services.ingresso_qr import ingresso_qr_scan_url
