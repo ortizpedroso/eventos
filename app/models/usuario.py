@@ -35,6 +35,11 @@ class Usuario(Base):
     senha_reset_token = Column(String(64), nullable=True, index=True)
     senha_reset_expires = Column(DateTime, nullable=True)
 
+    # Verificação de e-mail (compra rápida / reenvio)
+    email_verificado = Column(Boolean, default=True, nullable=False)
+    email_verificacao_token = Column(String(64), nullable=True, index=True)
+    email_verificacao_expires = Column(DateTime, nullable=True)
+
     # Datas
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     data_atualizacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

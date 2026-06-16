@@ -135,6 +135,28 @@ export function Navbar() {
     return `Pagamentos (${pendentesCount})`;
   }
 
+  function PagamentosNavLink({
+    href,
+    className,
+    onClick,
+  }: {
+    href: string;
+    className: string;
+    onClick?: () => void;
+  }) {
+    return (
+      <Link href={href} className={`relative inline-flex items-center gap-1.5 ${className}`} onClick={onClick}>
+        {pagamentosLabel()}
+        {pendentesCount > 0 ? (
+          <span
+            className="absolute -right-2 -top-1 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
+            aria-label={`${pendentesCount} pagamento(s) pendente(s)`}
+          />
+        ) : null}
+      </Link>
+    );
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
       {/* flex-col: menu móvel em linha própria; linha de cima sem flex-wrap para o ícone não “saltar” de linha */}
@@ -158,9 +180,7 @@ export function Navbar() {
                   Eventos
                 </Link>
                 <NavbarCategoriasMenu compact />
-                <Link href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")}>
-                  {pagamentosLabel()}
-                </Link>
+                <PagamentosNavLink href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")} />
                 <Link href="/conta/ingressos" className={navLinkClass("/conta/ingressos")}>
                   Ingressos
                 </Link>
@@ -170,9 +190,7 @@ export function Navbar() {
                 <Link href="/organizador/eventos" className={navLinkClass("/organizador")}>
                   Painel
                 </Link>
-                <Link href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")}>
-                  {pagamentosLabel()}
-                </Link>
+                <PagamentosNavLink href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")} />
                 <Link href="/conta/ingressos" className={navLinkClass("/conta/ingressos")}>
                   Ingressos
                 </Link>
@@ -322,9 +340,11 @@ export function Navbar() {
                   Eventos
                 </Link>
                 <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
-                <Link href="/conta/pagamentos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  {pagamentosLabel()}
-                </Link>
+                <PagamentosNavLink
+                  href="/conta/pagamentos"
+                  className={mobileLink}
+                  onClick={() => setMobileNavOpen(false)}
+                />
                 <Link href="/conta/ingressos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Ingressos
                 </Link>
@@ -334,9 +354,11 @@ export function Navbar() {
                 <Link href="/organizador/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Painel — Meus eventos
                 </Link>
-                <Link href="/conta/pagamentos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  {pagamentosLabel()}
-                </Link>
+                <PagamentosNavLink
+                  href="/conta/pagamentos"
+                  className={mobileLink}
+                  onClick={() => setMobileNavOpen(false)}
+                />
                 <Link href="/conta/ingressos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Ingressos
                 </Link>

@@ -38,6 +38,7 @@ class Evento(Base):
 
     # Link secreto para colaboradores validarem ingressos na portaria (/portaria/{id}?k=...)
     checkin_token = Column(String(64), nullable=True, unique=True, index=True)
+    checkin_token_em = Column(DateTime, nullable=True)
 
     # Datas
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

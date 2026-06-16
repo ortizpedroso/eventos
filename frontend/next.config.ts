@@ -10,45 +10,6 @@ if (apiTarget.endsWith("/api")) {
   apiTarget = apiTarget.slice(0, -4).replace(/\/+$/, "");
 }
 
-function contentSecurityPolicy(): string {
-  const connect = new Set([
-    "'self'",
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
-    "https://api.stripe.com",
-    "https://m.stripe.network",
-    "https://r.stripe.com",
-    "https://q.stripe.com",
-    "https://js.stripe.com",
-    "https://hooks.stripe.com",
-  ]);
-  const api = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (api && /^https?:\/\//i.test(api)) {
-    try {
-      connect.add(new URL(api).origin);
-    } catch {
-      /* ignore */
-    }
-  }
-  if (process.env.NODE_ENV !== "production") {
-    connect.add("ws:");
-    connect.add("wss:");
-  }
-  return [
-    "default-src 'self'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'self'",
-    /* Imagens: https/data/blob; evita http arbitrário em produção */
-    "img-src 'self' https: data: blob:",
-    "font-src 'self' data: https://fonts.gstatic.com",
-    "style-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://accounts.google.com",
-    "connect-src " + [...connect, "https://accounts.google.com"].join(" "),
-    "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com",
-  ].join("; ");
-}
-
 const nextConfig: NextConfig = {
   /**
    * Monorepo local: raiz do repo (lockfile acima de `frontend/`).
@@ -74,10 +35,6 @@ const nextConfig: NextConfig = {
         key: "Strict-Transport-Security",
         value: "max-age=31536000; includeSubDomains",
       });
-    }
-    /* CSP estrita quebra o `next dev` (eval / HMR / chunks). Só enviar em produção (`next build` + `next start`). */
-    if (process.env.NODE_ENV === "production") {
-      security.push({ key: "Content-Security-Policy", value: contentSecurityPolicy() });
     }
     return [{ source: "/:path*", headers: security }];
   },

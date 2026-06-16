@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { feedbackCheckinSucesso } from "@/lib/checkin-feedback";
 
 type Html5QrcodeModule = typeof import("html5-qrcode");
 type Html5QrcodeInstance = InstanceType<Html5QrcodeModule["Html5Qrcode"]>;
@@ -225,6 +226,9 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
           });
         }
         setLast(r);
+        if (r.ok) {
+          feedbackCheckinSucesso();
+        }
         setCodigo("");
         inputRef.current?.focus();
       } catch (err) {

@@ -66,6 +66,7 @@ class UsuarioResponse(BaseModel):
     tipo: str
     data_criacao: datetime
     tem_senha: bool = False
+    email_verificado: bool = True
     aceita_comunicacao_email: bool = False
     aceita_comunicacao_whatsapp: bool = False
     telefone: str | None = None
@@ -106,3 +107,7 @@ class SolicitarRecuperacaoSenhaRequest(BaseModel):
 class RedefinirSenhaRequest(BaseModel):
     token: str = Field(min_length=16, max_length=128)
     nova_senha: str = Field(min_length=8, max_length=128)
+
+
+class VerificarEmailRequest(BaseModel):
+    token: str = Field(min_length=16, max_length=128)

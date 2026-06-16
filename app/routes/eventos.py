@@ -14,7 +14,7 @@ from app.services.ingresso_lotes import (
     sincronizar_preco_ingresso_evento,
     substituir_lotes_evento,
 )
-from app.services.evento_portaria import garantir_checkin_token, gerar_checkin_token, url_portaria
+from app.services.evento_portaria import garantir_checkin_token, regenerar_checkin_token, url_portaria
 from app.utils.evento_cidade import resolver_cidade
 from app.utils.public_errors import LISTA_EVENTOS_CLIENTE
 
@@ -285,6 +285,7 @@ async def link_portaria_evento(
         "evento_nome": evento.nome,
         "token": token,
         "url": url_portaria(evento.id, token),
+        "token_em": evento.checkin_token_em.isoformat() if evento.checkin_token_em else None,
     }
 
 
@@ -296,15 +297,13 @@ async def regenerar_link_portaria(
 ):
     """Invalida o link anterior e gera um novo (se vazou o link antigo)."""
     evento = _evento_do_organizador(db, evento_id, usuario_atual)
-    evento.checkin_token = gerar_checkin_token()
-    db.commit()
-    db.refresh(evento)
-    token = evento.checkin_token
+    token = regenerar_checkin_token(db, evento)
     return {
         "evento_id": evento.id,
         "evento_nome": evento.nome,
         "token": token,
         "url": url_portaria(evento.id, token),
+        "token_em": evento.checkin_token_em.isoformat() if evento.checkin_token_em else None,
     }
 
 

@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 
 import { EventoImagemField } from "@/components/evento-imagem-field";
 import {
+  checklistPublicacaoPronta,
+  EventoPublicarChecklist,
+} from "@/components/evento-publicar-checklist";
+import {
   defaultLoteRows,
   EventoLotesEditor,
   lotesRowsToApiPayload,
@@ -96,6 +100,11 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [modoSimples, setModoSimples] = useState(true);
   const [precoSimples, setPrecoSimples] = useState("49.90");
   const [eventoGratuito, setEventoGratuito] = useState(false);
+  const [formNome, setFormNome] = useState("");
+  const [formDescricao, setFormDescricao] = useState("");
+  const [formDataInicio, setFormDataInicio] = useState("");
+  const [formLocal, setFormLocal] = useState("");
+  const [formPublicado, setFormPublicado] = useState(true);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -104,6 +113,20 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
 
   const slugPrev = slugFromNome(nomeParaSlug);
   const voltarHref = painel ? "/organizador/eventos" : "/eventos";
+
+  const checklistProps = {
+    nome: formNome,
+    descricao: formDescricao,
+    dataInicio: formDataInicio,
+    local: formLocal,
+    imagemUrl,
+    modoSimples,
+    eventoGratuito,
+    precoSimples,
+    loteRowsCount: loteRows.length,
+    publicado: formPublicado,
+  };
+  const prontoPublicar = checklistPublicacaoPronta(checklistProps);
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
@@ -244,7 +267,11 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   name="nome"
                   required
                   placeholder="Ex.: Conferência Tech Brasil 2026"
-                  onChange={(e) => setNomeParaSlug(e.target.value)}
+                  value={formNome}
+                  onChange={(e) => {
+                    setFormNome(e.target.value);
+                    setNomeParaSlug(e.target.value);
+                  }}
                 />
               </div>
               <div className="rounded-2xl border border-emerald-600 bg-gradient-to-b from-emerald-50/90 to-white p-4 shadow-sm ring-1 ring-emerald-600 sm:p-5">
@@ -277,6 +304,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   name="descricao"
                   required
                   placeholder="Conte o que o participante pode esperar…"
+                  value={formDescricao}
+                  onChange={(e) => setFormDescricao(e.target.value)}
                 />
               </div>
               <div className="grid gap-2">
@@ -314,6 +343,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     type="datetime-local"
                     step={60}
                     required
+                    value={formDataInicio}
+                    onChange={(e) => setFormDataInicio(e.target.value)}
                   />
                 </div>
               </div>
@@ -327,6 +358,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   name="local"
                   required
                   placeholder="Endereço ou link para mapa"
+                  value={formLocal}
+                  onChange={(e) => setFormLocal(e.target.value)}
                 />
               </div>
               <div className="grid gap-2">
@@ -396,7 +429,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
             </div>
 
             <div className={wizardStep === 3 ? "space-y-0" : "hidden"} aria-hidden={wizardStep !== 3}>
-            <section className="space-y-4">
+            <EventoPublicarChecklist {...checklistProps} />
+            <section className="mt-6 space-y-4">
               <SectionTitle>Visibilidade</SectionTitle>
               <div className="rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-white p-4 ring-1 ring-emerald-200/80 sm:p-5">
                 <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-emerald-300 hover:bg-white">
@@ -404,7 +438,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     type="radio"
                     name="publicado"
                     value="true"
-                    defaultChecked
+                    checked={formPublicado}
+                    onChange={() => setFormPublicado(true)}
                     className="mt-1 text-emerald-700 focus:ring-emerald-600"
                   />
                   <span className="text-sm text-zinc-800">
@@ -417,6 +452,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     type="radio"
                     name="publicado"
                     value="false"
+                    checked={!formPublicado}
+                    onChange={() => setFormPublicado(false)}
                     className="mt-1 text-emerald-700 focus:ring-emerald-600"
                   />
                   <span className="text-sm text-zinc-800">
@@ -459,8 +496,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   </button>
                 ) : (
                   <button
-                    disabled={loading}
-                    className="btn-success px-8 py-3 text-base shadow-sm sm:min-w-[11rem]"
+                    disabled={loading || !prontoPublicar}
+                    className="btn-success px-8 py-3 text-base shadow-sm sm:min-w-[11rem] disabled:opacity-50"
                     type="submit"
                   >
                     {loading ? "Criando…" : "Criar evento"}

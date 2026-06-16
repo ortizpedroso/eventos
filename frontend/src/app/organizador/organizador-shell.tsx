@@ -7,23 +7,24 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { OrganizadorTour } from "@/components/organizador-tour";
 import type { Usuario } from "@/lib/types";
 
 const navDesktop = [
-  { href: "/organizador/eventos", label: "Meus eventos" },
-  { href: "/organizador/novo", label: "Criar novo evento" },
-  { href: "/organizador/perfil", label: "Perfil" },
-  { href: "/organizador/relatorios", label: "Relatórios" },
-  { href: "/organizador/comunicados", label: "Comunicados" },
-  { href: "/organizador/checkin", label: "Check-in" },
-  { href: "/organizador/financeiro", label: "Financeiro" },
+  { href: "/organizador/eventos", label: "Meus eventos", tour: "org-eventos" },
+  { href: "/organizador/novo", label: "Criar novo evento", tour: "org-novo" },
+  { href: "/organizador/perfil", label: "Perfil", tour: "org-perfil" },
+  { href: "/organizador/relatorios", label: "Relatórios", tour: "org-relatorios" },
+  { href: "/organizador/comunicados", label: "Comunicados", tour: "org-comunicados" },
+  { href: "/organizador/checkin", label: "Check-in", tour: "org-checkin" },
+  { href: "/organizador/financeiro", label: "Financeiro", tour: "org-financeiro" },
 ] as const;
 
 const navMobilePrincipal = [
-  { href: "/organizador/eventos", label: "Eventos", short: "Eventos" },
-  { href: "/organizador/novo", label: "Criar", short: "Criar" },
-  { href: "/organizador/checkin", label: "Check-in", short: "Check-in" },
-  { href: "/organizador/relatorios", label: "Relatórios", short: "Relat." },
+  { href: "/organizador/eventos", label: "Eventos", short: "Eventos", tour: "org-eventos" },
+  { href: "/organizador/novo", label: "Criar", short: "Criar", tour: "org-novo" },
+  { href: "/organizador/checkin", label: "Check-in", short: "Check-in", tour: "org-checkin" },
+  { href: "/organizador/relatorios", label: "Relatórios", short: "Relat.", tour: "org-relatorios" },
 ] as const;
 
 const navMobileMais = [
@@ -156,6 +157,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    data-tour={item.tour}
                     className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                       active
                         ? "bg-emerald-700 text-white shadow-sm"
@@ -183,6 +185,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                data-tour={item.tour}
                 className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 py-2.5 text-[10px] font-medium ${
                   active ? "text-emerald-800" : "text-zinc-500"
                 }`}
@@ -239,6 +242,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
           </>
         ) : null}
       </nav>
+      <OrganizadorTour />
     </>
   );
 }
