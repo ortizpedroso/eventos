@@ -26,6 +26,8 @@ class AsaasClient:
 
     @property
     def enabled(self) -> bool:
+        if settings.asaas_e2e_mock:
+            return not settings.ASAAS_DISABLED
         return bool(self.api_key) and not settings.ASAAS_DISABLED
 
     def _headers(self) -> dict[str, str]:
@@ -36,6 +38,10 @@ class AsaasClient:
         }
 
     def request(self, method: str, path: str, *, json: dict | None = None, params: dict | None = None) -> Any:
+        if settings.asaas_e2e_mock:
+            from app.services.asaas_e2e_mock import mock_request
+
+            return mock_request(method, path, json=json)
         if not self.api_key:
             raise AsaasAPIError("ASAAS_API_KEY não configurada")
         url = f"{self.base_url}{path}"

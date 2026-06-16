@@ -100,11 +100,27 @@ Manual:
 - Readiness: `GET /ready` (inclui Postgres)
 - Caddy expõe `/health` e `/ready` diretamente na API
 - Logs: `docker compose -f docker-compose.prod.yml logs -f api web caddy`
-- Backup diário: cron com `./scripts/backup-postgres.sh`
+- Backup diário: cron com `./scripts/backup-postgres-cron.sh` (rotação 14 dias por padrão)
+- Alerta `/ready`: `./scripts/monitor-ready.sh` no cron (webhook ou e-mail via `.env`)
 
 ---
 
-## 7. Checkout — métodos disponíveis
+## 7. Credenciais Asaas (quando tiver acesso ao painel)
+
+```bash
+./scripts/configure-asaas-env.sh
+# ou não interativo:
+./scripts/configure-asaas-env.sh \
+  --api-key '$aact_prod_...' \
+  --platform-wallet 'SEU_WALLET_ID' \
+  --webhook-token 'token-forte'
+./scripts/deploy-vps.sh
+./scripts/verify-production.sh
+```
+
+---
+
+## 8. Checkout — métodos disponíveis
 
 | Método | UX |
 |--------|-----|

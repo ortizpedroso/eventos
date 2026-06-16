@@ -17,6 +17,7 @@ import {
   type LoteFormRow,
 } from "@/components/evento-lotes-editor";
 import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
+import { EventoWizardSimuladorLiquido } from "@/components/evento-wizard-simulador-liquido";
 import { EVENTO_CATEGORIAS, slugFromNome } from "@/lib/eventos";
 import { apiFetch } from "@/lib/api";
 
@@ -415,6 +416,10 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                       />
                     </div>
                   ) : null}
+                  <EventoWizardSimuladorLiquido
+                    preco={precoSimples}
+                    ocultar={eventoGratuito}
+                  />
                 </div>
               ) : (
                 <EventoLotesEditor rows={loteRows} onChange={setLoteRows} />

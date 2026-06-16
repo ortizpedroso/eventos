@@ -20,6 +20,9 @@ Ficheiros principais:
 | `.env.production.example` | Modelo de variáveis |
 | `scripts/deploy-vps.sh` | `git pull` + rebuild |
 | `scripts/backup-postgres.sh` | Backup da base |
+| `scripts/backup-postgres-cron.sh` | Backup + rotação + upload off-site |
+| `scripts/monitor-ready.sh` | Alerta se `/ready` falhar |
+| `scripts/configure-asaas-env.sh` | Preencher credenciais Asaas no `.env` |
 
 ## Fase A — Antes de ter o VPS (pode fazer agora)
 
@@ -50,9 +53,16 @@ Ficheiros principais:
    ```bash
    docker compose -f docker-compose.prod.yml up -d --build
    ```
-6. Agendar backup (cron diário):
+6. Agendar backup (cron diário com rotação e log):
    ```bash
-   0 3 * * * cd /opt/eventosbr && ./scripts/backup-postgres.sh
+   chmod +x scripts/backup-postgres-cron.sh scripts/upload-backup-offsite.sh
+   crontab -e
+   # 0 3 * * * cd /opt/eventosbr && ./scripts/backup-postgres-cron.sh
+   ```
+   Opcional: `BACKUP_OFFSITE_TARGET` no `.env` para cópia remota (S3, rclone, scp).
+7. Monitorar `/ready` (a cada 5 min):
+   ```bash
+   # */5 * * * * cd /opt/eventosbr && ./scripts/monitor-ready.sh
    ```
 
 ## Fase C — Go-live (dia da publicação)

@@ -33,6 +33,11 @@ export default defineConfig({
       testMatch: /fluxo-org-cliente\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "asaas",
+      testMatch: /compra-checkout-asaas\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
   ...(skipWebServer
     ? {}

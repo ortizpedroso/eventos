@@ -11,7 +11,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 | Nível | Descrição | Situação |
 |-------|-----------|----------|
 | **Patamar 1 — MVP sólido** | Compra, pagamento, ingresso, check-in, painel organizador | ✅ Concluído |
-| **Patamar 2 — Produção confiável** | Deploy real, **Asaas** live, SMTP, webhook, monitoramento | 🟡 ~85% (código pronto; falta VPS) |
+| **Patamar 2 — Produção confiável** | Deploy real, **Asaas** live, SMTP, webhook, monitoramento | 🟡 ~90% (código pronto; falta VPS + credenciais) |
 | **Patamar 3 — Paridade Sympla** | Parcelamento, lista espera, portaria equipe, página organizador | 🟡 ~15% (Sprint 1 parcial) |
 | **Patamar 4 — Diferenciação** | Transparência financeira, migração, CRM, selo confiança | ⏳ Planejado |
 | **Patamar 5 — Escala** | App equipe offline, API pública, NFSe, assinatura ativa | 🔮 Futuro |
@@ -33,7 +33,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 | Segurança / UX (auditoria) | 36/36 repo | merge PRs + ops VPS |
 | Admin plataforma | 6/8 | 2 itens |
 | Diferenciação (migração) | 6/15 | 9 itens |
-| Qualidade / testes | 9/10 | 1 item (E2E Asaas real) |
+| Qualidade / testes | 10/10 | 0 itens (E2E Asaas mock) |
 | **Total estimado** | **~128 itens OK** | **~24 itens abertos** |
 
 ---
@@ -71,7 +71,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 ## Patamar 4 — Diferenciação (migração Sympla)
 
 - [x] Simulador líquido no painel Financeiro (Asaas + taxa plataforma)
-- [ ] Simulador no **wizard** do evento (criação)
+- [x] Simulador **dentro do wizard** do evento (criação)
 - [ ] Antecipação opt-in em produção (código pronto; testar com subconta real)
 - [ ] Selo organizador verificado
 - [ ] Assistente de migração Sympla/Even3
@@ -85,7 +85,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 | Sprint | Foco | Status |
 |--------|------|--------|
 | **0** | Go-live (deploy, SMTP, webhook **Asaas**) | 🟡 Código pronto; falta VPS |
-| **1** | Quick wins (timer, busca portaria, duplicar UI, simulador) | 🟡 3/4 feitos |
+| **1** | Quick wins (timer, busca portaria, duplicar UI, simulador) | ✅ 4/4 feitos |
 | **2** | Receita (lista espera/interesse, parcelamento, página organizador) | ⏳ |
 | **3** | Equipe + migração (operadores, PWA, importação Sympla, selo) | ⏳ |
 | **4** | Profundidade (formulário custom, certificados, Wallet, conciliação) | ⏳ |
@@ -298,7 +298,9 @@ Organizado por **prioridade de execução** e **patamar alvo**.
 - [ ] Webhook Asaas configurado no painel
 - [ ] Credenciais SMTP reais + SPF/DKIM
 - [ ] `./scripts/verify-production.sh` verde
-- [ ] Backup Postgres automatizado testado em restore
+- [x] Backup Postgres automatizado (`backup-postgres-cron.sh` + rotação + upload off-site)
+- [x] Monitoramento `/ready` com alerta (`monitor-ready.sh`)
+- [x] Script `configure-asaas-env.sh` para credenciais Asaas
 - [ ] Merge [PR #3](https://github.com/ortizpedroso/eventos/pull/3) (ops pós-auditoria), se ainda pendente
 
 ### Financeiro real (Asaas)
@@ -314,8 +316,9 @@ Organizado por **prioridade de execução** e **patamar alvo**.
 ### Qualidade produção
 - [x] Testes integração pagamento + webhook Asaas
 - [x] Monitoramento: endpoints `/health` e `/ready` expostos
-- [ ] E2E browser com Asaas sandbox/produção (`E2E_ASAAS=1`)
-- [ ] Alerta automático se `/ready` retorna 503
+- [x] E2E browser com Asaas mock (`npm run test:e2e:asaas` + overlay `docker-compose.e2e.asaas.yml`)
+- [ ] E2E com Asaas sandbox real (`E2E_ASAAS=1` + credenciais)
+- [x] Alerta automático se `/ready` retorna 503 (`monitor-ready.sh`)
 - [ ] `MARKETING_WHATSAPP_WEBHOOK_URL` em produção (opcional)
 
 ### Admin
@@ -424,7 +427,7 @@ flowchart LR
 1. ~~Timer reserva no checkout~~ ✅
 2. ~~Busca manual na portaria~~ ✅
 3. ~~Duplicar evento na UI~~ ✅
-4. Simulador líquido no **wizard** do evento (parcial: já existe no Financeiro)
+4. ~~Simulador líquido no **wizard** do evento~~ ✅
 
 ### Sprint 2 — Receita
 1. Lista de interesse + lista de espera

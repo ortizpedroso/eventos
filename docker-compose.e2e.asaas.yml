@@ -1,0 +1,14 @@
+# Overlay para testes E2E do fluxo Asaas (mock local, sem sandbox real).
+# Uso:
+#   docker compose -p eventosbr-e2e -f docker-compose.e2e.yml -f docker-compose.e2e.asaas.yml up -d --build --wait
+#   cd frontend && PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e:asaas
+
+services:
+  api:
+    environment:
+      PAYMENT_PROVIDER: asaas
+      ASAAS_API_KEY: e2e-mock-key
+      ASAAS_E2E_MOCK: "true"
+      ASAAS_DISABLED: "false"
+      ASAAS_PLATFORM_WALLET_ID: e2e-platform-wallet
+      ASAAS_WEBHOOK_TOKEN: e2e-webhook-token

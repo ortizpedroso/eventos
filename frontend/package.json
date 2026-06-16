@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test:e2e": "playwright test --project=smoke",
     "test:e2e:compra": "playwright test --project=compra",
+    "test:e2e:asaas": "playwright test --project=asaas",
     "test:e2e:all": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

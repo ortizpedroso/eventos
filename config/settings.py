@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     ASAAS_PLATFORM_WALLET_ID: str = ""
     # Subconta no cadastro exige dados completos; padrão false (organizador informa wallet depois)
     ASAAS_CREATE_SUBACCOUNT_ON_REGISTER: bool = False
+    # true = respostas mock da API Asaas (só development/test; E2E Playwright)
+    ASAAS_E2E_MOCK: bool = False
 
     # OAuth (Google Sign In)
     GOOGLE_OAUTH_CLIENT_ID: str = ""
@@ -90,7 +92,13 @@ class Settings(BaseSettings):
         return "sandbox"
 
     @property
+    def asaas_e2e_mock(self) -> bool:
+        return self.ASAAS_E2E_MOCK and self.ENVIRONMENT in ("development", "test")
+
+    @property
     def use_asaas(self) -> bool:
+        if self.asaas_e2e_mock:
+            return (self.PAYMENT_PROVIDER or "asaas").lower() == "asaas" and not self.ASAAS_DISABLED
         return (
             (self.PAYMENT_PROVIDER or "asaas").lower() == "asaas"
             and not self.ASAAS_DISABLED

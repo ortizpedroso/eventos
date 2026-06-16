@@ -45,6 +45,54 @@ export async function waitForApiReady(maxMs = 120_000): Promise<void> {
   throw new Error(`API não respondeu em ${API}/ready após ${maxMs}ms`);
 }
 
+export async function seedPublishedEventAsaas(): Promise<SeededEvent> {
+  const suf = `${Date.now()}`;
+  const senha = "senha12345";
+  const orgEmail = `e2e_asaas_org_${suf}@test.com`;
+
+  await api("POST", "/api/auth/registrar", {
+    email: orgEmail,
+    nome: "Org Asaas E2E",
+    senha,
+    tipo: "organizador",
+  });
+
+  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
+    email: orgEmail,
+    senha,
+  });
+
+  await api(
+    "PUT",
+    "/api/organizador/asaas/wallet",
+    { wallet_id: "e2e-org-wallet", sincronizar_eventos: true },
+    orgToken,
+  );
+
+  const ev = await api<{ id: string; slug: string; preco_compra?: number; preco_ingresso: number }>(
+    "POST",
+    "/api/eventos/criar",
+    {
+      nome: `E2E Asaas ${suf}`,
+      descricao: "Evento para teste Playwright Asaas",
+      data_inicio: "2026-12-20T19:00:00",
+      data_fim: "2026-12-20T23:00:00",
+      local: "São Paulo",
+      preco_ingresso: 30,
+      categoria: "Outros",
+      publicado: true,
+      ingresso_lotes: [{ nome: "Geral", preco: 30, ordem: 1, ativo: true }],
+    },
+    orgToken,
+  );
+
+  return {
+    slug: ev.slug,
+    eventoId: ev.id,
+    precoReais: Number(ev.preco_compra ?? ev.preco_ingresso ?? 30),
+  };
+}
+
 export async function seedPublishedEvent(): Promise<SeededEvent> {
   const suf = `${Date.now()}`;
   const senha = "senha12345";
@@ -84,4 +132,36 @@ export async function seedPublishedEvent(): Promise<SeededEvent> {
     eventoId: ev.id,
     precoReais: Number(ev.preco_compra ?? ev.preco_ingresso ?? 30),
   };
+}
+
+export async function apiLogin(email: string, senha: string): Promise<string> {
+  const { access_token } = await api<{ access_token: string }>("POST", "/api/auth/login", {
+    email,
+    senha,
+  });
+  return access_token;
+}
+
+export async function simularWebhookAsaasPago(paymentId: string, ingressoId: string): Promise<void> {
+  const token = process.env.ASAAS_WEBHOOK_TOKEN ?? "e2e-webhook-token";
+  const res = await fetch(`${API}/api/webhooks/asaas`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "asaas-access-token": token,
+    },
+    body: JSON.stringify({
+      event: "PAYMENT_RECEIVED",
+      id: `evt_e2e_${Date.now()}`,
+      payment: {
+        id: paymentId,
+        status: "RECEIVED",
+        externalReference: ingressoId,
+      },
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Webhook Asaas E2E falhou: ${res.status} ${text}`);
+  }
 }
