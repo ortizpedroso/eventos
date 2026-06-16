@@ -2,7 +2,8 @@
 
 Checklist da auditoria de **segurança** e **experiência do usuário** (cliente e organizador), realizada em junho/2026.
 
-**Branch / PR:** `cursor/auditoria-seguranca-ux-bf71` → [PR #2](https://github.com/ortizpedroso/eventos/pull/2)
+**Auditoria (código UX/segurança):** mergeada em `main` via [PR #2](https://github.com/ortizpedroso/eventos/pull/2)  
+**Ops pós-auditoria (migração, SMTP, CSP, smoke):** [PR #3](https://github.com/ortizpedroso/eventos/pull/3) — branch `cursor/auditoria-deploy-ops-bf71`
 
 **Última atualização:** 16/06/2026
 
@@ -10,19 +11,20 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 
 ## Resumo executivo
 
-| Área | Implementado no código | Pendente (operação / validação) |
-|------|------------------------|----------------------------------|
-| Segurança crítica | 12 itens | 0 itens |
-| UX cliente | 10 itens | 0 itens |
-| UX organizador | 9 itens | 0 itens |
-| UX portaria | 3 itens | 0 itens |
-| Deploy / go-live | 4 itens | 2 itens |
+| Área | Status |
+|------|--------|
+| Segurança crítica (código) | ✅ 12/12 concluído |
+| UX cliente | ✅ 10/10 concluído |
+| UX organizador | ✅ 9/9 concluído |
+| UX portaria | ✅ 3/3 concluído |
+| Ops pós-auditoria (repo) | ✅ 6/7 concluído — falta merge do PR #3 |
+| Go-live / Fase D | ⏳ 6 itens abertos (fora do escopo da auditoria) |
 
-> **Código da auditoria:** concluído. O que falta é principalmente **configuração em produção**, **migração de banco** e itens do **roadmap Fase D** que ficam fora deste escopo.
+> **Situação atual:** toda a auditoria de código está em `main`. Scripts, correção da migration Postgres, SMTP unificado e validação de CSP estão no PR #3. No **servidor de produção**, ainda é preciso rodar a migração, preencher credenciais SMTP reais e validar SPF/DKIM.
 
 ---
 
-## Segurança — implementado
+## Segurança — implementado ✅
 
 ### Crítico (rodada 1)
 
@@ -41,18 +43,21 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 
 ### Complementos (rodada 3)
 
-- [x] **Verificação de e-mail na compra rápida** — campos `email_verificado`, `email_verificacao_token`, `email_verificacao_expires` no modelo `Usuario`; serviço `app/services/email_verificacao.py`; rotas `POST /api/auth/verificar-email` e `POST /api/auth/reenviar-verificacao-email`; página `/auth/verificar-email`; banner em `conta-banners.tsx`.
+- [x] **Verificação de e-mail na compra rápida** — campos no `Usuario`; serviço `app/services/email_verificacao.py`; rotas `POST /api/auth/verificar-email` e `POST /api/auth/reenviar-verificacao-email`; página `/auth/verificar-email`; banner em `conta-banners.tsx`.
 - [x] **Rotação automática do token de portaria** — campo `checkin_token_em` em `Evento`; lógica em `app/services/evento_portaria.py` (90 dias ou 7 dias antes do evento); regeneração manual via API/UI.
-- [x] **CSP com nonce em produção** — `frontend/src/lib/csp.ts` + header aplicado no middleware; CSP duplicada removida de `next.config.ts`.
+- [x] **CSP com nonce em produção** — `frontend/src/lib/csp.ts` + header no middleware; nonce propagado em `layout.tsx`; CSP duplicada removida de `next.config.ts`.
 - [x] **Mensagens de erro da API em português** — `frontend/src/lib/api-errors.ts`; redirect automático em 401 em rotas protegidas.
 
-### Migração de banco (código pronto)
+### Migração de banco
 
-- [x] Alembic `20260616_000019_email_verificado_portaria_token_em` — adiciona colunas de verificação de e-mail e `checkin_token_em`.
+- [x] Alembic `20260616_000019` — colunas de verificação de e-mail e `checkin_token_em`.
+- [x] **Correção Postgres** — `email_verificado = false` (antes `0` quebrava o upgrade).
+- [x] **Validado localmente** — `alembic upgrade head` → `20260616_000019 (head)` em Postgres.
+- [ ] **Rodar em produção/VPS** — `./scripts/migrate-db.sh` (após merge do PR #3).
 
 ---
 
-## UX — cliente — implementado
+## UX — cliente — implementado ✅
 
 - [x] Link **Painel** na navegação da conta (`conta-nav.tsx`) para organizadores.
 - [x] Itens **Pagamentos** e **Ingressos** na navbar global para organizador (`navbar.tsx`).
@@ -67,7 +72,7 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 
 ---
 
-## UX — organizador — implementado
+## UX — organizador — implementado ✅
 
 - [x] Botão **Pausar na vitrine** em Meus eventos (`organizador/eventos/page.tsx`).
 - [x] **Vendas e receita** nos cards de evento.
@@ -81,7 +86,7 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 
 ---
 
-## UX — portaria — implementado
+## UX — portaria — implementado ✅
 
 - [x] **Vibração + beep** no check-in bem-sucedido (`checkin-feedback.ts` + `checkin-portaria-client.tsx`).
 - [x] Scanner QR via pacote local (sem dependência de CDN).
@@ -89,40 +94,48 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 
 ---
 
-## Pendente — operação e validação
+## Ops pós-auditoria — implementado no repo
 
-Itens que **dependem de ambiente** ou **ainda não foram validados em produção**:
+Itens da rodada operacional (PR #3):
 
-### Obrigatório antes de usar as novas features
+- [x] **Cliente SMTP unificado** — `app/services/smtp_client.py`; `EMAIL_USE_TLS`; remetente com `EMAIL_FROM_NAME`.
+- [x] **Correção `lembrete_evento.py`** — usava `EMAIL_HOST` inexistente; corrigido para `EMAIL_SERVER`.
+- [x] **Teste SMTP** — `python scripts/test-smtp.py destino@email.com`.
+- [x] **Endpoint admin** — `POST /api/admin/smtp-test` (header `X-Platform-Admin-Key`).
+- [x] **CSP validada em produção local** — `next start` retorna header com `nonce-`, Stripe e Google OAuth na allowlist.
+- [x] **Scripts** — `scripts/migrate-db.sh`, `scripts/smoke-auditoria.sh`.
+- [x] **Testes** — `tests/test_smtp_client.py`, `tests/test_csp.py`; suite `64/65` passed (`STRIPE_DISABLED=true`).
+- [x] **Bugfix** — import `gerar_checkin_token` em `app/routes/eventos.py`.
+- [x] **PR #2 mergeado** em `main` (auditoria completa).
+- [ ] **PR #3 mergeado** — [fix(ops): migração Postgres, SMTP, CSP e smoke](https://github.com/ortizpedroso/eventos/pull/3).
 
-- [x] **Rodar migração** em staging/produção: `alembic upgrade head` (revision `20260616_000019`) — validado em Postgres; script `scripts/migrate-db.sh`
-- [x] **Configurar SMTP** — cliente unificado `app/services/smtp_client.py`, `EMAIL_USE_TLS`, script `scripts/test-smtp.py`, endpoint `POST /api/admin/smtp-test`
-- [x] **Validar CSP com nonce** em build de produção — `layout.tsx` propaga nonce; allowlist Stripe/Google OAuth; testado com `next start` (header `content-security-policy` com `nonce-`)
+---
 
-### Qualidade e merge
+## Pendente — só no servidor de produção
 
-- [ ] **Revisar e mergear** o [PR #2](https://github.com/ortizpedroso/eventos/pull/2) (aguarda aprovação humana no GitHub)
-- [x] **Suite completa de testes** com `SECRET_KEY` + `STRIPE_DISABLED=true`: `65` testes, `64` passed (1 falha pré-existente em worker de e-mail assíncrono)
-- [x] **Smoke manual** — script `scripts/smoke-auditoria.sh`; CSP validado via curl em produção local
+Ações que **não dependem mais de código**, apenas de deploy/configuração:
 
-### Segurança — melhorias futuras (fora do escopo da auditoria)
-
-- [ ] **SSO / lista de operadores** no painel admin (já listado no [roadmap Fase D](./07-fase-d-roadmap.md)).
-- [ ] **Monitoramento** (logs estruturados, alertas em `/ready` 503).
-- [ ] **Auditoria periódica** de dependências (`npm audit`, `pip audit`) e rotação de secrets.
+| Prioridade | Item | Como fazer |
+|------------|------|------------|
+| Alta | Rodar migração no VPS | `./scripts/migrate-db.sh` após deploy do PR #3 |
+| Alta | Credenciais SMTP reais | `EMAIL_USER`, `EMAIL_PASSWORD` no `.env`; testar com `scripts/test-smtp.py` |
+| Alta | SPF/DKIM no domínio | Configurar DNS do provedor de e-mail (Hostinger, Brevo, etc.) |
+| Média | Smoke pós-deploy | `./scripts/smoke-auditoria.sh` ou fluxo manual: compra rápida → verificar e-mail → portaria → check-in |
+| Baixa | Corrigir teste flaky | `TestRetomarPagamento` — worker assíncrono de e-mail fora do DB de teste |
 
 ---
 
 ## Pendente — go-live e Fase D
 
-Estes itens **não faziam parte da auditoria de UX/segurança**, mas continuam abertos no [07 — Fase D](./07-fase-d-roadmap.md):
+Itens do [07 — Fase D](./07-fase-d-roadmap.md), fora do escopo da auditoria:
 
 - [ ] Webhook Stripe com `STRIPE_WEBHOOK_SECRET` real em produção.
-- [ ] SMTP validado com **SPF/DKIM** no domínio.
 - [ ] Stripe Connect ativo (`STRIPE_SKIP_CONNECT_ON_REGISTER=false`).
 - [ ] Teste E2E browser com Stripe Elements (`E2E_STRIPE=1`).
 - [ ] Conciliação Stripe Connect e NFSe / comprovante de repasse.
 - [ ] `MARKETING_WHATSAPP_WEBHOOK_URL` em produção (opcional).
+- [ ] SSO / lista de operadores no painel admin.
+- [ ] Monitoramento (logs estruturados, alertas `/ready` 503).
 
 ---
 
@@ -130,18 +143,29 @@ Estes itens **não faziam parte da auditoria de UX/segurança**, mas continuam a
 
 | Tema | Arquivos |
 |------|----------|
-| Middleware / CSP | `frontend/src/middleware.ts`, `frontend/src/lib/csp.ts`, `frontend/src/lib/middleware-api.ts` |
+| Middleware / CSP | `frontend/src/middleware.ts`, `frontend/src/lib/csp.ts`, `frontend/src/app/layout.tsx` |
 | Admin proxy | `frontend/src/app/api/admin/proxy/[...path]/route.ts` |
+| SMTP | `app/services/smtp_client.py`, `scripts/test-smtp.py`, `app/routes/admin.py` (`/smtp-test`) |
 | E-mail verificação | `app/services/email_verificacao.py`, `app/routes/auth.py`, `frontend/src/app/auth/verificar-email/` |
 | Token portaria | `app/services/evento_portaria.py`, `app/models/evento.py` |
+| Migração | `alembic/versions/20260616_000019_*.py`, `scripts/migrate-db.sh` |
+| Smoke / QA | `scripts/smoke-auditoria.sh`, `tests/conftest.py` |
 | UX organizador | `organizador-tour.tsx`, `evento-publicar-checklist.tsx`, `organizador-shell.tsx` |
 | UX cliente | `navbar.tsx`, `conta-banners.tsx`, `lista-skeleton.tsx`, `api-errors.ts` |
 | Portaria | `checkin-portaria-client.tsx`, `checkin-feedback.ts`, `app/routes/portaria.py` |
 
 ---
 
-## Histórico de commits da auditoria
+## Histórico
+
+### Auditoria (PR #2 → `main`)
 
 1. `4d54bdd` — Auditoria: corrige bypass admin e melhora UX cliente/organizador  
 2. `71f5c0d` — Implementa melhorias pendentes da auditoria (segurança e UX)  
 3. `1129eed` — Implementa melhorias pendentes: e-mail, portaria, tour, CSP e UX  
+4. `282f01d` — docs: checklist auditoria segurança e UX  
+5. `d6f65bf` — **Merge PR #2** em `main`
+
+### Ops pós-auditoria (PR #3)
+
+1. `6a0034a` — fix(ops): migração Postgres, SMTP unificado, CSP nonce e smoke
