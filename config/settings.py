@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     EMAIL_USER: str = ""
     EMAIL_PASSWORD: str = ""
     EMAIL_FROM_NAME: str = "EventosBR"
+    # STARTTLS na porta 587 (Gmail, Hostinger). false só para relay local sem TLS.
+    EMAIL_USE_TLS: bool = True
     # Links em e-mails e QR (ex.: http://localhost:3000)
     FRONTEND_PUBLIC_URL: str = "http://localhost:3000"
 

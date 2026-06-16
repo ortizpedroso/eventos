@@ -42,6 +42,29 @@ async def status_setup():
     return build_setup_status()
 
 
+class SmtpTestBody(BaseModel):
+    destino: str
+
+
+@router.post("/smtp-test")
+async def testar_smtp(body: SmtpTestBody):
+    """Envia e-mail de teste para validar SMTP (requer X-Platform-Admin-Key)."""
+    from app.services.smtp_client import send_test_email, smtp_configured
+
+    if not smtp_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="SMTP não configurado. Defina EMAIL_USER e EMAIL_PASSWORD no .env da API.",
+        )
+    destino = body.destino.strip()
+    if "@" not in destino:
+        raise HTTPException(status_code=400, detail="E-mail de destino inválido.")
+    ok = send_test_email(destino)
+    if not ok:
+        raise HTTPException(status_code=502, detail="Falha ao enviar e-mail de teste.")
+    return {"ok": True, "message": f"E-mail de teste enviado para {destino}."}
+
+
 @router.get("/eventos")
 async def listar_eventos_plataforma(
     publicado: bool | None = Query(None),

@@ -27,7 +27,7 @@ def upgrade() -> None:
     op.execute(
         """
         UPDATE usuarios
-        SET email_verificado = 0
+        SET email_verificado = false
         WHERE senha_hash IS NULL AND (auth_provider IS NULL OR auth_provider = 'email')
         """
     )

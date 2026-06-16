@@ -77,6 +77,21 @@ cd frontend && PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e:compra
 
 Windows: `.\scripts\e2e-up.ps1` e `.\scripts\e2e-run-compra.ps1`.
 
+## Migração e smoke pós-auditoria
+
+```bash
+# Postgres (produção / Docker)
+./scripts/migrate-db.sh
+
+# Validar SMTP (defina EMAIL_* no .env antes)
+python scripts/test-smtp.py seu-email@exemplo.com
+
+# Smoke: pytest + health + CSP produção
+./scripts/smoke-auditoria.sh
+```
+
+Teste SMTP pelo painel admin: `POST /api/admin/smtp-test` com header `X-Platform-Admin-Key` e corpo `{"destino":"..."}`.
+
 ## Checklist de deploy (sugestão)
 
 1. Definir `ENVIRONMENT=production`, `DEBUG=False`, `SECRET_KEY` forte (`scripts/generate-secrets.ps1`).

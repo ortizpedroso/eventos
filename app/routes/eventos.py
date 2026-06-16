@@ -14,7 +14,12 @@ from app.services.ingresso_lotes import (
     sincronizar_preco_ingresso_evento,
     substituir_lotes_evento,
 )
-from app.services.evento_portaria import garantir_checkin_token, regenerar_checkin_token, url_portaria
+from app.services.evento_portaria import (
+    garantir_checkin_token,
+    gerar_checkin_token,
+    regenerar_checkin_token,
+    url_portaria,
+)
 from app.utils.evento_cidade import resolver_cidade
 from app.utils.public_errors import LISTA_EVENTOS_CLIENTE
 

@@ -30,8 +30,7 @@ _worker_started = False
 _stop_worker = threading.Event()
 
 
-def _smtp_configured() -> bool:
-    return bool((settings.EMAIL_USER or "").strip() and (settings.EMAIL_PASSWORD or "").strip())
+from app.services.smtp_client import format_from_header, smtp_configured
 
 
 def _build_html(ingresso: Ingresso, qr_cid: str) -> str:
@@ -80,7 +79,7 @@ def _send_sync(ingresso_id: str) -> bool:
 
         msg = MIMEMultipart("related")
         msg["Subject"] = f"Seu ingresso — {ingresso.evento.nome}"
-        msg["From"] = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_USER}>"
+        msg["From"] = format_from_header()
         msg["To"] = destino
 
         alt = MIMEMultipart("alternative")
@@ -101,7 +100,7 @@ def _send_sync(ingresso_id: str) -> bool:
         img.add_header("Content-Disposition", "inline", filename="ingresso-qr.png")
         msg.attach(img)
 
-        if not _smtp_configured():
+        if not smtp_configured():
             logger.info(
                 "E-mail ingresso %s → %s (SMTP não configurado; conteúdo gerado, não enviado)",
                 ingresso_id,
@@ -110,7 +109,8 @@ def _send_sync(ingresso_id: str) -> bool:
             return True
 
         with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-            server.starttls()
+            if settings.EMAIL_USE_TLS:
+                server.starttls()
             server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
             server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
 
@@ -257,17 +257,18 @@ def _send_comunicado_sync(evento_id: str, assunto: str, mensagem: str) -> int:
 
             msg = MIMEMultipart("alternative")
             msg["Subject"] = assunto[:200]
-            msg["From"] = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_USER}>"
+            msg["From"] = format_from_header()
             msg["To"] = destino
             msg.attach(MIMEText(mensagem, "plain", "utf-8"))
             msg.attach(MIMEText(html, "html", "utf-8"))
 
-            if not _smtp_configured():
+            if not smtp_configured():
                 enviados += 1
                 continue
             try:
                 with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-                    server.starttls()
+                    if settings.EMAIL_USE_TLS:
+                        server.starttls()
                     server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
                     server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
                 enviados += 1

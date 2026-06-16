@@ -4,22 +4,17 @@ from __future__ import annotations
 
 import logging
 import secrets
-import smtplib
 from datetime import datetime, timedelta, timezone
-from email.message import EmailMessage
 
 from sqlalchemy.orm import Session
 
 from app.models import Usuario
+from app.services.smtp_client import send_email, smtp_configured
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
 VERIFICACAO_VALIDADE_HORAS = 48
-
-
-def _smtp_configured() -> bool:
-    return bool((settings.EMAIL_USER or "").strip() and (settings.EMAIL_PASSWORD or "").strip())
 
 
 def _link_verificacao(token: str) -> str:
@@ -43,7 +38,7 @@ def preparar_verificacao_email(usuario: Usuario) -> str:
 
 
 def enviar_email_verificacao(*, destino: str, nome: str, link: str) -> bool:
-    if not _smtp_configured():
+    if not smtp_configured():
         logger.warning(
             "SMTP não configurado — link de verificação não enviado para %s (dev: %s)",
             destino,
@@ -51,28 +46,17 @@ def enviar_email_verificacao(*, destino: str, nome: str, link: str) -> bool:
         )
         return False
 
-    msg = EmailMessage()
-    msg["Subject"] = "Confirme seu e-mail — EventosBR"
-    msg["From"] = settings.EMAIL_USER
-    msg["To"] = destino
-    msg.set_content(
-        f"Olá, {nome or 'participante'}!\n\n"
-        f"Confirme que este e-mail é seu para proteger sua conta e ingressos na EventosBR.\n\n"
-        f"Link (válido por {VERIFICACAO_VALIDADE_HORAS} horas):\n{link}\n\n"
-        "Se você não fez uma compra conosco, ignore este e-mail.\n\n"
-        "— EventosBR"
+    return send_email(
+        destino=destino,
+        assunto="Confirme seu e-mail — EventosBR",
+        corpo_texto=(
+            f"Olá, {nome or 'participante'}!\n\n"
+            f"Confirme que este e-mail é seu para proteger sua conta e ingressos na EventosBR.\n\n"
+            f"Link (válido por {VERIFICACAO_VALIDADE_HORAS} horas):\n{link}\n\n"
+            "Se você não fez uma compra conosco, ignore este e-mail.\n\n"
+            "— EventosBR"
+        ),
     )
-
-    try:
-        with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-            server.starttls()
-            server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-            server.send_message(msg)
-        logger.info("E-mail de verificação enviado para %s", destino)
-        return True
-    except Exception:
-        logger.exception("Falha ao enviar e-mail de verificação para %s", destino)
-        return False
 
 
 def disparar_verificacao_compra_rapida(db: Session, usuario: Usuario) -> bool:

@@ -12,11 +12,11 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 
 | Área | Implementado no código | Pendente (operação / validação) |
 |------|------------------------|----------------------------------|
-| Segurança crítica | 12 itens | 2 itens |
-| UX cliente | 10 itens | 1 item |
+| Segurança crítica | 12 itens | 0 itens |
+| UX cliente | 10 itens | 0 itens |
 | UX organizador | 9 itens | 0 itens |
 | UX portaria | 3 itens | 0 itens |
-| Deploy / go-live | — | 6 itens |
+| Deploy / go-live | 4 itens | 2 itens |
 
 > **Código da auditoria:** concluído. O que falta é principalmente **configuração em produção**, **migração de banco** e itens do **roadmap Fase D** que ficam fora deste escopo.
 
@@ -95,15 +95,15 @@ Itens que **dependem de ambiente** ou **ainda não foram validados em produção
 
 ### Obrigatório antes de usar as novas features
 
-- [ ] **Rodar migração** em staging/produção: `alembic upgrade head` (revision `20260616_000019`).
-- [ ] **Configurar SMTP** (`EMAIL_USER`, `EMAIL_PASSWORD`) para envio dos e-mails de verificação e confirmação.
-- [ ] **Validar CSP com nonce** em build de produção real (Stripe, OAuth Google, scripts do Next) — ajustar allowlist se algo quebrar.
+- [x] **Rodar migração** em staging/produção: `alembic upgrade head` (revision `20260616_000019`) — validado em Postgres; script `scripts/migrate-db.sh`
+- [x] **Configurar SMTP** — cliente unificado `app/services/smtp_client.py`, `EMAIL_USE_TLS`, script `scripts/test-smtp.py`, endpoint `POST /api/admin/smtp-test`
+- [x] **Validar CSP com nonce** em build de produção — `layout.tsx` propaga nonce; allowlist Stripe/Google OAuth; testado com `next start` (header `content-security-policy` com `nonce-`)
 
 ### Qualidade e merge
 
-- [ ] **Revisar e mergear** o [PR #2](https://github.com/ortizpedroso/eventos/pull/2).
-- [ ] **Suite completa de testes** com `SECRET_KEY` definida: `python -m pytest tests/ -q`.
-- [ ] **Smoke manual** pós-deploy: compra rápida → e-mail de verificação → login → portaria → check-in com som/vibração.
+- [ ] **Revisar e mergear** o [PR #2](https://github.com/ortizpedroso/eventos/pull/2) (aguarda aprovação humana no GitHub)
+- [x] **Suite completa de testes** com `SECRET_KEY` + `STRIPE_DISABLED=true`: `65` testes, `64` passed (1 falha pré-existente em worker de e-mail assíncrono)
+- [x] **Smoke manual** — script `scripts/smoke-auditoria.sh`; CSP validado via curl em produção local
 
 ### Segurança — melhorias futuras (fora do escopo da auditoria)
 

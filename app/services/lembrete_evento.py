@@ -22,8 +22,7 @@ _stop_event = threading.Event()
 _thread: threading.Thread | None = None
 
 
-def _smtp_configured() -> bool:
-    return bool((settings.EMAIL_USER or "").strip() and (settings.EMAIL_PASSWORD or "").strip())
+from app.services.smtp_client import format_from_header, smtp_configured
 
 
 def _build_html(ingresso: Ingresso) -> str:
@@ -48,9 +47,9 @@ def _enviar_lembrete(ingresso: Ingresso) -> bool:
         return False
     msg = MIMEText(_build_html(ingresso), "html", "utf-8")
     msg["Subject"] = f"Lembrete: {ingresso.evento.nome} é amanhã"
-    msg["From"] = settings.EMAIL_USER
+    msg["From"] = format_from_header()
     msg["To"] = destino
-    with smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT) as server:
+    with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
         if settings.EMAIL_USE_TLS:
             server.starttls()
         server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
@@ -60,7 +59,7 @@ def _enviar_lembrete(ingresso: Ingresso) -> bool:
 
 def enviar_lembretes_pendentes() -> int:
     """Envia lembretes para ingressos pagos cujo evento começa em ~24h."""
-    if not _smtp_configured():
+    if not smtp_configured():
         return 0
 
     agora = datetime.now(timezone.utc).replace(tzinfo=None)

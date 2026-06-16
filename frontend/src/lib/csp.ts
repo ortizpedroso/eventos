@@ -11,6 +11,8 @@ export function buildContentSecurityPolicy(nonce: string, dev: boolean): string 
     "https://js.stripe.com",
     "https://hooks.stripe.com",
     "https://accounts.google.com",
+    "https://oauth2.googleapis.com",
+    "https://www.googleapis.com",
   ]);
   const api = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (api && /^https?:\/\//i.test(api)) {
@@ -25,9 +27,15 @@ export function buildContentSecurityPolicy(nonce: string, dev: boolean): string 
     connect.add("wss:");
   }
 
+  const scriptHosts = [
+    "https://js.stripe.com",
+    "https://accounts.google.com",
+    "https://apis.google.com",
+  ];
+
   const scriptSrc = dev
-    ? `'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://accounts.google.com`
-    : `'self' 'nonce-${nonce}' 'strict-dynamic' https://js.stripe.com https://accounts.google.com`;
+    ? `'self' 'unsafe-inline' 'unsafe-eval' ${scriptHosts.join(" ")}`
+    : `'self' 'nonce-${nonce}' 'strict-dynamic' ${scriptHosts.join(" ")}`;
 
   return [
     "default-src 'self'",
@@ -35,8 +43,8 @@ export function buildContentSecurityPolicy(nonce: string, dev: boolean): string 
     "form-action 'self'",
     "frame-ancestors 'self'",
     "img-src 'self' https: data: blob:",
-    "font-src 'self' data: https://fonts.gstatic.com",
-    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data: https://fonts.gstatic.com https://www.gstatic.com",
+    "style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com",
     `script-src ${scriptSrc}`,
     `connect-src ${[...connect].join(" ")}`,
     "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com",
