@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
@@ -19,32 +19,45 @@ import {
   nextRequerContaOrganizador,
 } from "@/lib/criar-evento-routes";
 
-export default function AuthClient() {
+export type AuthClientProps = {
+  resetToken?: string;
+  modeParam?: string;
+  fluxoOrganizador?: boolean;
+  precisaOrganizador?: boolean;
+  sessaoExpirada?: boolean;
+  tipoParam?: string;
+  nextParam?: string;
+};
+
+export default function AuthClient({
+  resetToken,
+  modeParam,
+  fluxoOrganizador = false,
+  precisaOrganizador = false,
+  sessaoExpirada = false,
+  tipoParam,
+  nextParam,
+}: AuthClientProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const resetToken = searchParams.get("reset");
   const mode =
     resetToken
       ? "reset"
-      : searchParams.get("mode") === "forgot"
+      : modeParam === "forgot"
         ? "forgot"
-        : searchParams.get("mode") === "register"
+        : modeParam === "register"
           ? "register"
           : "login";
-  const fluxoOrganizador = searchParams.get("fluxo") === "organizador";
-  const precisaOrganizador = searchParams.get("precisa") === "organizador";
-  const sessaoExpirada = searchParams.get("expirado") === "1";
 
   const defaultTipoRegistro = useMemo(() => {
-    if (searchParams.get("tipo") === "organizador") return "organizador";
+    if (tipoParam === "organizador") return "organizador";
     if (fluxoOrganizador || precisaOrganizador) return "organizador";
     return "cliente";
-  }, [searchParams, fluxoOrganizador, precisaOrganizador]);
+  }, [tipoParam, fluxoOrganizador, precisaOrganizador]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const [checandoSessao, setChecandoSessao] = useState(true);
+  const [checandoSessao, setChecandoSessao] = useState(false);
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
@@ -62,14 +75,23 @@ export default function AuthClient() {
   );
 
   useEffect(() => {
+    if (!checandoSessao) {
+      requestAnimationFrame(() => {
+        document.querySelector("form[data-auth-form]")?.setAttribute("data-auth-ready", "true");
+      });
+    }
+  }, [checandoSessao]);
+
+  useEffect(() => {
     let cancelled = false;
+    setChecandoSessao(true);
     void (async () => {
       const u = await fetchSession();
       if (cancelled) return;
-      const forcarLogin = searchParams.get("login") === "1";
+      const sp = new URLSearchParams(window.location.search);
+      const forcarLogin = sp.get("login") === "1";
       if (u && !forcarLogin) {
-        const next = searchParams.get("next");
-        redirecionar(destinoPosAuth(u, next));
+        redirecionar(destinoPosAuth(u, sp.get("next")));
         return;
       }
       setChecandoSessao(false);
@@ -77,10 +99,12 @@ export default function AuthClient() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, redirecionar]);
+    // Verificação de sessão só na montagem — evita loop com deps instáveis (router/searchParams).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function setAuthMode(next: "login" | "register") {
-    const p = new URLSearchParams(searchParams.toString());
+    const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
     if (next === "register") {
       p.set("mode", "register");
     } else {
@@ -92,7 +116,11 @@ export default function AuthClient() {
 
   function finishAuth(data: TokenResponse) {
     dispatchAuthSync();
-    const next = searchParams.get("next");
+    const next =
+      nextParam ||
+      (typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("next")
+        : null);
     if (
       isSafeInternalNext(next) &&
       data.usuario.tipo !== "organizador" &&
@@ -276,7 +304,7 @@ export default function AuthClient() {
       </div>
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-        <form onSubmit={handleFormSubmit} className="space-y-4">
+        <form data-auth-form method="post" action="#" onSubmit={handleFormSubmit} className="space-y-4">
           {infoMsg ? (
             <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
               {infoMsg}

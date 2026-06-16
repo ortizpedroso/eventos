@@ -1,25 +1,28 @@
-import { Suspense } from "react";
-
 import AuthClient from "./auth-client";
 
-function AuthFallback() {
-  return (
-    <div
-      className="mx-auto mt-10 w-full max-w-md rounded-2xl border border-zinc-200 bg-zinc-50 p-8 animate-pulse"
-      aria-hidden
-    >
-      <div className="mb-6 h-8 w-3/4 rounded bg-zinc-200" />
-      <div className="h-10 w-full rounded bg-zinc-200" />
-      <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
-      <div className="mt-6 h-10 w-full rounded bg-zinc-200" />
-    </div>
-  );
+function q(
+  sp: Record<string, string | string[] | undefined>,
+  key: string,
+): string | undefined {
+  const v = sp[key];
+  return typeof v === "string" ? v : undefined;
 }
 
-export default function AuthPage() {
+export default async function AuthPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   return (
-    <Suspense fallback={<AuthFallback />}>
-      <AuthClient />
-    </Suspense>
+    <AuthClient
+      resetToken={q(sp, "reset")}
+      modeParam={q(sp, "mode")}
+      fluxoOrganizador={q(sp, "fluxo") === "organizador"}
+      precisaOrganizador={q(sp, "precisa") === "organizador"}
+      sessaoExpirada={q(sp, "expirado") === "1"}
+      tipoParam={q(sp, "tipo")}
+      nextParam={q(sp, "next")}
+    />
   );
 }
