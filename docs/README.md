@@ -15,6 +15,7 @@ Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + Str
 | [07 — Fase D (roadmap)](./07-fase-d-roadmap.md) | Produção, fiscal, E2E e admin ampliado |
 | [08 — Deploy Hostinger (VPS)](./08-deploy-hostinger.md) | Docker prod, Caddy, DNS, go-live |
 | [09 — Auditoria segurança e UX](./09-auditoria-seguranca-ux.md) | Checklist do que foi melhorado e o que falta (jun/2026) |
+| [10 — Próximo patamar](./10-checklist-proximo-patamar.md) | Checklist completo: o que temos vs o que falta (produto, paridade, diferenciação) |
 
 ## Documentação interativa da API
 
