@@ -2,7 +2,7 @@
 
 Itens planejados após as fases A–C e o painel admin de marketing.
 
-**Última revisão:** 22/05/2026
+**Última revisão:** 16/06/2026
 
 ## Status geral do projeto
 
@@ -22,6 +22,7 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 - [x] Login social OAuth (Google) — backend + frontend
 - [x] Link de portaria sem conta (`checkin_token` + `/api/portaria`)
 - [x] Repasse / venda de ingresso (`POST /api/ingressos/{id}/repassar` + UI no painel do comprador)
+- [x] Auditoria segurança/UX (jun/2026) — ver checklist em [09-auditoria-seguranca-ux.md](./09-auditoria-seguranca-ux.md)
 
 ---
 
