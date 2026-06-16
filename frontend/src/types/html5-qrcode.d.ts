@@ -1,6 +1,6 @@
 /** html5-qrcode carregado via CDN em /portaria */
 declare class Html5Qrcode {
-  constructor(elementId: string);
+  constructor(elementId: string, config?: object);
   start(
     cameraIdOrConfig: { facingMode: string } | string,
     config: { fps: number; qrbox?: { width: number; height: number } },
@@ -9,6 +9,8 @@ declare class Html5Qrcode {
   ): Promise<void>;
   stop(): Promise<void>;
   clear(): Promise<void>;
+  scanFile(imageFile: File, showImage?: boolean): Promise<string>;
+  scanFileV2(imageFile: File, showImage?: boolean): Promise<{ decodedText: string } | string>;
 }
 
 declare class Html5QrcodeScanner {

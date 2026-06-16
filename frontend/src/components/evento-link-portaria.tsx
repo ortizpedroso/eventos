@@ -11,6 +11,68 @@ type LinkPortaria = {
   url: string;
 };
 
+function hostEhLocal(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+/**
+ * Link para colaboradores usarem no celular (mesma Wi‑Fi).
+ * Se o organizador abre o site em localhost, mantém o IP que a API envia (FRONTEND_PUBLIC_URL).
+ */
+function urlPortariaNoBrowser(link: LinkPortaria): string {
+  const lanOrigin = (process.env.NEXT_PUBLIC_LAN_ORIGIN || "").replace(/\/+$/, "");
+
+  if (typeof window === "undefined") {
+    if (lanOrigin) {
+      try {
+        const parsed = new URL(link.url);
+        return `${lanOrigin}${parsed.pathname}${parsed.search}`;
+      } catch {
+        return link.url;
+      }
+    }
+    return link.url;
+  }
+
+  try {
+    const parsed = new URL(link.url);
+    const path = `${parsed.pathname}${parsed.search}`;
+
+    if (!hostEhLocal(parsed.hostname)) {
+      return link.url;
+    }
+
+    if (lanOrigin) {
+      return `${lanOrigin}${path}`;
+    }
+
+    if (!hostEhLocal(window.location.hostname)) {
+      return `${window.location.origin}${path}`;
+    }
+
+    return link.url;
+  } catch {
+    return link.url;
+  }
+}
+
+function linkPrecisaAvisoCelular(link: LinkPortaria): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const exibido = new URL(urlPortariaNoBrowser(link));
+    return hostEhLocal(window.location.hostname) && !hostEhLocal(exibido.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function urlWhatsappPortaria(url: string, eventoNome?: string): string {
+  const texto = eventoNome
+    ? `Validação de ingressos — ${eventoNome}\n\nAbra este link na entrada (mesma Wi‑Fi do organizador):\n${url}`
+    : `Validação de ingressos na entrada:\n${url}`;
+  return `https://wa.me/?text=${encodeURIComponent(texto)}`;
+}
+
 export function EventoLinkPortaria({ eventoId }: { eventoId: string }) {
   const [link, setLink] = useState<LinkPortaria | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,9 +95,10 @@ export function EventoLinkPortaria({ eventoId }: { eventoId: string }) {
   }, [carregar]);
 
   async function copiar() {
-    if (!link?.url) return;
+    if (!link) return;
+    const url = urlPortariaNoBrowser(link);
     try {
-      await navigator.clipboard.writeText(link.url);
+      await navigator.clipboard.writeText(url);
       setCopiado(true);
       window.setTimeout(() => setCopiado(false), 2500);
     } catch {
@@ -72,38 +135,61 @@ export function EventoLinkPortaria({ eventoId }: { eventoId: string }) {
       {erro ? <p className="mt-2 text-red-800">{erro}</p> : null}
       {link ? (
         <div className="mt-2 space-y-2">
-          <input
-            type="text"
-            readOnly
-            value={link.url}
-            className="w-full rounded-md border border-sky-200 bg-white px-2 py-1.5 font-mono text-[11px] text-zinc-800"
-            onFocus={(e) => e.target.select()}
-          />
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void copiar()}
-              className="rounded-md bg-sky-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-sky-800"
-            >
-              {copiado ? "Copiado!" : "Copiar link"}
-            </button>
-            <a
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-md border border-sky-300 bg-white px-2.5 py-1.5 text-xs font-medium text-sky-900 hover:bg-sky-100"
-            >
-              Abrir portaria
-            </a>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void regenerar()}
-              className="rounded-md border border-sky-300 px-2.5 py-1.5 text-xs text-sky-900 hover:bg-sky-100 disabled:opacity-60"
-            >
-              {busy ? "…" : "Novo link"}
-            </button>
-          </div>
+          {(() => {
+            const urlBrowser = urlPortariaNoBrowser(link);
+            const avisoCelular = linkPrecisaAvisoCelular(link);
+            const whatsappHref = urlWhatsappPortaria(urlBrowser, link.evento_nome);
+            return (
+              <>
+                {avisoCelular ? (
+                  <p className="text-[11px] text-sky-800">
+                    Copie este link com <strong>IP da rede</strong> para abrir no celular (mesma Wi‑Fi).
+                    No PC pode continuar usando localhost.
+                  </p>
+                ) : null}
+                <input
+                  type="text"
+                  readOnly
+                  value={urlBrowser}
+                  className="w-full rounded-md border border-sky-200 bg-white px-2 py-1.5 font-mono text-[11px] text-zinc-800"
+                  onFocus={(e) => e.target.select()}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void copiar()}
+                    className="rounded-md bg-sky-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-sky-800"
+                  >
+                    {copiado ? "Copiado!" : "Copiar link"}
+                  </button>
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md bg-[#25D366] px-2.5 py-1.5 text-xs font-medium text-white hover:bg-[#1ebe57]"
+                  >
+                    Enviar no WhatsApp
+                  </a>
+                  <a
+                    href={urlBrowser}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md border border-sky-300 bg-white px-2.5 py-1.5 text-xs font-medium text-sky-900 hover:bg-sky-100"
+                  >
+                    Abrir portaria
+                  </a>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void regenerar()}
+                    className="rounded-md border border-sky-300 px-2.5 py-1.5 text-xs text-sky-900 hover:bg-sky-100 disabled:opacity-60"
+                  >
+                    {busy ? "…" : "Novo link"}
+                  </button>
+                </div>
+              </>
+            );
+          })()}
         </div>
       ) : !erro ? (
         <p className="mt-2 text-sky-800/80">A carregar link…</p>

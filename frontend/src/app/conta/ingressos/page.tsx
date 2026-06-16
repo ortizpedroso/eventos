@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { ContaNav } from "@/components/conta-nav";
+import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
 import { apiFetch } from "@/lib/api";
+import { classeBadgeStatus, labelStatusIngresso } from "@/lib/ingresso-status";
 import type { IngressoListItem } from "@/lib/types";
 
 function PendenteBadge({ reservadoAte }: { reservadoAte: string }) {
@@ -73,6 +76,8 @@ export default function MeusIngressosPage() {
         </Link>
       </div>
 
+      <ContaNav />
+
       {error ? (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           {error}
@@ -84,8 +89,20 @@ export default function MeusIngressosPage() {
         </div>
       ) : null}
 
+      {items === null && !error ? (
+        <p className="text-sm text-zinc-600">Carregando ingressos…</p>
+      ) : null}
+
       {items && !items.length ? (
-        <p className="text-sm text-zinc-600">Nenhum ingresso ainda.</p>
+        <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-sm text-zinc-600">Você ainda não tem ingressos.</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            Explore eventos publicados e garanta o seu lugar em poucos cliques.
+          </p>
+          <Link href="/eventos" className="btn-success mt-6 inline-flex px-6 py-3 text-base shadow-sm">
+            Explorar eventos
+          </Link>
+        </div>
       ) : null}
 
       {items && items.length > 0 ? (
@@ -117,20 +134,30 @@ export default function MeusIngressosPage() {
                   Repassado para {it.repassado_para_nome}
                 </div>
               ) : null}
-              <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500">
-                <span>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-zinc-500">
                   Valor:{" "}
                   {it.valor.toLocaleString("pt-BR", {
                     style: "currency",
                     currency: "BRL",
                   })}
                 </span>
-                <span>Status: {it.status}</span>
-                <span>
+                <span
+                  className={`rounded-full px-2 py-0.5 font-medium ${classeBadgeStatus(it.status)}`}
+                >
+                  {labelStatusIngresso(it.status)}
+                </span>
+                <span className="text-zinc-500">
                   Compra: {new Date(it.data_compra).toLocaleString("pt-BR")}
                 </span>
               </div>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <ContinuarPagamentoLink
+                  ingressoId={it.id}
+                  eventoSlug={it.evento.slug}
+                  reservadoAte={it.reservado_ate}
+                  status={it.status}
+                />
                 <Link
                   href={`/conta/ingressos/${it.id}`}
                   className="text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"

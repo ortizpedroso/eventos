@@ -18,26 +18,13 @@ function normalizeApiOrigin(raw: string): string {
 
 /** No browser: vazio = mesma origem (Next reescreve `/api/*` para o backend). */
 function getPublicApiUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (typeof window === "undefined") {
+    const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
     return raw ? normalizeApiOrigin(raw) : "";
   }
-  if (!raw) return "";
-  const normalized = normalizeApiOrigin(raw);
-  const pageHost = window.location.hostname;
-  const apiHost = normalized.replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
-  const pageIsLoopback = pageHost === "localhost" || pageHost === "127.0.0.1";
-  const apiIsLoopback = apiHost === "localhost" || apiHost === "127.0.0.1";
-  // Hostnames internos Docker nunca resolvem no browser — usar proxy `/api` do Next.
-  if (apiHost === "api") return "";
-  // Dev local ou Docker (localhost:3000 → proxy): evitar fetch direto à porta 8000.
-  if (pageIsLoopback && (apiIsLoopback || process.env.NODE_ENV === "development")) {
-    return "";
-  }
-  if (apiIsLoopback && !pageIsLoopback) {
-    return "";
-  }
-  return normalized;
+  // Cliente sempre usa o proxy `/api` do Next — evita fetch direto a localhost:8000
+  // ou hostnames Docker (`api`) que falham no browser.
+  return "";
 }
 
 function getServerApiUrl(): string {
@@ -102,7 +89,11 @@ export async function apiFetch<T>(
   }
 
   if (res.status === 401 && typeof window !== "undefined") {
-    dispatchAuthSync();
+    const pathOnly = path.split("?")[0];
+    // /me retorna 401 quando não há sessão — não disparar sync em loop.
+    if (pathOnly !== "/api/auth/me") {
+      dispatchAuthSync();
+    }
   }
 
   if (!res.ok) {

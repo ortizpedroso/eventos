@@ -43,3 +43,35 @@ def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
 def notificar_ingresso_pago(ingresso_id: str) -> None:
     """Dispara e-mail do ingresso (após commit)."""
     enqueue_ticket_email(ingresso_id)
+
+
+def marcar_ingressos_pi_pagos(db: Session, payment_intent_id: str) -> list[str]:
+    """Marca todos os ingressos pendentes de um PaymentIntent como pagos."""
+    alterados: list[str] = []
+    ingressos = (
+        db.query(Ingresso)
+        .filter(Ingresso.stripe_payment_intent_id == payment_intent_id)
+        .all()
+    )
+    for ingresso in ingressos:
+        if marcar_ingresso_pago(db, ingresso):
+            alterados.append(ingresso.id)
+    return alterados
+
+
+def cancelar_ingressos_pi_pendentes(db: Session, payment_intent_id: str) -> int:
+    """Cancela reservas pendentes ligadas ao PaymentIntent."""
+    n = 0
+    ingressos = (
+        db.query(Ingresso)
+        .filter(
+            Ingresso.stripe_payment_intent_id == payment_intent_id,
+            Ingresso.status == "pendente",
+        )
+        .all()
+    )
+    for ingresso in ingressos:
+        ingresso.status = "cancelado"
+        ingresso.reservado_ate = None
+        n += 1
+    return n

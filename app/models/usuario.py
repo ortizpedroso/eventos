@@ -31,6 +31,10 @@ class Usuario(Base):
     telefone = Column(String(20), nullable=True)
     comunicacao_consentimento_em = Column(DateTime, nullable=True)
 
+    # Recuperação de senha (token único, expira em 1 h)
+    senha_reset_token = Column(String(64), nullable=True, index=True)
+    senha_reset_expires = Column(DateTime, nullable=True)
+
     # Datas
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     data_atualizacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
@@ -45,3 +49,7 @@ class Usuario(Base):
 
     def __repr__(self):
         return f"<Usuario {self.email}>"
+
+    @property
+    def tem_senha(self) -> bool:
+        return bool(self.senha_hash)

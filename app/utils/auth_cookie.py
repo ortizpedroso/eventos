@@ -10,7 +10,12 @@ AUTH_COOKIE_NAME = "eventosbr_session"
 
 
 def _cookie_secure() -> bool:
-    return settings.ENVIRONMENT not in ("development", "test")
+    if settings.ENVIRONMENT in ("development", "test"):
+        return False
+    # Only use Secure flag when actually served over HTTPS.
+    # In local Docker setups ENVIRONMENT=production is common but the app
+    # runs on plain HTTP, so the browser would silently drop the cookie.
+    return settings.FRONTEND_PUBLIC_URL.startswith("https://")
 
 
 def set_auth_cookie(response: Response, token: str) -> None:

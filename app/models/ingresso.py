@@ -18,7 +18,7 @@ class Ingresso(Base):
     participante_telefone = Column(String(20), nullable=True)
 
     # Stripe
-    stripe_payment_intent_id = Column(String, unique=True, index=True)
+    stripe_payment_intent_id = Column(String, index=True)
 
     valor = Column(Float)
     status = Column(String, default="pendente")  # pendente, pago, cancelado, usado
@@ -31,6 +31,8 @@ class Ingresso(Base):
     # Após o prazo, o job de limpeza cancela o ingresso e libera a vaga.
     reservado_ate = Column(DateTime, nullable=True)
 
+    lembrete_enviado_em = Column(DateTime, nullable=True)
+
     # Repasse / transferência para outro participante
     repassado_para_nome = Column(String(200), nullable=True)
     repassado_para_cpf = Column(String(14), nullable=True)
@@ -42,6 +44,10 @@ class Ingresso(Base):
     # Check-in na portaria
     checkin_em = Column(DateTime, nullable=True)
     checkin_por_id = Column(String, ForeignKey("usuarios.id"), nullable=True)
+
+    # Aceite do termo de compra no checkout (auditoria)
+    termo_compra_aceito_em = Column(DateTime, nullable=True)
+    termo_compra_versao = Column(String(32), nullable=True)
 
     # Datas
     data_compra = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

@@ -18,6 +18,7 @@ class Evento(Base):
     data_inicio = Column(DateTime)
     data_fim = Column(DateTime, nullable=False)
     local = Column(String)
+    cidade = Column(String(120), nullable=True, index=True)
     imagem_url = Column(Text, nullable=True)
 
     categoria = Column(String(80), nullable=False, default="Outros")

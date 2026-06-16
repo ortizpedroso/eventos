@@ -2,9 +2,11 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { CompraInfoConfianca } from "@/components/compra-info-confianca";
+import { EventoCategoriaBadge } from "@/components/evento-categoria-badge";
 import { EventoHeroBanner } from "@/components/evento-hero-banner";
 import { EventoPoliticaReembolso } from "@/components/evento-politica-reembolso";
 import { EventoResumoRapido } from "@/components/evento-resumo-rapido";
@@ -30,9 +32,14 @@ const ComprarIngressoLazy = dynamic(
   },
 );
 
-type Props = { slug: string; alteracaoGuardada?: boolean };
+type Props = { slug: string; alteracaoGuardada?: boolean; ingressoRetomarId?: string | null };
 
-export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
+export function EventoPublicClient({
+  slug,
+  alteracaoGuardada = false,
+  ingressoRetomarId = null,
+}: Props) {
+  const searchParams = useSearchParams();
   const [evento, setEvento] = useState<Evento | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +54,26 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
       window.history.replaceState(null, "", next || url.pathname);
     }
   }, [alteracaoGuardada]);
+
+  useEffect(() => {
+    if (!ingressoRetomarId || typeof window === "undefined") return;
+    const el = document.getElementById("comprar");
+    if (el) {
+      window.requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [ingressoRetomarId, loading, evento]);
+
+  useEffect(() => {
+    if (searchParams.get("compra") !== "ok" || typeof window === "undefined") return;
+    const el = document.getElementById("comprar");
+    if (el) {
+      window.requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [searchParams, loading, evento]);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,9 +134,25 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
     return evento.ingresso_lotes.find((l) => l.id === evento.lote_compra_id)?.nome ?? null;
   }, [evento]);
 
+  const descricaoResumo = useMemo(() => {
+    if (!evento?.descricao) return "";
+    const t = evento.descricao.trim();
+    if (t.length <= 320) return t;
+    return `${t.slice(0, 320).trim()}…`;
+  }, [evento?.descricao]);
+
+  const descricaoLonga = useMemo(() => {
+    if (!evento?.descricao) return false;
+    return evento.descricao.trim().length > 320;
+  }, [evento?.descricao]);
+
   const imagemBanner = useMemo(
     () => resolveEventoImagemSrc(evento?.imagem_url),
     [evento?.imagem_url],
+  );
+
+  const souOrganizador = Boolean(
+    me && evento && me.tipo === "organizador" && me.id === evento.organizador_id,
   );
 
   if (loading) {
@@ -121,8 +164,8 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
   if (err || !evento) {
     return (
       <div className="space-y-4">
-        <Link className="text-sm text-zinc-600 hover:underline" href="/">
-          ← Voltar
+        <Link className="text-sm text-zinc-600 hover:underline" href="/eventos">
+          ← Voltar aos eventos
         </Link>
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           {err ?? "Evento não encontrado."}
@@ -132,12 +175,14 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
   }
 
   const fmtInicio = formatEventoDataHora(evento.data_inicio);
+  const compraDisponivel = evento.compra_disponivel ?? Boolean(evento.lote_compra_id);
+  const motivoCompraIndisponivel = evento.motivo_compra_indisponivel ?? null;
 
   return (
     <div className={`space-y-6${evento.publicado ? " pb-24 lg:pb-0" : ""}`}>
       <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-600">
-        <Link className="hover:underline" href="/">
-          ← Voltar
+        <Link className="hover:underline" href="/eventos">
+          ← Voltar aos eventos
         </Link>
         {me &&
         evento &&
@@ -157,7 +202,7 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
           className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-justify text-emerald-900"
           role="status"
         >
-          Alteração guardada com sucesso.
+          Alteração salva com sucesso.
         </div>
       ) : null}
 
@@ -187,11 +232,30 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
             fmtInicio={fmtInicio}
             local={evento.local}
             precoFmt={precoFmt}
-            precoIngresso={Number(evento.preco_compra ?? evento.preco_ingresso)}
+            precoIngresso={
+              evento.preco_compra != null
+                ? Number(evento.preco_compra)
+                : Number(evento.preco_ingresso)
+            }
             loteAtivoNome={loteAtivoNome}
             lotes={evento.ingresso_lotes}
             loteCompraId={evento.lote_compra_id}
+            compraDisponivel={compraDisponivel}
+            motivoCompraIndisponivel={motivoCompraIndisponivel}
           />
+
+          {!compraDisponivel ? (
+            <div
+              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+              role="status"
+            >
+              <p className="font-semibold">Vendas encerradas ou indisponíveis</p>
+              <p className="mt-1 leading-relaxed">
+                {motivoCompraIndisponivel ??
+                  "Não há ingressos à venda no momento. Contacte o organizador do evento."}
+              </p>
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start">
             <aside
@@ -208,8 +272,18 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
                   eventoNome={evento.nome}
                   precoIngresso={Number(evento.preco_compra ?? evento.preco_ingresso)}
                   limiteIngressosPorCpf={evento.limite_ingressos_por_cpf ?? null}
+                  compraDisponivel={compraDisponivel}
+                  motivoCompraIndisponivel={motivoCompraIndisponivel}
                   usuarioInicial={me}
                   sessaoInicialResolvida
+                  ingressoRetomarId={ingressoRetomarId}
+                  loteAtivoNome={loteAtivoNome}
+                  ingressoLotes={evento.ingresso_lotes}
+                  loteCompraId={evento.lote_compra_id}
+                  eventoDataInicio={evento.data_inicio}
+                  eventoDataFim={evento.data_fim}
+                  eventoLocal={evento.local}
+                  mensagemConfirmacao={evento.mensagem_confirmacao}
                 />
               </div>
             </aside>
@@ -224,9 +298,7 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
               {!imagemBanner ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-semibold text-zinc-900 sm:text-2xl">{evento.nome}</h1>
-                  <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700">
-                    {evento.categoria}
-                  </span>
+                  <EventoCategoriaBadge categoria={evento.categoria} variant="inline" />
                 </div>
               ) : (
                 <p className="mt-3 text-base font-semibold text-zinc-900">{evento.nome}</p>
@@ -279,14 +351,19 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
                   </ul>
                 </div>
               ) : null}
-              <details className="mt-5 border-t border-zinc-100 pt-4">
-                <summary className="cursor-pointer text-sm font-medium text-emerald-800 hover:underline">
-                  Ver descrição completa
-                </summary>
-                <p className="mt-3 whitespace-pre-line text-justify text-sm leading-6 text-zinc-800">
-                  {evento.descricao}
-                </p>
-              </details>
+              <p className="mt-4 whitespace-pre-line text-sm leading-6 text-zinc-800">
+                {descricaoResumo}
+              </p>
+              {descricaoLonga ? (
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-sm font-medium text-emerald-800 hover:underline">
+                    Ler descrição completa
+                  </summary>
+                  <p className="mt-3 whitespace-pre-line text-justify text-sm leading-6 text-zinc-800">
+                    {evento.descricao}
+                  </p>
+                </details>
+              ) : null}
             </section>
           </div>
           <CompraInfoConfianca />
@@ -302,9 +379,7 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
           {!imagemBanner ? (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-semibold text-zinc-900 sm:text-2xl">{evento.nome}</h1>
-              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700">
-                {evento.categoria}
-              </span>
+              <EventoCategoriaBadge categoria={evento.categoria} variant="inline" />
             </div>
           ) : (
             <p className="mt-3 text-base font-semibold text-zinc-900">{evento.nome}</p>
@@ -362,8 +437,8 @@ export function EventoPublicClient({ slug, alteracaoGuardada = false }: Props) {
         </section>
       )}
 
-      {evento.publicado ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] lg:hidden">
+      {evento.publicado && compraDisponivel ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] lg:hidden">
           <button
             type="button"
             className="btn-success flex w-full items-center justify-center gap-2 text-white"

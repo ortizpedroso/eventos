@@ -11,6 +11,7 @@ export type IngressoLote = {
   vendas_inicio: string | null;
   vendas_fim: string | null;
   vendidos: number;
+  elegivel_compra?: boolean;
 };
 
 export type Evento = {
@@ -21,6 +22,7 @@ export type Evento = {
   data_inicio: string;
   data_fim: string;
   local: string;
+  cidade?: string | null;
   imagem_url?: string | null;
   /** Menor preço entre lotes ativos (sincronizado na API). */
   preco_ingresso: number;
@@ -28,6 +30,9 @@ export type Evento = {
   preco_compra?: number | null;
   /** Identificador do lote usado na compra (primeiro elegível por ordem). */
   lote_compra_id?: string | null;
+  /** False quando lotes esgotados ou fora do período de vendas. */
+  compra_disponivel?: boolean;
+  motivo_compra_indisponivel?: string | null;
   ingresso_lotes?: IngressoLote[];
   categoria: string;
   mensagem_confirmacao?: string | null;
@@ -44,6 +49,8 @@ export type Usuario = {
   nome: string;
   tipo: string;
   data_criacao: string;
+  /** False em contas de compra rápida ou login social sem senha local. */
+  tem_senha?: boolean;
   aceita_comunicacao_email?: boolean;
   aceita_comunicacao_whatsapp?: boolean;
   telefone?: string | null;
@@ -59,6 +66,8 @@ export type TokenResponse = {
 export type CriarPagamentoResponse = {
   client_secret: string;
   ingresso_id: string;
+  ingresso_ids?: string[];
+  quantidade?: number;
   /** Quando a API está com STRIPE_DISABLED: compra concluída sem cartão. */
   stripe_disabled?: boolean;
   cortesia?: boolean;
@@ -68,9 +77,24 @@ export type CriarPagamentoResponse = {
   reservado_ate?: string | null;
 };
 
+export type RetomarPagamentoResponse = CriarPagamentoResponse & {
+  ja_pago?: boolean;
+  participante_nome?: string | null;
+  participante_email?: string | null;
+  valor_centavos?: number;
+  evento_slug?: string;
+};
+
 export type IngressoListItem = {
   id: string;
-  evento: { nome: string; data: string; data_fim: string; local: string };
+  evento: {
+    id?: string;
+    slug?: string;
+    nome: string;
+    data: string;
+    data_fim: string;
+    local: string;
+  };
   participante_nome: string | null;
   participante_email: string | null;
   valor: number;
@@ -81,12 +105,15 @@ export type IngressoListItem = {
   repassado_em: string | null;
   /** ISO 8601 UTC — prazo da reserva pendente. Nulo quando já pago/cancelado. */
   reservado_ate: string | null;
+  /** EBR1:… — código para digitar na portaria (só quando pago ou usado). */
+  codigo_checkin?: string | null;
 };
 
 export type PagamentoListItem = {
   id: string;
   evento: {
     id: string;
+    slug?: string;
     nome: string;
     data: string;
     data_fim: string;
@@ -101,4 +128,5 @@ export type PagamentoListItem = {
   status: string;
   data_compra: string;
   data_limite_cancelamento: string;
+  reservado_ate?: string | null;
 };

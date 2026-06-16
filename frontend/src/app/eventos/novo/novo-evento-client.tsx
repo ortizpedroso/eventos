@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 import { EventoImagemField } from "@/components/evento-imagem-field";
@@ -29,6 +29,7 @@ type CriarEventoPayload = {
   data_inicio: string;
   data_fim: string;
   local: string;
+  cidade?: string | null;
   imagem_url?: string | null;
   preco_ingresso: number;
   ingresso_lotes: ReturnType<typeof lotesRowsToApiPayload>;
@@ -41,6 +42,37 @@ type CriarEventoPayload = {
 function SectionTitle({ children }: { children: ReactNode }) {
   return (
     <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800">{children}</h2>
+  );
+}
+
+const WIZARD_STEPS = [
+  { id: 1, label: "Básico" },
+  { id: 2, label: "Ingresso" },
+  { id: 3, label: "Publicar" },
+] as const;
+
+function WizardBar({ step }: { step: number }) {
+  return (
+    <ol className="mb-8 flex gap-2" aria-label="Progresso do formulário">
+      {WIZARD_STEPS.map((s) => {
+        const ativo = s.id === step;
+        const feito = s.id < step;
+        return (
+          <li
+            key={s.id}
+            className={`flex-1 rounded-lg border px-3 py-2 text-center text-xs font-semibold ${
+              ativo
+                ? "border-emerald-600 bg-emerald-50 text-emerald-900"
+                : feito
+                  ? "border-emerald-200 bg-white text-emerald-800"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-500"
+            }`}
+          >
+            {s.id}. {s.label}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -60,6 +92,11 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>(() => defaultLoteRows());
+  const [wizardStep, setWizardStep] = useState(1);
+  const [modoSimples, setModoSimples] = useState(true);
+  const [precoSimples, setPrecoSimples] = useState("49.90");
+  const [eventoGratuito, setEventoGratuito] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     setOrigin(typeof window !== "undefined" ? window.location.origin : "");
@@ -72,12 +109,43 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
     setLoading(true);
     setError(null);
 
-    const preco_ingresso = precoMinimoDosLotes(loteRows);
-    const lotesPayload = lotesRowsToApiPayload(loteRows);
+    let rows = loteRows;
+    if (modoSimples) {
+      if (eventoGratuito) {
+        rows = [
+          {
+            nome: "Cortesia",
+            tipo: "cortesia",
+            preco: "0",
+            ordem: 1,
+            quantidade_maxima: "",
+            ativo: true,
+            vendas_inicio: "",
+            vendas_fim: "",
+          },
+        ];
+      } else {
+        rows = [
+          {
+            nome: "Geral",
+            tipo: "inteira",
+            preco: precoSimples.replace(",", "."),
+            ordem: 1,
+            quantidade_maxima: "",
+            ativo: true,
+            vendas_inicio: "",
+            vendas_fim: "",
+          },
+        ];
+      }
+    }
+
+    const preco_ingresso = precoMinimoDosLotes(rows);
+    const lotesPayload = lotesRowsToApiPayload(rows);
     for (const l of lotesPayload) {
       if (l.tipo === "cortesia") continue;
       if (!Number.isFinite(l.preco) || l.preco < 0.5) {
-        setError("Cada lote pago precisa de preço válido (mínimo R$ 0,50). Cortesia usa R$ 0.");
+        setError("Informe um preço válido (mínimo R$ 0,50) ou marque evento gratuito.");
         setLoading(false);
         return;
       }
@@ -108,6 +176,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
       data_inicio: rawIni,
       data_fim: rawIni,
       local: String(formData.get("local") ?? ""),
+      cidade: String(formData.get("cidade") ?? "").trim() || null,
       imagem_url: imagemUrl.trim() || null,
       preco_ingresso,
       ingresso_lotes: lotesPayload,
@@ -147,36 +216,22 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
             Novo <span className="text-emerald-700">evento</span>
           </h1>
           <p className="mt-4 text-lg text-zinc-600 sm:text-xl">
-            {painel ? (
-              <>
-                Campos agrupados por etapa. O link público fica{" "}
-                <code className="rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-sm text-zinc-800">
-                  /eventos/
-                </code>{" "}
-                + nome em formato de URL. Em <span className="font-medium text-zinc-800">Visibilidade</span>{" "}
-                você decide se já aparece na vitrine ou se o evento fica pausado até você publicar.
-              </>
-            ) : (
-              <>
-                Preencha os dados abaixo. O endereço público será{" "}
-                <code className="rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-sm text-zinc-800">
-                  /eventos/
-                </code>{" "}
-                seguido do nome em formato URL (slug). Publique na vitrine ou deixe pausado até estar
-                pronto.
-              </>
-            )}
+            {painel
+              ? "Siga as 3 etapas abaixo. Comece pelo básico e publique quando estiver pronto."
+              : "Três passos simples: informações, ingresso e publicação."}
           </p>
         </div>
 
         <div className="mt-10 rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:mt-12 sm:p-8">
-          <form action={onSubmit} className="space-y-0">
+          <WizardBar step={wizardStep} />
+          <form ref={formRef} action={onSubmit} className="space-y-0">
             {error ? (
               <div className="mb-8 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
                 {error}
               </div>
             ) : null}
 
+            <div className={wizardStep === 1 ? "space-y-0" : "hidden"} aria-hidden={wizardStep !== 1}>
             <section className="space-y-4">
               <SectionTitle>Identidade</SectionTitle>
               <div className="grid gap-2">
@@ -260,10 +315,6 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     step={60}
                     required
                   />
-                  <p className="text-xs text-zinc-500">
-                    Não pedimos horário de fim: o evento pode durar o tempo que for (show, feijoada,
-                    etc.).
-                  </p>
                 </div>
               </div>
               <div className="grid gap-2">
@@ -278,49 +329,73 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   placeholder="Endereço ou link para mapa"
                 />
               </div>
-            </section>
-
-            <div className="my-8 border-t border-emerald-100" aria-hidden />
-
-            <section className="space-y-4">
-              <SectionTitle>Ingresso</SectionTitle>
-              <EventoLotesEditor rows={loteRows} onChange={setLoteRows} />
               <div className="grid gap-2">
-                <label className="text-sm font-medium text-zinc-800" htmlFor="limite_ingressos_por_cpf">
-                  Limite por CPF <span className="font-normal text-zinc-500">(opcional)</span>
+                <label className="text-sm font-medium text-zinc-800" htmlFor="cidade">
+                  Cidade (para filtros)
                 </label>
                 <input
                   className={inputClass}
-                  id="limite_ingressos_por_cpf"
-                  name="limite_ingressos_por_cpf"
-                  type="number"
-                  min={1}
-                  max={50}
-                  placeholder="Ex.: 2 (vazio = sem limite)"
+                  id="cidade"
+                  name="cidade"
+                  placeholder="Ex.: São Paulo — ou deixe vazio para inferir do local"
                 />
-                <p className="text-xs text-zinc-500">
-                  Máximo de ingressos ativos com o mesmo CPF neste evento.
-                </p>
               </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium text-zinc-800" htmlFor="mensagem_confirmacao">
-                  Mensagem de confirmação <span className="font-normal text-zinc-500">(opcional)</span>
-                </label>
-                <textarea
-                  className={`${textareaClass} min-h-[88px]`}
-                  id="mensagem_confirmacao"
-                  name="mensagem_confirmacao"
-                  maxLength={2000}
-                  placeholder="Ex.: Obrigado pela inscrição! Leve este comprovante no dia do evento."
+            </section>
+            </div>
+
+            <div className={wizardStep === 2 ? "space-y-0" : "hidden"} aria-hidden={wizardStep !== 2}>
+            <section className="space-y-4">
+              <SectionTitle>Ingresso</SectionTitle>
+              <label className="flex items-center gap-2 text-sm text-zinc-800">
+                <input
+                  type="checkbox"
+                  checked={modoSimples}
+                  onChange={(e) => setModoSimples(e.target.checked)}
+                  className="rounded border-zinc-300"
                 />
-                <p className="text-xs text-zinc-500">
-                  Exibida ao comprador após o pagamento (área &quot;Meus pagamentos&quot;).
-                </p>
-              </div>
+                Modo simples (recomendado para começar)
+              </label>
+              {modoSimples ? (
+                <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+                  <label className="flex items-center gap-2 text-sm font-medium text-zinc-800">
+                    <input
+                      type="checkbox"
+                      checked={eventoGratuito}
+                      onChange={(e) => setEventoGratuito(e.target.checked)}
+                      className="rounded border-zinc-300"
+                    />
+                    Evento gratuito (cortesia)
+                  </label>
+                  {!eventoGratuito ? (
+                    <div className="grid gap-2 max-w-xs">
+                      <label className="text-sm font-medium text-zinc-800" htmlFor="preco_simples">
+                        Preço do ingresso (R$)
+                      </label>
+                      <input
+                        id="preco_simples"
+                        type="text"
+                        inputMode="decimal"
+                        value={precoSimples}
+                        onChange={(e) => setPrecoSimples(e.target.value)}
+                        className={inputClass}
+                        placeholder="Ex.: 49,90"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <EventoLotesEditor rows={loteRows} onChange={setLoteRows} />
+              )}
             </section>
 
             <div className="my-8 border-t border-emerald-100" aria-hidden />
 
+            <section className="space-y-3">
+              <EventoImagemField value={imagemUrl} onChange={setImagemUrl} />
+            </section>
+            </div>
+
+            <div className={wizardStep === 3 ? "space-y-0" : "hidden"} aria-hidden={wizardStep !== 3}>
             <section className="space-y-4">
               <SectionTitle>Visibilidade</SectionTitle>
               <div className="rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-white p-4 ring-1 ring-emerald-200/80 sm:p-5">
@@ -352,12 +427,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                 <EventoVisibilidadeAvisosLegais />
               </div>
             </section>
-
-            <div className="my-8 border-t border-emerald-100" aria-hidden />
-
-            <section className="space-y-3">
-              <EventoImagemField value={imagemUrl} onChange={setImagemUrl} />
-            </section>
+            </div>
 
             <div className="mt-10 flex flex-col-reverse gap-3 border-t border-emerald-100 pt-8 sm:flex-row sm:items-center sm:justify-between">
               <Link
@@ -366,13 +436,37 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
               >
                 Cancelar
               </Link>
-              <button
-                disabled={loading}
-                className="btn-success px-8 py-3 text-base shadow-sm sm:min-w-[11rem]"
-                type="submit"
-              >
-                {loading ? "Criando…" : "Criar evento"}
-              </button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {wizardStep > 1 ? (
+                  <button
+                    type="button"
+                    className="btn-outline px-6 py-3 text-sm"
+                    onClick={() => setWizardStep((s) => Math.max(1, s - 1))}
+                  >
+                    ← Anterior
+                  </button>
+                ) : null}
+                {wizardStep < 3 ? (
+                  <button
+                    type="button"
+                    className="btn-success px-8 py-3 text-base shadow-sm"
+                    onClick={() => {
+                      if (wizardStep === 1 && formRef.current && !formRef.current.reportValidity()) return;
+                      setWizardStep((s) => Math.min(3, s + 1));
+                    }}
+                  >
+                    Próximo →
+                  </button>
+                ) : (
+                  <button
+                    disabled={loading}
+                    className="btn-success px-8 py-3 text-base shadow-sm sm:min-w-[11rem]"
+                    type="submit"
+                  >
+                    {loading ? "Criando…" : "Criar evento"}
+                  </button>
+                )}
+              </div>
             </div>
           </form>
         </div>

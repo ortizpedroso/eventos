@@ -146,6 +146,7 @@ class TestCupons:
                     "evento_id": ev["id"],
                     "valor_centavos": 4000,
                     "codigo_cupom": "DESC20",
+                    "termo_compra_aceito": True,
                 },
             )
             assert r.status_code == 200, r.text
@@ -159,6 +160,7 @@ class TestCupons:
                 "evento_id": ev["id"],
                 "valor_centavos": 5000,
                 "codigo_cupom": "DESC20",
+                "termo_compra_aceito": True,
             },
         )
         assert bad.status_code == 400
@@ -176,7 +178,7 @@ class TestComunicados:
             ing = client.post(
                 "/api/pagamentos/criar",
                 headers={"Authorization": f"Bearer {cli}"},
-                json={"evento_id": ev["id"], "valor_centavos": 5000},
+                json={"evento_id": ev["id"], "valor_centavos": 5000, "termo_compra_aceito": True},
             )
             assert ing.status_code == 200, ing.text
         finally:

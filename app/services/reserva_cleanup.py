@@ -44,19 +44,23 @@ def cancelar_reservas_expiradas() -> int:
             .all()
         )
 
+        pis_ja_cancelados: set[str] = set()
         for ing in expirados:
             ing.status = "cancelado"
             ing.reservado_ate = None
 
-            # Cancela o PI no Stripe para impedir pagamentos tardios de cartão.
-            # PIX já expira pelo próprio Stripe; o cancel é no-op para PIs fake.
             pi_id = ing.stripe_payment_intent_id or ""
-            if pi_id and not pi_id.startswith(("disabled_", "cortesia_")):
+            if (
+                pi_id
+                and pi_id not in pis_ja_cancelados
+                and not pi_id.startswith(("disabled_", "cortesia_"))
+            ):
                 try:
                     stripe.PaymentIntent.cancel(pi_id)
+                    pis_ja_cancelados.add(pi_id)
                     logger.debug("PI %s cancelado pelo cleanup (ingresso %s)", pi_id, ing.id)
                 except stripe.error.InvalidRequestError:
-                    pass  # PI já cancelado, succeeded, ou inexistente — tudo OK
+                    pis_ja_cancelados.add(pi_id)
                 except Exception:
                     logger.warning(
                         "Não foi possível cancelar PI %s do ingresso %s",

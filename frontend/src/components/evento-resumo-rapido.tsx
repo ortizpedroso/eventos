@@ -15,6 +15,8 @@ type Props = {
   loteAtivoNome?: string | null;
   lotes?: IngressoLote[];
   loteCompraId?: string | null;
+  compraDisponivel?: boolean;
+  motivoCompraIndisponivel?: string | null;
 };
 
 export function EventoResumoRapido({
@@ -25,6 +27,8 @@ export function EventoResumoRapido({
   loteAtivoNome,
   lotes,
   loteCompraId,
+  compraDisponivel = true,
+  motivoCompraIndisponivel,
 }: Props) {
   const sorted = lotes?.slice().sort((a, b) => a.ordem - b.ordem) ?? [];
   const loteAtivo = loteCompraId ? sorted.find((l) => l.id === loteCompraId) : null;
@@ -65,13 +69,22 @@ export function EventoResumoRapido({
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Lote à venda</p>
           <p className="mt-0.5 text-sm font-medium text-zinc-900">
-            {loteAtivoNome ?? "Consulte abaixo"}
-            {loteAtivo?.tipo ? (
-              <span className="ml-1 text-xs font-normal text-zinc-500">
-                ({labelTipoIngresso(loteAtivo.tipo)})
-              </span>
-            ) : null}
+            {compraDisponivel ? (
+              <>
+                {loteAtivoNome ?? "Consulte abaixo"}
+                {loteAtivo?.tipo ? (
+                  <span className="ml-1 text-xs font-normal text-zinc-500">
+                    ({labelTipoIngresso(loteAtivo.tipo)})
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <span className="text-amber-800">Indisponível</span>
+            )}
           </p>
+          {!compraDisponivel && motivoCompraIndisponivel ? (
+            <p className="mt-1 text-[11px] leading-relaxed text-amber-800">{motivoCompraIndisponivel}</p>
+          ) : null}
         </div>
       </div>
 

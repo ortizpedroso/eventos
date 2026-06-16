@@ -149,6 +149,7 @@ def main() -> int:
             "participante_email": cli_email,
             "participante_cpf": "52998224725",
             "participante_telefone": "11999999999",
+            "termo_compra_aceito": True,
         },
         token=cli_token,
     )

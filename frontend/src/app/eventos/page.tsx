@@ -1,30 +1,92 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
+import { categoriaFromQuery } from "@/lib/evento-categorias";
+import { fetchEventosPublicos } from "@/lib/eventos-publicos";
 
 import { EventosListaPublica } from "./eventos-lista-publica";
 
-export const metadata: Metadata = {
-  title: "Eventos | EventosBR",
-  description:
-    "Descubra eventos publicados na EventosBR: datas, locais e ingressos com pagamento seguro.",
+type PageProps = {
+  searchParams: Promise<{ categoria?: string; q?: string; cidade?: string }>;
 };
 
-export default function EventosListPage() {
+function buscaFromQuery(raw: string | undefined): string {
+  return raw?.trim() ?? "";
+}
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const sp = await searchParams;
+  const categoria = categoriaFromQuery(sp.categoria);
+  const q = buscaFromQuery(sp.q);
+  if (q) {
+    return {
+      title: `Busca: ${q} | Eventos | EventosBR`,
+      description: `Eventos relacionados a “${q}” na EventosBR.`,
+    };
+  }
+  if (categoria) {
+    return {
+      title: `${categoria} | Eventos | EventosBR`,
+      description: `Eventos de ${categoria} na EventosBR — datas, locais e ingressos com pagamento seguro.`,
+    };
+  }
+  return {
+    title: "Eventos | EventosBR",
+    description:
+      "Descubra eventos publicados na EventosBR: datas, locais e ingressos com pagamento seguro.",
+  };
+}
+
+export default async function EventosListPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const categoriaInicial = categoriaFromQuery(sp.categoria);
+  const buscaInicial = buscaFromQuery(sp.q);
+  const cidadeInicial = sp.cidade?.trim() ?? "";
+
+  let eventosIniciais = null;
+  try {
+    eventosIniciais = await fetchEventosPublicos(50, {
+      categoria: categoriaInicial || undefined,
+      q: buscaInicial || undefined,
+      cidade: cidadeInicial || undefined,
+    });
+  } catch {
+    eventosIniciais = null;
+  }
+
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
-          Eventos em <span className="text-emerald-700">destaque.</span>
+          {buscaInicial ? (
+            <>
+              Busca: <span className="text-emerald-700">{buscaInicial}</span>
+            </>
+          ) : categoriaInicial ? (
+            <>
+              Eventos de <span className="text-emerald-700">{categoriaInicial}</span>
+            </>
+          ) : (
+            <>
+              Encontre seu <span className="text-emerald-700">próximo evento.</span>
+            </>
+          )}
         </h1>
         <p className="mt-6 text-lg text-zinc-600 sm:text-xl">
-          De shows que agitam a cidade a encontros que criam conexões, aqui você encontra a sua próxima experiência.
-          Navegue, descubra e garanta seu lugar.
+          Busque por nome, filtre por categoria e garanta seu ingresso com pagamento seguro.
         </p>
       </div>
 
-      <EventosListaPublica />
+      <Suspense fallback={<EventosListaFallback />}>
+        <EventosListaPublica
+          initialEventos={eventosIniciais}
+          initialCategoria={categoriaInicial}
+          initialBusca={buscaInicial}
+          initialCidade={cidadeInicial}
+        />
+      </Suspense>
 
       <div className="mx-auto mt-16 max-w-3xl text-center sm:mt-20">
         <p className="text-sm text-zinc-600">Organiza eventos?</p>
@@ -36,6 +98,19 @@ export default function EventosListPage() {
             Ver planos
           </Link>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function EventosListaFallback() {
+  return (
+    <div className="mx-auto mt-16 max-w-6xl animate-pulse sm:mt-20">
+      <div className="mb-8 h-24 rounded-2xl bg-zinc-100" />
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="aspect-[4/3] rounded-2xl bg-zinc-100" />
+        ))}
       </div>
     </div>
   );

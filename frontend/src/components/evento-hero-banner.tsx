@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 
+import { EventoCategoriaBadge } from "@/components/evento-categoria-badge";
+
 type Props = {
   nome: string;
   categoria: string;
@@ -91,9 +93,7 @@ export function EventoHeroBanner({
         <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-center lg:gap-12">
           <div className="order-1 flex flex-col gap-4 lg:order-1 [&_p]:text-justify">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-zinc-100 ring-1 ring-white/15">
-                {categoria}
-              </span>
+              <EventoCategoriaBadge categoria={categoria} variant="hero" />
             </div>
             <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">{nome}</h1>
             <div className="flex flex-col gap-3 text-sm text-zinc-200 sm:text-base">

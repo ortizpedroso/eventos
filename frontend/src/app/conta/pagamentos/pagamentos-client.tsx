@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ContaNav } from "@/components/conta-nav";
+import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
 import { apiFetch } from "@/lib/api";
+import { urlPosCompraEvento } from "@/lib/checkout-return";
+import { classeBadgeStatus, labelStatusIngresso } from "@/lib/ingresso-status";
 import type { PagamentoListItem } from "@/lib/types";
 
 export function PagamentosClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const ok = searchParams.get("ok");
   const ingressoParam = searchParams.get("ingresso");
@@ -42,7 +47,16 @@ export function PagamentosClient() {
     [items, ingressoParam],
   );
 
+  useEffect(() => {
+    if (ok !== "1" || !ingressoParam || !destaque?.evento.slug) return;
+    router.replace(urlPosCompraEvento(destaque.evento.slug, ingressoParam));
+  }, [ok, ingressoParam, destaque?.evento.slug, router]);
+
   async function cancelar(ingressoId: string) {
+    const ok = window.confirm(
+      "Deseja cancelar este ingresso e solicitar reembolso? Esta ação não pode ser desfeita.",
+    );
+    if (!ok) return;
     setCancelMsg(null);
     try {
       await apiFetch("/api/pagamentos/cancelar", {
@@ -59,6 +73,11 @@ export function PagamentosClient() {
     }
   }
 
+  const pendentes = useMemo(
+    () => (items ?? []).filter((i) => i.status === "pendente" && i.reservado_ate),
+    [items],
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -68,11 +87,57 @@ export function PagamentosClient() {
         </Link>
       </div>
 
-      {ok ? (
+      <ContaNav />
+
+      {pendentes.length > 0 ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
+          <p className="font-semibold text-amber-950">
+            {pendentes.length === 1
+              ? "Você tem 1 pagamento pendente"
+              : `Você tem ${pendentes.length} pagamentos pendentes`}
+          </p>
+          <p className="mt-1 text-sm text-amber-900">
+            Conclua antes que a reserva expire — o ingresso não fica garantido após o prazo.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {pendentes.map((it) => (
+              <li
+                key={it.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm"
+              >
+                <span className="font-medium text-zinc-900">{it.evento.nome}</span>
+                <ContinuarPagamentoLink
+                  ingressoId={it.id}
+                  eventoSlug={it.evento.slug}
+                  reservadoAte={it.reservado_ate}
+                  status={it.status}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {ok && ingressoParam && destaque?.evento.slug ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          Pagamento confirmado! Redirecionando para seu ingresso…
+        </div>
+      ) : null}
+
+      {ok && (!ingressoParam || !destaque?.evento.slug) ? (
         <div className="space-y-3">
           <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
-            Pagamento concluído. Se o status ainda aparecer como pendente, aguarde
-            o webhook do Stripe ou atualize a página.
+            Pagamento recebido! Seu ingresso será confirmado em instantes.{" "}
+            {ingressoParam ? (
+              <Link href={`/conta/ingressos/${ingressoParam}`} className="font-medium underline">
+                Ver ingresso e QR Code
+              </Link>
+            ) : (
+              <Link href="/conta/ingressos" className="font-medium underline">
+                Ver meus ingressos
+              </Link>
+            )}
+            .
           </div>
           {destaque?.evento.mensagem_confirmacao ? (
             <div className="rounded-md border border-emerald-600 bg-white p-4 text-sm shadow-sm ring-1 ring-emerald-600">
@@ -111,6 +176,10 @@ export function PagamentosClient() {
         </div>
       ) : null}
 
+      {items === null && !error ? (
+        <p className="text-sm text-zinc-600">Carregando pagamentos…</p>
+      ) : null}
+
       {items && !items.length ? (
         <p className="text-sm text-zinc-600">Nenhum pagamento ainda.</p>
       ) : null}
@@ -133,29 +202,41 @@ export function PagamentosClient() {
                   {it.participante_email ? ` (${it.participante_email})` : ""}
                 </div>
               ) : null}
-              <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500">
-                <span>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-zinc-500">
                   Valor:{" "}
                   {it.valor.toLocaleString("pt-BR", {
                     style: "currency",
                     currency: "BRL",
                   })}
                 </span>
-                <span>Status: {it.status}</span>
-                <span>
-                  Limite cancel.:{" "}
-                  {new Date(it.data_limite_cancelamento).toLocaleString("pt-BR")}
+                <span
+                  className={`rounded-full px-2 py-0.5 font-medium ${classeBadgeStatus(it.status)}`}
+                >
+                  {labelStatusIngresso(it.status)}
+                </span>
+                <span className="text-zinc-500">
+                  Prazo reembolso:{" "}
+                  {new Date(it.data_limite_cancelamento).toLocaleDateString("pt-BR")}
                 </span>
               </div>
-              {it.status === "pago" ? (
-                <button
-                  type="button"
-                  onClick={() => void cancelar(it.id)}
-                  className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-800 hover:bg-red-100"
-                >
-                  Cancelar e reembolsar
-                </button>
-              ) : null}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <ContinuarPagamentoLink
+                  ingressoId={it.id}
+                  eventoSlug={it.evento.slug}
+                  reservadoAte={it.reservado_ate}
+                  status={it.status}
+                />
+                {it.status === "pago" ? (
+                  <button
+                    type="button"
+                    onClick={() => void cancelar(it.id)}
+                    className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-800 hover:bg-red-100"
+                  >
+                    Cancelar e reembolsar
+                  </button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>

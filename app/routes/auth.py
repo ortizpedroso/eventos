@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
+import secrets
 import stripe
 
 from app.models import Usuario, get_db
@@ -17,6 +18,8 @@ from app.schemas.usuario import (
     UsuarioLogin,
     UsuarioResponse,
     Token,
+    SolicitarRecuperacaoSenhaRequest,
+    RedefinirSenhaRequest,
 )
 from app.deps.rate_limit import rate_limit_login, rate_limit_oauth, rate_limit_register
 from app.services.oauth_verify import (
@@ -34,6 +37,7 @@ from app.services.auth import (
     verify_password,
 )
 from app.services.usuario_stripe import criar_stripe_para_novo_usuario
+from app.services.password_reset_email import enviar_email_recuperacao_senha
 from app.utils.auth_cookie import AUTH_COOKIE_NAME, clear_auth_cookie, set_auth_cookie
 from app.utils.public_errors import STRIPE_CLIENTE
 from config.settings import settings
@@ -330,6 +334,14 @@ async def login(
     if not usuario:
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
     if not usuario.senha_hash:
+        if (usuario.auth_provider or "email") == "email":
+            raise HTTPException(
+                status_code=401,
+                detail=(
+                    "Esta conta ainda não tem senha. Acesse Minha conta → Perfil para criar uma, "
+                    "ou use «Continuar com Google» no checkout."
+                ),
+            )
         prov = (usuario.auth_provider or "social").capitalize()
         if usuario.auth_provider == "google":
             prov = "Google"
@@ -356,6 +368,63 @@ async def login(
         "token_type": "bearer",
         "usuario": UsuarioResponse.model_validate(usuario)
     }
+
+
+@router.post("/solicitar-recuperacao-senha")
+async def solicitar_recuperacao_senha(
+    body: SolicitarRecuperacaoSenhaRequest,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_login),
+):
+    """Envia link de recuperação por e-mail (resposta genérica por segurança)."""
+    email = str(body.email).strip().lower()
+    usuario = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
+    msg = "Se o e-mail estiver cadastrado e tiver senha, você receberá instruções em instantes."
+
+    if usuario and usuario.ativo and usuario.senha_hash:
+        token = secrets.token_urlsafe(32)
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        usuario.senha_reset_token = token
+        usuario.senha_reset_expires = agora + timedelta(hours=1)
+        db.commit()
+        base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
+        link = f"{base}/auth?reset={token}"
+        enviar_email_recuperacao_senha(destino=usuario.email, nome=usuario.nome, link=link)
+
+    return {"message": msg}
+
+
+@router.post("/redefinir-senha")
+async def redefinir_senha(
+    body: RedefinirSenhaRequest,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_login),
+):
+    """Define nova senha a partir do token recebido por e-mail."""
+    agora = datetime.now(timezone.utc).replace(tzinfo=None)
+    usuario = (
+        db.query(Usuario)
+        .filter(Usuario.senha_reset_token == body.token.strip())
+        .first()
+    )
+    if (
+        not usuario
+        or not usuario.senha_reset_expires
+        or usuario.senha_reset_expires < agora
+        or not usuario.ativo
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Link inválido ou expirado. Solicite uma nova recuperação de senha.",
+        )
+
+    usuario.senha_hash = hash_password(body.nova_senha)
+    usuario.senha_reset_token = None
+    usuario.senha_reset_expires = None
+    usuario.token_version = int(usuario.token_version or 0) + 1
+    db.commit()
+
+    return {"message": "Senha atualizada com sucesso. Faça login com a nova senha."}
 
 
 def _issue_token(usuario: Usuario) -> str:
@@ -553,7 +622,7 @@ async def atualizar_perfil(
     if email_mudou and not usuario.senha_hash and not body.nova_senha:
         raise HTTPException(
             status_code=400,
-            detail="Conta social: defina uma senha em «Nova senha» antes de alterar o email, ou continue usando Google.",
+            detail="Defina uma senha em «Nova senha» antes de alterar o email de login.",
         )
 
     if (email_mudou or body.nova_senha) and usuario.senha_hash:

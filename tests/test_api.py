@@ -258,6 +258,37 @@ class TestEventos:
         assert len(response.json().get("ingresso_lotes") or []) >= 1
         assert "slug" in response.json()
 
+    def test_criar_evento_categoria_invalida(self):
+        response = client.post(
+            "/api/eventos/criar",
+            headers=self.headers,
+            json={
+                "nome": "Evento categoria inválida",
+                "descricao": "Teste",
+                "data_inicio": "2025-06-15T09:00:00",
+                "local": "São Paulo, SP",
+                "preco_ingresso": 10,
+                "categoria": "CategoriaInexistente",
+            },
+        )
+        assert response.status_code == 422
+
+    def test_criar_evento_categoria_gastronomia(self):
+        response = client.post(
+            "/api/eventos/criar",
+            headers=self.headers,
+            json={
+                "nome": "Feijoada beneficente",
+                "descricao": "Gastronomia",
+                "data_inicio": "2025-07-01T12:00:00",
+                "local": "Centro",
+                "preco_ingresso": 35,
+                "categoria": "Gastronomia",
+            },
+        )
+        assert response.status_code == 200
+        assert response.json()["categoria"] == "Gastronomia"
+
     def test_criar_evento_com_dois_lotes(self):
         """Lotes com preços distintos: resposta inclui ambos e preço mínimo sincronizado."""
         response = client.post(
@@ -325,6 +356,158 @@ class TestEventos:
         response = client.get("/api/eventos")
         assert response.status_code == 200
         assert len(response.json()) > 0
+
+
+class TestCompraRapidaPerfil:
+    def test_compra_rapida_tem_senha_false(self):
+        r = client.post(
+            "/api/auth/compra-rapida",
+            json={"nome": "Convidado", "email": "convidado@test.com"},
+        )
+        assert r.status_code == 200, r.text
+        token = r.json()["access_token"]
+        me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+        assert me.status_code == 200
+        assert me.json()["tem_senha"] is False
+
+    def test_compra_rapida_define_primeira_senha_sem_senha_atual(self):
+        r = client.post(
+            "/api/auth/compra-rapida",
+            json={"nome": "Davi Teste", "email": "davi.perfil@test.com"},
+        )
+        assert r.status_code == 200, r.text
+        token = r.json()["access_token"]
+        h = {"Authorization": f"Bearer {token}"}
+        patch = client.patch(
+            "/api/auth/me",
+            headers=h,
+            json={
+                "nome": "Davi Teste",
+                "email": "davi.perfil@test.com",
+                "nova_senha": "senha12345",
+            },
+        )
+        assert patch.status_code == 200, patch.text
+        assert patch.json()["tem_senha"] is True
+
+        login = client.post(
+            "/api/auth/login",
+            json={"email": "davi.perfil@test.com", "senha": "senha12345"},
+        )
+        assert login.status_code == 200, login.text
+
+
+class TestRetomarPagamento:
+    def test_retomar_pagamento_pendente(self):
+        org = client.post(
+            "/api/auth/registrar",
+            json={
+                "email": "org_ret@test.com",
+                "nome": "Org",
+                "senha": "senha12345",
+                "tipo": "organizador",
+            },
+        ).json()["access_token"]
+        cli = client.post(
+            "/api/auth/registrar",
+            json={
+                "email": "cli_ret@test.com",
+                "nome": "Cli",
+                "senha": "senha12345",
+                "tipo": "cliente",
+            },
+        ).json()["access_token"]
+
+        ev = client.post(
+            "/api/eventos/criar",
+            headers={"Authorization": f"Bearer {org}"},
+            json={
+                "nome": "Evento Retomar",
+                "descricao": "d",
+                "data_inicio": "2026-12-01T10:00:00",
+                "data_fim": "2026-12-01T22:00:00",
+                "local": "SP",
+                "preco_ingresso": 50,
+                "categoria": "Outros",
+                "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
+            },
+        ).json()
+
+        pay = client.post(
+            "/api/pagamentos/criar",
+            headers={"Authorization": f"Bearer {cli}"},
+            json={
+                "evento_id": ev["id"],
+                "valor_centavos": 5000,
+                "termo_compra_aceito": True,
+            },
+        )
+        assert pay.status_code == 200, pay.text
+        ingresso_id = pay.json()["ingresso_id"]
+
+        with patch("stripe.PaymentIntent.retrieve") as retrieve:
+            retrieve.return_value = type(
+                "PaymentIntent",
+                (),
+                {
+                    "id": "pi_test_123",
+                    "client_secret": "pi_test_secret_123",
+                    "status": "requires_payment_method",
+                    "payment_method_types": ["card", "pix"],
+                },
+            )()
+            ret = client.post(
+                "/api/pagamentos/retomar",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={"ingresso_id": ingresso_id, "evento_id": ev["id"]},
+            )
+        assert ret.status_code == 200, ret.text
+        body = ret.json()
+        assert body["ingresso_id"] == ingresso_id
+        assert body["client_secret"] == "pi_test_secret_123"
+        assert body.get("evento_slug")
+
+
+class TestRecuperacaoSenha:
+    def test_solicitar_e_redefinir_senha(self):
+        client.post(
+            "/api/auth/registrar",
+            json={
+                "email": "reset@test.com",
+                "nome": "Reset",
+                "senha": "senha12345",
+                "tipo": "cliente",
+            },
+        )
+        with patch("app.routes.auth.enviar_email_recuperacao_senha") as send_mail:
+            send_mail.return_value = True
+            r = client.post(
+                "/api/auth/solicitar-recuperacao-senha",
+                json={"email": "reset@test.com"},
+            )
+        assert r.status_code == 200
+        assert "message" in r.json()
+        assert send_mail.called
+
+        db = TestingSessionLocal()
+        from app.models import Usuario
+
+        u = db.query(Usuario).filter(Usuario.email == "reset@test.com").first()
+        assert u and u.senha_reset_token
+        token = u.senha_reset_token
+        db.close()
+
+        r2 = client.post(
+            "/api/auth/redefinir-senha",
+            json={"token": token, "nova_senha": "novaSenha99"},
+        )
+        assert r2.status_code == 200, r2.text
+
+        login = client.post(
+            "/api/auth/login",
+            json={"email": "reset@test.com", "senha": "novaSenha99"},
+        )
+        assert login.status_code == 200, login.text
 
 
 class TestWebhookIdempotencia:

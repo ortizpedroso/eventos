@@ -59,9 +59,9 @@ export default function PlanosPage() {
               Produções profissionais, conferências e shows com ingresso pago.
             </p>
             <div className="mt-6 flex flex-wrap items-baseline gap-x-1 gap-y-1">
-              <span className="text-4xl font-bold tracking-tight text-zinc-900">10%</span>
+              <span className="text-4xl font-bold tracking-tight text-zinc-900">8%</span>
               <span className="text-sm font-semibold text-zinc-600">
-                + R$ 2,00 por ingresso vendido
+                + R$ 0,50 por ingresso vendido
               </span>
             </div>
             <ul className="mt-8 space-y-3 text-sm text-zinc-600">
@@ -96,9 +96,9 @@ export default function PlanosPage() {
               </div>
               <p className="text-xs font-medium text-emerald-900">Mensalidade</p>
               <div className="flex flex-wrap items-baseline gap-x-1 gap-y-1 border-t border-emerald-200/80 pt-2">
-                <span className="text-3xl font-bold tracking-tight text-zinc-900">8%</span>
+                <span className="text-3xl font-bold tracking-tight text-zinc-900">6%</span>
                 <span className="text-sm font-semibold text-zinc-600">
-                  + R$ 1,50 por ingresso vendido
+                  + R$ 0,30 por ingresso vendido
                 </span>
               </div>
               <p className="text-xs font-medium text-emerald-900">Taxa sobre vendas</p>

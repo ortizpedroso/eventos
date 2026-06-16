@@ -61,13 +61,10 @@ def contar_ocupacao_por_lotes(db: Session, lote_ids: Sequence[str]) -> dict[str,
     return out
 
 
-def reservar_vaga_lote(db: Session, lote_id: str) -> EventoIngressoLote:
-    """Trava a linha do lote (SELECT FOR UPDATE) e verifica capacidade.
-
-    Deve ser chamado dentro da mesma transação que cria o Ingresso.
-    Lança ValueError se o lote estiver esgotado ou inativo.
-    O cadeado é liberado automaticamente no COMMIT seguinte.
-    """
+def reservar_vaga_lote(db: Session, lote_id: str, quantidade: int = 1) -> EventoIngressoLote:
+    """Trava a linha do lote (SELECT FOR UPDATE) e verifica capacidade para N vagas."""
+    if quantidade < 1:
+        raise ValueError("Quantidade inválida.")
     lote = (
         db.query(EventoIngressoLote)
         .filter(EventoIngressoLote.id == lote_id)
@@ -80,12 +77,21 @@ def reservar_vaga_lote(db: Session, lote_id: str) -> EventoIngressoLote:
         raise ValueError("Este lote não está mais disponível.")
     if lote.quantidade_maxima is not None:
         vendidos = contar_ocupacao_lote(db, lote.id)
-        if vendidos >= lote.quantidade_maxima:
-            raise ValueError(
-                "Ingressos esgotados para este lote. "
-                "Outro comprador acabou de reservar a última vaga."
-            )
+        if vendidos + quantidade > lote.quantidade_maxima:
+            restantes = max(0, lote.quantidade_maxima - vendidos)
+            if restantes == 0:
+                msg = (
+                    "Ingressos esgotados para este lote. "
+                    "Outro comprador acabou de reservar a última vaga."
+                )
+            else:
+                msg = f"Apenas {restantes} vaga(s) restante(s) neste lote."
+            raise ValueError(msg)
     return lote
+
+
+# Alias legado
+reservar_vagas_lote = reservar_vaga_lote
 
 
 def lote_elegivel_compra(
@@ -124,6 +130,82 @@ def resolver_lote_compra(
         if lote_elegivel_compra(db, l, agora, ocupacao_por_lote=ocupacao_por_lote):
             return l
     return None
+
+
+def resolver_lote_por_id(
+    db: Session,
+    evento: Evento,
+    lote_id: str,
+    *,
+    ocupacao_por_lote: dict[str, int] | None = None,
+) -> EventoIngressoLote | None:
+    agora = agora_utc_naive()
+    for l in evento.ingresso_lotes:
+        if l.id == lote_id and lote_elegivel_compra(db, l, agora, ocupacao_por_lote=ocupacao_por_lote):
+            return l
+    return None
+
+
+def listar_lotes_elegiveis_compra(
+    db: Session,
+    evento: Evento,
+    *,
+    ocupacao_por_lote: dict[str, int] | None = None,
+) -> list[EventoIngressoLote]:
+    lotes = sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id))
+    agora = agora_utc_naive()
+    return [
+        l
+        for l in lotes
+        if lote_elegivel_compra(db, l, agora, ocupacao_por_lote=ocupacao_por_lote)
+    ]
+
+
+def motivo_lote_indisponivel(
+    db: Session,
+    evento: Evento,
+    *,
+    ocupacao_por_lote: dict[str, int] | None = None,
+) -> str:
+    """Explica por que não há lote à venda (checkout bloqueado)."""
+    lotes = sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id))
+    if not lotes:
+        return "Este evento ainda não tem lotes de ingressos configurados."
+
+    agora = agora_utc_naive()
+    ativos = [l for l in lotes if l.ativo]
+    if not ativos:
+        return "Não há lotes de ingressos ativos neste evento."
+
+    todos_fora_periodo = True
+    algum_ainda_nao_iniciou = False
+    algum_periodo_encerrado = False
+
+    for l in ativos:
+        if l.vendas_inicio is not None and agora < l.vendas_inicio:
+            algum_ainda_nao_iniciou = True
+            continue
+        if l.vendas_fim is not None and agora > l.vendas_fim:
+            algum_periodo_encerrado = True
+            continue
+        todos_fora_periodo = False
+        if l.quantidade_maxima is not None:
+            vendidos = (
+                ocupacao_por_lote.get(l.id, 0)
+                if ocupacao_por_lote is not None
+                else contar_ocupacao_lote(db, l.id)
+            )
+            if vendidos < l.quantidade_maxima:
+                return "Recarregue a página — a disponibilidade de ingressos pode ter mudado."
+
+    if todos_fora_periodo:
+        if algum_periodo_encerrado and not algum_ainda_nao_iniciou:
+            return "O período de vendas encerrou. Contacte o organizador do evento."
+        if algum_ainda_nao_iniciou and not algum_periodo_encerrado:
+            return "As vendas ainda não começaram para este evento."
+        return "Nenhum lote está em período de venda no momento."
+
+    return "Ingressos esgotados no lote atual. Recarregue a página — pode ter aberto um novo lote."
 
 
 def preco_minimo_lotes_ativos(db: Session, evento_id: str) -> float | None:

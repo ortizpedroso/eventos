@@ -48,7 +48,8 @@ def _build_html(ingresso: Ingresso, qr_cid: str) -> str:
         f"<strong>Local:</strong> {evento.local}<br/>"
         f"<strong>Valor:</strong> R$ {valor_fmt}</p>"
         f'<p style="text-align:center"><img src="cid:{qr_cid}" alt="QR Code" width="200" height="200"/></p>'
-        f'<p style="font-size:12px;color:#71717a">Código: {ingresso.id}</p>'
+        f'<p style="font-size:12px;color:#71717a">Código para digitar na portaria:<br/>'
+        f'<span style="font-family:monospace;word-break:break-all">{esc(ingresso_qr_payload(ingresso.id))}</span></p>'
         f'<p><a href="{link}" style="color:#047857">Ver ingresso na conta</a></p>'
         f'<p style="font-size:11px;color:#a1a1aa">Reembolso: até 10 dias em Minha conta → Pagamentos.</p>'
         "</div>"

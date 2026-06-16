@@ -10,7 +10,8 @@ import re
 
 from app.models import Ingresso, Usuario, Evento, get_db
 from app.routes.auth import get_usuario_atual
-from app.services.ingresso_qr import gerar_qr_png_bytes
+from app.services.ingresso_checkin import codigo_checkin
+from app.services.ingresso_qr import gerar_qr_png_bytes, ingresso_qr_payload
 from app.services.ticket_email import enqueue_ticket_email
 from app.utils.cpf import cpf_valido
 from app.utils.html_escape import esc
@@ -29,10 +30,14 @@ async def listar_meus_ingressos(
         Ingresso.usuario_id == usuario_atual.id
     ).order_by(desc(Evento.data_inicio)).all()
 
-    return [
-        {
+    items = []
+    for ingresso in ingressos:
+        st = (ingresso.status or "").lower()
+        item = {
             "id": ingresso.id,
             "evento": {
+                "id": ingresso.evento.id,
+                "slug": ingresso.evento.slug,
                 "nome": ingresso.evento.nome,
                 "data": ingresso.evento.data_inicio,
                 "data_fim": ingresso.evento.data_fim,
@@ -54,8 +59,10 @@ async def listar_meus_ingressos(
                 else None
             ),
         }
-        for ingresso in ingressos
-    ]
+        if st in ("pago", "usado"):
+            item["codigo_checkin"] = codigo_checkin(ingresso.id)
+        items.append(item)
+    return items
 
 class EmailRequest(BaseModel):
     pass
@@ -153,8 +160,21 @@ async def download_ingresso(
 
         qr_b64 = base64.b64encode(gerar_qr_png_bytes(ingresso.id)).decode("ascii")
 
+    codigo_portaria = ""
+    if qr_b64:
+        codigo_txt = esc(ingresso_qr_payload(ingresso.id))
+        codigo_portaria = (
+            f'<p style="text-align:center;margin:14px 0 0;font-size:14px;color:#18181b">'
+            f"<strong>Código para digitar na portaria</strong><br/>"
+            f'<span style="display:inline-block;margin-top:8px;padding:10px 12px;background:#fff;border:1px solid #d4d4d8;border-radius:8px;'
+            f'font-family:monospace;font-size:13px;font-weight:600;color:#18181b;word-break:break-all">{codigo_txt}</span></p>'
+        )
     qr_block = (
-        f'<p style="text-align:center;margin:16px 0"><img src="data:image/png;base64,{qr_b64}" width="180" height="180" alt="QR Code"/></p>'
+        f'<div style="text-align:center;margin:20px 0;padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px">'
+        f'<img src="data:image/png;base64,{qr_b64}" width="240" height="240" alt="QR Code do ingresso" style="display:block;margin:0 auto"/>'
+        f"{codigo_portaria}"
+        f'<p style="margin:10px 0 0;font-size:12px;color:#71717a">Apresente este QR ou o código na entrada do evento.</p>'
+        f"</div>"
         if qr_b64
         else ""
     )
@@ -220,6 +240,27 @@ async def download_ingresso(
     </html>
     """
     return HTMLResponse(content=html_content)
+
+@router.get("/{ingresso_id}/codigo-checkin")
+async def codigo_checkin_ingresso(
+    ingresso_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Código EBR1 para digitar na portaria (apenas ingresso confirmado do titular)."""
+    ingresso = db.query(Ingresso).filter(
+        Ingresso.id == ingresso_id,
+        Ingresso.usuario_id == usuario_atual.id,
+    ).first()
+    if not ingresso:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+    if (ingresso.status or "").lower() not in ("pago", "usado"):
+        raise HTTPException(
+            status_code=400,
+            detail="Código disponível apenas para ingressos confirmados (pagos ou já utilizados na entrada).",
+        )
+    return {"codigo_checkin": codigo_checkin(ingresso.id)}
+
 
 @router.get("/{ingresso_id}/qr")
 async def qr_ingresso(

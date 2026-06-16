@@ -41,8 +41,34 @@ def ingresso_qr_payload(ingresso_id: str) -> str:
     return codigo_checkin(ingresso_id)
 
 
-def extrair_ingresso_id(codigo: str) -> str | None:
+def normalizar_codigo_lido(codigo: str) -> str:
+    """Extrai EBR1:… de URL (QR lido pela câmera), query ?c= ou texto livre."""
     raw = (codigo or "").strip()
+    if not raw:
+        return raw
+    if raw.startswith(f"{_PREFIX}:"):
+        return raw
+
+    if "c=" in raw:
+        from urllib.parse import parse_qs, unquote, urlparse
+
+        try:
+            parsed = urlparse(raw if "://" in raw else f"http://local/?{raw.lstrip('?')}")
+            qs = parse_qs(parsed.query)
+            if qs.get("c"):
+                return unquote(qs["c"][0]).strip()
+        except Exception:
+            pass
+
+    marker = f"{_PREFIX}:"
+    if marker in raw:
+        return raw[raw.find(marker) :]
+
+    return raw
+
+
+def extrair_ingresso_id(codigo: str) -> str | None:
+    raw = normalizar_codigo_lido(codigo)
     if not raw:
         return None
 

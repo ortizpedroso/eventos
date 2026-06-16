@@ -12,15 +12,15 @@ export type PlanoTarifa = {
 export const TARIFA_PADRAO: PlanoTarifa = {
   id: "padrao",
   label: "Por ingresso vendido (sem assinatura)",
-  percentual: 0.1,
-  fixoPorIngresso: 2,
+  percentual: 0.08,
+  fixoPorIngresso: 0.5,
 };
 
 export const TARIFA_ASSINATURA: PlanoTarifa = {
   id: "assinatura",
   label: "Com assinatura mensal",
-  percentual: 0.08,
-  fixoPorIngresso: 1.5,
+  percentual: 0.06,
+  fixoPorIngresso: 0.3,
 };
 
 /** Mensalidade do plano com taxa reduzida (divulgada em /planos). */

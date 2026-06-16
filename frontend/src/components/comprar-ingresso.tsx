@@ -7,8 +7,10 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CheckoutConfirmacaoIngresso } from "@/components/checkout-confirmacao-ingresso";
 import { CheckoutStepper } from "@/components/checkout-stepper";
 import { CheckoutAuthPanel } from "@/components/checkout-auth-panel";
 import {
@@ -19,12 +21,16 @@ import {
 import { CheckoutPrecoDetalhe } from "@/components/checkout-preco-detalhe";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { authHrefParaComprarIngresso } from "@/lib/criar-evento-routes";
-import { apiFetch, fetchSession, getApiBaseUrl } from "@/lib/api";
-import { mapCheckoutError, isDevCheckoutWarning } from "@/lib/checkout-errors";
+import { apiFetch, fetchSession } from "@/lib/api";
+import { isDevCheckoutWarning, mapCheckoutError } from "@/lib/checkout-errors";
+import { urlPosCompraEventoAbsoluta } from "@/lib/checkout-return";
+import { CheckoutTermoResponsabilidade } from "@/components/checkout-termo-responsabilidade";
+import { TERMO_COMPRA_VERSAO } from "@/lib/termo-compra";
 import { formatCpfMask, isValidCpf, onlyDigits } from "@/lib/cpf";
 import { getStripe } from "@/lib/stripe-client";
 import { formatTelefoneBrMask, isTelefoneBrasilOk } from "@/lib/telefone-br";
-import type { CriarPagamentoResponse, Usuario } from "@/lib/types";
+import type { CriarPagamentoResponse, IngressoLote, RetomarPagamentoResponse, Usuario } from "@/lib/types";
+import { urlRetomarPagamento } from "@/lib/reserva-pagamento";
 
 type Props = {
   eventoId: string;
@@ -32,10 +38,22 @@ type Props = {
   eventoNome: string;
   precoIngresso: number;
   limiteIngressosPorCpf?: number | null;
+  compraDisponivel?: boolean;
+  motivoCompraIndisponivel?: string | null;
   embedded?: boolean;
   /** Sessão já obtida pela página pai — evita refetch e layout shift. */
   usuarioInicial?: Usuario | null;
   sessaoInicialResolvida?: boolean;
+  /** Retoma pagamento pendente (query ?retomar=). */
+  ingressoRetomarId?: string | null;
+  mensagemConfirmacao?: string | null;
+  /** Nome do lote atualmente à venda (ex.: "1º lote"). */
+  loteAtivoNome?: string | null;
+  ingressoLotes?: IngressoLote[];
+  loteCompraId?: string | null;
+  eventoDataInicio?: string;
+  eventoDataFim?: string;
+  eventoLocal?: string;
 };
 
 type CheckoutStep = 1 | 2 | 3;
@@ -53,12 +71,14 @@ function ConfirmForm({
   participante,
   pixDisponivel,
   onSuccess,
+  returnUrl,
 }: {
   clientSecret: string;
   valorFmt: string;
   participante: ParticipanteCheckout;
   pixDisponivel: boolean;
   onSuccess: () => void;
+  returnUrl: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -68,7 +88,9 @@ function ConfirmForm({
   const [metodo, setMetodo] = useState<MetodoPagamento>(pixDisponivel ? "pix" : "card");
   const [cpfPix, setCpfPix] = useState(participante.cpf ?? "");
 
-  const returnUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/conta/pagamentos`;
+  useEffect(() => {
+    if (participante.cpf) setCpfPix(participante.cpf);
+  }, [participante.cpf]);
 
   async function gerarPix(e: FormEvent) {
     e.preventDefault();
@@ -265,93 +287,72 @@ function ConfirmForm({
   );
 }
 
-function ConfirmacaoIngresso({
-  ingressoId,
-  eventoNome,
-  emailParticipante,
-}: {
-  ingressoId: string;
-  eventoNome: string;
-  emailParticipante: string;
-}) {
-  const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const downloadHref = `${getApiBaseUrl()}/api/ingressos/${ingressoId}/download`;
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const base = getApiBaseUrl();
-        const res = await fetch(`${base}/api/ingressos/${ingressoId}/qr`, {
-          credentials: "include",
-        });
-        if (!res.ok) return;
-        const blob = await res.blob();
-        if (!cancelled) setQrUrl(URL.createObjectURL(blob));
-      } catch {
-        /* QR opcional na confirmação */
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      if (qrUrl) URL.revokeObjectURL(qrUrl);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- qrUrl cleanup on unmount only
-  }, [ingressoId]);
-
-  return (
-    <div className="space-y-4 text-center">
-      <p className="text-3xl" aria-hidden>
-        ✓
-      </p>
-      <h2 className="text-lg font-semibold text-emerald-900" data-testid="checkout-confirmacao">
-        Compra confirmada!
-      </h2>
-      <p className="text-sm text-zinc-600">{eventoNome}</p>
-      <p className="text-sm text-zinc-700">
-        Enviamos o ingresso com QR Code para{" "}
-        <strong className="text-zinc-900">{emailParticipante}</strong> (verifique o spam).
-      </p>
-      {qrUrl ? (
-        <div className="mx-auto inline-block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrUrl} alt="QR Code do ingresso" width={240} height={240} className="mx-auto" />
-          <p className="mt-2 text-xs text-zinc-500">Apresente na entrada do evento</p>
-        </div>
-      ) : null}
-      <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-        <Link href={`/conta/ingressos/${ingressoId}`} className="btn-success text-white">
-          Ver meu ingresso
-        </Link>
-        <a
-          href={downloadHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-outline"
-        >
-          Baixar / imprimir
-        </a>
-        <Link href="/conta/pagamentos" className="btn-outline">
-          Meus pagamentos
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 export function ComprarIngresso({
   eventoId,
   eventoSlug,
   eventoNome,
   precoIngresso,
   limiteIngressosPorCpf = null,
+  compraDisponivel = true,
+  motivoCompraIndisponivel = null,
   embedded = false,
   usuarioInicial = null,
   sessaoInicialResolvida = false,
+  ingressoRetomarId = null,
+  mensagemConfirmacao = null,
+  loteAtivoNome = null,
+  ingressoLotes = [],
+  loteCompraId = null,
+  eventoDataInicio,
+  eventoDataFim,
+  eventoLocal,
 }: Props) {
+  const searchParams = useSearchParams();
+  const [quantidade, setQuantidade] = useState(1);
+
+  const lotesElegiveis = useMemo(
+    () =>
+      ingressoLotes
+        .filter((l) => l.elegivel_compra !== false && l.ativo)
+        .sort((a, b) => a.ordem - b.ordem),
+    [ingressoLotes],
+  );
+
+  const [loteSelecionadoId, setLoteSelecionadoId] = useState(
+    loteCompraId ?? lotesElegiveis[0]?.id ?? "",
+  );
+
+  useEffect(() => {
+    if (lotesElegiveis.some((l) => l.id === loteSelecionadoId)) return;
+    const next = loteCompraId ?? lotesElegiveis[0]?.id ?? "";
+    setLoteSelecionadoId(next);
+  }, [loteCompraId, lotesElegiveis, loteSelecionadoId]);
+
+  const loteAtual = useMemo(
+    () => lotesElegiveis.find((l) => l.id === loteSelecionadoId) ?? lotesElegiveis[0],
+    [lotesElegiveis, loteSelecionadoId],
+  );
+
+  const precoUnitario = loteAtual?.preco ?? precoIngresso;
+  const maxQuantidade = useMemo(() => {
+    let max = 10;
+    if (limiteIngressosPorCpf && limiteIngressosPorCpf >= 1) {
+      max = Math.min(max, limiteIngressosPorCpf);
+    }
+    if (loteAtual?.quantidade_maxima != null) {
+      const restantes = Math.max(0, loteAtual.quantidade_maxima - (loteAtual.vendidos ?? 0));
+      max = Math.min(max, restantes || 1);
+    }
+    return Math.max(1, max);
+  }, [limiteIngressosPorCpf, loteAtual]);
+
+  useEffect(() => {
+    if (quantidade > maxQuantidade) setQuantidade(maxQuantidade);
+  }, [maxQuantidade, quantidade]);
+
   const authLoginHref = authHrefParaComprarIngresso(eventoSlug);
   const authRegisterHref = authHrefParaComprarIngresso(eventoSlug, "register");
+  const loteNomeExibicao = loteAtual?.nome ?? loteAtivoNome;
   const [step, setStep] = useState<CheckoutStep>(1);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [ingressoId, setIngressoId] = useState<string | null>(null);
@@ -380,6 +381,7 @@ export function ComprarIngresso({
   } | null>(null);
   const [cupomBusy, setCupomBusy] = useState(false);
   const [cupomMsg, setCupomMsg] = useState<string | null>(null);
+  const [termoAceito, setTermoAceito] = useState(false);
   const [sessaoUsuario, setSessaoUsuario] = useState<Usuario | null>(
     sessaoInicialResolvida ? usuarioInicial : null,
   );
@@ -387,9 +389,37 @@ export function ComprarIngresso({
     sessaoInicialResolvida ? Boolean(usuarioInicial) : false,
   );
   const [checandoSessao, setChecandoSessao] = useState(!sessaoInicialResolvida);
+  const [retomandoPagamento, setRetomandoPagamento] = useState(false);
   const sessaoCarregadaRef = useRef(sessaoInicialResolvida);
+  const retomarTentadoRef = useRef(false);
+  const posCompraProcessadoRef = useRef(false);
 
   const stripePromise = useMemo(() => getStripe(), []);
+
+  const returnUrlPagamento = useMemo(() => {
+    if (!ingressoId || typeof window === "undefined") return "";
+    return urlPosCompraEventoAbsoluta(window.location.origin, eventoSlug, ingressoId);
+  }, [ingressoId, eventoSlug]);
+
+  useEffect(() => {
+    if (posCompraProcessadoRef.current) return;
+    if (searchParams.get("compra") !== "ok") return;
+    const ing = searchParams.get("ingresso");
+    if (!ing) return;
+    posCompraProcessadoRef.current = true;
+    setIngressoId(ing);
+    setStep(3);
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        document.getElementById("comprar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("compra");
+      url.searchParams.delete("ingresso");
+      const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams}` : "") + url.hash;
+      window.history.replaceState(null, "", next);
+    }
+  }, [searchParams]);
 
   // Countdown do prazo de reserva
   useEffect(() => {
@@ -412,6 +442,23 @@ export function ComprarIngresso({
     setTemToken(Boolean(usuarioInicial));
     setChecandoSessao(false);
     sessaoCarregadaRef.current = true;
+  }, [sessaoInicialResolvida, usuarioInicial]);
+
+  // Revalida sessão quando a página do evento não trouxe usuário (evita falso "deslogado").
+  useEffect(() => {
+    if (!sessaoInicialResolvida || usuarioInicial) return;
+    let cancelled = false;
+    void (async () => {
+      const u = await fetchSession();
+      if (cancelled) return;
+      if (u) {
+        setSessaoUsuario(u);
+        setTemToken(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [sessaoInicialResolvida, usuarioInicial]);
 
   useEffect(() => {
@@ -448,6 +495,55 @@ export function ComprarIngresso({
   const logado = temToken || Boolean(sessaoUsuario);
   const devCheckout = isDevCheckoutWarning();
 
+  useEffect(() => {
+    if (!ingressoRetomarId || !logado || retomarTentadoRef.current || checandoSessao) return;
+    retomarTentadoRef.current = true;
+    setRetomandoPagamento(true);
+    setError(null);
+
+    void (async () => {
+      try {
+        const data = await apiFetch<RetomarPagamentoResponse>("/api/pagamentos/retomar", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ingresso_id: ingressoRetomarId, evento_id: eventoId }),
+        });
+
+        if (data.evento_slug && data.evento_slug !== eventoSlug) {
+          window.location.assign(urlRetomarPagamento(data.evento_slug, ingressoRetomarId));
+          return;
+        }
+
+        setTermoAceito(true);
+        setIngressoId(data.ingresso_id);
+
+        const pn = data.participante_nome?.trim();
+        const pe = data.participante_email?.trim();
+        if (pn && pe) {
+          setParticipanteCheckout({ nome: pn, email: pe });
+          setEmailConfirmacao(pe);
+        }
+
+        if (data.ja_pago || data.stripe_disabled || data.cortesia) {
+          setPagamentoModoTeste(Boolean(data.stripe_disabled && !data.cortesia));
+          setStep(3);
+          return;
+        }
+
+        setClientSecret(data.client_secret);
+        setPixDisponivel(data.pix_disponivel !== false);
+        if (data.reservado_ate) {
+          setReservadoAte(new Date(data.reservado_ate));
+        }
+        setStep(2);
+      } catch (e) {
+        setError(mapCheckoutError(e instanceof Error ? e.message : "Não foi possível retomar o pagamento"));
+      } finally {
+        setRetomandoPagamento(false);
+      }
+    })();
+  }, [ingressoRetomarId, logado, checandoSessao, eventoId, eventoSlug]);
+
   const recarregarSessaoPosAuth = useCallback(() => {
     void (async () => {
       const u = await fetchSession();
@@ -456,16 +552,18 @@ export function ComprarIngresso({
     })();
   }, []);
 
-  const ehCortesia = Number.isFinite(precoIngresso) && precoIngresso < 0.5;
-  const precoCentavosBase = ehCortesia ? 0 : Math.round(precoIngresso * 100);
-  const precoCentavosCheckout = cupomPreview?.valor_centavos ?? precoCentavosBase;
+  const ehCortesia = Number.isFinite(precoUnitario) && precoUnitario < 0.5;
+  const precoCentavosUnit = ehCortesia ? 0 : Math.round(precoUnitario * 100);
+  const precoCentavosCheckout = cupomPreview?.valor_centavos ?? precoCentavosUnit * quantidade;
   const precoReaisCheckout = precoCentavosCheckout / 100;
   const precoFmt = ehCortesia
     ? "Cortesia (grátis)"
-    : precoReaisCheckout.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      });
+    : quantidade > 1
+      ? `${quantidade}× ${precoUnitario.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} = ${precoReaisCheckout.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
+      : precoReaisCheckout.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        });
   const exigeCpf = Boolean(limiteIngressosPorCpf && limiteIngressosPorCpf >= 1);
 
   const alertaCpfParticipante = useMemo(() => {
@@ -491,7 +589,12 @@ export function ComprarIngresso({
       }>("/api/pagamentos/validar-cupom", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ evento_id: eventoId, codigo_cupom: codigo }),
+        body: JSON.stringify({
+          evento_id: eventoId,
+          codigo_cupom: codigo,
+          lote_id: loteSelecionadoId || undefined,
+          quantidade,
+        }),
       });
       setCupomPreview(r);
       setCupomMsg(
@@ -509,7 +612,7 @@ export function ComprarIngresso({
 
   async function criarIntent() {
     setError(null);
-    const v = precoIngresso;
+    const v = precoUnitario;
     if (!Number.isFinite(v) || (!ehCortesia && v < 0.5)) {
       setError("Preço do ingresso inválido para pagamento (mínimo R$ 0,50).");
       return;
@@ -566,10 +669,17 @@ export function ComprarIngresso({
       }
     }
 
+    if (!termoAceito) {
+      setError("Leia e aceite o termo de responsabilidade para continuar.");
+      return;
+    }
+
     const body: Record<string, unknown> = {
       evento_id: eventoId,
       valor_centavos,
+      quantidade,
     };
+    if (loteSelecionadoId) body.lote_id = loteSelecionadoId;
     if (!mesmoPagador) {
       body.participante_nome = participanteNome.trim();
       body.participante_email = participanteEmail.trim();
@@ -585,6 +695,8 @@ export function ComprarIngresso({
     if (cupomCodigo && !ehCortesia) {
       body.codigo_cupom = cupomCodigo;
     }
+    body.termo_compra_aceito = true;
+    body.termo_compra_versao = TERMO_COMPRA_VERSAO;
 
     setCreating(true);
     try {
@@ -628,6 +740,23 @@ export function ComprarIngresso({
     ? "mt-0 border-0 bg-transparent p-0 shadow-none [&_p]:text-justify"
     : "mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 shadow-sm [&_p]:text-justify";
 
+  if (!compraDisponivel) {
+    return (
+      <div className={shellClass}>
+        <div
+          className="rounded-md border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950"
+          role="status"
+        >
+          <p className="font-semibold">Compras indisponíveis</p>
+          <p className="mt-2 leading-relaxed">
+            {motivoCompraIndisponivel ??
+              "Não há ingressos à venda neste momento. Recarregue a página ou contacte o organizador."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (step === 3 && ingressoId) {
     return (
       <div className={`${shellClass} [&_p]:text-center`}>
@@ -638,10 +767,20 @@ export function ComprarIngresso({
             <p className="mt-1 text-xs">Ingresso registrado na API com STRIPE_DISABLED.</p>
           </div>
         ) : null}
-        <ConfirmacaoIngresso
+        <CheckoutConfirmacaoIngresso
           ingressoId={ingressoId}
           eventoNome={eventoNome}
           emailParticipante={emailConfirmacao || "o e-mail da sua conta"}
+          mensagemConfirmacao={mensagemConfirmacao}
+          quantidade={quantidade}
+          eventoDataInicio={eventoDataInicio}
+          eventoDataFim={eventoDataFim}
+          eventoLocal={eventoLocal}
+          eventoUrl={
+            typeof window !== "undefined"
+              ? `${window.location.origin}/eventos/${eventoSlug}`
+              : undefined
+          }
         />
       </div>
     );
@@ -666,12 +805,82 @@ export function ComprarIngresso({
 
       {step === 1 ? (
         <div className="space-y-4">
+          {retomandoPagamento ? (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
+              Retomando seu pagamento pendente…
+            </div>
+          ) : null}
           <div>
             <h2 className="text-sm font-semibold text-zinc-900">
               {logado ? "1. Dados do participante" : "1. Identifique-se para comprar"}
             </h2>
             <p className="mt-1 text-xs text-zinc-600">{eventoNome}</p>
+            {loteNomeExibicao ? (
+              <p className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                <span className="font-semibold">Ingresso selecionado:</span> {loteNomeExibicao} ·{" "}
+                {precoFmt}
+              </p>
+            ) : null}
           </div>
+
+          {lotesElegiveis.length > 1 ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-zinc-700">Escolha o lote</p>
+              <div className="space-y-2">
+                {lotesElegiveis.map((l) => (
+                  <label
+                    key={l.id}
+                    className={`flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${
+                      loteSelecionadoId === l.id
+                        ? "border-emerald-400 bg-emerald-50"
+                        : "border-zinc-200 bg-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="lote-checkout"
+                        checked={loteSelecionadoId === l.id}
+                        onChange={() => {
+                          setLoteSelecionadoId(l.id);
+                          setCupomPreview(null);
+                          setCupomMsg(null);
+                        }}
+                      />
+                      {l.nome}
+                    </span>
+                    <span className="font-medium tabular-nums text-zinc-800">
+                      {l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {maxQuantidade > 1 ? (
+            <div>
+              <label htmlFor="qtd-ingressos" className="text-xs font-medium text-zinc-700">
+                Quantidade
+              </label>
+              <select
+                id="qtd-ingressos"
+                value={quantidade}
+                onChange={(e) => {
+                  setQuantidade(Number(e.target.value));
+                  setCupomPreview(null);
+                  setCupomMsg(null);
+                }}
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-2 text-sm"
+              >
+                {Array.from({ length: maxQuantidade }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n} ingresso{n > 1 ? "s" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
 
           {!ehCortesia ? (
             <>
@@ -679,11 +888,15 @@ export function ComprarIngresso({
               {cupomPreview && cupomPreview.desconto_centavos > 0 ? (
                 <p className="text-xs text-emerald-800">
                   Preço original{" "}
-                  {precoIngresso.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} — desconto
+                  {(precoUnitario * quantidade).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}{" "}
+                  — desconto
                   aplicado com cupom <strong>{cupomPreview.codigo}</strong>.
                 </p>
               ) : null}
-              <details className="rounded-md border border-zinc-200 bg-white text-sm shadow-sm">
+              <details className="rounded-md border border-zinc-200 bg-white text-sm shadow-sm" open={Boolean(codigoCupom)}>
                 <summary className="cursor-pointer px-3 py-2.5 font-medium text-zinc-900 hover:bg-zinc-50">
                   Tem cupom de desconto?
                 </summary>
@@ -729,7 +942,13 @@ export function ComprarIngresso({
           )}
 
           <div className="min-h-[300px]">
-          {checandoSessao ? null : !logado ? (
+          {checandoSessao ? (
+            <div className="animate-pulse space-y-3 rounded-md border border-zinc-200 bg-white p-4">
+              <div className="h-4 w-2/3 rounded bg-zinc-200" />
+              <div className="h-10 rounded bg-zinc-100" />
+              <div className="h-10 rounded bg-zinc-100" />
+            </div>
+          ) : !logado ? (
             <CheckoutAuthPanel
               authLoginHref={authLoginHref}
               authRegisterHref={authRegisterHref}
@@ -865,11 +1084,18 @@ export function ComprarIngresso({
                 )}
               </p>
 
+              <CheckoutTermoResponsabilidade
+                eventoNome={eventoNome}
+                aceito={termoAceito}
+                onAceitoChange={setTermoAceito}
+                disabled={creating}
+              />
+
               <button
                 type="button"
                 data-testid="checkout-continuar"
                 onClick={() => void criarIntent()}
-                disabled={creating}
+                disabled={creating || !termoAceito}
                 className="btn-primary w-full"
               >
                 {creating
@@ -951,6 +1177,7 @@ export function ComprarIngresso({
                   participante={participanteCheckout}
                   pixDisponivel={pixDisponivel}
                   onSuccess={() => setStep(3)}
+                  returnUrl={returnUrlPagamento}
                 />
               ) : null}
             </Elements>

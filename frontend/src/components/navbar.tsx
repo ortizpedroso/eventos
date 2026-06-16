@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { apiFetch, fetchSession, logoutSession } from "@/lib/api";
+import { NavbarCategoriasMenu } from "@/components/navbar-categorias-menu";
+import { fetchSession, logoutSession } from "@/lib/api";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
-import type { Usuario } from "@/lib/types";
 
 function UserIcon({ className }: { className?: string }) {
   return (
@@ -58,10 +58,8 @@ export function Navbar() {
     async function syncSession() {
       const u = await fetchSession();
       setLoggedIn(Boolean(u));
-      if (!u) {
-        setUserNome(null);
-        setUserTipo(null);
-      }
+      setUserNome(u?.nome ?? null);
+      setUserTipo(u?.tipo ?? null);
     }
     const onSync = () => void syncSession();
     void syncSession();
@@ -74,32 +72,6 @@ export function Navbar() {
   useEffect(() => {
     setMobileNavOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    if (!loggedIn) {
-      setUserNome(null);
-      setUserTipo(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const u = await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
-        if (!cancelled) {
-          setUserNome(u.nome);
-          setUserTipo(u.tipo);
-        }
-      } catch {
-        if (!cancelled) {
-          setUserNome(null);
-          setUserTipo(null);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [loggedIn]);
 
   const logout = useCallback(() => {
     void logoutSession().finally(() => {
@@ -143,6 +115,13 @@ export function Navbar() {
   const mobileLink =
     "block rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-emerald-50 hover:text-emerald-950";
 
+  function navLinkClass(href: string) {
+    const ativo = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+    return ativo
+      ? "shrink-0 font-semibold text-emerald-900 underline-offset-2 hover:underline"
+      : "shrink-0 transition-colors hover:text-zinc-900";
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
       {/* flex-col: menu móvel em linha própria; linha de cima sem flex-wrap para o ícone não “saltar” de linha */}
@@ -162,43 +141,49 @@ export function Navbar() {
           >
             {navClienteOuCarregando ? (
               <>
-                <Link href="/eventos" className="shrink-0 transition-colors hover:text-zinc-900">
+                <Link href="/eventos" className={navLinkClass("/eventos")}>
                   Eventos
                 </Link>
-                <Link href="/conta/pagamentos" className="shrink-0 transition-colors hover:text-zinc-900">
+                <NavbarCategoriasMenu compact />
+                <Link href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")}>
                   Pagamentos
                 </Link>
-                <Link href="/conta/ingressos" className="shrink-0 transition-colors hover:text-zinc-900">
+                <Link href="/conta/ingressos" className={navLinkClass("/conta/ingressos")}>
                   Ingressos
                 </Link>
               </>
             ) : isOrganizador ? (
               <>
-                <Link href="/funcionalidades" className="shrink-0 transition-colors hover:text-zinc-900">
+                <Link href="/organizador/eventos" className={navLinkClass("/organizador")}>
+                  Painel
+                </Link>
+                <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
                   Funcionalidades
                 </Link>
-                <Link href="/planos" className="shrink-0 transition-colors hover:text-zinc-900">
+                <Link href="/planos" className={navLinkClass("/planos")}>
                   Planos
                 </Link>
-                <Link href="/eventos" className="shrink-0 transition-colors hover:text-zinc-900">
+                <Link href="/eventos" className={navLinkClass("/eventos")}>
                   Eventos
                 </Link>
-                <Link href="/sobre" className="shrink-0 transition-colors hover:text-zinc-900">
+                <NavbarCategoriasMenu compact />
+                <Link href="/sobre" className={navLinkClass("/sobre")}>
                   Sobre
                 </Link>
               </>
             ) : (
               <>
-                <Link href="/funcionalidades" className="shrink-0 transition-colors hover:text-zinc-900">
+                <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
                   Funcionalidades
                 </Link>
-                <Link href="/planos" className="shrink-0 transition-colors hover:text-zinc-900">
+                <Link href="/planos" className={navLinkClass("/planos")}>
                   Planos
                 </Link>
-                <Link href="/eventos" className="shrink-0 transition-colors hover:text-zinc-900">
+                <Link href="/eventos" className={navLinkClass("/eventos")}>
                   Eventos
                 </Link>
-                <Link href="/sobre" className="shrink-0 transition-colors hover:text-zinc-900">
+                <NavbarCategoriasMenu compact />
+                <Link href="/sobre" className={navLinkClass("/sobre")}>
                   Sobre
                 </Link>
               </>
@@ -317,6 +302,7 @@ export function Navbar() {
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Eventos
                 </Link>
+                <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
                 <Link href="/conta/pagamentos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Pagamentos
                 </Link>
@@ -335,6 +321,7 @@ export function Navbar() {
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Eventos
                 </Link>
+                <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
                 <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Sobre
                 </Link>
@@ -353,6 +340,7 @@ export function Navbar() {
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Eventos
                 </Link>
+                <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
                 <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Sobre
                 </Link>

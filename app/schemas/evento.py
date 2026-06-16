@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.utils.imagem_url import validar_imagem_url
+from app.utils.evento_categorias import normalizar_categoria_evento
 from app.utils.ingresso_tipos import TIPO_PADRAO, normalizar_tipo_ingresso, lote_e_cortesia
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
@@ -50,6 +51,7 @@ class IngressoLoteResponse(BaseModel):
     vendas_inicio: datetime | None
     vendas_fim: datetime | None
     vendidos: int = 0
+    elegivel_compra: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -61,6 +63,7 @@ class CriarEventoRequest(BaseModel):
     # Opcional: eventos de um dia (show, feijoada) usam só início; se omitido, replica data_inicio.
     data_fim: datetime | None = None
     local: str
+    cidade: str | None = None
     imagem_url: Optional[str] = Field(default=None, max_length=2048)
     # Reais (ex.: 49.9). Mínimo alinhado ao Stripe para ingressos pagos.
     preco_ingresso: float = Field(ge=0, le=500_000)
@@ -75,6 +78,11 @@ class CriarEventoRequest(BaseModel):
     @classmethod
     def _imagem_url(cls, v: object) -> str | None:
         return validar_imagem_url(v)
+
+    @field_validator("categoria", mode="before")
+    @classmethod
+    def _categoria(cls, v: object) -> str:
+        return normalizar_categoria_evento(str(v) if v is not None else None)
 
     @model_validator(mode="after")
     def validar_datas(self):
@@ -103,6 +111,7 @@ class EventoResponse(BaseModel):
     data_inicio: datetime
     data_fim: datetime
     local: str
+    cidade: str | None = None
     imagem_url: Optional[str]
     preco_ingresso: float
     categoria: str
@@ -113,6 +122,8 @@ class EventoResponse(BaseModel):
     ingresso_lotes: list[IngressoLoteResponse] = Field(default_factory=list)
     lote_compra_id: str | None = None
     preco_compra: float | None = None
+    compra_disponivel: bool = False
+    motivo_compra_indisponivel: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -123,11 +134,18 @@ def montar_evento_response(
     *,
     ocupacao_por_lote: dict[str, int] | None = None,
 ) -> EventoResponse:
-    from app.services.ingresso_lotes import contar_ocupacao_por_lotes, resolver_lote_compra
+    from app.services.ingresso_lotes import (
+        agora_utc_naive,
+        contar_ocupacao_por_lotes,
+        lote_elegivel_compra,
+        motivo_lote_indisponivel,
+        resolver_lote_compra,
+    )
 
     lotes_orm = sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id))
     if ocupacao_por_lote is None:
         ocupacao_por_lote = contar_ocupacao_por_lotes(db, [l.id for l in lotes_orm])
+    agora = agora_utc_naive()
     lotes_out: list[IngressoLoteResponse] = []
     for l in lotes_orm:
         lotes_out.append(
@@ -142,11 +160,16 @@ def montar_evento_response(
                 vendas_inicio=l.vendas_inicio,
                 vendas_fim=l.vendas_fim,
                 vendidos=ocupacao_por_lote.get(l.id, 0),
+                elegivel_compra=lote_elegivel_compra(db, l, agora, ocupacao_por_lote=ocupacao_por_lote),
             )
         )
     cur = resolver_lote_compra(db, evento, ocupacao_por_lote=ocupacao_por_lote)
-    preco_compra = float(cur.preco) if cur is not None else float(evento.preco_ingresso)
+    compra_disponivel = cur is not None
+    preco_compra = float(cur.preco) if cur is not None else None
     lote_compra_id = cur.id if cur is not None else None
+    motivo_compra_indisponivel = (
+        None if compra_disponivel else motivo_lote_indisponivel(db, evento, ocupacao_por_lote=ocupacao_por_lote)
+    )
 
     base: dict[str, Any] = {
         "id": evento.id,
@@ -157,6 +180,7 @@ def montar_evento_response(
         "data_inicio": evento.data_inicio,
         "data_fim": evento.data_fim,
         "local": evento.local,
+        "cidade": getattr(evento, "cidade", None),
         "imagem_url": evento.imagem_url,
         "preco_ingresso": evento.preco_ingresso,
         "categoria": evento.categoria,
@@ -167,6 +191,8 @@ def montar_evento_response(
         "ingresso_lotes": lotes_out,
         "lote_compra_id": lote_compra_id,
         "preco_compra": preco_compra,
+        "compra_disponivel": compra_disponivel,
+        "motivo_compra_indisponivel": motivo_compra_indisponivel,
     }
     return EventoResponse.model_validate(base)
 

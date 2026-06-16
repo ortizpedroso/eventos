@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
@@ -21,7 +22,15 @@ import {
 export default function AuthClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const mode = searchParams.get("mode") === "register" ? "register" : "login";
+  const resetToken = searchParams.get("reset");
+  const mode =
+    resetToken
+      ? "reset"
+      : searchParams.get("mode") === "forgot"
+        ? "forgot"
+        : searchParams.get("mode") === "register"
+          ? "register"
+          : "login";
   const fluxoOrganizador = searchParams.get("fluxo") === "organizador";
   const precisaOrganizador = searchParams.get("precisa") === "organizador";
 
@@ -33,6 +42,7 @@ export default function AuthClient() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
   const [checandoSessao, setChecandoSessao] = useState(true);
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
@@ -55,7 +65,8 @@ export default function AuthClient() {
     void (async () => {
       const u = await fetchSession();
       if (cancelled) return;
-      if (u) {
+      const forcarLogin = searchParams.get("login") === "1";
+      if (u && !forcarLogin) {
         const next = searchParams.get("next");
         redirecionar(destinoPosAuth(u, next));
         return;
@@ -99,8 +110,36 @@ export default function AuthClient() {
   async function onSubmit(formData: FormData) {
     setLoading(true);
     setError(null);
+    setInfoMsg(null);
 
     try {
+      if (mode === "forgot") {
+        const email = String(formData.get("email") ?? "");
+        const r = await apiFetch<{ message: string }>("/api/auth/solicitar-recuperacao-senha", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        setInfoMsg(r.message);
+        return;
+      }
+
+      if (mode === "reset") {
+        const novaSenha = String(formData.get("nova_senha") ?? "");
+        if (novaSenha.length < 8) {
+          setError("A nova senha deve ter pelo menos 8 caracteres.");
+          return;
+        }
+        const r = await apiFetch<{ message: string }>("/api/auth/redefinir-senha", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ token: resetToken, nova_senha: novaSenha }),
+        });
+        setInfoMsg(r.message);
+        router.replace("/auth");
+        return;
+      }
+
       const senha = String(formData.get("senha") ?? "");
       if (mode === "register" && senha.length < 8) {
         setError("A senha deve ter pelo menos 8 caracteres.");
@@ -139,16 +178,20 @@ export default function AuthClient() {
     } catch (e) {
       const message = e instanceof Error ? e.message : "Erro";
       const lower = message.toLowerCase();
+      const isDev = process.env.NODE_ENV === "development";
       if (lower.includes("email ou senha incorretos")) {
         setError(
-          "Email ou senha incorretos. Se acabou de reiniciar o Docker ou limpar a base de dados, cadastre-se de novo.",
+          isDev
+            ? "Email ou senha incorretos. Se acabou de reiniciar o Docker ou limpar a base de dados, cadastre-se de novo."
+            : "Email ou senha incorretos. Verifique os dados ou use «Esqueci minha senha».",
         );
       } else if (
-        lower.includes("responsibilities of managing losses") ||
-        lower.includes("managing losses") ||
-        (lower.includes("responsabilidade") && lower.includes("perda")) ||
-        lower.includes("loss liability") ||
-        lower.includes("connected account agreement")
+        isDev &&
+        (lower.includes("responsibilities of managing losses") ||
+          lower.includes("managing losses") ||
+          (lower.includes("responsabilidade") && lower.includes("perda")) ||
+          lower.includes("loss liability") ||
+          lower.includes("connected account agreement"))
       ) {
         setError(
           [
@@ -187,12 +230,22 @@ export default function AuthClient() {
     <div className="mx-auto mt-10 w-full max-w-md">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">
-          {mode === "login" ? "Acesse sua conta" : "Crie sua conta"}
+          {mode === "login"
+            ? "Acesse sua conta"
+            : mode === "register"
+              ? "Crie sua conta"
+              : mode === "forgot"
+                ? "Recuperar senha"
+                : "Nova senha"}
         </h1>
         <p className="mt-2 text-sm text-zinc-600">
           {mode === "login"
             ? "Bem-vindo de volta ao EventosBR."
-            : "Junte-se à nossa plataforma."}
+            : mode === "register"
+              ? "Junte-se à nossa plataforma."
+              : mode === "forgot"
+                ? "Enviaremos um link para redefinir sua senha."
+                : "Escolha uma nova senha para sua conta."}
         </p>
         {fluxoOrganizador ? (
           <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-xs leading-relaxed text-emerald-950">
@@ -214,73 +267,107 @@ export default function AuthClient() {
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <form onSubmit={handleFormSubmit} className="space-y-4">
+          {infoMsg ? (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+              {infoMsg}
+            </div>
+          ) : null}
+
           {error ? (
             <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 whitespace-pre-line">
               {error}
             </div>
           ) : null}
 
-          <div className="grid gap-2">
-            <label className="text-sm font-medium text-zinc-800" htmlFor="email">
-              Email
-            </label>
-            <input
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-              id="email"
-              name="email"
-              type="email"
-              required
-            />
-          </div>
-
-          {mode === "register" ? (
+          {mode === "reset" ? (
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-zinc-800" htmlFor="nova_senha">
+                Nova senha
+                <span className="block font-normal text-zinc-500"> (mínimo 8 caracteres)</span>
+              </label>
+              <input
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                id="nova_senha"
+                name="nova_senha"
+                type="password"
+                required
+                minLength={8}
+              />
+            </div>
+          ) : (
             <>
               <div className="grid gap-2">
-                <label className="text-sm font-medium text-zinc-800" htmlFor="nome">
-                  Nome
+                <label className="text-sm font-medium text-zinc-800" htmlFor="email">
+                  Email
                 </label>
                 <input
                   className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-                  id="nome"
-                  name="nome"
+                  id="email"
+                  name="email"
+                  type="email"
                   required
                 />
               </div>
 
-              <div className="grid gap-2">
-                <label className="text-sm font-medium text-zinc-800" htmlFor="tipo">
-                  Tipo
-                </label>
-                <select
-                  className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-                  id="tipo"
-                  name="tipo"
-                  defaultValue={defaultTipoRegistro}
-                  key={defaultTipoRegistro}
-                >
-                  <option value="cliente">Cliente</option>
-                  <option value="organizador">Organizador</option>
-                </select>
-              </div>
-            </>
-          ) : null}
-
-          <div className="grid gap-2">
-            <label className="text-sm font-medium text-zinc-800" htmlFor="senha">
-              Senha
               {mode === "register" ? (
-                <span className="block font-normal text-zinc-500"> (mínimo 8 caracteres)</span>
+                <>
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium text-zinc-800" htmlFor="nome">
+                      Nome
+                    </label>
+                    <input
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                      id="nome"
+                      name="nome"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium text-zinc-800" htmlFor="tipo">
+                      Tipo
+                    </label>
+                    <select
+                      className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                      id="tipo"
+                      name="tipo"
+                      defaultValue={defaultTipoRegistro}
+                      key={defaultTipoRegistro}
+                    >
+                      <option value="cliente">Cliente</option>
+                      <option value="organizador">Organizador</option>
+                    </select>
+                  </div>
+                </>
               ) : null}
-            </label>
-            <input
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-              id="senha"
-              name="senha"
-              type="password"
-              required
-              minLength={mode === "register" ? 8 : 1}
-            />
-          </div>
+
+              {mode !== "forgot" ? (
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-sm font-medium text-zinc-800" htmlFor="senha">
+                      Senha
+                      {mode === "register" ? (
+                        <span className="block font-normal text-zinc-500"> (mínimo 8 caracteres)</span>
+                      ) : null}
+                    </label>
+                    {mode === "login" ? (
+                      <Link href="/auth?mode=forgot" className="text-xs font-medium text-emerald-800 hover:underline">
+                        Esqueci minha senha
+                      </Link>
+                    ) : null}
+                  </div>
+                  <input
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                    id="senha"
+                    name="senha"
+                    type="password"
+                    required
+                    minLength={mode === "register" ? 8 : 1}
+                  />
+                </div>
+              ) : null}
+            </>
+          )}
 
           {mode === "register" ? (
             <div className="space-y-3">
@@ -311,32 +398,50 @@ export default function AuthClient() {
           ) : null}
 
           <button disabled={loading} className="btn-success w-full" type="submit">
-            {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Cadastrar"}
+            {loading
+              ? "Aguarde..."
+              : mode === "login"
+                ? "Entrar"
+                : mode === "register"
+                  ? "Cadastrar"
+                  : mode === "forgot"
+                    ? "Enviar link"
+                    : "Salvar nova senha"}
           </button>
         </form>
 
-        <div className="mt-6">
-          <OAuthLoginButtons
-            mode={mode}
-            tipoRegistro={defaultTipoRegistro}
-            aceitaComEmail={aceitaComEmail}
-            aceitaComWhatsapp={aceitaComWhatsapp}
-            telefoneCadastro={telefoneCadastro}
-            disabled={loading}
-            onSuccess={finishAuth}
-            onError={setError}
-          />
-        </div>
+        {mode === "login" || mode === "register" ? (
+          <div className="mt-6">
+            <OAuthLoginButtons
+              mode={mode === "register" ? "register" : "login"}
+              tipoRegistro={defaultTipoRegistro}
+              aceitaComEmail={aceitaComEmail}
+              aceitaComWhatsapp={aceitaComWhatsapp}
+              telefoneCadastro={telefoneCadastro}
+              disabled={loading}
+              onSuccess={finishAuth}
+              onError={setError}
+            />
+          </div>
+        ) : null}
 
         <div className="mt-6 text-center text-sm text-zinc-600">
-          {mode === "login" ? "Não tem uma conta?" : "Já possui conta?"}{" "}
-          <button
-            type="button"
-            className="font-semibold text-zinc-900 hover:underline"
-            onClick={() => setAuthMode(mode === "login" ? "register" : "login")}
-          >
-            {mode === "login" ? "Cadastre-se" : "Faça login"}
-          </button>
+          {mode === "forgot" || mode === "reset" ? (
+            <Link href="/auth" className="font-semibold text-zinc-900 hover:underline">
+              Voltar ao login
+            </Link>
+          ) : (
+            <>
+              {mode === "login" ? "Não tem uma conta?" : "Já possui conta?"}{" "}
+              <button
+                type="button"
+                className="font-semibold text-zinc-900 hover:underline"
+                onClick={() => setAuthMode(mode === "login" ? "register" : "login")}
+              >
+                {mode === "login" ? "Cadastre-se" : "Faça login"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { ContaNav } from "@/components/conta-nav";
 import { apiFetch, getApiBaseUrl } from "@/lib/api";
+import { labelStatusIngresso } from "@/lib/ingresso-status";
 import type { IngressoListItem } from "@/lib/types";
 
 type RepasseForm = {
@@ -40,12 +42,31 @@ function formatarTelefone(v: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
+function escHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b);
+  });
+  return btoa(binary);
+}
+
 export default function IngressoDetalhePage() {
   const params = useParams();
   const ingressoId =
     typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
 
   const [ingresso, setIngresso] = useState<IngressoListItem | null>(null);
+  const [carregando, setCarregando] = useState(true);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -56,6 +77,7 @@ export default function IngressoDetalhePage() {
   const [repasseSending, setRepasseSending] = useState(false);
   const [repasseMessage, setRepasseMessage] = useState("");
   const [repasseError, setRepasseError] = useState("");
+  const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
     if (!ingressoId) return;
@@ -70,6 +92,8 @@ export default function IngressoDetalhePage() {
         if (!cancelled) setIngresso(found);
       } catch {
         if (!cancelled) setIngresso(null);
+      } finally {
+        if (!cancelled) setCarregando(false);
       }
     })();
 
@@ -113,23 +137,105 @@ export default function IngressoDetalhePage() {
     };
   }, [ingressoId, ingresso?.status]);
 
+  async function copiarCodigoCheckin() {
+    const codigo = ingresso?.codigo_checkin;
+    if (!codigo) return;
+    try {
+      await navigator.clipboard.writeText(codigo);
+      setCopiado(true);
+      window.setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      setMessage("Não foi possível copiar o código. Selecione e copie manualmente.");
+    }
+  }
+
   async function openDownloadPdf() {
-    if (!ingressoId) return;
-    const base = getApiBaseUrl();
-    const path = `${base}/api/ingressos/${ingressoId}/download`;
-    const res = await fetch(path, { credentials: "include", cache: "no-store" });
-    if (!res.ok) {
+    if (!ingresso || !ingressoId) return;
+    setMessage("");
+
+    try {
+      let qrB64 = "";
+      const st = (ingresso.status || "").toLowerCase();
+      if (st === "pago" || st === "usado") {
+        const base = getApiBaseUrl();
+        const res = await fetch(`${base}/api/ingressos/${ingressoId}/qr`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (res.ok) {
+          qrB64 = await blobToBase64(await res.blob());
+        }
+      }
+
+      const codigo = ingresso.codigo_checkin ?? "";
+      const evNome = escHtml(ingresso.evento.nome);
+      const partNome = escHtml(ingresso.participante_nome || "—");
+      const partEmail = escHtml(ingresso.participante_email || "—");
+      const evData = escHtml(ingresso.evento.data || "—");
+      const evLocal = escHtml(ingresso.evento.local || "—");
+      const statusTxt = escHtml((ingresso.status || "").toUpperCase());
+      const codigoHtml = codigo
+        ? `<p style="text-align:center;margin:14px 0 0;font-size:14px;color:#18181b">
+            <strong>Código para digitar na portaria</strong><br/>
+            <span style="display:inline-block;margin-top:8px;padding:10px 12px;background:#fff;border:1px solid #d4d4d8;border-radius:8px;font-family:monospace;font-size:13px;font-weight:600;color:#18181b;word-break:break-all">${escHtml(codigo)}</span>
+          </p>`
+        : "";
+      const qrHtml = qrB64
+        ? `<div style="text-align:center;margin:20px 0;padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px">
+            <img src="data:image/png;base64,${qrB64}" width="240" height="240" alt="QR Code do ingresso" style="display:block;margin:0 auto"/>
+            ${codigoHtml}
+            <p style="margin:10px 0 0;font-size:12px;color:#71717a">Apresente este QR ou o código na entrada do evento.</p>
+          </div>`
+        : "";
+
+      const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <title>Ingresso - ${evNome}</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; color: #333; }
+    .ticket { border: 2px dashed #10b981; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 12px; }
+    .header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+    .header h2 { margin: 0; color: #047857; }
+    .details p { margin: 10px 0; font-size: 16px; }
+    .status { display: inline-block; padding: 4px 12px; background: #d1fae5; color: #047857; border-radius: 999px; font-weight: bold; font-size: 14px; margin-top: 15px; }
+    @media print { body { padding: 0; } .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="text-align:center;margin-bottom:30px">
+    <button onclick="window.print()" style="padding:12px 24px;font-size:16px;cursor:pointer;background:#10b981;color:#fff;border:none;border-radius:8px;font-weight:bold">
+      Imprimir ou Salvar como PDF
+    </button>
+  </div>
+  <div class="ticket">
+    <div class="header">
+      <h2>${evNome}</h2>
+      <p style="margin-top:5px;color:#666">Ingresso Oficial</p>
+    </div>
+    <div class="details">
+      <p><strong>Participante:</strong> ${partNome}</p>
+      <p><strong>E-mail:</strong> ${partEmail}</p>
+      <p><strong>Data:</strong> ${evData}</p>
+      <p><strong>Local:</strong> ${evLocal}</p>
+      ${qrHtml}
+      <div class="status">${statusTxt}</div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const w = window.open(url, "_blank", "noopener,noreferrer");
+      if (!w) {
+        setMessage("Permita pop-ups para abrir o ingresso numa nova janela.");
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
       setMessage("Não foi possível abrir o ingresso para impressão.");
-      return;
     }
-    const html = await res.text();
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, "_blank", "noopener,noreferrer");
-    if (!w) {
-      setMessage("Permita pop-ups para abrir o ingresso numa nova janela.");
-    }
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   const handleSendEmail = async (e: FormEvent) => {
@@ -214,24 +320,45 @@ export default function IngressoDetalhePage() {
 
   const foiRepassado = !!ingresso?.repassado_em;
 
+  if (carregando) {
+    return (
+      <div className="space-y-4">
+        <Link href="/conta/ingressos" className="text-sm text-zinc-600 hover:underline">
+          ← Meus ingressos
+        </Link>
+        <ContaNav />
+        <p className="text-sm text-zinc-600">Carregando ingresso…</p>
+      </div>
+    );
+  }
+
+  if (!ingresso) {
+    return (
+      <div className="space-y-4">
+        <Link href="/conta/ingressos" className="text-sm text-zinc-600 hover:underline">
+          ← Meus ingressos
+        </Link>
+        <ContaNav />
+        <p className="text-sm text-zinc-600">Ingresso não encontrado.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mb-6">
+    <div className="space-y-4">
+      <div>
         <Link href="/conta/ingressos" className="text-sm text-zinc-600 hover:underline">
           ← Meus ingressos
         </Link>
       </div>
-      <h1 className="mb-2 text-3xl font-extrabold text-zinc-900">Seu ingresso</h1>
-      {ingresso ? (
-        <p className="mb-4 text-sm text-zinc-600">
-          <strong>{ingresso.evento.nome}</strong>
-          {ingresso.participante_nome ? ` · ${ingresso.participante_nome}` : ""}
-          {" · "}
-          <span className="capitalize">{ingresso.status}</span>
-        </p>
-      ) : (
-        <p className="mb-4 text-sm text-zinc-600">Apresente o QR Code abaixo na entrada do evento.</p>
-      )}
+      <ContaNav />
+      <h1 className="text-2xl font-semibold text-zinc-900">Seu ingresso</h1>
+      <p className="text-sm text-zinc-600">
+        <strong>{ingresso.evento.nome}</strong>
+        {ingresso.participante_nome ? ` · ${ingresso.participante_nome}` : ""}
+        {" · "}
+        {labelStatusIngresso(ingresso.status)}
+      </p>
 
       {foiRepassado && ingresso ? (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -272,7 +399,26 @@ export default function IngressoDetalhePage() {
           ) : (
             <p className="mt-4 text-sm text-zinc-600">A carregar QR Code…</p>
           )}
-          <p className="mt-3 font-mono text-[11px] text-zinc-500 break-all">{ingressoId}</p>
+          {ingresso.codigo_checkin ? (
+            <div className="mx-auto mt-4 max-w-md rounded-lg border border-emerald-200 bg-white p-4 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                Código para digitar na portaria
+              </p>
+              <p className="mt-2 break-all font-mono text-sm font-medium text-zinc-900">
+                {ingresso.codigo_checkin}
+              </p>
+              <button
+                type="button"
+                onClick={() => void copiarCodigoCheckin()}
+                className="mt-3 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100"
+              >
+                {copiado ? "Copiado!" : "Copiar código"}
+              </button>
+              <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                Use se a câmera não ler o QR. Cada ingresso só entra uma vez.
+              </p>
+            </div>
+          ) : null}
         </section>
       )}
 

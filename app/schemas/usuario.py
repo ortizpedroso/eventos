@@ -65,6 +65,7 @@ class UsuarioResponse(BaseModel):
     nome: str
     tipo: str
     data_criacao: datetime
+    tem_senha: bool = False
     aceita_comunicacao_email: bool = False
     aceita_comunicacao_whatsapp: bool = False
     telefone: str | None = None
@@ -96,3 +97,12 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     usuario: UsuarioResponse
+
+
+class SolicitarRecuperacaoSenhaRequest(BaseModel):
+    email: EmailStr
+
+
+class RedefinirSenhaRequest(BaseModel):
+    token: str = Field(min_length=16, max_length=128)
+    nova_senha: str = Field(min_length=8, max_length=128)

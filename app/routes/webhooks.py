@@ -6,7 +6,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Ingresso, StripeEvent, get_db
-from app.services.ingresso_pago import marcar_ingresso_pago, notificar_ingresso_pago
+from app.services.ingresso_pago import (
+    cancelar_ingressos_pi_pendentes,
+    marcar_ingresso_pago,
+    marcar_ingressos_pi_pagos,
+    notificar_ingresso_pago,
+)
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -62,50 +67,44 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if existente:
             return {"status": "success", "idempotent": True}
 
-    ingresso_recém_pago_id: str | None = None
+    ingressos_recém_pagos: list[str] = []
     try:
         if event_type == "payment_intent.succeeded":
             payment_intent = event["data"]["object"]
-            ingresso = (
-                db.query(Ingresso)
-                .filter(Ingresso.stripe_payment_intent_id == payment_intent["id"])
-                .first()
-            )
-            if ingresso and marcar_ingresso_pago(db, ingresso):
-                ingresso_recém_pago_id = ingresso.id
-                logger.info("Ingresso %s pago via webhook", ingresso.id)
+            pi_id = payment_intent["id"]
+            ingressos_recém_pagos = marcar_ingressos_pi_pagos(db, pi_id)
+            if ingressos_recém_pagos:
+                logger.info(
+                    "Ingressos pagos via webhook PI %s: %s",
+                    pi_id,
+                    ", ".join(ingressos_recém_pagos),
+                )
 
         elif event_type == "payment_intent.payment_failed":
             payment_intent = event["data"]["object"]
-            ingresso = (
-                db.query(Ingresso)
-                .filter(Ingresso.stripe_payment_intent_id == payment_intent["id"])
-                .first()
-            )
-            if ingresso and ingresso.status == "pendente":
-                ingresso.status = "cancelado"
-                ingresso.reservado_ate = None
-                logger.info("Ingresso %s cancelado (pagamento falhou)", ingresso.id)
+            n = cancelar_ingressos_pi_pendentes(db, payment_intent["id"])
+            if n:
+                logger.info(
+                    "Ingressos cancelados (pagamento falhou) PI %s: %d",
+                    payment_intent["id"],
+                    n,
+                )
 
         elif event_type == "payment_intent.canceled":
-            # PI cancelado/expirado pelo Stripe (ex.: PIX não pago em 30 min).
-            # Libera a vaga imediatamente sem esperar o job de limpeza.
             payment_intent = event["data"]["object"]
-            ingresso = (
-                db.query(Ingresso)
-                .filter(Ingresso.stripe_payment_intent_id == payment_intent["id"])
-                .first()
-            )
-            if ingresso and ingresso.status == "pendente":
-                ingresso.status = "cancelado"
-                ingresso.reservado_ate = None
-                logger.info("Ingresso %s cancelado (PI expirado/cancelado pelo Stripe)", ingresso.id)
+            n = cancelar_ingressos_pi_pendentes(db, payment_intent["id"])
+            if n:
+                logger.info(
+                    "Ingressos cancelados (PI expirado) %s: %d",
+                    payment_intent["id"],
+                    n,
+                )
 
         if event_id:
             db.add(StripeEvent(id=event_id, tipo=event_type))
         db.commit()
-        if ingresso_recém_pago_id:
-            notificar_ingresso_pago(ingresso_recém_pago_id)
+        for iid in ingressos_recém_pagos:
+            notificar_ingresso_pago(iid)
     except IntegrityError:
         db.rollback()
         logger.info("Webhook duplicado (race): %s", event_id)

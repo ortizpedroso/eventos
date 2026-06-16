@@ -18,7 +18,18 @@ export function mapCheckoutError(raw: string): string {
   if (lower.includes("cupom")) {
     return msg.includes("Cupom") ? msg : "Cupom inválido ou expirado. Remova o cupom ou tente outro código.";
   }
-  if (lower.includes("lote") || lower.includes("esgotad") || lower.includes("indisponível")) {
+  if (lower.includes("período de vendas") || lower.includes("periodo de vendas")) {
+    return msg;
+  }
+  if (lower.includes("vendas ainda não") || lower.includes("vendas ainda nao")) {
+    return msg;
+  }
+  if (lower.includes("esgotad")) {
+    return msg.includes("esgotad")
+      ? msg
+      : "Ingressos esgotados no lote atual. Recarregue a página.";
+  }
+  if (lower.includes("lote") && lower.includes("indisponível")) {
     return "Este lote não está mais disponível. Recarregue a página — o preço pode ter mudado.";
   }
   if (lower.includes("valor incorreto") || lower.includes("recarregue")) {

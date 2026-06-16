@@ -26,6 +26,7 @@ type SalvarPayload = {
   data_inicio: string;
   data_fim: string;
   local: string;
+  cidade?: string | null;
   imagem_url?: string | null;
   preco_ingresso: number;
   ingresso_lotes: ReturnType<typeof lotesRowsToApiPayload>;
@@ -126,6 +127,7 @@ export function EditarEventoClient({ slug }: Props) {
       data_inicio: rawIni,
       data_fim: rawIni,
       local: String(formData.get("local") ?? ""),
+      cidade: String(formData.get("cidade") ?? "").trim() || null,
       imagem_url: imagemUrl.trim() || null,
       preco_ingresso,
       ingresso_lotes: lotesPayload,
@@ -153,7 +155,7 @@ export function EditarEventoClient({ slug }: Props) {
 
   if (loading) {
     return (
-      <div className="mx-auto mt-10 max-w-2xl py-8 text-sm text-zinc-600">A carregar…</div>
+      <div className="mx-auto mt-10 max-w-2xl py-8 text-sm text-zinc-600">Carregando…</div>
     );
   }
 
@@ -314,6 +316,19 @@ export function EditarEventoClient({ slug }: Props) {
           </div>
 
           <div className="grid gap-2">
+            <label className="text-sm font-medium text-zinc-800" htmlFor="cidade">
+              Cidade (para filtros)
+            </label>
+            <input
+              className="h-10 rounded-md border border-zinc-300 px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+              id="cidade"
+              name="cidade"
+              defaultValue={evento.cidade ?? ""}
+              placeholder="Ex.: São Paulo"
+            />
+          </div>
+
+          <div className="grid gap-2">
             <EventoLotesEditor rows={loteRows} onChange={setLoteRows} />
           </div>
 
@@ -379,7 +394,7 @@ export function EditarEventoClient({ slug }: Props) {
 
           <div className="mt-6 flex justify-end border-t border-zinc-100 pt-4">
             <button disabled={saving} className="btn-success px-8" type="submit">
-              {saving ? "A guardar…" : "Guardar alterações"}
+              {saving ? "Salvando…" : "Salvar alterações"}
             </button>
           </div>
         </form>

@@ -13,8 +13,14 @@ from app.deps.rate_limit import rate_limit_checkout
 from app.routes.auth import get_usuario_atual
 from app.services.cpf_limite import validar_limite_cpf_evento
 from app.services.cupom_desconto import centavos_com_cupom, resolver_cupom_evento
+from app.services.ingresso_lotes import (
+    motivo_lote_indisponivel,
+    reservar_vaga_lote,
+    resolver_lote_compra,
+    resolver_lote_por_id,
+)
+from app.services.ingresso_pago import marcar_ingresso_pago, marcar_ingressos_pi_pagos, notificar_ingresso_pago
 from app.services.ticket_email import enqueue_ticket_email
-from app.services.ingresso_lotes import reservar_vaga_lote, resolver_lote_compra
 from app.utils.cpf import cpf_valido, normalizar_cpf
 from app.utils.ingresso_tipos import lote_e_cortesia
 from app.utils.privacy import mask_cpf, mask_telefone_br
@@ -80,6 +86,8 @@ def _criar_payment_intent_brl(
 
 class CriarPagamentoRequest(BaseModel):
     evento_id: str
+    lote_id: str | None = Field(default=None, max_length=64)
+    quantidade: int = Field(default=1, ge=1, le=10)
     # Preferir sempre centavos (inteiro) para evitar erro de arredondamento.
     valor_centavos: int | None = Field(default=None, ge=0)
     # Compatibilidade: aceita "valor" em reais (float) temporariamente.
@@ -91,6 +99,8 @@ class CriarPagamentoRequest(BaseModel):
     participante_telefone: str | None = Field(default=None, max_length=30)
     cortesia_responsavel: str | None = Field(default=None, max_length=200)
     codigo_cupom: str | None = Field(default=None, max_length=40)
+    termo_compra_aceito: bool = Field(default=False)
+    termo_compra_versao: str | None = Field(default=None, max_length=32)
 
     @field_validator("participante_nome", mode="before")
     @classmethod
@@ -129,9 +139,16 @@ class CancelarIngressoRequest(BaseModel):
     ingresso_id: str
 
 
+class RetomarPagamentoRequest(BaseModel):
+    ingresso_id: str
+    evento_id: str | None = None
+
+
 class ValidarCupomRequest(BaseModel):
     evento_id: str
     codigo_cupom: str = Field(min_length=3, max_length=40)
+    lote_id: str | None = Field(default=None, max_length=64)
+    quantidade: int = Field(default=1, ge=1, le=10)
 
 
 @router.post("/validar-cupom")
@@ -145,15 +162,21 @@ async def validar_cupom_checkout(
     if not evento or not evento.publicado:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
 
-    lote = resolver_lote_compra(db, evento)
+    lote_id_req = (body.lote_id or "").strip() or None
+    if lote_id_req:
+        lote = resolver_lote_por_id(db, evento, lote_id_req)
+    else:
+        lote = resolver_lote_compra(db, evento)
     if lote is None:
-        raise HTTPException(status_code=400, detail="Não há lote disponível para compra.")
+        raise HTTPException(status_code=400, detail=motivo_lote_indisponivel(db, evento))
 
+    quantidade = int(body.quantidade or 1)
     eh_cortesia = lote_e_cortesia(getattr(lote, "tipo", None)) or float(lote.preco or 0) <= 0
     if eh_cortesia:
         raise HTTPException(status_code=400, detail="Cupom não se aplica a ingresso cortesia.")
 
-    base_centavos = int(round(float(lote.preco) * 100))
+    unit_centavos = int(round(float(lote.preco) * 100))
+    base_centavos = unit_centavos * quantidade
     try:
         cupom = resolver_cupom_evento(db, evento.id, body.codigo_cupom)
     except ValueError as e:
@@ -198,6 +221,14 @@ async def criar_pagamento(
             detail="Evento pausado: não é possível comprar ingressos até ser republicado.",
         )
 
+    if not body.termo_compra_aceito:
+        raise HTTPException(
+            status_code=400,
+            detail="É necessário aceitar o termo de responsabilidade para continuar a compra.",
+        )
+    termo_aceite_em = datetime.now(timezone.utc).replace(tzinfo=None)
+    termo_versao = (body.termo_compra_versao or "").strip() or "2026-05-v1"
+
     nome_req = (body.participante_nome or "").strip() or None
     email_req = (body.participante_email or "").strip() or None
     if (nome_req and not email_req) or (email_req and not nome_req):
@@ -232,35 +263,47 @@ async def criar_pagamento(
     except EmailNotValidError:
         raise HTTPException(status_code=400, detail="E-mail do participante inválido")
 
-    lote = resolver_lote_compra(db, evento)
-    if lote is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Não há lote de ingressos disponível para compra (esgotado ou fora do período de vendas).",
-        )
+    quantidade = int(body.quantidade or 1)
+
+    lote_id_req = (body.lote_id or "").strip() or None
+    if lote_id_req:
+        lote = resolver_lote_por_id(db, evento, lote_id_req)
+        if lote is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Lote indisponível ou esgotado. Escolha outro lote ou recarregue a página.",
+            )
+    else:
+        lote = resolver_lote_compra(db, evento)
+        if lote is None:
+            raise HTTPException(
+                status_code=400,
+                detail=motivo_lote_indisponivel(db, evento),
+            )
 
     eh_cortesia = lote_e_cortesia(getattr(lote, "tipo", None)) or float(lote.preco or 0) <= 0
-    esperado_centavos = 0 if eh_cortesia else int(round(float(lote.preco) * 100))
+    unit_centavos = 0 if eh_cortesia else int(round(float(lote.preco) * 100))
+    unit_reais = unit_centavos / 100
     cupom_id: str | None = None
     codigo_cupom = (body.codigo_cupom or "").strip()
     if codigo_cupom and not eh_cortesia:
         try:
             cupom = resolver_cupom_evento(db, evento.id, codigo_cupom)
-            esperado_centavos = centavos_com_cupom(esperado_centavos, cupom)
+            unit_centavos = centavos_com_cupom(unit_centavos, cupom)
             cupom_id = cupom.id
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
     elif codigo_cupom and eh_cortesia:
         raise HTTPException(status_code=400, detail="Cupom não se aplica a ingresso cortesia.")
 
-    valor_centavos = esperado_centavos
+    valor_centavos = unit_centavos * quantidade
     valor_reais = valor_centavos / 100
     if body.valor_centavos is not None and int(body.valor_centavos) != valor_centavos:
         raise HTTPException(
             status_code=400,
             detail=f"Valor incorreto para o lote atual ({lote.nome}). Recarregue a página e tente novamente.",
         )
-    if not eh_cortesia and valor_centavos < 50:
+    if not eh_cortesia and unit_centavos < 50:
         raise HTTPException(status_code=400, detail="Valor mínimo de R$ 0,50 para ingressos pagos.")
 
     limite_cpf = getattr(evento, "limite_ingressos_por_cpf", None)
@@ -277,7 +320,7 @@ async def criar_pagamento(
                 )
             p_cpf = cpf_limite
         try:
-            validar_limite_cpf_evento(db, evento, cpf_limite or "")
+            validar_limite_cpf_evento(db, evento, cpf_limite or "", incremento=quantidade)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -285,44 +328,62 @@ async def criar_pagamento(
     if eh_cortesia and not resp_cortesia:
         resp_cortesia = "Ingresso cortesia"
 
-    def _ingresso_gratis(fake_prefix: str = "cortesia") -> dict:
+    def _ingressos_gratis(fake_prefix: str = "cortesia") -> dict:
         agora = datetime.now(timezone.utc).replace(tzinfo=None)
-        fake_pi = f"{fake_prefix}_{uuid.uuid4().hex}"
-        novo = Ingresso(
-            evento_id=evento.id,
-            usuario_id=usuario_atual.id,
-            lote_id=lote.id,
-            participante_nome=pn,
-            participante_email=pe,
-            participante_cpf=p_cpf,
-            participante_telefone=p_tel,
-            cortesia_responsavel=resp_cortesia if eh_cortesia else None,
-            valor=valor_reais,
-            stripe_payment_intent_id=fake_pi,
-            status="pago",
-            data_compra=agora,
-            data_limite_cancelamento=agora + timedelta(days=10),
-        )
-        db.add(novo)
+        ids: list[str] = []
+        for _ in range(quantidade):
+            fake_pi = f"{fake_prefix}_{uuid.uuid4().hex}"
+            novo = Ingresso(
+                evento_id=evento.id,
+                usuario_id=usuario_atual.id,
+                lote_id=lote.id,
+                participante_nome=pn,
+                participante_email=pe,
+                participante_cpf=p_cpf,
+                participante_telefone=p_tel,
+                cortesia_responsavel=resp_cortesia if eh_cortesia else None,
+                termo_compra_aceito_em=termo_aceite_em,
+                termo_compra_versao=termo_versao,
+                valor=unit_reais,
+                stripe_payment_intent_id=fake_pi,
+                status="pago",
+                data_compra=agora,
+                data_limite_cancelamento=agora + timedelta(days=10),
+            )
+            db.add(novo)
+            db.flush()
+            ids.append(novo.id)
         db.commit()
-        db.refresh(novo)
-        enqueue_ticket_email(novo.id)
+        for iid in ids:
+            enqueue_ticket_email(iid)
         return {
             "client_secret": "",
-            "ingresso_id": novo.id,
+            "ingresso_id": ids[0],
+            "ingresso_ids": ids,
+            "quantidade": quantidade,
             "stripe_disabled": True,
             "cortesia": eh_cortesia,
         }
 
     if eh_cortesia:
-        logger.info("Ingresso cortesia (R$ 0) evento %s lote %s", evento.id, lote.id)
-        return _ingresso_gratis("cortesia")
+        logger.info(
+            "Ingresso cortesia (R$ 0) evento %s lote %s x%d",
+            evento.id,
+            lote.id,
+            quantidade,
+        )
+        return _ingressos_gratis("cortesia")
 
-    logger.info("Criando pagamento R$ %.2f evento %s", valor_reais, body.evento_id)
+    logger.info(
+        "Criando pagamento R$ %.2f (%d ingresso(s)) evento %s",
+        valor_reais,
+        quantidade,
+        body.evento_id,
+    )
 
     if settings.STRIPE_DISABLED:
         logger.warning("STRIPE_DISABLED: ingresso pago sem Stripe evento %s", evento.id)
-        return _ingresso_gratis("disabled")
+        return _ingressos_gratis("disabled")
 
     if not usuario_atual.stripe_customer_id:
         raise HTTPException(
@@ -334,31 +395,38 @@ async def criar_pagamento(
     # SELECT FOR UPDATE garante que apenas uma transação por vez verifica e
     # decrementa a capacidade. O COMMIT libera o cadeado antes da chamada Stripe.
     try:
-        reservar_vaga_lote(db, lote.id)
+        reservar_vaga_lote(db, lote.id, quantidade)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
-    novo_ingresso = Ingresso(
-        evento_id=evento.id,
-        usuario_id=usuario_atual.id,
-        lote_id=lote.id,
-        participante_nome=pn,
-        participante_email=pe,
-        participante_cpf=p_cpf,
-        participante_telefone=p_tel,
-        cupom_id=cupom_id,
-        valor=valor_reais,
-        stripe_payment_intent_id=None,  # preenchido após a chamada Stripe
-        status="pendente",
-        reservado_ate=agora + timedelta(minutes=_RESERVA_MINUTOS),
-    )
-    db.add(novo_ingresso)
-    db.commit()  # reserva confirmada — cadeado liberado aqui
-    db.refresh(novo_ingresso)
+    reserva_ate = agora + timedelta(minutes=_RESERVA_MINUTOS)
+    novos: list[Ingresso] = []
+    for _ in range(quantidade):
+        ing = Ingresso(
+            evento_id=evento.id,
+            usuario_id=usuario_atual.id,
+            lote_id=lote.id,
+            participante_nome=pn,
+            participante_email=pe,
+            participante_cpf=p_cpf,
+            participante_telefone=p_tel,
+            cupom_id=cupom_id,
+            valor=unit_reais,
+            stripe_payment_intent_id=None,
+            status="pendente",
+            reservado_ate=reserva_ate,
+            termo_compra_aceito_em=termo_aceite_em,
+            termo_compra_versao=termo_versao,
+        )
+        db.add(ing)
+        novos.append(ing)
+    db.commit()
+    for ing in novos:
+        db.refresh(ing)
 
-    # ── Passo 2: criar PaymentIntent no Stripe (fora de transação) ──────────
-    # idempotency_key por ingresso: duplo clique ou retry retorna o mesmo PI.
+    primeiro = novos[0]
+
     try:
         intent, pix_disponivel = _criar_payment_intent_brl(
             amount=valor_centavos,
@@ -368,27 +436,34 @@ async def criar_pagamento(
                 "usuario_id": usuario_atual.id,
                 "participante_nome": (pn or "")[:450],
                 "participante_email": (pe or "")[:450],
+                "quantidade": str(quantidade),
             },
             transfer_destination=evento.stripe_account_id,
-            idempotency_key=f"pi_{novo_ingresso.id}",
+            idempotency_key=f"pi_{primeiro.id}",
         )
-        novo_ingresso.stripe_payment_intent_id = intent.id
+        for ing in novos:
+            ing.stripe_payment_intent_id = intent.id
         db.commit()
 
         return {
             "client_secret": intent.client_secret,
-            "ingresso_id": novo_ingresso.id,
+            "ingresso_id": primeiro.id,
+            "ingresso_ids": [i.id for i in novos],
+            "quantidade": quantidade,
             "pix_disponivel": pix_disponivel,
             "valor_centavos": valor_centavos,
             "cupom_aplicado": cupom_id is not None,
-            "reservado_ate": novo_ingresso.reservado_ate.isoformat() + "Z",
+            "reservado_ate": reserva_ate.isoformat() + "Z",
         }
 
     except stripe.error.StripeError as e:
-        # Stripe falhou — libera a reserva imediatamente para não bloquear a vaga
-        logger.exception("Erro Stripe ao criar pagamento; cancelando reserva %s", novo_ingresso.id)
-        novo_ingresso.status = "cancelado"
-        novo_ingresso.reservado_ate = None
+        logger.exception(
+            "Erro Stripe ao criar pagamento; cancelando reserva(s) %s",
+            ", ".join(i.id for i in novos),
+        )
+        for ing in novos:
+            ing.status = "cancelado"
+            ing.reservado_ate = None
         db.commit()
         raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
 
@@ -412,6 +487,7 @@ async def listar_meus_pagamentos(
             "id": ingresso.id,
             "evento": {
                 "id": ingresso.evento.id,
+                "slug": ingresso.evento.slug,
                 "nome": ingresso.evento.nome,
                 "data": ingresso.evento.data_inicio,
                 "data_fim": ingresso.evento.data_fim,
@@ -426,9 +502,123 @@ async def listar_meus_pagamentos(
             "status": ingresso.status,
             "data_compra": ingresso.data_compra,
             "data_limite_cancelamento": ingresso.data_limite_cancelamento,
+            "reservado_ate": (
+                ingresso.reservado_ate.isoformat() + "Z"
+                if ingresso.reservado_ate is not None
+                else None
+            ),
         }
         for ingresso in ingressos
     ]
+
+
+@router.post("/retomar")
+async def retomar_pagamento(
+    body: RetomarPagamentoRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Retoma pagamento de ingresso pendente com reserva ainda válida."""
+    ingresso = (
+        db.query(Ingresso)
+        .filter(
+            Ingresso.id == body.ingresso_id,
+            Ingresso.usuario_id == usuario_atual.id,
+        )
+        .first()
+    )
+    if not ingresso:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+
+    if body.evento_id and ingresso.evento_id != body.evento_id:
+        raise HTTPException(status_code=400, detail="Este ingresso pertence a outro evento.")
+
+    if ingresso.status == "pago":
+        return {
+            "client_secret": "",
+            "ingresso_id": ingresso.id,
+            "ja_pago": True,
+            "reservado_ate": None,
+            "evento_slug": ingresso.evento.slug,
+        }
+
+    if ingresso.status != "pendente":
+        raise HTTPException(
+            status_code=400,
+            detail="Este ingresso não está aguardando pagamento.",
+        )
+
+    agora = datetime.now(timezone.utc).replace(tzinfo=None)
+    if ingresso.reservado_ate and ingresso.reservado_ate < agora:
+        raise HTTPException(
+            status_code=400,
+            detail="A reserva expirou. Inicie uma nova compra no evento.",
+        )
+
+    pi_id = (ingresso.stripe_payment_intent_id or "").strip()
+    if not pi_id or pi_id.startswith("cortesia_") or pi_id.startswith("disabled_"):
+        raise HTTPException(
+            status_code=400,
+            detail="Pagamento não disponível para retomada. Inicie uma nova compra.",
+        )
+
+    if settings.STRIPE_DISABLED:
+        marcar_ingresso_pago(db, ingresso)
+        db.commit()
+        notificar_ingresso_pago(ingresso.id)
+        return {
+            "client_secret": "",
+            "ingresso_id": ingresso.id,
+            "ja_pago": True,
+            "stripe_disabled": True,
+            "reservado_ate": None,
+            "evento_slug": ingresso.evento.slug,
+        }
+
+    try:
+        intent = stripe.PaymentIntent.retrieve(pi_id)
+    except stripe.error.StripeError as e:
+        logger.exception("Erro ao recuperar PaymentIntent %s", pi_id)
+        raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
+
+    if intent.status == "succeeded":
+        pagos = marcar_ingressos_pi_pagos(db, pi_id)
+        if pagos:
+            db.commit()
+            for iid in pagos:
+                notificar_ingresso_pago(iid)
+        else:
+            db.commit()
+        return {
+            "client_secret": "",
+            "ingresso_id": ingresso.id,
+            "ja_pago": True,
+            "reservado_ate": None,
+            "evento_slug": ingresso.evento.slug,
+        }
+
+    if intent.status == "canceled":
+        raise HTTPException(
+            status_code=400,
+            detail="O pagamento anterior expirou. Inicie uma nova compra no evento.",
+        )
+
+    pix_disponivel = "pix" in (intent.payment_method_types or [])
+
+    return {
+        "client_secret": intent.client_secret,
+        "ingresso_id": ingresso.id,
+        "pix_disponivel": pix_disponivel,
+        "reservado_ate": (
+            ingresso.reservado_ate.isoformat() + "Z"
+            if ingresso.reservado_ate is not None
+            else None
+        ),
+        "participante_nome": ingresso.participante_nome,
+        "participante_email": ingresso.participante_email,
+        "valor_centavos": int(round(float(ingresso.valor or 0) * 100)),
+        "evento_slug": ingresso.evento.slug,
+    }
 
 @router.post("/cancelar")
 async def cancelar_ingresso(

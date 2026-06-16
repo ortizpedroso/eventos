@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EventoLinkPortaria } from "@/components/evento-link-portaria";
+import { EventoCategoriaBadge } from "@/components/evento-categoria-badge";
 import { apiFetch } from "@/lib/api";
 import { formatEventoDataHora } from "@/lib/eventos";
 import type { Evento } from "@/lib/types";
@@ -165,9 +166,7 @@ export default function OrganizadorMeusEventosPage() {
                       {e.publicado ? "Publicado" : "Pausado"}
                     </span>
                   </div>
-                  <span className="mt-2 inline-flex w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
-                    {e.categoria}
-                  </span>
+                  <EventoCategoriaBadge categoria={e.categoria} variant="inline" className="mt-2" />
                   <p className="mt-3 line-clamp-3 flex-1 text-sm leading-6 text-zinc-600">{resumo}</p>
                   <div className="mt-4 space-y-1 text-xs text-zinc-500">
                     <p>

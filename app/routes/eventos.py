@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import or_
 from slugify import slugify
 
 from app.models import Evento, EventoCupom, Usuario, get_db
@@ -14,6 +15,7 @@ from app.services.ingresso_lotes import (
     substituir_lotes_evento,
 )
 from app.services.evento_portaria import garantir_checkin_token, gerar_checkin_token, url_portaria
+from app.utils.evento_cidade import resolver_cidade
 from app.utils.public_errors import LISTA_EVENTOS_CLIENTE
 
 logger = logging.getLogger(__name__)
@@ -55,6 +57,7 @@ async def criar_evento(
         data_inicio=evento_data.data_inicio,
         data_fim=evento_data.data_fim or evento_data.data_inicio,
         local=evento_data.local,
+        cidade=resolver_cidade(evento_data.cidade, evento_data.local),
         imagem_url=evento_data.imagem_url,
         preco_ingresso=evento_data.preco_ingresso,
         categoria=evento_data.categoria.strip() or "Outros",
@@ -107,6 +110,7 @@ async def atualizar_evento(
     evento.data_inicio = body.data_inicio
     evento.data_fim = body.data_fim or body.data_inicio
     evento.local = body.local
+    evento.cidade = resolver_cidade(body.cidade, body.local)
     evento.imagem_url = body.imagem_url
     evento.preco_ingresso = body.preco_ingresso
     evento.categoria = body.categoria.strip() or "Outros"
@@ -158,6 +162,81 @@ async def listar_meus_eventos(
     return _montar_lista_eventos(db, eventos)
 
 
+@router.get("/stats-publicas")
+async def stats_publicas(db: Session = Depends(get_db)):
+    """Números agregados para prova social na home."""
+    from sqlalchemy import func
+
+    from app.models import Ingresso
+
+    eventos = db.query(func.count(Evento.id)).filter(Evento.publicado.is_(True)).scalar() or 0
+    ingressos = (
+        db.query(func.count(Ingresso.id)).filter(Ingresso.status.in_(("pago", "usado"))).scalar() or 0
+    )
+    return {"eventos_publicados": int(eventos), "ingressos_confirmados": int(ingressos)}
+
+
+@router.get("/cidades")
+async def listar_cidades_eventos(
+    db: Session = Depends(get_db),
+    limit: int = Query(80, ge=1, le=200),
+):
+    """Cidades com eventos publicados (para filtro na vitrine)."""
+    from sqlalchemy import func
+
+    rows = (
+        db.query(Evento.cidade, func.count(Evento.id))
+        .filter(Evento.publicado.is_(True), Evento.cidade.isnot(None), Evento.cidade != "")
+        .group_by(Evento.cidade)
+        .order_by(func.count(Evento.id).desc(), Evento.cidade.asc())
+        .limit(limit)
+        .all()
+    )
+    return [{"cidade": r[0], "total": int(r[1])} for r in rows if r[0]]
+
+
+@router.get("", response_model=list[EventoResponse])
+async def listar_eventos(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    q: str | None = Query(None, max_length=100, description="Busca por nome, descrição ou local"),
+    categoria: str | None = Query(None, max_length=80),
+    cidade: str | None = Query(None, max_length=120),
+    db: Session = Depends(get_db),
+):
+    """Lista eventos publicados na vitrine."""
+    try:
+        query = (
+            db.query(Evento)
+            .options(selectinload(Evento.ingresso_lotes))
+            .filter(Evento.publicado.is_(True))
+        )
+        if q:
+            termo = f"%{q.strip()}%"
+            query = query.filter(
+                or_(
+                    Evento.nome.ilike(termo),
+                    Evento.descricao.ilike(termo),
+                    Evento.local.ilike(termo),
+                )
+            )
+        if categoria:
+            query = query.filter(Evento.categoria == categoria.strip())
+        if cidade:
+            query = query.filter(Evento.cidade.ilike(cidade.strip()))
+
+        eventos = (
+            query.order_by(Evento.data_inicio.asc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        return _montar_lista_eventos(db, eventos)
+    except Exception:
+        logger.exception("Erro inesperado ao listar eventos públicos")
+        raise HTTPException(status_code=500, detail=LISTA_EVENTOS_CLIENTE)
+
+
 @router.get("/{slug}", response_model=EventoResponse)
 async def obter_evento(
     slug: str,
@@ -181,28 +260,6 @@ async def obter_evento(
             raise HTTPException(status_code=404, detail="Evento não encontrado")
 
     return montar_evento_response(db, evento)
-
-@router.get("", response_model=list[EventoResponse])
-async def listar_eventos(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    db: Session = Depends(get_db)
-):
-    """Lista todos os eventos com paginação"""
-    try:
-        eventos = (
-            db.query(Evento)
-            .options(selectinload(Evento.ingresso_lotes))
-            .filter(Evento.publicado.is_(True))
-            .order_by(Evento.data_criacao.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
-        return _montar_lista_eventos(db, eventos)
-    except Exception:
-        logger.exception("Erro inesperado ao listar eventos públicos")
-        raise HTTPException(status_code=500, detail=LISTA_EVENTOS_CLIENTE)
 
 
 def _evento_do_organizador(db: Session, evento_id: str, usuario: Usuario) -> Evento:
@@ -311,3 +368,110 @@ async def remover_cupom_evento(
     db.delete(cupom)
     db.commit()
     return {"ok": True}
+
+
+@router.get("/id/{evento_id}/resumo")
+async def resumo_evento_organizador(
+    evento_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Indicadores simples para o painel do organizador."""
+    from sqlalchemy import func
+
+    evento = (
+        db.query(Evento)
+        .options(selectinload(Evento.ingresso_lotes))
+        .filter(Evento.id == evento_id, Evento.organizador_id == usuario_atual.id)
+        .first()
+    )
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+
+    rows = (
+        db.query(Ingresso.status, func.count(Ingresso.id))
+        .filter(Ingresso.evento_id == evento_id)
+        .group_by(Ingresso.status)
+        .all()
+    )
+    por_status = {str(s): int(c) for s, c in rows}
+    pagos = por_status.get("pago", 0) + por_status.get("usado", 0)
+    pendentes = por_status.get("pendente", 0)
+    checkins = por_status.get("usado", 0)
+
+    receita = (
+        db.query(func.coalesce(func.sum(Ingresso.valor), 0))
+        .filter(Ingresso.evento_id == evento_id, Ingresso.status.in_(("pago", "usado")))
+        .scalar()
+    )
+
+    return {
+        "evento_id": evento.id,
+        "publicado": evento.publicado,
+        "ingressos_pagos": pagos,
+        "ingressos_pendentes": pendentes,
+        "checkins_realizados": checkins,
+        "receita_bruta": float(receita or 0),
+        "lotes_ativos": sum(1 for l in evento.ingresso_lotes if l.ativo),
+        "tem_link_portaria": bool(evento.checkin_token),
+    }
+
+
+@router.post("/id/{evento_id}/duplicar", response_model=EventoResponse)
+async def duplicar_evento(
+    evento_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Cria cópia do evento (pausada) com os mesmos lotes."""
+    from app.models import EventoIngressoLote
+
+    evento = (
+        db.query(Evento)
+        .options(selectinload(Evento.ingresso_lotes))
+        .filter(Evento.id == evento_id, Evento.organizador_id == usuario_atual.id)
+        .first()
+    )
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+    slug = _slug_unico(db, f"{evento.nome} copia")
+    copia = Evento(
+        nome=f"{evento.nome} (cópia)",
+        descricao=evento.descricao,
+        data_inicio=evento.data_inicio,
+        data_fim=evento.data_fim,
+        local=evento.local,
+        cidade=evento.cidade,
+        imagem_url=evento.imagem_url,
+        preco_ingresso=evento.preco_ingresso,
+        categoria=evento.categoria,
+        mensagem_confirmacao=evento.mensagem_confirmacao,
+        organizador_id=usuario_atual.id,
+        stripe_account_id=usuario_atual.stripe_account_id,
+        slug=slug,
+        publicado=False,
+        limite_ingressos_por_cpf=evento.limite_ingressos_por_cpf,
+        checkin_token=gerar_checkin_token(),
+    )
+    db.add(copia)
+    db.flush()
+
+    for lote in sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id)):
+        db.add(
+            EventoIngressoLote(
+                evento_id=copia.id,
+                nome=lote.nome,
+                tipo=getattr(lote, "tipo", "padrao") or "padrao",
+                preco=lote.preco,
+                ordem=lote.ordem,
+                quantidade_maxima=lote.quantidade_maxima,
+                ativo=lote.ativo,
+                vendas_inicio=lote.vendas_inicio,
+                vendas_fim=lote.vendas_fim,
+            )
+        )
+
+    db.commit()
+    db.refresh(copia)
+    logger.info("Evento %s duplicado como %s por %s", evento.id, copia.id, usuario_atual.id)
+    return montar_evento_response(db, copia)

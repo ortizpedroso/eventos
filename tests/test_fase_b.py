@@ -116,6 +116,7 @@ class TestLimiteCpf:
             "evento_id": ev["id"],
             "valor_centavos": 5000,
             "participante_cpf": "52998224725",
+            "termo_compra_aceito": True,
         }
         h = {"Authorization": f"Bearer {cli}"}
         r1 = client.post("/api/pagamentos/criar", headers=h, json=body)
@@ -124,6 +125,21 @@ class TestLimiteCpf:
         r2 = client.post("/api/pagamentos/criar", headers=h, json=body)
         assert r2.status_code == 400
         assert "Limite" in r2.json()["detail"]
+
+
+class TestTermoCompra:
+    def test_termo_obrigatorio(self):
+        suffix = uuid.uuid4().hex[:8]
+        org = _registrar_organizador(suffix)
+        cli = _registrar_cliente(suffix)
+        ev = _criar_evento(org)
+        r = client.post(
+            "/api/pagamentos/criar",
+            headers={"Authorization": f"Bearer {cli}"},
+            json={"evento_id": ev["id"], "valor_centavos": 5000},
+        )
+        assert r.status_code == 400
+        assert "termo" in r.json()["detail"].lower()
 
 
 class TestCortesia:
@@ -144,6 +160,7 @@ class TestCortesia:
                 "evento_id": ev["id"],
                 "valor_centavos": 0,
                 "cortesia_responsavel": "Organizador Teste",
+                "termo_compra_aceito": True,
             },
         )
         assert r.status_code == 200
@@ -163,7 +180,7 @@ class TestCortesia:
         r = client.post(
             "/api/pagamentos/criar",
             headers={"Authorization": f"Bearer {cli}"},
-            json={"evento_id": ev["id"], "valor_centavos": 0},
+            json={"evento_id": ev["id"], "valor_centavos": 0, "termo_compra_aceito": True},
         )
         assert r.status_code == 200
         assert r.json().get("cortesia") is True
@@ -183,7 +200,7 @@ class TestCheckin:
             r = client.post(
                 "/api/pagamentos/criar",
                 headers={"Authorization": f"Bearer {cli}"},
-                json={"evento_id": ev["id"], "valor_centavos": 5000},
+                json={"evento_id": ev["id"], "valor_centavos": 5000, "termo_compra_aceito": True},
             )
             assert r.status_code == 200, r.text
             iid = r.json()["ingresso_id"]
@@ -199,3 +216,14 @@ class TestCheckin:
         assert chk.status_code == 200
         assert chk.json()["ok"] is True
         assert chk.json()["ja_utilizado"] is False
+
+    def test_checkin_aceita_url_do_qr(self):
+        from app.services.ingresso_checkin import extrair_ingresso_id
+        from app.services.ingresso_qr import ingresso_qr_scan_url
+
+        iid = str(uuid.uuid4())
+        codigo = codigo_checkin(iid)
+        url = ingresso_qr_scan_url(iid)
+
+        assert extrair_ingresso_id(url) == iid
+        assert extrair_ingresso_id(codigo) == iid

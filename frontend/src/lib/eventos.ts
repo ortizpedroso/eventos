@@ -1,14 +1,5 @@
-export const EVENTO_CATEGORIAS = [
-  "Cultura",
-  "Esportes",
-  "Tecnologia",
-  "Negócios",
-  "Educação",
-  "Música",
-  "Religião",
-  "Saúde",
-  "Outros",
-] as const;
+export { EVENTO_CATEGORIAS } from "@/lib/evento-categorias";
+export type { EventoCategoria } from "@/lib/evento-categorias";
 
 /** Pré-visualização de slug (alinhada à ideia do python-slugify no backend). */
 export function slugFromNome(nome: string): string {

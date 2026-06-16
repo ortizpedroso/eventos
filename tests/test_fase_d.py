@@ -104,6 +104,7 @@ class TestFluxoCompra:
                         "participante_email": "maria@test.com",
                         "participante_cpf": "52998224725",
                         "participante_telefone": "11999999999",
+                        "termo_compra_aceito": True,
                     },
                 )
                 assert r.status_code == 200, r.text

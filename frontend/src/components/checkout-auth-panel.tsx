@@ -26,9 +26,14 @@ type Props = {
   onAuthenticated: () => void;
 };
 
+type PainelAuth = "inicio" | "login";
+
 export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthenticated }: Props) {
+  const [painel, setPainel] = useState<PainelAuth>("inicio");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginSenha, setLoginSenha] = useState("");
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
@@ -80,6 +85,138 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
     }
   }
 
+  async function loginComSenha(e: FormEvent) {
+    e.preventDefault();
+    const em = loginEmail.trim();
+    const senha = loginSenha;
+    if (!em || !senha) {
+      setErro("Informe e-mail e senha.");
+      return;
+    }
+    setBusy(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      await apiFetch<TokenResponse>("/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: em, senha }),
+      });
+      dispatchAuthSync();
+      setSucesso("Login feito! Continue a compra abaixo.");
+      onAuthenticated();
+    } catch (err) {
+      setErro(mapCheckoutError(err instanceof Error ? err.message : "Não foi possível entrar."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (painel === "login") {
+    return (
+      <div className="rounded-lg border border-sky-200 bg-sky-50/90 p-4 text-sm shadow-sm">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="font-semibold text-sky-950">Entrar na sua conta</p>
+            <p className="mt-1 text-xs leading-relaxed text-sky-900/90">
+              Use e-mail e senha. Você permanece neste evento.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setPainel("inicio");
+              setErro(null);
+              setSucesso(null);
+            }}
+            className="shrink-0 text-xs font-medium text-sky-800 underline hover:text-sky-950"
+          >
+            Voltar
+          </button>
+        </div>
+
+        <div className="mt-4 min-h-[44px]">
+          {mostrarOAuth ? (
+            <OAuthLoginButtons
+              mode="login"
+              tipoRegistro="cliente"
+              aceitaComEmail={false}
+              aceitaComWhatsapp={false}
+              telefoneCadastro=""
+              disabled={busy}
+              variant="checkout"
+              onSuccess={onOAuthSuccess}
+              onError={onOAuthError}
+            />
+          ) : (
+            <div className="h-11 w-full max-w-[400px] rounded-md bg-sky-100/60" aria-hidden />
+          )}
+        </div>
+
+        <form onSubmit={(e) => void loginComSenha(e)} className="mt-4 space-y-3 border-t border-sky-200/80 pt-4">
+          <div className="grid gap-2">
+            <label className="text-xs font-medium text-sky-950" htmlFor="checkout_login_email">
+              E-mail
+            </label>
+            <input
+              id="checkout_login_email"
+              type="email"
+              placeholder="seu@email.com"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              autoComplete="email"
+              className="rounded-md border border-sky-200 bg-white px-2.5 py-2 text-sm"
+            />
+            <label className="text-xs font-medium text-sky-950" htmlFor="checkout_login_senha">
+              Senha
+            </label>
+            <input
+              id="checkout_login_senha"
+              type="password"
+              placeholder="••••••••"
+              value={loginSenha}
+              onChange={(e) => setLoginSenha(e.target.value)}
+              autoComplete="current-password"
+              className="rounded-md border border-sky-200 bg-white px-2.5 py-2 text-sm"
+            />
+            <Link href="/auth?mode=forgot" className="text-xs font-medium text-sky-900 underline">
+              Esqueci minha senha
+            </Link>
+          </div>
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-md bg-sky-800 px-3 py-2.5 text-sm font-medium text-white hover:bg-sky-900 disabled:opacity-60"
+          >
+            {busy ? "Entrando…" : "Entrar"}
+          </button>
+        </form>
+
+        <p className="mt-3 text-center text-xs text-sky-900">
+          Sem conta?{" "}
+          <Link href={authRegisterHref} className="font-semibold underline">
+            Cadastro completo
+          </Link>
+          {" · "}
+          <Link href={authLoginHref} className="font-semibold underline">
+            Abrir login em página inteira
+          </Link>
+        </p>
+
+        {erro ? (
+          <p className="mt-3 text-xs text-red-700" role="alert">
+            {erro}
+          </p>
+        ) : null}
+        {sucesso ? (
+          <p className="mt-3 text-xs text-emerald-800" role="status">
+            {sucesso}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/90 p-4 text-sm shadow-sm">
       <p className="font-semibold text-sky-950">Para comprar, identifique-se</p>
@@ -108,23 +245,35 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
       <form onSubmit={(e) => void compraRapida(e)} className="mt-4 space-y-3 border-t border-sky-200/80 pt-4">
         <p className="text-xs font-medium text-sky-950">Compra rápida (sem senha agora)</p>
         <div className="grid gap-2 sm:grid-cols-2">
-          <input
-            type="text"
-            placeholder="Seu nome"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            autoComplete="name"
-            className="rounded-md border border-sky-200 bg-white px-2.5 py-2 text-sm"
-            maxLength={200}
-          />
-          <input
-            type="email"
-            placeholder="Seu e-mail"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            className="rounded-md border border-sky-200 bg-white px-2.5 py-2 text-sm"
-          />
+          <div className="grid gap-1">
+            <label className="text-xs font-medium text-sky-950" htmlFor="checkout_nome">
+              Nome
+            </label>
+            <input
+              id="checkout_nome"
+              type="text"
+              placeholder="Seu nome"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              autoComplete="name"
+              className="rounded-md border border-sky-200 bg-white px-2.5 py-2 text-sm"
+              maxLength={200}
+            />
+          </div>
+          <div className="grid gap-1">
+            <label className="text-xs font-medium text-sky-950" htmlFor="checkout_email">
+              E-mail
+            </label>
+            <input
+              id="checkout_email"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              className="rounded-md border border-sky-200 bg-white px-2.5 py-2 text-sm"
+            />
+          </div>
         </div>
         <button
           type="submit"
@@ -141,9 +290,17 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
 
       <p className="mt-3 text-center text-xs text-sky-900">
         Já tem conta?{" "}
-        <Link href={authLoginHref} className="font-semibold underline">
+        <button
+          type="button"
+          onClick={() => {
+            setPainel("login");
+            setErro(null);
+            setSucesso(null);
+          }}
+          className="font-semibold underline hover:text-sky-950"
+        >
           Entrar
-        </Link>
+        </button>
         {" · "}
         <Link href={authRegisterHref} className="font-semibold underline">
           Cadastro completo
