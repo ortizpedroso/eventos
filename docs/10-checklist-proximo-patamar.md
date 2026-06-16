@@ -36,6 +36,62 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 
 ---
 
+# ROTEIRO EXECUTIVO — O que falta (~42 itens)
+
+*Versão condensada para execução. Detalhamento nas Partes 2–3 abaixo.*
+
+## Patamar 2 — Go-live (urgente)
+
+- [ ] Merge [PR #3](https://github.com/ortizpedroso/eventos/pull/3), migração VPS, webhook Stripe live, SMTP + SPF/DKIM
+- [ ] Connect ativo em produção (`STRIPE_SKIP_CONNECT_ON_REGISTER=false`)
+- [ ] Conciliação Connect + comprovante de repasse + NFSe
+- [ ] Monitoramento e E2E com Stripe real (`E2E_STRIPE=1`)
+
+## Patamar 3 — Top 10 (ordem sugerida)
+
+| # | Item |
+|---|------|
+| 1 | Temporizador de reserva no checkout |
+| 2 | Busca manual na portaria |
+| 3 | Lista de interesse + lista de espera |
+| 4 | Parcelamento no cartão |
+| 5 | Múltiplos operadores com permissões |
+| 6 | Página pública do organizador |
+| 7 | Formulário customizável na inscrição |
+| 8 | Importação CSV |
+| 9 | Certificados com validação |
+| 10 | PWA modo equipe *(mobile só para equipe)* |
+
+## Patamar 4 — Diferenciação (migração Sympla)
+
+- [ ] Simulador líquido no wizard do evento
+- [ ] Selo organizador verificado
+- [ ] Assistente de migração Sympla/Even3
+- [ ] Webhook por venda + CRM leve
+- [ ] Apple/Google Wallet
+- [ ] Painel ao vivo na entrada
+- [ ] **Garantia EventosBR** (reembolso como marca)
+
+## Roteiro em sprints
+
+| Sprint | Foco |
+|--------|------|
+| **0** | Go-live (deploy, SMTP, webhook, Connect) |
+| **1** | Quick wins (timer reserva, busca portaria, duplicar evento UI, simulador no wizard) |
+| **2** | Receita (lista espera/interesse, parcelamento, página organizador) |
+| **3** | Equipe + migração (operadores, PWA, importação Sympla, selo) |
+| **4** | Profundidade (formulário custom, certificados, Wallet, conciliação) |
+
+## Mobile (estratégia aprovada)
+
+| Papel | Canal |
+|-------|--------|
+| **Cliente** | Web mobile — sem app |
+| **Organizador** | Painel web — sem app no início |
+| **Equipe** | Link portaria + PWA → app nativo só se precisar |
+
+---
+
 # PARTE 1 — O QUE JÁ TEMOS ✅
 
 ## 1. Comprador / participante
@@ -381,3 +437,4 @@ Considere que subiu de patamar quando:
 ## Histórico
 
 - `10-checklist-proximo-patamar.md` — Checklist mestre criado (jun/2026)
+- Roteiro executivo (Patamares 2–4 + sprints 0–4 + mobile) registrado no topo do doc (jun/2026)
