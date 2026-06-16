@@ -5,8 +5,8 @@ Guia para subir o EventosBR em um **VPS Hostinger** com domínio próprio. O que
 ## Arquitetura no VPS
 
 ```
-Internet → Caddy (:443) → web (Next.js :3000)
-                        → api (FastAPI :8000) em /api/* (webhook Stripe)
+Internet → Caddy (:443) → /api/*, /health, /ready → api (FastAPI :8000)
+                        → resto → web (Next.js :3000)
          → db (Postgres, rede interna)
          → redis (rede interna)
 ```
@@ -61,22 +61,26 @@ Ficheiros principais:
    - `A` `@` → IP do VPS
    - `A` `www` → IP do VPS (ou `CNAME` para `@`)
 2. **E-mail** — registos **SPF**, **DKIM** (painel Hostinger → Email → DNS).
-3. **Stripe live**
-   - Chaves `sk_live_` / `pk_live_` no `.env`
-   - Webhook: `https://SEU_DOMINIO/api/webhooks/stripe` → eventos `payment_intent.succeeded`, `payment_intent.payment_failed`
-   - Copiar `whsec` de produção para `STRIPE_WEBHOOK_SECRET`
+3. **Asaas produção** (provedor principal — ver `docs/11-go-live-asaas.md`)
+   - `PAYMENT_PROVIDER=asaas`
+   - `ASAAS_API_KEY` com chave `$aact_prod_...`
+   - `ASAAS_PLATFORM_WALLET_ID` da conta EventosBR
+   - `ASAAS_WEBHOOK_TOKEN` — token forte no `.env`
+   - Webhook: `https://SEU_DOMINIO/api/webhooks/asaas`
+   - Eventos: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, reembolsos/atrasos
 4. Ajustar `.env`:
    - `ENVIRONMENT=production`, `DEBUG=False`
    - `CORS_ORIGINS=https://seudominio.com.br,https://www.seudominio.com.br`
    - `FRONTEND_PUBLIC_URL` / `NEXT_PUBLIC_API_URL` com HTTPS
-   - `STRIPE_SKIP_CONNECT_ON_REGISTER=false` (após termos Connect)
+   - `STRIPE_DISABLED=true` (se não usar Stripe em paralelo)
 5. Recriar containers:
    ```bash
    ./scripts/deploy-vps.sh
    ```
 6. **Smoke pós-deploy**
-   - `curl -fsS https://seudominio.com.br/ready` (via Caddy → API; se expuser health no proxy, use rota interna)
-   - Registar organizador → criar evento → compra teste com cartão **live** em valor baixo ou manter test até validar
+   - `./scripts/verify-production.sh`
+   - `curl -fsS https://seudominio.com.br/ready`
+   - Organizador configura wallet em Financeiro → compra teste PIX/cartão
    - Painel `/admin/dashboard` → aba **Produção** verde
 7. **Firewall** — só portas 22 (SSH restrito), 80, 443 abertas.
 

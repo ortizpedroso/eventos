@@ -446,7 +446,7 @@ export function AdminDashboardClient() {
               <li
                 key={k}
                 className={`flex justify-between rounded-md border px-3 py-2 text-sm ${
-                  v === "ok" || v === "desativado" || v === "desativado_stripe" || v === "dev_sem_assinatura"
+                  v === "ok" || v === "desativado" || v === "desativado_stripe" || v === "desativado_asaas" || v === "dev_sem_assinatura" || v === "dev_sem_token"
                     ? "border-emerald-100 bg-emerald-50/50"
                     : "border-amber-100 bg-amber-50/50"
                 }`}

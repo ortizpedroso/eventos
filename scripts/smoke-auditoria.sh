@@ -13,7 +13,7 @@ python3 -m pytest tests/ -q
 echo "==> 2/4 alembic current (se Postgres disponível)"
 if [[ "${DATABASE_URL}" == postgresql* ]]; then
   alembic upgrade head
-  alembic current | grep -q "20260616_000019" && echo "Migração 20260616_000019 OK"
+  alembic current | grep -q "20260617_000021" && echo "Migração 20260617_000021 OK"
 else
   echo "Pule migração Postgres (DATABASE_URL não é postgresql)"
 fi

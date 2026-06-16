@@ -169,3 +169,8 @@ def rate_limit_portaria_buscar(request: Request, evento_id: str = "", token: str
 
 def rate_limit_checkin_buscar(request: Request) -> None:
     enforce_rate_limit(request, "checkin_buscar")
+
+
+def client_ip_from_request(request: Request) -> str:
+    """IP do cliente para pagamentos com cartão (Asaas exige remoteIp)."""
+    return _client_ip(request)

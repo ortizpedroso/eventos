@@ -98,6 +98,17 @@ def iniciar_cobranca_asaas(
     if not evento:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
 
+    if not (evento.asaas_wallet_id or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Organizador ainda não configurou conta Asaas para repasses.",
+        )
+    if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
+        raise HTTPException(
+            status_code=503,
+            detail="Pagamentos temporariamente indisponíveis. Contate o suporte.",
+        )
+
     pay_id = (ingresso.asaas_payment_id or "").strip()
     if pay_id:
         try:
@@ -245,10 +256,16 @@ def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
 
 
 def status_cobranca_asaas(db: Session, ingresso_id: str, usuario: Usuario) -> dict:
-    ingresso = _validar_ingresso_pendente(
-        db.query(Ingresso).filter(Ingresso.id == ingresso_id).first(),
-        usuario,
-    )
+    ingresso = db.query(Ingresso).filter(Ingresso.id == ingresso_id).first()
+    if not ingresso:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+    if ingresso.usuario_id != usuario.id:
+        raise HTTPException(status_code=403, detail="Sem permissão")
+    if ingresso.status == "pago":
+        return {"status": "CONFIRMED", "pago": True, "payment_id": ingresso.asaas_payment_id}
+    if ingresso.status != "pendente":
+        raise HTTPException(status_code=400, detail="Ingresso não está aguardando pagamento.")
+
     pay_id = (ingresso.asaas_payment_id or "").strip()
     if not pay_id:
         return {"status": "SEM_COBRANCA", "pago": False}

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import stripe
 from email_validator import EmailNotValidError, validate_email
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
@@ -393,23 +393,7 @@ async def criar_pagamento(
         logger.warning("Pagamentos desativados: ingresso pago sem gateway evento %s", evento.id)
         return _ingressos_gratis("disabled")
 
-    if settings.use_asaas:
-        return criar_resposta_asaas_apos_criar(
-            novos=novos,
-            valor_centavos=valor_centavos,
-            reserva_ate=reserva_ate,
-            quantidade=quantidade,
-        )
-
-    if not usuario_atual.stripe_customer_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Cliente Stripe não encontrado. Refaça o cadastro ou contate o suporte.",
-        )
-
-    # ── Passo 1: travar o lote e criar a reserva ────────────────────────────
-    # SELECT FOR UPDATE garante que apenas uma transação por vez verifica e
-    # decrementa a capacidade. O COMMIT libera o cadeado antes da chamada Stripe.
+    # ── Reserva de vaga (Asaas e Stripe) ───────────────────────────────────
     try:
         reservar_vaga_lote(db, lote.id, quantidade)
     except ValueError as e:
@@ -428,6 +412,7 @@ async def criar_pagamento(
             participante_cpf=p_cpf,
             participante_telefone=p_tel,
             cupom_id=cupom_id,
+            cortesia_responsavel=resp_cortesia if eh_cortesia else None,
             valor=unit_reais,
             stripe_payment_intent_id=None,
             status="pendente",
@@ -440,6 +425,33 @@ async def criar_pagamento(
     db.commit()
     for ing in novos:
         db.refresh(ing)
+
+    if settings.use_asaas:
+        if not (evento.asaas_wallet_id or "").strip():
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Este evento ainda não tem conta de repasse Asaas. "
+                    "O organizador deve configurar o walletId em Financeiro antes de vender ingressos."
+                ),
+            )
+        if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
+            raise HTTPException(
+                status_code=503,
+                detail="Pagamentos temporariamente indisponíveis. Contate o suporte.",
+            )
+        return criar_resposta_asaas_apos_criar(
+            novos=novos,
+            valor_centavos=valor_centavos,
+            reserva_ate=reserva_ate,
+            quantidade=quantidade,
+        )
+
+    if not usuario_atual.stripe_customer_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Cliente Stripe não encontrado. Refaça o cadastro ou contate o suporte.",
+        )
 
     primeiro = novos[0]
 
@@ -750,6 +762,7 @@ async def cancelar_ingresso(
 
 @router.post("/asaas/cobranca")
 async def asaas_iniciar_cobranca(
+    request: Request,
     body: AsaasCobrancaRequest,
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
@@ -758,6 +771,10 @@ async def asaas_iniciar_cobranca(
     """Gera cobrança Asaas (PIX, cartão ou fatura) para ingresso reservado."""
     if not settings.use_asaas:
         raise HTTPException(status_code=400, detail="Provedor Asaas não está ativo.")
+    from app.deps.rate_limit import client_ip_from_request
+
+    if body.metodo == "card" and not body.remote_ip:
+        body = body.model_copy(update={"remote_ip": client_ip_from_request(request)})
     return iniciar_cobranca_asaas(db, usuario_atual, body)
 
 
