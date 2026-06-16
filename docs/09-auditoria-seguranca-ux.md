@@ -189,4 +189,4 @@ Itens do [07 — Fase D](./07-fase-d-roadmap.md), fora do escopo da auditoria:
 1. `6a0034a` — fix(ops): migração Postgres, SMTP unificado, CSP nonce e smoke
 2. `a179662` — docs: atualiza checklist auditoria (PR #2 mergeado, PR #3 pendente)
 3. `4c83983` — fix(auth): corrige hidratação da página `/auth` e testes E2E
-4. `dd8f7a0` — fix(checkin): bloqueia duplicata com `ok: false`; corrige `TestRetomarPagamento`; atualiza checklist
+4. `afb71e9` — fix(checkin): bloqueia duplicata com `ok: false`; corrige `TestRetomarPagamento`; atualiza checklist
