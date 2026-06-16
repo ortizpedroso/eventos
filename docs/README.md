@@ -14,6 +14,7 @@ Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + Str
 | [06 — Configuração e operação](./06-configuracao-operacao.md) | Variáveis de ambiente, Docker, Alembic, testes |
 | [07 — Fase D (roadmap)](./07-fase-d-roadmap.md) | Produção, fiscal, E2E e admin ampliado |
 | [08 — Deploy Hostinger (VPS)](./08-deploy-hostinger.md) | Docker prod, Caddy, DNS, go-live |
+| [09 — Auditoria segurança e UX](./09-auditoria-seguranca-ux.md) | Checklist do que foi melhorado e o que falta (jun/2026) |
 
 ## Documentação interativa da API
 

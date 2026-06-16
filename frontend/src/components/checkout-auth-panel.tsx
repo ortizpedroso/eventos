@@ -76,7 +76,7 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
         body: JSON.stringify({ nome: n, email: em }),
       });
       dispatchAuthSync();
-      setSucesso("Pronto! Sua conta foi criada — continue para o pagamento.");
+      setSucesso("Pronto! Enviamos um e-mail para confirmar seu endereço. Você já pode continuar o pagamento.");
       onAuthenticated();
     } catch (err) {
       setErro(mapCheckoutError(err instanceof Error ? err.message : "Não foi possível continuar."));

@@ -155,7 +155,13 @@ export function EditarEventoClient({ slug }: Props) {
 
   if (loading) {
     return (
-      <div className="mx-auto mt-10 max-w-2xl py-8 text-sm text-zinc-600">Carregando…</div>
+      <div className="mx-auto mt-10 max-w-2xl py-8">
+        <div className="animate-pulse space-y-4" role="status" aria-label="Carregando evento">
+          <div className="h-4 w-48 rounded bg-zinc-200" />
+          <div className="h-8 w-2/3 rounded bg-zinc-200" />
+          <div className="h-40 rounded-xl bg-zinc-100" />
+        </div>
+      </div>
     );
   }
 
@@ -200,6 +206,17 @@ export function EditarEventoClient({ slug }: Props) {
 
   return (
     <div className="mx-auto mt-10 w-full max-w-2xl">
+      <nav className="mb-4 text-sm text-zinc-600" aria-label="Navegação">
+        <Link href="/organizador/eventos" className="hover:text-emerald-800 hover:underline">
+          Painel
+        </Link>
+        <span className="mx-1.5 text-zinc-400">/</span>
+        <Link href="/organizador/eventos" className="hover:text-emerald-800 hover:underline">
+          Meus eventos
+        </Link>
+        <span className="mx-1.5 text-zinc-400">/</span>
+        <span className="text-zinc-900">Editar</span>
+      </nav>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">Editar evento</h1>

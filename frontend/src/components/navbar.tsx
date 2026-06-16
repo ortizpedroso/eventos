@@ -8,6 +8,7 @@ import { NavbarCategoriasMenu } from "@/components/navbar-categorias-menu";
 import { fetchSession, logoutSession } from "@/lib/api";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
+import { contarPagamentosPendentes } from "@/lib/pagamentos-pendentes";
 
 function UserIcon({ className }: { className?: string }) {
   return (
@@ -52,6 +53,7 @@ export function Navbar() {
   const [userTipo, setUserTipo] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [pendentesCount, setPendentesCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,6 +62,12 @@ export function Navbar() {
       setLoggedIn(Boolean(u));
       setUserNome(u?.nome ?? null);
       setUserTipo(u?.tipo ?? null);
+      if (u) {
+        const n = await contarPagamentosPendentes();
+        setPendentesCount(n);
+      } else {
+        setPendentesCount(0);
+      }
     }
     const onSync = () => void syncSession();
     void syncSession();
@@ -122,6 +130,33 @@ export function Navbar() {
       : "shrink-0 transition-colors hover:text-zinc-900";
   }
 
+  function pagamentosLabel() {
+    if (pendentesCount <= 0) return "Pagamentos";
+    return `Pagamentos (${pendentesCount})`;
+  }
+
+  function PagamentosNavLink({
+    href,
+    className,
+    onClick,
+  }: {
+    href: string;
+    className: string;
+    onClick?: () => void;
+  }) {
+    return (
+      <Link href={href} className={`relative inline-flex items-center gap-1.5 ${className}`} onClick={onClick}>
+        {pagamentosLabel()}
+        {pendentesCount > 0 ? (
+          <span
+            className="absolute -right-2 -top-1 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
+            aria-label={`${pendentesCount} pagamento(s) pendente(s)`}
+          />
+        ) : null}
+      </Link>
+    );
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
       {/* flex-col: menu móvel em linha própria; linha de cima sem flex-wrap para o ícone não “saltar” de linha */}
@@ -145,9 +180,7 @@ export function Navbar() {
                   Eventos
                 </Link>
                 <NavbarCategoriasMenu compact />
-                <Link href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")}>
-                  Pagamentos
-                </Link>
+                <PagamentosNavLink href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")} />
                 <Link href="/conta/ingressos" className={navLinkClass("/conta/ingressos")}>
                   Ingressos
                 </Link>
@@ -156,6 +189,10 @@ export function Navbar() {
               <>
                 <Link href="/organizador/eventos" className={navLinkClass("/organizador")}>
                   Painel
+                </Link>
+                <PagamentosNavLink href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")} />
+                <Link href="/conta/ingressos" className={navLinkClass("/conta/ingressos")}>
+                  Ingressos
                 </Link>
                 <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
                   Funcionalidades
@@ -303,15 +340,28 @@ export function Navbar() {
                   Eventos
                 </Link>
                 <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
-                <Link href="/conta/pagamentos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Pagamentos
-                </Link>
+                <PagamentosNavLink
+                  href="/conta/pagamentos"
+                  className={mobileLink}
+                  onClick={() => setMobileNavOpen(false)}
+                />
                 <Link href="/conta/ingressos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Ingressos
                 </Link>
               </div>
             ) : isOrganizador ? (
               <div className="flex flex-col gap-0.5">
+                <Link href="/organizador/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Painel — Meus eventos
+                </Link>
+                <PagamentosNavLink
+                  href="/conta/pagamentos"
+                  className={mobileLink}
+                  onClick={() => setMobileNavOpen(false)}
+                />
+                <Link href="/conta/ingressos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Ingressos
+                </Link>
                 <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Funcionalidades
                 </Link>
@@ -324,9 +374,6 @@ export function Navbar() {
                 <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
                 <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Sobre
-                </Link>
-                <Link href="/organizador/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Painel — Meus eventos
                 </Link>
               </div>
             ) : (

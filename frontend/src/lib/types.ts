@@ -51,6 +51,7 @@ export type Usuario = {
   data_criacao: string;
   /** False em contas de compra rápida ou login social sem senha local. */
   tem_senha?: boolean;
+  email_verificado?: boolean;
   aceita_comunicacao_email?: boolean;
   aceita_comunicacao_whatsapp?: boolean;
   telefone?: string | null;

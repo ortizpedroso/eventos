@@ -369,6 +369,7 @@ class TestCompraRapidaPerfil:
         me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert me.status_code == 200
         assert me.json()["tem_senha"] is False
+        assert me.json()["email_verificado"] is False
 
     def test_compra_rapida_define_primeira_senha_sem_senha_atual(self):
         r = client.post(
@@ -395,6 +396,30 @@ class TestCompraRapidaPerfil:
             json={"email": "davi.perfil@test.com", "senha": "senha12345"},
         )
         assert login.status_code == 200, login.text
+
+    def test_verificar_email_com_token(self):
+        with patch("app.services.email_verificacao.enviar_email_verificacao", return_value=True):
+            r = client.post(
+                "/api/auth/compra-rapida",
+                json={"nome": "Verify", "email": "verify@test.com"},
+            )
+            assert r.status_code == 200, r.text
+        from app.models import Usuario
+
+        db = TestingSessionLocal()
+        try:
+            u = db.query(Usuario).filter(Usuario.email == "verify@test.com").first()
+            assert u is not None
+            assert u.email_verificado is False
+            token = u.email_verificacao_token
+            assert token
+        finally:
+            db.close()
+
+        ok = client.post("/api/auth/verificar-email", json={"token": token})
+        assert ok.status_code == 200, ok.text
+        me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {r.json()['access_token']}"})
+        assert me.json()["email_verificado"] is True
 
 
 class TestRetomarPagamento:

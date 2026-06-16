@@ -105,6 +105,7 @@ def obter_ou_criar_usuario_oauth(
         auth_provider=provider,
         auth_provider_id=provider_id,
         tipo=tipo_norm,
+        email_verificado=True,
         stripe_customer_id=stripe_customer_id,
         stripe_account_id=stripe_account_id,
         aceita_comunicacao_email=aceita_comunicacao_email,

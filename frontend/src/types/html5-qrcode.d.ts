@@ -1,4 +1,4 @@
-/** html5-qrcode carregado via CDN em /portaria */
+/** Tipos do pacote html5-qrcode (import dinâmico no check-in). */
 declare class Html5Qrcode {
   constructor(elementId: string, config?: object);
   start(

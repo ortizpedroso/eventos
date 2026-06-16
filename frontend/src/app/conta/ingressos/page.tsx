@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { ContaNav } from "@/components/conta-nav";
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
+import { ListaSkeleton } from "@/components/lista-skeleton";
 import { apiFetch } from "@/lib/api";
 import { classeBadgeStatus, labelStatusIngresso } from "@/lib/ingresso-status";
 import type { IngressoListItem } from "@/lib/types";
@@ -89,9 +90,7 @@ export default function MeusIngressosPage() {
         </div>
       ) : null}
 
-      {items === null && !error ? (
-        <p className="text-sm text-zinc-600">Carregando ingressos…</p>
-      ) : null}
+      {items === null && !error ? <ListaSkeleton linhas={3} /> : null}
 
       {items && !items.length ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
@@ -158,6 +157,14 @@ export default function MeusIngressosPage() {
                   reservadoAte={it.reservado_ate}
                   status={it.status}
                 />
+                {(it.status === "pago" || it.status === "usado") && (
+                  <Link
+                    href={`/conta/ingressos/${it.id}`}
+                    className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-800"
+                  >
+                    Ver QR Code
+                  </Link>
+                )}
                 <Link
                   href={`/conta/ingressos/${it.id}`}
                   className="text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"

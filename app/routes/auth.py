@@ -20,6 +20,7 @@ from app.schemas.usuario import (
     Token,
     SolicitarRecuperacaoSenhaRequest,
     RedefinirSenhaRequest,
+    VerificarEmailRequest,
 )
 from app.deps.rate_limit import rate_limit_login, rate_limit_oauth, rate_limit_register
 from app.services.oauth_verify import (
@@ -38,6 +39,12 @@ from app.services.auth import (
 )
 from app.services.usuario_stripe import criar_stripe_para_novo_usuario
 from app.services.password_reset_email import enviar_email_recuperacao_senha
+from app.services.email_verificacao import (
+    confirmar_email_por_token,
+    disparar_verificacao_compra_rapida,
+    enviar_email_verificacao,
+    preparar_verificacao_email,
+)
 from app.utils.auth_cookie import AUTH_COOKIE_NAME, clear_auth_cookie, set_auth_cookie
 from app.utils.public_errors import STRIPE_CLIENTE
 from config.settings import settings
@@ -217,6 +224,7 @@ async def registrar(
         nome=usuario_data.nome,
         senha_hash=hash_password(usuario_data.senha),
         tipo=usuario_data.tipo,
+        email_verificado=True,
         stripe_customer_id=stripe_customer_id,
         stripe_account_id=stripe_account_id,
         aceita_comunicacao_email=aceita_email,
@@ -282,6 +290,8 @@ async def compra_rapida(
             existente.nome = nome
             db.commit()
             db.refresh(existente)
+        if not existente.email_verificado and not existente.senha_hash:
+            disparar_verificacao_compra_rapida(db, existente)
         logger.info("Compra rápida: sessão reutilizada para %s", email)
         return _token_response(existente, response)
 
@@ -305,12 +315,14 @@ async def compra_rapida(
         senha_hash=None,
         tipo="cliente",
         auth_provider="email",
+        email_verificado=False,
         stripe_customer_id=stripe_customer_id,
     )
     db.add(novo_usuario)
     db.commit()
     db.refresh(novo_usuario)
 
+    disparar_verificacao_compra_rapida(db, novo_usuario)
     logger.info("Compra rápida: usuário criado %s", novo_usuario.id)
     return _token_response(novo_usuario, response)
 
@@ -425,6 +437,24 @@ async def redefinir_senha(
     db.commit()
 
     return {"message": "Senha atualizada com sucesso. Faça login com a nova senha."}
+
+
+@router.post("/verificar-email")
+async def verificar_email(
+    body: VerificarEmailRequest,
+    db: Session = Depends(get_db),
+):
+    """Confirma propriedade do e-mail via link enviado na compra rápida."""
+    usuario = confirmar_email_por_token(db, body.token)
+    if not usuario:
+        raise HTTPException(
+            status_code=400,
+            detail="Link inválido ou expirado. Solicite um novo e-mail de confirmação.",
+        )
+    return {
+        "message": "E-mail confirmado com sucesso!",
+        "email_verificado": True,
+    }
 
 
 def _issue_token(usuario: Usuario) -> str:
@@ -548,6 +578,27 @@ async def get_usuario_atual(
         raise HTTPException(status_code=401, detail="Sessão expirada. Faça login novamente.")
 
     return usuario
+
+
+@router.post("/reenviar-verificacao-email")
+async def reenviar_verificacao_email(
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Reenvia link de confirmação para a conta autenticada."""
+    if usuario.email_verificado:
+        return {"message": "Seu e-mail já está confirmado."}
+    token = preparar_verificacao_email(usuario)
+    db.commit()
+    base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
+    link = f"{base}/auth/verificar-email?token={token}"
+    enviado = enviar_email_verificacao(destino=usuario.email, nome=usuario.nome, link=link)
+    if not enviado and settings.ENVIRONMENT == "development":
+        return {
+            "message": "SMTP não configurado. Em desenvolvimento, use o link no log da API.",
+            "dev_link": link,
+        }
+    return {"message": "Enviamos um novo link de confirmação para o seu e-mail."}
 
 
 @router.post("/vincular-google", response_model=UsuarioResponse)

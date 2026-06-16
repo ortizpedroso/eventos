@@ -3,6 +3,19 @@
 import { FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { feedbackCheckinSucesso } from "@/lib/checkin-feedback";
+
+type Html5QrcodeModule = typeof import("html5-qrcode");
+type Html5QrcodeInstance = InstanceType<Html5QrcodeModule["Html5Qrcode"]>;
+
+let html5QrcodeModule: Html5QrcodeModule | null = null;
+
+async function importHtml5Qrcode(): Promise<Html5QrcodeModule> {
+  if (!html5QrcodeModule) {
+    html5QrcodeModule = await import("html5-qrcode");
+  }
+  return html5QrcodeModule;
+}
 
 export type CheckinResult = {
   ok: boolean;
@@ -24,48 +37,19 @@ type Props = {
   tituloEvento?: string;
 };
 
-function loadHtml5Qrcode(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof Html5Qrcode !== "undefined") {
-      resolve();
-      return;
-    }
-    const id = "html5-qrcode-cdn";
-    if (document.getElementById(id)) {
-      const t = setInterval(() => {
-        if (typeof Html5Qrcode !== "undefined") {
-          clearInterval(t);
-          resolve();
-        }
-      }, 50);
-      setTimeout(() => {
-        clearInterval(t);
-        reject(new Error("Timeout ao carregar leitor QR"));
-      }, 15000);
-      return;
-    }
-    const el = document.createElement("script");
-    el.id = id;
-    el.src = "https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";
-    el.async = true;
-    el.onload = () => resolve();
-    el.onerror = () => reject(new Error("Falha ao carregar leitor de QR"));
-    document.head.appendChild(el);
-  });
+function loadHtml5Qrcode() {
+  return importHtml5Qrcode();
 }
 
 async function executarScanner(
-  scanner: Html5Qrcode | null | undefined,
+  scanner: Html5QrcodeInstance | null | undefined,
   metodo: "stop" | "clear",
 ): Promise<void> {
   if (!scanner) return;
   const fn = metodo === "stop" ? scanner.stop?.bind(scanner) : scanner.clear?.bind(scanner);
   if (!fn) return;
   try {
-    const resultado = fn();
-    if (resultado && typeof (resultado as Promise<void>).then === "function") {
-      await resultado;
-    }
+    await Promise.resolve(fn());
   } catch {
     /* scanner já parado ou nunca iniciou câmera */
   }
@@ -152,7 +136,7 @@ function garantirElementoLeituraArquivo(): string {
 }
 
 async function decodificarQrDeArquivo(file: File): Promise<string> {
-  await loadHtml5Qrcode();
+  const { Html5Qrcode } = await loadHtml5Qrcode();
   const preparado = await normalizarImagemParaJpeg(file);
   const elementId = garantirElementoLeituraArquivo();
   const scanner = new Html5Qrcode(elementId);
@@ -193,7 +177,7 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
   const [cameraReady, setCameraReady] = useState(false);
   const [fotoBusy, setFotoBusy] = useState(false);
   const [modoFesta, setModoFesta] = useState(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<Html5QrcodeInstance | null>(null);
   const cooldownRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fotoInputRef = useRef<HTMLInputElement>(null);
@@ -242,6 +226,9 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
           });
         }
         setLast(r);
+        if (r.ok) {
+          feedbackCheckinSucesso();
+        }
         setCodigo("");
         inputRef.current?.focus();
       } catch (err) {
@@ -281,7 +268,7 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
 
     void (async () => {
       try {
-        await loadHtml5Qrcode();
+        const { Html5Qrcode } = await loadHtml5Qrcode();
         if (cancelled) return;
         const scanner = new Html5Qrcode(scannerDivId);
         scannerRef.current = scanner;
@@ -365,6 +352,12 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
           Leia o QR do ingresso ou cole o código <strong>EBR1:…</strong>. Cada ingresso só entra uma
           vez.
         </p>
+        {modo === "organizador" && !modoFesta ? (
+          <p className="mt-2 text-xs font-medium text-emerald-800">
+            No dia do evento, ative o <strong>Modo festa</strong> para tela cheia e leitura mais rápida na
+            portaria.
+          </p>
+        ) : null}
           </div>
           <label className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm ${modoFesta ? "border-zinc-700 bg-zinc-900" : "border-zinc-200 bg-white"}`}>
             <input

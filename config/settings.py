@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     ENVIRONMENT: str = "development"
 
+    # Portaria: rotação automática do token (dias)
+    PORTARIA_TOKEN_MAX_AGE_DAYS: int = 90
+    PORTARIA_TOKEN_ROTATE_BEFORE_EVENT_DAYS: int = 7
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

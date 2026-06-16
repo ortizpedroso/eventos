@@ -9,6 +9,7 @@ type LinkPortaria = {
   evento_nome: string;
   token: string;
   url: string;
+  token_em?: string | null;
 };
 
 function hostEhLocal(hostname: string): boolean {
@@ -131,6 +132,7 @@ export function EventoLinkPortaria({ eventoId }: { eventoId: string }) {
       <p className="font-semibold text-sky-900">Link da portaria (colaboradores)</p>
       <p className="mt-1 text-sky-900/90">
         Envie para quem valida na entrada. Funciona sem login — câmera, leitor USB ou digitação.
+        O link é renovado automaticamente perto da data do evento ou após 90 dias.
       </p>
       {erro ? <p className="mt-2 text-red-800">{erro}</p> : null}
       {link ? (

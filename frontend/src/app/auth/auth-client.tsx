@@ -33,6 +33,7 @@ export default function AuthClient() {
           : "login";
   const fluxoOrganizador = searchParams.get("fluxo") === "organizador";
   const precisaOrganizador = searchParams.get("precisa") === "organizador";
+  const sessaoExpirada = searchParams.get("expirado") === "1";
 
   const defaultTipoRegistro = useMemo(() => {
     if (searchParams.get("tipo") === "organizador") return "organizador";
@@ -228,6 +229,15 @@ export default function AuthClient() {
 
   return (
     <div className="mx-auto mt-10 w-full max-w-md">
+      {sessaoExpirada ? (
+        <div
+          className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          role="alert"
+        >
+          <p className="font-semibold">Sua sessão expirou</p>
+          <p className="mt-1">Faça login novamente para continuar de onde parou.</p>
+        </div>
+      ) : null}
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">
           {mode === "login"
