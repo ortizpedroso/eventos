@@ -27,8 +27,20 @@ export type CheckinResult = {
   mensagem: string;
 };
 
+export type IngressoBuscaItem = {
+  ingresso_id: string;
+  participante_nome: string | null;
+  participante_email: string | null;
+  participante_cpf: string | null;
+  status: string;
+  checkin_em: string | null;
+  evento_id: string;
+  evento_nome: string;
+  lote_nome: string | null;
+};
+
 type Modo = "organizador" | "portaria";
-type Aba = "camera" | "foto" | "digitar";
+type Aba = "camera" | "foto" | "digitar" | "buscar";
 
 type Props = {
   modo: Modo;
@@ -177,6 +189,10 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
   const [cameraReady, setCameraReady] = useState(false);
   const [fotoBusy, setFotoBusy] = useState(false);
   const [modoFesta, setModoFesta] = useState(false);
+  const [buscaQ, setBuscaQ] = useState("");
+  const [buscaBusy, setBuscaBusy] = useState(false);
+  const [buscaResultados, setBuscaResultados] = useState<IngressoBuscaItem[]>([]);
+  const [buscaErro, setBuscaErro] = useState<string | null>(null);
   const scannerRef = useRef<Html5QrcodeInstance | null>(null);
   const cooldownRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -236,6 +252,83 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
         setError(err instanceof Error ? err.message : "Não foi possível validar.");
       } finally {
         setBusy(false);
+      }
+    },
+    [modo, eventoId, token],
+  );
+
+  const validarPorId = useCallback(
+    async (ingressoId: string) => {
+      setBusy(true);
+      setError(null);
+      try {
+        let r: CheckinResult;
+        if (modo === "portaria") {
+          if (!eventoId || !token) {
+            throw new Error("Link da portaria incompleto.");
+          }
+          r = await apiFetch<CheckinResult>("/api/portaria/validar-id", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ evento_id: eventoId, token, ingresso_id: ingressoId }),
+          });
+        } else {
+          r = await apiFetch<CheckinResult>("/api/checkin/validar-id", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ingresso_id: ingressoId }),
+          });
+        }
+        setLast(r);
+        if (r.ok) {
+          feedbackCheckinSucesso();
+        }
+      } catch (err) {
+        setLast(null);
+        setError(err instanceof Error ? err.message : "Não foi possível validar.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [modo, eventoId, token],
+  );
+
+  const buscarIngressos = useCallback(
+    async (raw: string) => {
+      const q = raw.trim();
+      if (q.length < 2) {
+        setBuscaErro("Digite pelo menos 2 caracteres (nome, e-mail ou CPF).");
+        return;
+      }
+      setBuscaBusy(true);
+      setBuscaErro(null);
+      setBuscaResultados([]);
+      try {
+        let data: { resultados: IngressoBuscaItem[] };
+        if (modo === "portaria") {
+          if (!eventoId || !token) {
+            throw new Error("Link da portaria incompleto.");
+          }
+          data = await apiFetch<{ resultados: IngressoBuscaItem[] }>("/api/portaria/buscar", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ evento_id: eventoId, token, q }),
+          });
+        } else {
+          data = await apiFetch<{ resultados: IngressoBuscaItem[] }>("/api/checkin/buscar", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ q }),
+          });
+        }
+        setBuscaResultados(data.resultados);
+        if (!data.resultados.length) {
+          setBuscaErro("Nenhum ingresso encontrado. Tente outro nome, e-mail ou CPF.");
+        }
+      } catch (err) {
+        setBuscaErro(err instanceof Error ? err.message : "Não foi possível buscar.");
+      } finally {
+        setBuscaBusy(false);
       }
     },
     [modo, eventoId, token],
@@ -332,6 +425,11 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
     void validarCodigo(codigo);
   }
 
+  function onSubmitBusca(e: FormEvent) {
+    e.preventDefault();
+    void buscarIngressos(buscaQ);
+  }
+
   const mostrarAbaCamera = cameraAoVivoOk;
   const shellClass = modoFesta
     ? "fixed inset-0 z-50 flex flex-col overflow-y-auto bg-zinc-950 p-4 text-white pb-[max(1rem,env(safe-area-inset-bottom))]"
@@ -411,6 +509,15 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
           onClick={() => setAba("digitar")}
         >
           Digitar
+        </button>
+        <button
+          type="button"
+          className={`flex-1 rounded-md px-2 py-2 text-sm font-medium ${
+            aba === "buscar" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-600"
+          }`}
+          onClick={() => setAba("buscar")}
+        >
+          Buscar
         </button>
       </div>
 
@@ -520,6 +627,85 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
             {busy ? "Validando…" : "Validar entrada"}
           </button>
         </form>
+      ) : null}
+
+      {aba === "buscar" ? (
+        <div className="space-y-4">
+          <form
+            onSubmit={onSubmitBusca}
+            className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm sm:p-6"
+          >
+            <label htmlFor="checkin-busca" className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+              Nome, e-mail ou CPF
+            </label>
+            <input
+              id="checkin-busca"
+              type="search"
+              autoComplete="off"
+              className="mt-2 w-full rounded-lg border border-emerald-200 bg-white px-3 py-3 text-sm text-zinc-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20"
+              placeholder="Ex.: Maria, maria@email.com ou 12345678901"
+              value={buscaQ}
+              onChange={(e) => setBuscaQ(e.target.value)}
+            />
+            {buscaErro ? (
+              <p className="mt-3 text-sm text-red-700" role="alert">
+                {buscaErro}
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={buscaBusy}
+              className="mt-4 h-11 w-full rounded-lg bg-emerald-700 text-sm font-medium text-white shadow-sm hover:bg-emerald-800 disabled:opacity-60 sm:w-auto sm:px-8"
+            >
+              {buscaBusy ? "Buscando…" : "Buscar ingresso"}
+            </button>
+          </form>
+
+          {buscaResultados.length > 0 ? (
+            <ul className="space-y-2">
+              {buscaResultados.map((item) => {
+                const jaEntrou = item.status === "usado";
+                return (
+                  <li
+                    key={item.ingresso_id}
+                    className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"
+                  >
+                    <p className="font-semibold text-zinc-900">
+                      {item.participante_nome || "Sem nome"}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-600">
+                      {item.participante_email || "—"}
+                      {item.participante_cpf ? ` · CPF ${item.participante_cpf}` : ""}
+                    </p>
+                    {modo === "organizador" ? (
+                      <p className="mt-1 text-xs text-zinc-500">{item.evento_nome}</p>
+                    ) : null}
+                    {item.lote_nome ? (
+                      <p className="mt-1 text-xs text-zinc-500">Lote: {item.lote_nome}</p>
+                    ) : null}
+                    {jaEntrou ? (
+                      <p className="mt-2 text-sm font-medium text-amber-800">
+                        Já entrou
+                        {item.checkin_em
+                          ? ` · ${new Date(item.checkin_em).toLocaleString("pt-BR")}`
+                          : ""}
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void validarPorId(item.ingresso_id)}
+                        className="mt-3 w-full rounded-lg bg-emerald-700 py-2.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60 sm:w-auto sm:px-6"
+                      >
+                        {busy ? "Validando…" : "Validar entrada"}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
       ) : null}
 
       {last ? (

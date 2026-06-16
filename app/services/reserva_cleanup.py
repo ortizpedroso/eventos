@@ -49,25 +49,39 @@ def cancelar_reservas_expiradas() -> int:
             ing.status = "cancelado"
             ing.reservado_ate = None
 
-            pi_id = ing.stripe_payment_intent_id or ""
+            pay_id = (ing.asaas_payment_id or ing.stripe_payment_intent_id or "").strip()
             if (
-                pi_id
-                and pi_id not in pis_ja_cancelados
-                and not pi_id.startswith(("disabled_", "cortesia_"))
+                pay_id
+                and pay_id not in pis_ja_cancelados
+                and not pay_id.startswith(("disabled_", "cortesia_"))
             ):
-                try:
-                    stripe.PaymentIntent.cancel(pi_id)
-                    pis_ja_cancelados.add(pi_id)
-                    logger.debug("PI %s cancelado pelo cleanup (ingresso %s)", pi_id, ing.id)
-                except stripe.error.InvalidRequestError:
-                    pis_ja_cancelados.add(pi_id)
-                except Exception:
-                    logger.warning(
-                        "Não foi possível cancelar PI %s do ingresso %s",
-                        pi_id,
-                        ing.id,
-                        exc_info=True,
-                    )
+                if settings.use_asaas and ing.asaas_payment_id:
+                    try:
+                        from app.services.pagamento_asaas import cancelar_cobranca_pendente
+
+                        cancelar_cobranca_pendente(pay_id)
+                        pis_ja_cancelados.add(pay_id)
+                    except Exception:
+                        logger.warning(
+                            "Não foi possível cancelar cobrança Asaas %s do ingresso %s",
+                            pay_id,
+                            ing.id,
+                            exc_info=True,
+                        )
+                elif ing.stripe_payment_intent_id and settings.use_stripe:
+                    try:
+                        stripe.PaymentIntent.cancel(pay_id)
+                        pis_ja_cancelados.add(pay_id)
+                        logger.debug("PI %s cancelado pelo cleanup (ingresso %s)", pay_id, ing.id)
+                    except stripe.error.InvalidRequestError:
+                        pis_ja_cancelados.add(pay_id)
+                    except Exception:
+                        logger.warning(
+                            "Não foi possível cancelar PI %s do ingresso %s",
+                            pay_id,
+                            ing.id,
+                            exc_info=True,
+                        )
 
             logger.info("Reserva expirada cancelada: ingresso %s", ing.id)
 

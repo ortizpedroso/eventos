@@ -13,8 +13,9 @@ class Cancelamento(Base):
     valor_reembolso = Column(Float)
     status = Column(String, default="pendente")  # pendente, processado, falhou
 
-    # Stripe
+    # Reembolso externo
     stripe_refund_id = Column(String, nullable=True)
+    asaas_refund_id = Column(String, nullable=True)
 
     # Datas
     data_solicitacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

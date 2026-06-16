@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CheckoutAsaasPainel } from "@/components/checkout-asaas-painel";
 import { CheckoutConfirmacaoIngresso } from "@/components/checkout-confirmacao-ingresso";
 import { CheckoutStepper } from "@/components/checkout-stepper";
 import { CheckoutAuthPanel } from "@/components/checkout-auth-panel";
@@ -373,6 +374,7 @@ export function ComprarIngresso({
     null,
   );
   const [pixDisponivel, setPixDisponivel] = useState(true);
+  const [paymentProvider, setPaymentProvider] = useState<"asaas" | "stripe">("asaas");
   const [codigoCupom, setCodigoCupom] = useState("");
   const [cupomPreview, setCupomPreview] = useState<{
     codigo: string;
@@ -530,6 +532,16 @@ export function ComprarIngresso({
           return;
         }
 
+        if (data.payment_provider === "asaas" || data.aguardando_cobranca) {
+          setPaymentProvider("asaas");
+          setClientSecret(null);
+          setPixDisponivel(data.pix_disponivel !== false);
+          if (data.reservado_ate) setReservadoAte(new Date(data.reservado_ate));
+          setStep(2);
+          return;
+        }
+
+        setPaymentProvider("stripe");
         setClientSecret(data.client_secret);
         setPixDisponivel(data.pix_disponivel !== false);
         if (data.reservado_ate) {
@@ -711,8 +723,17 @@ export function ComprarIngresso({
         setStep(3);
         return;
       }
-      setClientSecret(data.client_secret);
       setIngressoId(data.ingresso_id);
+      if (data.payment_provider === "asaas" || data.aguardando_cobranca) {
+        setPaymentProvider("asaas");
+        setClientSecret(null);
+        setPixDisponivel(data.pix_disponivel !== false);
+        if (data.reservado_ate) setReservadoAte(new Date(data.reservado_ate));
+        setStep(2);
+        return;
+      }
+      setPaymentProvider("stripe");
+      setClientSecret(data.client_secret);
       setPixDisponivel(data.pix_disponivel !== false);
       if (data.reservado_ate) {
         setReservadoAte(new Date(data.reservado_ate));
@@ -1115,12 +1136,12 @@ export function ComprarIngresso({
           )}
           </div>
         </div>
-      ) : step === 2 && clientSecret && stripePubOk ? (
+      ) : step === 2 && ingressoId && (paymentProvider === "asaas" || (clientSecret && stripePubOk)) ? (
         <div className="space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-zinc-900">2. Pagamento</h2>
             <p className="mt-1 text-xs text-zinc-600">
-              PIX (QR com timer) ou cartão via Stripe · total {precoFmt}
+              PIX ou cartão via Asaas · total {precoFmt}
             </p>
           </div>
 
@@ -1149,7 +1170,7 @@ export function ComprarIngresso({
           ) : null}
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-500">
-            <span>🔒 Pagamento seguro via Stripe</span>
+            <span>🔒 Pagamento seguro via Asaas</span>
             <span>Reembolso em até 10 dias</span>
             <span>Ingresso por e-mail + QR Code</span>
           </div>
@@ -1167,10 +1188,22 @@ export function ComprarIngresso({
             ← Voltar aos dados
           </button>
           {!timerExpirou ? (
+            paymentProvider === "asaas" && participanteCheckout ? (
+              <CheckoutAsaasPainel
+                ingressoId={ingressoId}
+                valorFmt={precoFmt}
+                valorCentavos={precoCentavosCheckout}
+                participanteNome={participanteCheckout.nome}
+                participanteEmail={participanteCheckout.email}
+                participanteCpf={participanteCheckout.cpf}
+                reservadoAte={reservadoAte?.toISOString()}
+                onSuccess={() => setStep(3)}
+              />
+            ) : (
             <Elements
               key={clientSecret}
               stripe={stripePromise}
-              options={{ clientSecret, appearance: { theme: "stripe" } }}
+              options={{ clientSecret: clientSecret!, appearance: { theme: "stripe" } }}
             >
               {clientSecret && participanteCheckout ? (
                 <ConfirmForm
@@ -1183,6 +1216,7 @@ export function ComprarIngresso({
                 />
               ) : null}
             </Elements>
+            )
           ) : null}
         </div>
       ) : (

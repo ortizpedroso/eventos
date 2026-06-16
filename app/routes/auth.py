@@ -37,7 +37,7 @@ from app.services.auth import (
     hash_password,
     verify_password,
 )
-from app.services.usuario_stripe import criar_stripe_para_novo_usuario
+from app.services.usuario_pagamentos import criar_pagamento_para_novo_usuario
 from app.services.password_reset_email import enviar_email_recuperacao_senha
 from app.services.email_verificacao import (
     confirmar_email_por_token,
@@ -46,7 +46,7 @@ from app.services.email_verificacao import (
     preparar_verificacao_email,
 )
 from app.utils.auth_cookie import AUTH_COOKIE_NAME, clear_auth_cookie, set_auth_cookie
-from app.utils.public_errors import STRIPE_CLIENTE
+from app.utils.public_errors import PAGAMENTO_CLIENTE, STRIPE_CLIENTE
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -158,54 +158,35 @@ async def registrar(
 
     stripe_customer_id: str | None = None
     stripe_account_id: str | None = None
+    asaas_customer_id: str | None = None
+    asaas_wallet_id: str | None = None
+    asaas_account_id: str | None = None
 
-    if not settings.STRIPE_DISABLED:
+    if not settings.payments_disabled:
         try:
-            customer = stripe.Customer.create(
+            prov = criar_pagamento_para_novo_usuario(
                 email=usuario_data.email,
-                name=usuario_data.nome,
+                nome=usuario_data.nome,
+                tipo=usuario_data.tipo,
+                telefone=_normalizar_telefone_usuario(usuario_data.telefone),
             )
-            stripe_customer_id = customer.id
-            logger.info("Cliente Stripe criado: %s", stripe_customer_id)
+            stripe_customer_id = prov.get("stripe_customer_id")
+            stripe_account_id = prov.get("stripe_account_id")
+            asaas_customer_id = prov.get("asaas_customer_id")
+            asaas_wallet_id = prov.get("asaas_wallet_id")
+            asaas_account_id = prov.get("asaas_account_id")
+        except Exception as e:
+            if settings.use_asaas:
+                from app.services.asaas_client import AsaasAPIError
 
-            if usuario_data.tipo == "organizador":
-                if settings.STRIPE_SKIP_CONNECT_ON_REGISTER:
-                    logger.info(
-                        "STRIPE_SKIP_CONNECT_ON_REGISTER: organizador %s cadastrado sem Account.create",
-                        usuario_data.email,
-                    )
-                    stripe_account_id = None
-                else:
-                    try:
-                        account = stripe.Account.create(
-                            type="express",
-                            country="BR",
-                            email=usuario_data.email,
-                        )
-                        stripe_account_id = account.id
-                        logger.info("Conta conectada Stripe criada: %s", stripe_account_id)
-                    except stripe.error.StripeError as conn_err:
-                        if _stripe_connect_platform_terms_missing(conn_err):
-                            logger.warning(
-                                "Conta Connect não criada no cadastro (termos Connect no Stripe pendentes ou erro equivalente). "
-                                "Organizador %s segue sem stripe_account_id. Stripe: %s",
-                                usuario_data.email,
-                                conn_err,
-                            )
-                            stripe_account_id = None
-                        else:
-                            logger.error(
-                                "Erro Stripe ao criar conta Connect (texto completo para diagnóstico): %s",
-                                _stripe_error_all_text(conn_err),
-                            )
-                            logger.exception("Erro Stripe ao criar conta Connect")
-                            raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from conn_err
-        except stripe.error.StripeError as e:
-            logger.exception("Erro Stripe no registo: %s", e)
+                if isinstance(e, AsaasAPIError):
+                    logger.exception("Erro Asaas no registo")
+                    raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
+            logger.exception("Erro no provedor de pagamento no registo")
             raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
     else:
         logger.warning(
-            "STRIPE_DISABLED: registro de %s (%s) sem Customer/Connect Stripe",
+            "Pagamentos desativados: registro de %s (%s) sem customer/conta",
             usuario_data.email,
             usuario_data.tipo,
         )
@@ -227,6 +208,9 @@ async def registrar(
         email_verificado=True,
         stripe_customer_id=stripe_customer_id,
         stripe_account_id=stripe_account_id,
+        asaas_customer_id=asaas_customer_id,
+        asaas_wallet_id=asaas_wallet_id,
+        asaas_account_id=asaas_account_id,
         aceita_comunicacao_email=aceita_email,
         aceita_comunicacao_whatsapp=aceita_whatsapp,
         telefone=tel,
@@ -296,18 +280,17 @@ async def compra_rapida(
         return _token_response(existente, response)
 
     stripe_customer_id: str | None = None
-    if not settings.STRIPE_DISABLED:
+    asaas_customer_id: str | None = None
+    if not settings.payments_disabled:
         try:
-            stripe_customer_id, _ = criar_stripe_para_novo_usuario(
-                email=email,
-                nome=nome,
-                tipo="cliente",
-            )
-        except stripe.error.StripeError as e:
-            logger.exception("Erro Stripe na compra rápida: %s", e)
-            raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
+            prov = criar_pagamento_para_novo_usuario(email=email, nome=nome, tipo="cliente")
+            stripe_customer_id = prov.get("stripe_customer_id")
+            asaas_customer_id = prov.get("asaas_customer_id")
+        except Exception as e:
+            logger.exception("Erro provedor pagamento na compra rápida: %s", e)
+            raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
     else:
-        logger.warning("STRIPE_DISABLED: compra rápida %s sem Customer Stripe", email)
+        logger.warning("Pagamentos desativados: compra rápida %s sem customer", email)
 
     novo_usuario = Usuario(
         email=email,
@@ -317,6 +300,7 @@ async def compra_rapida(
         auth_provider="email",
         email_verificado=False,
         stripe_customer_id=stripe_customer_id,
+        asaas_customer_id=asaas_customer_id,
     )
     db.add(novo_usuario)
     db.commit()

@@ -50,6 +50,54 @@ def _parse_stripe_webhook_event(payload: bytes, sig_header: str | None) -> dict:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
 
+@router.post("/asaas")
+async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
+    """Recebe eventos do Asaas (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.)."""
+    payload = await request.body()
+    token_header = request.headers.get("asaas-access-token", "")
+    expected = (settings.ASAAS_WEBHOOK_TOKEN or "").strip()
+    if expected and token_header != expected:
+        if settings.ENVIRONMENT == "production":
+            logger.error("Webhook Asaas: token inválido")
+            raise HTTPException(status_code=401, detail="Invalid token")
+        logger.warning("Webhook Asaas: token não confere (aceito em não-produção)")
+
+    try:
+        event = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=400, detail="Invalid payload") from e
+
+    event_id = str(event.get("id") or "")
+    event_type = event.get("event", "unknown")
+    payment = event.get("payment") or {}
+    pay_id = payment.get("id") or ""
+
+    logger.info("Webhook Asaas: %s (%s)", event_type, event_id or pay_id)
+
+    if event_id:
+        existente = db.get(StripeEvent, event_id)
+        if existente:
+            return {"status": "success", "idempotent": True}
+
+    ingressos_recém_pagos: list[str] = []
+    try:
+        if event_type in ("PAYMENT_RECEIVED", "PAYMENT_CONFIRMED") and pay_id:
+            ingressos_recém_pagos = marcar_ingressos_pi_pagos(db, pay_id)
+        elif event_type in ("PAYMENT_DELETED", "PAYMENT_REFUNDED", "PAYMENT_OVERDUE") and pay_id:
+            cancelar_ingressos_pi_pendentes(db, pay_id)
+
+        if event_id:
+            db.add(StripeEvent(id=event_id, tipo=event_type))
+        db.commit()
+        for iid in ingressos_recém_pagos:
+            notificar_ingresso_pago(iid)
+    except IntegrityError:
+        db.rollback()
+        return {"status": "success", "idempotent": True}
+
+    return {"status": "success"}
+
+
 @router.post("/stripe")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     """Recebe eventos do Stripe via Webhook"""

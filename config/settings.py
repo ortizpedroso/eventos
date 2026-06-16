@@ -7,7 +7,10 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./eventos.db"
 
-    # Stripe
+    # Provedor de pagamento: asaas | stripe
+    PAYMENT_PROVIDER: str = "asaas"
+
+    # Stripe (legado / fallback)
     STRIPE_SECRET_KEY: str = ""
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
@@ -15,6 +18,17 @@ class Settings(BaseSettings):
     STRIPE_DISABLED: bool = False
     # true = cadastro de organizador sem criar conta Connect (só Customer). Até aceitar termos em Settings > Connect.
     STRIPE_SKIP_CONNECT_ON_REGISTER: bool = False
+
+    # Asaas (principal)
+    ASAAS_API_KEY: str = ""
+    ASAAS_WEBHOOK_TOKEN: str = ""
+    # sandbox | production — se vazio, infere pela chave ($aact_prod_ = production)
+    ASAAS_ENVIRONMENT: str = ""
+    ASAAS_DISABLED: bool = False
+    # walletId da conta EventosBR para split da taxa da plataforma
+    ASAAS_PLATFORM_WALLET_ID: str = ""
+    # Subconta no cadastro exige dados completos; padrão false (organizador informa wallet depois)
+    ASAAS_CREATE_SUBACCOUNT_ON_REGISTER: bool = False
 
     # OAuth (Google Sign In)
     GOOGLE_OAUTH_CLIENT_ID: str = ""
@@ -66,8 +80,47 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    def asaas_env(self) -> str:
+        explicit = (self.ASAAS_ENVIRONMENT or "").strip().lower()
+        if explicit in ("sandbox", "production", "prod"):
+            return "production" if explicit in ("production", "prod") else "sandbox"
+        key = (self.ASAAS_API_KEY or "").strip()
+        if "$aact_prod_" in key or key.startswith("aact_prod_"):
+            return "production"
+        return "sandbox"
+
+    @property
+    def use_asaas(self) -> bool:
+        return (
+            (self.PAYMENT_PROVIDER or "asaas").lower() == "asaas"
+            and not self.ASAAS_DISABLED
+            and bool((self.ASAAS_API_KEY or "").strip())
+        )
+
+    @property
+    def use_stripe(self) -> bool:
+        return (self.PAYMENT_PROVIDER or "").lower() == "stripe" and not self.STRIPE_DISABLED
+
+    @property
+    def asaas_base_url(self) -> str:
+        return "https://api.asaas.com" if self.asaas_env() == "production" else "https://api-sandbox.asaas.com"
+
+    @property
+    def payments_disabled(self) -> bool:
+        if self.use_asaas:
+            return self.ASAAS_DISABLED
+        return self.STRIPE_DISABLED
+
 
 settings = Settings()
+
+
+if settings.ASAAS_DISABLED and settings.use_asaas:
+    import logging as _logging
+
+    _logging.getLogger(__name__).warning(
+        "ASAAS_DISABLED está ativo: pagamentos Asaas desligados (modo teste local)."
+    )
 
 if settings.STRIPE_DISABLED:
     import logging as _logging

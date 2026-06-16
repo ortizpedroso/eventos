@@ -27,6 +27,8 @@ _LIMITS: dict[str, tuple[int, int]] = {
     "checkin_validar": (120, 60),
     "portaria_validar": (120, 60),
     "portaria_info": (60, 60),
+    "portaria_buscar": (60, 60),
+    "checkin_buscar": (60, 60),
 }
 
 
@@ -157,3 +159,13 @@ def rate_limit_portaria_info(request: Request, evento_id: str = "", token: str =
     ip = _client_ip(request)
     tok = (token or "")[:12]
     enforce_rate_limit(request, "portaria_info", f"{ip}:{evento_id}:{tok}")
+
+
+def rate_limit_portaria_buscar(request: Request, evento_id: str = "", token: str = "") -> None:
+    ip = _client_ip(request)
+    tok = (token or "")[:12]
+    enforce_rate_limit(request, "portaria_buscar", f"{ip}:{evento_id}:{tok}")
+
+
+def rate_limit_checkin_buscar(request: Request) -> None:
+    enforce_rate_limit(request, "checkin_buscar")

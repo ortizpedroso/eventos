@@ -210,3 +210,21 @@ def realizar_checkin_portaria(
         "checkin_em": agora.isoformat(),
         "mensagem": "Entrada liberada.",
     }
+
+
+def realizar_checkin_por_id(
+    db: Session,
+    organizador: Usuario,
+    ingresso_id: str,
+) -> dict:
+    """Check-in a partir da busca manual (organizador autenticado)."""
+    return realizar_checkin(db, organizador, codigo_checkin(ingresso_id))
+
+
+def realizar_checkin_portaria_por_id(
+    db: Session,
+    evento_id: str,
+    ingresso_id: str,
+) -> dict:
+    """Check-in a partir da busca manual (link da portaria)."""
+    return realizar_checkin_portaria(db, evento_id, codigo_checkin(ingresso_id))

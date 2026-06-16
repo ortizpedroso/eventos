@@ -17,8 +17,9 @@ class Ingresso(Base):
     participante_cpf = Column(String(14), nullable=True)
     participante_telefone = Column(String(20), nullable=True)
 
-    # Stripe
+    # Pagamento externo (Stripe legado / Asaas)
     stripe_payment_intent_id = Column(String, index=True)
+    asaas_payment_id = Column(String, index=True)
 
     valor = Column(Float)
     status = Column(String, default="pendente")  # pendente, pago, cancelado, usado

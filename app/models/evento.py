@@ -30,8 +30,10 @@ class Evento(Base):
     # Máximo de ingressos ativos por CPF neste evento (null = sem limite).
     limite_ingressos_por_cpf = Column(Integer, nullable=True)
 
-    # Stripe
+    # Stripe (legado)
     stripe_account_id = Column(String)
+    # Asaas split — wallet do organizador no momento da criação do evento
+    asaas_wallet_id = Column(String, nullable=True)
 
     # Status
     publicado = Column(Boolean, default=True)

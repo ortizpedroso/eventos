@@ -3,6 +3,7 @@
 STRIPE_CLIENTE = (
     "Não foi possível concluir a operação com o pagamento. Tente novamente ou contacte o suporte."
 )
+PAGAMENTO_CLIENTE = STRIPE_CLIENTE
 STRIPE_PIX_INATIVO = (
     "O PIX ainda não está ativo na conta Stripe desta plataforma. "
     "Ative em dashboard.stripe.com → Configurações → Formas de pagamento → Pix. "

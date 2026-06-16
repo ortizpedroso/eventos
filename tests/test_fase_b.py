@@ -266,3 +266,85 @@ class TestCheckin:
 
         assert extrair_ingresso_id(url) == iid
         assert extrair_ingresso_id(codigo) == iid
+
+    def test_buscar_e_validar_por_id(self):
+        org = _registrar_organizador("busca")
+        cli = _registrar_cliente("busca")
+        ev = _criar_evento(org)
+
+        r = client.post(
+            "/api/pagamentos/criar",
+            headers={"Authorization": f"Bearer {cli}"},
+            json={
+                "evento_id": ev["id"],
+                "valor_centavos": 5000,
+                "participante_nome": "Ana Busca",
+                "participante_email": "ana.busca@test.com",
+                "participante_cpf": "52998224725",
+                "participante_telefone": "11987654321",
+                "termo_compra_aceito": True,
+            },
+        )
+        assert r.status_code == 200, r.text
+        iid = r.json()["ingresso_id"]
+
+        busca = client.post(
+            "/api/checkin/buscar",
+            headers={"Authorization": f"Bearer {org}"},
+            json={"q": "Ana Busca"},
+        )
+        assert busca.status_code == 200
+        resultados = busca.json()["resultados"]
+        assert len(resultados) >= 1
+        assert any(x["ingresso_id"] == iid for x in resultados)
+
+        chk = client.post(
+            "/api/checkin/validar-id",
+            headers={"Authorization": f"Bearer {org}"},
+            json={"ingresso_id": iid},
+        )
+        assert chk.status_code == 200
+        assert chk.json()["ok"] is True
+
+    def test_portaria_buscar_por_nome(self):
+        org = _registrar_organizador("pbusca")
+        cli = _registrar_cliente("pbusca")
+        ev = _criar_evento(org)
+
+        r = client.post(
+            "/api/pagamentos/criar",
+            headers={"Authorization": f"Bearer {cli}"},
+            json={
+                "evento_id": ev["id"],
+                "valor_centavos": 5000,
+                "participante_nome": "Carlos Portaria",
+                "participante_email": "carlos.port@test.com",
+                "participante_cpf": "52998224725",
+                "participante_telefone": "11987654321",
+                "termo_compra_aceito": True,
+            },
+        )
+        assert r.status_code == 200, r.text
+        iid = r.json()["ingresso_id"]
+
+        link = client.get(
+            f"/api/eventos/id/{ev['id']}/link-portaria",
+            headers={"Authorization": f"Bearer {org}"},
+        )
+        assert link.status_code == 200
+        token = link.json()["token"]
+
+        busca = client.post(
+            "/api/portaria/buscar",
+            json={"evento_id": ev["id"], "token": token, "q": "Carlos"},
+        )
+        assert busca.status_code == 200
+        resultados = busca.json()["resultados"]
+        assert any(x["ingresso_id"] == iid for x in resultados)
+
+        chk = client.post(
+            "/api/portaria/validar-id",
+            json={"evento_id": ev["id"], "token": token, "ingresso_id": iid},
+        )
+        assert chk.status_code == 200
+        assert chk.json()["ok"] is True

@@ -10,7 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import Usuario
-from app.services.usuario_stripe import criar_stripe_para_novo_usuario
+from app.services.usuario_pagamentos import criar_pagamento_para_novo_usuario
 logger = logging.getLogger(__name__)
 
 _PROVIDER_LABEL = {"google": "Google", "apple": "Apple"}
@@ -87,16 +87,17 @@ def obter_ou_criar_usuario_oauth(
         )
 
     try:
-        stripe_customer_id, stripe_account_id = criar_stripe_para_novo_usuario(
+        prov = criar_pagamento_para_novo_usuario(
             email=email_norm,
             nome=nome_limpo,
             tipo=tipo_norm,
+            telefone=telefone,
         )
     except Exception as e:
-        logger.exception("Stripe no cadastro OAuth: %s", e)
-        from app.utils.public_errors import STRIPE_CLIENTE
+        logger.exception("Provedor pagamento no cadastro OAuth: %s", e)
+        from app.utils.public_errors import PAGAMENTO_CLIENTE
 
-        raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
+        raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
 
     novo = Usuario(
         email=email_norm,
@@ -106,8 +107,11 @@ def obter_ou_criar_usuario_oauth(
         auth_provider_id=provider_id,
         tipo=tipo_norm,
         email_verificado=True,
-        stripe_customer_id=stripe_customer_id,
-        stripe_account_id=stripe_account_id,
+        stripe_customer_id=prov.get("stripe_customer_id"),
+        stripe_account_id=prov.get("stripe_account_id"),
+        asaas_customer_id=prov.get("asaas_customer_id"),
+        asaas_wallet_id=prov.get("asaas_wallet_id"),
+        asaas_account_id=prov.get("asaas_account_id"),
         aceita_comunicacao_email=aceita_comunicacao_email,
         aceita_comunicacao_whatsapp=aceita_comunicacao_whatsapp,
         telefone=telefone,

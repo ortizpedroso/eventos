@@ -20,11 +20,19 @@ from app.services.ingresso_lotes import (
     resolver_lote_por_id,
 )
 from app.services.ingresso_pago import marcar_ingresso_pago, marcar_ingressos_pi_pagos, notificar_ingresso_pago
+from app.services.pagamentos_asaas_handlers import (
+    AsaasCobrancaRequest,
+    cancelar_com_reembolso_asaas,
+    criar_resposta_asaas_apos_criar,
+    iniciar_cobranca_asaas,
+    retomar_pagamento_asaas,
+    status_cobranca_asaas,
+)
 from app.services.ticket_email import enqueue_ticket_email
 from app.utils.cpf import cpf_valido, normalizar_cpf
 from app.utils.ingresso_tipos import lote_e_cortesia
 from app.utils.privacy import mask_cpf, mask_telefone_br
-from app.utils.public_errors import REEMBOLSO_CLIENTE, STRIPE_CLIENTE
+from app.utils.public_errors import PAGAMENTO_CLIENTE, REEMBOLSO_CLIENTE, STRIPE_CLIENTE
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -381,9 +389,17 @@ async def criar_pagamento(
         body.evento_id,
     )
 
-    if settings.STRIPE_DISABLED:
-        logger.warning("STRIPE_DISABLED: ingresso pago sem Stripe evento %s", evento.id)
+    if settings.payments_disabled:
+        logger.warning("Pagamentos desativados: ingresso pago sem gateway evento %s", evento.id)
         return _ingressos_gratis("disabled")
+
+    if settings.use_asaas:
+        return criar_resposta_asaas_apos_criar(
+            novos=novos,
+            valor_centavos=valor_centavos,
+            reserva_ate=reserva_ate,
+            quantidade=quantidade,
+        )
 
     if not usuario_atual.stripe_customer_id:
         raise HTTPException(
@@ -555,7 +571,30 @@ async def retomar_pagamento(
             detail="A reserva expirou. Inicie uma nova compra no evento.",
         )
 
-    pi_id = (ingresso.stripe_payment_intent_id or "").strip()
+    pi_id = (ingresso.asaas_payment_id or ingresso.stripe_payment_intent_id or "").strip()
+    if settings.use_asaas:
+        if ingresso.status == "pago":
+            return {
+                "client_secret": "",
+                "ingresso_id": ingresso.id,
+                "ja_pago": True,
+                "reservado_ate": None,
+                "evento_slug": ingresso.evento.slug,
+            }
+        if settings.payments_disabled:
+            marcar_ingresso_pago(db, ingresso)
+            db.commit()
+            notificar_ingresso_pago(ingresso.id)
+            return {
+                "client_secret": "",
+                "ingresso_id": ingresso.id,
+                "ja_pago": True,
+                "payment_provider": "asaas",
+                "reservado_ate": None,
+                "evento_slug": ingresso.evento.slug,
+            }
+        return retomar_pagamento_asaas(db, ingresso)
+
     if not pi_id or pi_id.startswith("cortesia_") or pi_id.startswith("disabled_"):
         raise HTTPException(
             status_code=400,
@@ -653,17 +692,21 @@ async def cancelar_ingresso(
         raise HTTPException(status_code=400, detail="Prazo para cancelamento expirou")
 
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
-    skip_stripe_refund = settings.STRIPE_DISABLED or (
-        ingresso.stripe_payment_intent_id or ""
-    ).startswith("disabled_")
+    skip_gateway_refund = settings.payments_disabled or (
+        (ingresso.asaas_payment_id or ingresso.stripe_payment_intent_id or "").startswith("disabled_")
+    )
 
     try:
-        if skip_stripe_refund:
+        if skip_gateway_refund:
             refund_id: str | None = None
+            asaas_refund_id: str | None = None
             logger.warning(
-                "Cancelamento sem reembolso Stripe (STRIPE_DISABLED ou pagamento de teste): ingresso %s",
+                "Cancelamento sem reembolso no gateway (modo teste): ingresso %s",
                 ingresso.id,
             )
+        elif settings.use_asaas:
+            asaas_refund_id = cancelar_com_reembolso_asaas(db, ingresso)
+            refund_id = None
         else:
             refund = stripe.Refund.create(
                 payment_intent=ingresso.stripe_payment_intent_id,
@@ -671,12 +714,14 @@ async def cancelar_ingresso(
                 idempotency_key=f"refund_{ingresso.id}",
             )
             refund_id = refund.id
+            asaas_refund_id = None
 
         if cancelamento_existente:
             cancelamento = cancelamento_existente
             cancelamento.valor_reembolso = ingresso.valor
             cancelamento.status = "processado"
             cancelamento.stripe_refund_id = refund_id
+            cancelamento.asaas_refund_id = asaas_refund_id
             cancelamento.data_processamento = agora
         else:
             cancelamento = Cancelamento(
@@ -684,6 +729,7 @@ async def cancelar_ingresso(
                 valor_reembolso=ingresso.valor,
                 status="processado",
                 stripe_refund_id=refund_id,
+                asaas_refund_id=asaas_refund_id,
                 data_processamento=agora,
             )
 
@@ -700,3 +746,28 @@ async def cancelar_ingresso(
     except stripe.error.StripeError as e:
         logger.exception("Erro Stripe ao processar reembolso")
         raise HTTPException(status_code=400, detail=REEMBOLSO_CLIENTE) from e
+
+
+@router.post("/asaas/cobranca")
+async def asaas_iniciar_cobranca(
+    body: AsaasCobrancaRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_checkout),
+):
+    """Gera cobrança Asaas (PIX, cartão ou fatura) para ingresso reservado."""
+    if not settings.use_asaas:
+        raise HTTPException(status_code=400, detail="Provedor Asaas não está ativo.")
+    return iniciar_cobranca_asaas(db, usuario_atual, body)
+
+
+@router.get("/asaas/status/{ingresso_id}")
+async def asaas_status_cobranca(
+    ingresso_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Consulta status da cobrança Asaas (polling PIX)."""
+    if not settings.use_asaas:
+        raise HTTPException(status_code=400, detail="Provedor Asaas não está ativo.")
+    return status_cobranca_asaas(db, ingresso_id, usuario_atual)

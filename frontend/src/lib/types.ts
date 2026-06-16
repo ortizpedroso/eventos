@@ -64,16 +64,29 @@ export type TokenResponse = {
   usuario: Usuario;
 };
 
+export type AsaasPixPayload = {
+  encoded_image?: string;
+  copia_cola?: string;
+  expiration_date?: string;
+};
+
 export type CriarPagamentoResponse = {
   client_secret: string;
   ingresso_id: string;
   ingresso_ids?: string[];
   quantidade?: number;
-  /** Quando a API está com STRIPE_DISABLED: compra concluída sem cartão. */
+  /** Provedor ativo: asaas | stripe */
+  payment_provider?: "asaas" | "stripe";
+  /** Asaas: reserva criada, aguarda POST /asaas/cobranca */
+  aguardando_cobranca?: boolean;
+  /** Quando a API está com pagamentos desativados (teste). */
   stripe_disabled?: boolean;
   cortesia?: boolean;
-  /** False se a conta Stripe da plataforma não tiver PIX ativo no Dashboard. */
   pix_disponivel?: boolean;
+  pix?: AsaasPixPayload;
+  invoice_url?: string;
+  payment_id?: string;
+  valor_centavos?: number;
   /** ISO 8601 UTC — prazo até quando a reserva é válida (35 min). */
   reservado_ate?: string | null;
 };

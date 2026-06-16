@@ -14,28 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
-    """Marca como pago (sem commit). Retorna True se o status mudou.
-
-    Casos tratados:
-    - já pago → idempotente, retorna False
-    - cancelado → o ingresso expirou antes do webhook chegar; não reativa
-      (o Stripe PI deveria ter sido cancelado pelo cleanup, mas em caso de
-      atraso de rede o webhook pode chegar depois — logamos e ignoramos)
-    - pendente → transição normal, limpa reservado_ate
-    """
+    """Marca como pago (sem commit). Retorna True se o status mudou."""
     if ingresso.status == "pago":
         return False
 
     if ingresso.status == "cancelado":
         logger.warning(
-            "PI confirmado para ingresso já cancelado %s (reserva expirou antes do webhook). "
-            "Verifique se o reembolso foi processado pelo Stripe.",
+            "Pagamento confirmado para ingresso já cancelado %s (reserva expirou antes do webhook).",
             ingresso.id,
         )
         return False
 
     ingresso.status = "pago"
-    ingresso.reservado_ate = None  # limpa o prazo de reserva
+    ingresso.reservado_ate = None
     registrar_uso_cupom(db, getattr(ingresso, "cupom_id", None))
     return True
 
@@ -45,33 +36,47 @@ def notificar_ingresso_pago(ingresso_id: str) -> None:
     enqueue_ticket_email(ingresso_id)
 
 
-def marcar_ingressos_pi_pagos(db: Session, payment_intent_id: str) -> list[str]:
-    """Marca todos os ingressos pendentes de um PaymentIntent como pagos."""
-    alterados: list[str] = []
-    ingressos = (
+def _ingressos_por_ref(db: Session, payment_ref: str) -> list[Ingresso]:
+    return (
         db.query(Ingresso)
-        .filter(Ingresso.stripe_payment_intent_id == payment_intent_id)
+        .filter(
+            (Ingresso.asaas_payment_id == payment_ref)
+            | (Ingresso.stripe_payment_intent_id == payment_ref)
+        )
         .all()
     )
-    for ingresso in ingressos:
+
+
+def marcar_ingressos_pi_pagos(db: Session, payment_ref: str) -> list[str]:
+    """Marca todos os ingressos pendentes de um pagamento externo como pagos."""
+    alterados: list[str] = []
+    for ingresso in _ingressos_por_ref(db, payment_ref):
         if marcar_ingresso_pago(db, ingresso):
             alterados.append(ingresso.id)
     return alterados
 
 
-def cancelar_ingressos_pi_pendentes(db: Session, payment_intent_id: str) -> int:
-    """Cancela reservas pendentes ligadas ao PaymentIntent."""
+def cancelar_ingressos_pi_pendentes(db: Session, payment_ref: str) -> int:
+    """Cancela reservas pendentes ligadas ao pagamento externo."""
     n = 0
-    ingressos = (
-        db.query(Ingresso)
-        .filter(
-            Ingresso.stripe_payment_intent_id == payment_intent_id,
-            Ingresso.status == "pendente",
-        )
-        .all()
-    )
-    for ingresso in ingressos:
+    for ingresso in _ingressos_por_ref(db, payment_ref):
+        if ingresso.status != "pendente":
+            continue
         ingresso.status = "cancelado"
         ingresso.reservado_ate = None
         n += 1
     return n
+
+
+def ingressos_lote_pendente(db: Session, ingresso: Ingresso) -> list[Ingresso]:
+    """Ingressos do mesmo lote de compra (mesma reserva / mesmo payment ref)."""
+    ref = (ingresso.asaas_payment_id or ingresso.stripe_payment_intent_id or "").strip()
+    if ref:
+        return _ingressos_por_ref(db, ref)
+    q = db.query(Ingresso).filter(
+        Ingresso.usuario_id == ingresso.usuario_id,
+        Ingresso.evento_id == ingresso.evento_id,
+        Ingresso.status == "pendente",
+        Ingresso.reservado_ate == ingresso.reservado_ate,
+    )
+    return q.all()
