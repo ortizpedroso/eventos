@@ -1,0 +1,158 @@
+"""Onboarding Asaas do organizador."""
+
+from __future__ import annotations
+
+import uuid
+from unittest.mock import MagicMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+from config.database import Base
+from app.models import get_db
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base.metadata.create_all(bind=engine)
+
+
+def override_get_db():
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = override_get_db
+client = TestClient(app)
+
+
+def _registrar_organizador(suffix: str) -> str:
+    r = client.post(
+        "/api/auth/registrar",
+        json={
+            "email": f"org_asaas_{suffix}@test.com",
+            "nome": "Org Asaas",
+            "senha": "senha12345",
+            "tipo": "organizador",
+        },
+    )
+    assert r.status_code == 200
+    return r.json()["access_token"]
+
+
+class TestOrganizadorAsaas:
+    def test_status_sem_wallet(self):
+        token = _registrar_organizador("st")
+        with patch("app.services.organizador_asaas.settings") as mock_settings:
+            mock_settings.use_asaas = True
+            mock_settings.payments_disabled = False
+            r = client.get(
+                "/api/organizador/asaas",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["wallet_configurado"] is False
+        assert body["repasses_prontos"] is False
+
+    def test_definir_wallet(self):
+        token = _registrar_organizador("wal")
+        wallet = str(uuid.uuid4())
+        with (
+            patch("app.routes.organizador.settings") as route_settings,
+            patch("app.services.organizador_asaas.settings") as mock_settings,
+        ):
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            mock_settings.use_asaas = True
+            mock_settings.payments_disabled = False
+            r = client.put(
+                "/api/organizador/asaas/wallet",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"wallet_id": wallet},
+            )
+        assert r.status_code == 200, r.text
+        assert r.json()["wallet_id"] == wallet
+
+        st = client.get(
+            "/api/organizador/asaas",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert st.status_code == 200
+        assert st.json()["wallet_id"] == wallet
+
+    def test_simular_antecipacao_estimativa(self):
+        token = _registrar_organizador("sim")
+        with patch("app.services.organizador_asaas.settings") as mock_settings:
+            mock_settings.use_asaas = True
+            r = client.post(
+                "/api/organizador/asaas/antecipacao/simular",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"valor_reais": 100.0},
+            )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["modo"] == "estimativa"
+        assert body["valor_bruto"] == 100.0
+        assert "liquido_antecipado_estimado" in body
+
+    def test_antecipacao_sem_subconta_falha(self):
+        token = _registrar_organizador("ant")
+        r = client.put(
+            "/api/organizador/asaas/antecipacao",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"credit_card_automatic_enabled": True},
+        )
+        assert r.status_code == 400
+        assert "subconta" in r.json()["detail"].lower()
+
+    def test_criar_subconta_mock(self):
+        token = _registrar_organizador("sub")
+        wallet = str(uuid.uuid4())
+        mock_resp = {"id": "acc_test", "walletId": wallet, "apiKey": "sub_key_test"}
+        with (
+            patch("app.routes.organizador.settings") as route_settings,
+            patch("app.services.organizador_asaas.settings") as mock_settings,
+            patch("app.services.organizador_asaas.get_asaas_client") as mock_client_factory,
+        ):
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            mock_settings.use_asaas = True
+            mock_settings.payments_disabled = False
+            mock_client = MagicMock()
+            mock_client.post.return_value = mock_resp
+            mock_client_factory.return_value = mock_client
+            r = client.post(
+                "/api/organizador/asaas/subconta",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "cpf_cnpj": "52998224725",
+                    "telefone": "11987654321",
+                    "renda_mensal": 8000,
+                    "cep": "89010025",
+                    "endereco": "Rua Teste",
+                    "numero": "100",
+                    "bairro": "Centro",
+                },
+            )
+        assert r.status_code == 200, r.text
+        assert r.json()["wallet_id"] == wallet
+
+        st = client.get(
+            "/api/organizador/asaas",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert st.status_code == 200
+        assert st.json()["tem_subconta"] is True
+        assert st.json()["wallet_id"] == wallet

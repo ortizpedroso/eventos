@@ -24,6 +24,9 @@ class Usuario(Base):
     asaas_customer_id = Column(String, nullable=True)
     asaas_wallet_id = Column(String, nullable=True)
     asaas_account_id = Column(String, nullable=True)
+    asaas_subaccount_api_key = Column(String, nullable=True)
+    # Opt-in antecipação automática no cartão (espelho da config Asaas)
+    asaas_anticipacao_cartao = Column(Boolean, nullable=True)
 
     # Status
     ativo = Column(Boolean, default=True)

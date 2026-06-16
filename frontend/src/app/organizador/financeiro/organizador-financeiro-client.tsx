@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { OrganizadorAsaasPainel } from "@/components/organizador-asaas-painel";
 import { apiFetch } from "@/lib/api";
 
 type FinanceiroResumo = {
@@ -61,6 +62,8 @@ export function OrganizadorFinanceiroClient() {
           .
         </p>
       </div>
+
+      <OrganizadorAsaasPainel />
 
       {error ? (
         <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
