@@ -37,7 +37,15 @@ class AsaasClient:
             "User-Agent": "EventosBR/1.0",
         }
 
-    def request(self, method: str, path: str, *, json: dict | None = None, params: dict | None = None) -> Any:
+    def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict | None = None,
+        params: dict | None = None,
+        idempotency_key: str | None = None,
+    ) -> Any:
         if settings.asaas_e2e_mock:
             from app.services.asaas_e2e_mock import mock_request
 
@@ -45,9 +53,12 @@ class AsaasClient:
         if not self.api_key:
             raise AsaasAPIError("ASAAS_API_KEY não configurada")
         url = f"{self.base_url}{path}"
+        headers = self._headers()
+        if idempotency_key:
+            headers["Idempotency-Key"] = idempotency_key[:128]
         try:
             with httpx.Client(timeout=60.0) as client:
-                resp = client.request(method, url, headers=self._headers(), json=json, params=params)
+                resp = client.request(method, url, headers=headers, json=json, params=params)
         except httpx.HTTPError as e:
             logger.exception("Falha de rede Asaas %s %s", method, path)
             raise AsaasAPIError("Falha de comunicação com Asaas") from e

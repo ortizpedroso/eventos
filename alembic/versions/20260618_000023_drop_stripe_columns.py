@@ -29,14 +29,51 @@ def upgrade() -> None:
     bind = op.get_bind()
     insp = sa.inspect(bind)
 
+    # Repasse: wallet Asaas do organizador → eventos sem wallet configurada.
+    if (
+        _table_exists(insp, "eventos")
+        and _table_exists(insp, "usuarios")
+        and _column_exists(insp, "eventos", "asaas_wallet_id")
+        and _column_exists(insp, "usuarios", "asaas_wallet_id")
+    ):
+        op.execute(
+            """
+            UPDATE eventos AS e
+            SET asaas_wallet_id = u.asaas_wallet_id
+            FROM usuarios AS u
+            WHERE e.organizador_id = u.id
+              AND (e.asaas_wallet_id IS NULL OR e.asaas_wallet_id = '')
+              AND u.asaas_wallet_id IS NOT NULL
+              AND u.asaas_wallet_id != ''
+            """
+        )
+
+    # Histórico de reembolsos: preservar IDs legados antes de dropar coluna Stripe.
+    if (
+        _table_exists(insp, "cancelamentos")
+        and _column_exists(insp, "cancelamentos", "stripe_refund_id")
+        and _column_exists(insp, "cancelamentos", "asaas_refund_id")
+    ):
+        op.execute(
+            """
+            UPDATE cancelamentos
+            SET asaas_refund_id = stripe_refund_id
+            WHERE (asaas_refund_id IS NULL OR asaas_refund_id = '')
+              AND stripe_refund_id IS NOT NULL
+              AND stripe_refund_id != ''
+            """
+        )
+
+    # Reservas pendentes só com PI Stripe não podem ser concluídas via Asaas — cancelar.
     if _table_exists(insp, "ingressos") and _column_exists(insp, "ingressos", "stripe_payment_intent_id"):
         op.execute(
             """
             UPDATE ingressos
-            SET asaas_payment_id = stripe_payment_intent_id
-            WHERE (asaas_payment_id IS NULL OR asaas_payment_id = '')
+            SET status = 'cancelado', reservado_ate = NULL
+            WHERE status = 'pendente'
               AND stripe_payment_intent_id IS NOT NULL
               AND stripe_payment_intent_id != ''
+              AND (asaas_payment_id IS NULL OR asaas_payment_id = '')
             """
         )
         if _index_exists(insp, "ingressos", "ix_ingressos_stripe_payment_intent_id"):
@@ -55,10 +92,17 @@ def upgrade() -> None:
     if _table_exists(insp, "cancelamentos") and _column_exists(insp, "cancelamentos", "stripe_refund_id"):
         op.drop_column("cancelamentos", "stripe_refund_id")
 
-    if _table_exists(insp, "stripe_events") and not _table_exists(insp, "webhook_events"):
-        op.rename_table("stripe_events", "webhook_events")
-    elif _table_exists(insp, "stripe_events"):
+    if _table_exists(insp, "stripe_events") and _table_exists(insp, "webhook_events"):
+        op.execute(
+            """
+            INSERT INTO webhook_events (id, tipo, data_recebimento)
+            SELECT id, tipo, data_recebimento FROM stripe_events
+            ON CONFLICT (id) DO NOTHING
+            """
+        )
         op.drop_table("stripe_events")
+    elif _table_exists(insp, "stripe_events") and not _table_exists(insp, "webhook_events"):
+        op.rename_table("stripe_events", "webhook_events")
 
 
 def downgrade() -> None:

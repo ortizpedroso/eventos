@@ -60,6 +60,7 @@ def criar_cobranca_asaas(
     remote_ip: str | None = None,
     installment_count: int | None = None,
     quantidade: int = 1,
+    idempotency_key: str | None = None,
 ) -> dict[str, Any]:
     client = get_asaas_client()
     due = (date.today() + timedelta(days=1)).isoformat()
@@ -83,7 +84,7 @@ def criar_cobranca_asaas(
         if installment_count and installment_count > 1:
             payload["installmentCount"] = installment_count
 
-    return client.post("/v3/payments", json=payload)
+    return client.post("/v3/payments", json=payload, idempotency_key=idempotency_key)
 
 
 def obter_cobranca(payment_id: str) -> dict[str, Any]:

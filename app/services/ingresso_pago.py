@@ -72,20 +72,38 @@ def marcar_ingressos_pi_pagos(db: Session, payment_ref: str) -> list[str]:
 
 
 def exigir_fulfillment_pagamento(db: Session, payment_ref: str, marcados: list[str]) -> None:
-    """Falha com 422 se o gateway confirmou mas ingressos pendentes não foram liberados."""
+    """Reembolsa e cancela se o gateway confirmou mas ingressos não puderam ser liberados."""
     if marcados:
         return
     pendentes = [i for i in _ingressos_por_ref(db, payment_ref) if i.status == "pendente"]
     if not pendentes:
         return
-    logger.error(
-        "Pagamento %s confirmado mas %d ingresso(s) pendente(s) não liberado(s)",
-        payment_ref,
+
+    refunded = False
+    pay_id = (payment_ref or "").strip()
+    if pay_id and not pay_id.startswith(("disabled_", "cortesia_")):
+        from app.services.asaas_client import AsaasAPIError
+        from app.services.pagamento_asaas import obter_cobranca, reembolsar_cobranca, status_eh_pago
+
+        try:
+            payment = obter_cobranca(pay_id)
+            if status_eh_pago(payment.get("status")):
+                reembolsar_cobranca(pay_id)
+                refunded = True
+        except AsaasAPIError:
+            logger.exception(
+                "Falha ao reembolsar pagamento %s após bloqueio de fulfillment",
+                pay_id,
+            )
+
+    cancelados = cancelar_ingressos_pi_pendentes(db, pay_id)
+    logger.warning(
+        "Pagamento %s confirmado no gateway mas %d ingresso(s) não liberado(s); "
+        "reembolso_automatico=%s, cancelados=%d",
+        pay_id,
         len(pendentes),
-    )
-    raise HTTPException(
-        status_code=422,
-        detail="Pagamento confirmado no gateway, mas ingressos não foram liberados.",
+        refunded,
+        cancelados,
     )
 
 

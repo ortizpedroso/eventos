@@ -398,7 +398,7 @@ def test_webhook_asaas_refund_cancela_pago():
         db.close()
 
 
-def test_webhook_asaas_422_quando_ingresso_nao_liberado():
+def test_webhook_asaas_reembolsa_quando_ingresso_nao_liberado():
     from tests import test_api as ta
 
     db = ta.TestingSessionLocal()
@@ -428,9 +428,14 @@ def test_webhook_asaas_422_quando_ingresso_nao_liberado():
     finally:
         db.close()
 
-    with patch("app.routes.webhooks.settings") as wh_settings:
+    with (
+        patch("app.routes.webhooks.settings") as wh_settings,
+        patch("app.services.pagamento_asaas.obter_cobranca") as mock_obter,
+        patch("app.services.pagamento_asaas.reembolsar_cobranca") as mock_reembolso,
+    ):
         wh_settings.ASAAS_WEBHOOK_TOKEN = "tok_test"
         wh_settings.ENVIRONMENT = "test"
+        mock_obter.return_value = {"id": "pay_wh422", "status": "CONFIRMED"}
         payload = {
             "id": f"evt_{uuid.uuid4().hex[:8]}",
             "event": "PAYMENT_CONFIRMED",
@@ -441,7 +446,16 @@ def test_webhook_asaas_422_quando_ingresso_nao_liberado():
             headers={"asaas-access-token": "tok_test", "content-type": "application/json"},
             content=json.dumps(payload),
         )
-    assert wh.status_code == 422
+    assert wh.status_code == 200
+    mock_reembolso.assert_called_once_with("pay_wh422")
+
+    db = ta.TestingSessionLocal()
+    try:
+        ing = db.query(Ingresso).filter(Ingresso.asaas_payment_id == "pay_wh422").first()
+        assert ing is not None
+        assert ing.status == "cancelado"
+    finally:
+        db.close()
 
 
 def test_cobranca_card_remote_ip_do_servidor():

@@ -80,15 +80,35 @@ def criar_resposta_asaas_apos_criar(
     }
 
 
+def _lock_ingresso_e_lote(db: Session, ingresso_id: str, usuario: Usuario) -> Ingresso:
+    """Trava ingresso e lote pendente (SELECT FOR UPDATE) para evitar cobranças duplicadas."""
+    ingresso = (
+        db.query(Ingresso)
+        .filter(Ingresso.id == ingresso_id)
+        .with_for_update()
+        .first()
+    )
+    ingresso = _validar_ingresso_pendente(ingresso, usuario)
+    pay_id = (ingresso.asaas_payment_id or "").strip()
+    if pay_id:
+        db.query(Ingresso).filter(Ingresso.asaas_payment_id == pay_id).with_for_update().all()
+    else:
+        db.query(Ingresso).filter(
+            Ingresso.usuario_id == ingresso.usuario_id,
+            Ingresso.evento_id == ingresso.evento_id,
+            Ingresso.status == "pendente",
+            Ingresso.reservado_ate == ingresso.reservado_ate,
+        ).with_for_update().all()
+    db.refresh(ingresso)
+    return ingresso
+
+
 def iniciar_cobranca_asaas(
     db: Session,
     usuario: Usuario,
     body: AsaasCobrancaRequest,
 ) -> dict:
-    ingresso = _validar_ingresso_pendente(
-        db.query(Ingresso).filter(Ingresso.id == body.ingresso_id).first(),
-        usuario,
-    )
+    ingresso = _lock_ingresso_e_lote(db, body.ingresso_id, usuario)
     from app.services.lista_espera import validar_espera_para_ingresso_pendente
 
     validar_espera_para_ingresso_pendente(db, ingresso, body.token_espera)
@@ -196,6 +216,7 @@ def iniciar_cobranca_asaas(
             remote_ip=body.remote_ip,
             installment_count=installment_count,
             quantidade=len(lote),
+            idempotency_key=f"cobranca_{ingresso.id}",
         )
     except AsaasAPIError as e:
         logger.exception("Erro Asaas ao criar cobrança")
