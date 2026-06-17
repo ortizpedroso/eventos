@@ -49,6 +49,7 @@ export type Evento = {
   aceita_interesse?: boolean;
   lista_espera_habilitada?: boolean;
   lista_espera_prazo_horas?: number;
+  espera_janela_exclusiva_ativa?: boolean;
 };
 
 export type Usuario = {

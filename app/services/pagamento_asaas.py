@@ -37,6 +37,7 @@ def split_para_evento(
     q = max(1, int(quantidade or 1))
     valor_unit = valor_reais / q if q > 1 else valor_reais
     taxa = round(q * taxa_ingresso(valor_unit), 2)
+    taxa = min(taxa, valor_reais)
     liquido = round(max(0.0, valor_reais - taxa), 2)
     org_wallet = (evento.asaas_wallet_id or "").strip()
     platform_wallet = (settings.ASAAS_PLATFORM_WALLET_ID or "").strip()
@@ -100,8 +101,11 @@ def cancelar_cobranca_pendente(payment_id: str) -> None:
         logger.warning("Não foi possível cancelar cobrança Asaas %s: %s", payment_id, e)
 
 
-def reembolsar_cobranca(payment_id: str) -> dict[str, Any]:
-    return get_asaas_client().post(f"/v3/payments/{payment_id}/refund")
+def reembolsar_cobranca(payment_id: str, *, valor: float | None = None) -> dict[str, Any]:
+    payload: dict[str, Any] | None = None
+    if valor is not None and valor > 0:
+        payload = {"value": round(valor, 2)}
+    return get_asaas_client().post(f"/v3/payments/{payment_id}/refund", json=payload)
 
 
 def status_eh_pago(status: str | None) -> bool:

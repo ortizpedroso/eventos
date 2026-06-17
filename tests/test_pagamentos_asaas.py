@@ -318,3 +318,49 @@ def test_split_asaas_taxa_por_ingresso():
     by_wallet = {x["walletId"]: x["fixedValue"] for x in splits}
     assert by_wallet["wallet-platform"] == taxa_esperada
     assert by_wallet["wallet-org"] == liquido_esperado
+
+
+def test_reembolso_parcial_asaas_multi_ingresso():
+    from app.models import Ingresso
+    from app.services.pagamentos_asaas_handlers import cancelar_com_reembolso_asaas
+
+    db = TestingSessionLocal()
+    try:
+        org = _registrar_organizador("partial")
+        ev = _criar_evento(org)
+        ing1 = Ingresso(
+            evento_id=ev["id"],
+            usuario_id="u1",
+            valor=50.0,
+            status="pago",
+            asaas_payment_id="pay_multi",
+        )
+        ing2 = Ingresso(
+            evento_id=ev["id"],
+            usuario_id="u1",
+            valor=50.0,
+            status="pago",
+            asaas_payment_id="pay_multi",
+        )
+        db.add(ing1)
+        db.add(ing2)
+        db.commit()
+        db.refresh(ing1)
+        with patch("app.services.pagamentos_asaas_handlers.reembolsar_cobranca") as mock_refund:
+            mock_refund.return_value = {"id": "ref_partial"}
+            ref = cancelar_com_reembolso_asaas(db, ing1)
+        mock_refund.assert_called_once_with("pay_multi", valor=50.0)
+        assert ref == "ref_partial"
+    finally:
+        db.close()
+
+
+def test_split_cap_nao_excede_valor():
+    from app.services.pagamento_asaas import split_para_evento
+
+    ev = Evento(asaas_wallet_id="wallet-org", nome="Barato")
+    with patch("app.services.pagamento_asaas.settings") as s:
+        s.ASAAS_PLATFORM_WALLET_ID = "wallet-platform"
+        splits = split_para_evento(ev, 1.0, quantidade=1)
+    total = sum(x["fixedValue"] for x in splits)
+    assert total <= 1.0

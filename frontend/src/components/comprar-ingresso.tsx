@@ -60,6 +60,7 @@ type Props = {
   parcelamentoMax?: number;
   urgenciaAtivo?: boolean;
   urgenciaBadge?: string | null;
+  tokenEspera?: string | null;
 };
 
 type CheckoutStep = 1 | 2 | 3;
@@ -316,6 +317,7 @@ export function ComprarIngresso({
   parcelamentoMax = 2,
   urgenciaAtivo = false,
   urgenciaBadge = null,
+  tokenEspera = null,
 }: Props) {
   const searchParams = useSearchParams();
   const [quantidade, setQuantidade] = useState(1);
@@ -718,6 +720,9 @@ export function ComprarIngresso({
     }
     body.termo_compra_aceito = true;
     body.termo_compra_versao = TERMO_COMPRA_VERSAO;
+    if (tokenEspera?.trim()) {
+      body.token_espera = tokenEspera.trim();
+    }
 
     setCreating(true);
     try {

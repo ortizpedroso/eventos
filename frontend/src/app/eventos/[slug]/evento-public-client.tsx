@@ -48,6 +48,8 @@ export function EventoPublicClient({
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<Usuario | null>(null);
+  const [tokenEsperaValido, setTokenEsperaValido] = useState<boolean | null>(null);
+  const tokenEsperaQuery = searchParams.get("espera");
 
   useEffect(() => {
     if (!alteracaoGuardada || typeof window === "undefined") return;
@@ -112,6 +114,27 @@ export function EventoPublicClient({
       cancelled = true;
     };
   }, [slug]);
+
+  useEffect(() => {
+    if (!tokenEsperaQuery || !slug) {
+      setTokenEsperaValido(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        await apiFetch<{ ok: boolean }>(
+          `/api/listas/espera/validar/${encodeURIComponent(slug)}?token=${encodeURIComponent(tokenEsperaQuery)}`,
+        );
+        if (!cancelled) setTokenEsperaValido(true);
+      } catch {
+        if (!cancelled) setTokenEsperaValido(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, tokenEsperaQuery]);
 
   useEffect(() => {
     const onSync = () => {
@@ -181,6 +204,12 @@ export function EventoPublicClient({
   const fmtInicio = formatEventoDataHora(evento.data_inicio);
   const compraDisponivel = evento.compra_disponivel ?? Boolean(evento.lote_compra_id);
   const motivoCompraIndisponivel = evento.motivo_compra_indisponivel ?? null;
+  const janelaEsperaExclusiva = Boolean(evento.espera_janela_exclusiva_ativa);
+  const podeComprarComEspera =
+    compraDisponivel &&
+    (!janelaEsperaExclusiva || tokenEsperaValido === true);
+  const bloqueadoPorEspera =
+    compraDisponivel && janelaEsperaExclusiva && tokenEsperaValido !== true;
 
   return (
     <div className={`space-y-6${evento.publicado ? " pb-24 lg:pb-0" : ""}`}>
@@ -265,6 +294,20 @@ export function EventoPublicClient({
             <ListaEsperaForm slug={evento.slug} />
           ) : null}
 
+          {bloqueadoPorEspera ? (
+            <div
+              className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950"
+              role="status"
+            >
+              <p className="font-semibold">Vaga reservada para a lista de espera</p>
+              <p className="mt-1 leading-relaxed">
+                {tokenEsperaQuery && tokenEsperaValido === false
+                  ? "Este link expirou ou não é válido. Aguarde um novo e-mail ou entre na fila novamente."
+                  : "Quem está na fila recebe um link exclusivo por e-mail quando uma vaga abre."}
+              </p>
+            </div>
+          ) : null}
+
           {!compraDisponivel ? (
             <div
               className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
@@ -293,8 +336,12 @@ export function EventoPublicClient({
                   eventoNome={evento.nome}
                   precoIngresso={Number(evento.preco_compra ?? evento.preco_ingresso)}
                   limiteIngressosPorCpf={evento.limite_ingressos_por_cpf ?? null}
-                  compraDisponivel={compraDisponivel}
-                  motivoCompraIndisponivel={motivoCompraIndisponivel}
+                  compraDisponivel={podeComprarComEspera}
+                  motivoCompraIndisponivel={
+                    bloqueadoPorEspera
+                      ? "Use o link enviado por e-mail da lista de espera para comprar nesta janela."
+                      : motivoCompraIndisponivel
+                  }
                   usuarioInicial={me}
                   sessaoInicialResolvida
                   ingressoRetomarId={ingressoRetomarId}
@@ -309,6 +356,7 @@ export function EventoPublicClient({
                   parcelamentoMax={evento.parcelamento_max}
                   urgenciaAtivo={evento.urgencia_ativo}
                   urgenciaBadge={evento.urgencia_badge}
+                  tokenEspera={tokenEsperaValido ? tokenEsperaQuery : null}
                 />
               </div>
             </aside>

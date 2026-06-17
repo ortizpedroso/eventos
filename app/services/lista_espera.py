@@ -175,6 +175,51 @@ def liberar_vagas_apos_cancelamento(db: Session, evento_id: str, quantidade: int
     return notificados
 
 
+def janela_exclusiva_espera_ativa(db: Session, evento_id: str) -> bool:
+    """Há comprador notificado com janela exclusiva ainda válida."""
+    agora = _agora()
+    return (
+        db.query(EventoListaEspera)
+        .filter(
+            EventoListaEspera.evento_id == evento_id,
+            EventoListaEspera.status == "notificado",
+            EventoListaEspera.token_expira_em.isnot(None),
+            EventoListaEspera.token_expira_em > agora,
+        )
+        .first()
+        is not None
+    )
+
+
+def validar_compra_com_token_espera(
+    db: Session,
+    evento: Evento,
+    token: str | None,
+    email_participante: str,
+) -> None:
+    """Exige token válido enquanto houver janela exclusiva da lista de espera."""
+    if not evento.lista_espera_habilitada:
+        return
+    if not janela_exclusiva_espera_ativa(db, evento.id):
+        return
+    if not token or not token.strip():
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Esta vaga está reservada para quem recebeu o link da lista de espera. "
+                "Use o e-mail enviado pela plataforma."
+            ),
+        )
+    entrada = validar_token_espera(db, evento, token)
+    if not entrada:
+        raise HTTPException(status_code=400, detail="Link da lista de espera inválido ou expirado.")
+    if email_participante.strip().lower() != entrada.email:
+        raise HTTPException(
+            status_code=403,
+            detail="O e-mail do participante deve ser o da lista de espera.",
+        )
+
+
 def validar_token_espera(db: Session, evento: Evento, token: str | None) -> EventoListaEspera | None:
     if not token:
         return None

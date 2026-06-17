@@ -109,6 +109,7 @@ class CriarPagamentoRequest(BaseModel):
     codigo_cupom: str | None = Field(default=None, max_length=40)
     termo_compra_aceito: bool = Field(default=False)
     termo_compra_versao: str | None = Field(default=None, max_length=32)
+    token_espera: str | None = Field(default=None, max_length=128)
 
     @field_validator("participante_nome", mode="before")
     @classmethod
@@ -270,6 +271,10 @@ async def criar_pagamento(
         validate_email(pe, check_deliverability=False)
     except EmailNotValidError:
         raise HTTPException(status_code=400, detail="E-mail do participante inválido")
+
+    from app.services.lista_espera import validar_compra_com_token_espera
+
+    validar_compra_com_token_espera(db, evento, body.token_espera, pe)
 
     quantidade = int(body.quantidade or 1)
 
@@ -735,11 +740,23 @@ async def cancelar_ingresso(
             asaas_refund_id = cancelar_com_reembolso_asaas(db, ingresso)
             refund_id = None
         else:
-            refund = stripe.Refund.create(
-                payment_intent=ingresso.stripe_payment_intent_id,
-                reason="requested_by_customer",
-                idempotency_key=f"refund_{ingresso.id}",
+            outros_pagos = (
+                db.query(Ingresso)
+                .filter(
+                    Ingresso.stripe_payment_intent_id == ingresso.stripe_payment_intent_id,
+                    Ingresso.id != ingresso.id,
+                    Ingresso.status == "pago",
+                )
+                .count()
             )
+            refund_kwargs: dict = {
+                "payment_intent": ingresso.stripe_payment_intent_id,
+                "reason": "requested_by_customer",
+                "idempotency_key": f"refund_{ingresso.id}",
+            }
+            if outros_pagos > 0:
+                refund_kwargs["amount"] = int(round(float(ingresso.valor or 0) * 100))
+            refund = stripe.Refund.create(**refund_kwargs)
             refund_id = refund.id
             asaas_refund_id = None
 

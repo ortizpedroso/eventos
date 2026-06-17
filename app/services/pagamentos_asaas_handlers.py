@@ -12,11 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
 from app.services.asaas_client import AsaasAPIError
-from app.services.ingresso_pago import (
-    ingressos_lote_pendente,
-    marcar_ingressos_pi_pagos,
-    notificar_ingresso_pago,
-)
+from app.services.ingresso_pago import ingressos_lote_pendente, marcar_ingressos_pi_pagos, notificar_ingresso_pago
 from app.services.pagamento_asaas import (
     cancelar_cobranca_pendente,
     criar_cobranca_asaas,
@@ -265,8 +261,21 @@ def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
     pay_id = (ingresso.asaas_payment_id or "").strip()
     if not pay_id or pay_id.startswith("disabled_") or pay_id.startswith("cortesia_"):
         return None
+    outros_pagos = (
+        db.query(Ingresso)
+        .filter(
+            Ingresso.asaas_payment_id == pay_id,
+            Ingresso.id != ingresso.id,
+            Ingresso.status == "pago",
+        )
+        .count()
+    )
+    valor = float(ingresso.valor or 0)
     try:
-        result = reembolsar_cobranca(pay_id)
+        if outros_pagos > 0:
+            result = reembolsar_cobranca(pay_id, valor=valor)
+        else:
+            result = reembolsar_cobranca(pay_id)
         return result.get("id") or pay_id
     except AsaasAPIError as e:
         logger.exception("Erro Asaas reembolso")
@@ -287,7 +296,11 @@ def status_cobranca_asaas(db: Session, ingresso_id: str, usuario: Usuario) -> di
     pay_id = (ingresso.asaas_payment_id or "").strip()
     if not pay_id:
         return {"status": "SEM_COBRANCA", "pago": False}
-    payment = obter_cobranca(pay_id)
+    try:
+        payment = obter_cobranca(pay_id)
+    except AsaasAPIError as e:
+        logger.exception("Erro ao consultar cobrança Asaas %s", pay_id)
+        raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
     pago = status_eh_pago(payment.get("status"))
     if pago:
         pagos = marcar_ingressos_pi_pagos(db, pay_id)

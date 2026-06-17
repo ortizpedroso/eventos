@@ -1,5 +1,6 @@
 import json
 import logging
+import secrets
 import stripe
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.exc import IntegrityError
@@ -57,7 +58,7 @@ def _validar_token_webhook_asaas(token_header: str) -> None:
         if not expected:
             logger.error("Webhook Asaas: ASAAS_WEBHOOK_TOKEN ausente em produção")
             raise HTTPException(status_code=503, detail="Webhook not configured")
-        if token_header != expected:
+        if not secrets.compare_digest(token_header, expected):
             logger.error("Webhook Asaas: token inválido")
             raise HTTPException(status_code=401, detail="Invalid token")
         return
@@ -67,7 +68,7 @@ def _validar_token_webhook_asaas(token_header: str) -> None:
             return
         logger.error("Webhook Asaas: ASAAS_WEBHOOK_TOKEN ausente")
         raise HTTPException(status_code=503, detail="Webhook not configured")
-    if token_header != expected:
+    if not secrets.compare_digest(token_header, expected):
         logger.error("Webhook Asaas: token inválido")
         raise HTTPException(status_code=401, detail="Invalid token")
 

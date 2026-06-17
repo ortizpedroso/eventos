@@ -23,7 +23,7 @@ fi
 URL="https://${DOMAIN}/api/webhooks/asaas"
 echo "Webhook URL: $URL"
 if [[ -n "$TOKEN" ]]; then
-  echo "Header asaas-access-token: $TOKEN"
+  echo "Configure o header asaas-access-token com o valor de ASAAS_WEBHOOK_TOKEN no .env (não exibido aqui)."
 fi
 echo ""
 echo "Teste local (com API rodando):"

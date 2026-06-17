@@ -152,6 +152,7 @@ class EventoResponse(BaseModel):
     aceita_interesse: bool = True
     lista_espera_habilitada: bool = False
     lista_espera_prazo_horas: int = 24
+    espera_janela_exclusiva_ativa: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -170,6 +171,7 @@ def montar_evento_response(
         resolver_lote_compra,
     )
     from app.services.urgencia import calcular_urgencia
+    from app.services.lista_espera import janela_exclusiva_espera_ativa
 
     lotes_orm = sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id))
     if ocupacao_por_lote is None:
@@ -240,6 +242,7 @@ def montar_evento_response(
         "aceita_interesse": bool(getattr(evento, "aceita_interesse", True)),
         "lista_espera_habilitada": bool(getattr(evento, "lista_espera_habilitada", False)),
         "lista_espera_prazo_horas": int(getattr(evento, "lista_espera_prazo_horas", 24) or 24),
+        "espera_janela_exclusiva_ativa": janela_exclusiva_espera_ativa(db, evento.id),
     }
     return EventoResponse.model_validate(base)
 

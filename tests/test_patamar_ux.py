@@ -13,6 +13,7 @@ from app.services.ingresso_pago import marcar_ingresso_pago
 from app.services.lista_espera import (
     expirar_tokens_vencidos,
     inscrever_espera,
+    janela_exclusiva_espera_ativa,
     liberar_vagas_apos_cancelamento,
     validar_token_espera,
 )
@@ -211,6 +212,45 @@ def test_eventos_relacionados_prioridade_organizador():
         db.commit()
         rel = listar_eventos_relacionados(db, ev, limite=4)
         assert any(r.organizador_id == ev.organizador_id for r in rel)
+    finally:
+        db.close()
+
+
+def test_janela_exclusiva_espera():
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        assert not janela_exclusiva_espera_ativa(db, ev.id)
+        entrada = inscrever_espera(db, ev, email="fila@ex.com")
+        entrada.status = "notificado"
+        entrada.token_compra = "tok-janela"
+        entrada.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        db.commit()
+        assert janela_exclusiva_espera_ativa(db, ev.id)
+    finally:
+        db.close()
+
+
+def test_validar_compra_com_token_espera():
+    import pytest
+    from fastapi import HTTPException
+
+    from app.services.lista_espera import validar_compra_com_token_espera
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        entrada = inscrever_espera(db, ev, email="comprador@ex.com")
+        entrada.status = "notificado"
+        entrada.token_compra = "tok-compra"
+        entrada.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        db.commit()
+        with pytest.raises(HTTPException) as exc:
+            validar_compra_com_token_espera(db, ev, None, "comprador@ex.com")
+        assert exc.value.status_code == 403
+        validar_compra_com_token_espera(db, ev, "tok-compra", "comprador@ex.com")
     finally:
         db.close()
 
