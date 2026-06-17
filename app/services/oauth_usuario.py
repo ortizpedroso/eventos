@@ -107,8 +107,6 @@ def obter_ou_criar_usuario_oauth(
         auth_provider_id=provider_id,
         tipo=tipo_norm,
         email_verificado=True,
-        stripe_customer_id=None,
-        stripe_account_id=None,
         asaas_customer_id=prov.get("asaas_customer_id"),
         asaas_wallet_id=prov.get("asaas_wallet_id"),
         asaas_account_id=prov.get("asaas_account_id"),

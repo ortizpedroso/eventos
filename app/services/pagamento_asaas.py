@@ -20,10 +20,8 @@ _ASAAS_CANCELADO = frozenset({"REFUNDED", "REFUND_REQUESTED", "CHARGEBACK_REQUES
 
 
 def ingresso_payment_ref(ingresso: Ingresso) -> str:
-    """ID externo do pagamento (Asaas ou Stripe)."""
-    if ingresso.asaas_payment_id:
-        return ingresso.asaas_payment_id
-    return (ingresso.stripe_payment_intent_id or "").strip()
+    """ID externo do pagamento Asaas."""
+    return (ingresso.asaas_payment_id or "").strip()
 
 
 def split_para_evento(

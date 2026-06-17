@@ -58,9 +58,8 @@ Elevar o EventosBR ao próximo patamar de produto e confiança de mercado, imple
 - **Remover** exibição de host/API bruto ao usuário final.
 - **Concluído quando:** footer sem links `#` mortos por padrão (placeholders vazios = ocultar ícone, não link quebrado).
 
-### REQ-06 — Consistência Asaas (não Stripe) no comprador
-- Atualizar `compra-info-confianca.tsx` e `checkout-preco-detalhe.tsx` (e qualquer copy visível ao comprador em produção Asaas) para citar **Asaas**, não Stripe, quando `PAYMENT_PROVIDER=asaas`.
-- Manter menção Stripe apenas se provider legado ativo.
+### REQ-06 — Consistência Asaas no comprador
+- `compra-info-confianca.tsx` e `checkout-preco-detalhe.tsx` citam **Asaas** em todo copy visível ao comprador.
 - **Concluído quando:** página de evento + checkout Asaas sem texto contraditório.
 
 ### REQ-07 — Badges de pagamento no checkout
@@ -343,7 +342,7 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 - [ ] Navbar: busca funciona  
 - [ ] Footer: sem links mortos; redes ocultas ou válidas  
 - [ ] Página evento: mapa/link, relacionados, urgência, simulador comprador  
-- [ ] Checkout: badges Asaas; sem texto Stripe indevido  
+- [x] Checkout: badges Asaas; sem texto de outro processador  
 - [ ] Vitrine: chips Hoje/Fim de semana/Semana; sem calendário mensal  
 - [ ] `/planos`: ícones SVG; comparativo Sympla com disclaimer  
 - [ ] Wizard + Financeiro: simuladores coerentes  

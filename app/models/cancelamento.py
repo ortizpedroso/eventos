@@ -13,8 +13,7 @@ class Cancelamento(Base):
     valor_reembolso = Column(Float)
     status = Column(String, default="pendente")  # pendente, processado, falhou
 
-    # Reembolso externo
-    stripe_refund_id = Column(String, nullable=True)
+    # Reembolso Asaas
     asaas_refund_id = Column(String, nullable=True)
 
     # Datas

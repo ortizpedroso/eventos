@@ -14,7 +14,7 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 | **Admin** | Marketing, campanhas, moderação eventos/usuários, checklist produção | ✅ Operacional |
 | **D** | Produção real, fiscal BR, E2E compra browser, monitoramento | 🟡 Em andamento (~70%) |
 
-**Testes automatizados:** 42 passed (`pytest tests/`).
+**Testes automatizados:** suite pytest completa.
 
 **Pré-produção (implementado no repo):** `docker-compose.prod.yml`, Caddy, `.env.production.example`, deploy Hostinger, backup/restore, secrets, E2E compra (`docker compose -p eventosbr-e2e` + Playwright).
 
@@ -23,31 +23,29 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 - [x] Link de portaria sem conta (`checkin_token` + `/api/portaria`)
 - [x] Repasse / venda de ingresso (`POST /api/ingressos/{id}/repassar` + UI no painel do comprador)
 - [x] Auditoria segurança/UX (jun/2026) — ver checklist em [09-auditoria-seguranca-ux.md](./09-auditoria-seguranca-ux.md) (PR #2 mergeado; ops no PR #3)
+- [x] Pagamentos 100% Asaas (remoção do Stripe)
 
 ---
 
 ## Produção e operação
 
 - [x] Commit/tag de release e CI verde no remoto
-- [x] Webhook Stripe em dev (`stripe-webhook-setup.ps1`, `stripe-webhook-dev.ps1`, `compra_teste_stripe.py`)
-- [x] Validação manual dev: PI confirmado + webhook → ingresso pago
-- [x] `PaymentIntent` cartão com `allow_redirects: never`
+- [x] Webhook Asaas em dev (`compra_teste_asaas.py`, mock em desenvolvimento)
+- [x] Validação manual dev: cobrança confirmada + webhook → ingresso pago
 - [x] `docker-compose.prod.yml` + Caddy + `.env.production.example`
 - [x] Guia deploy Hostinger ([08-deploy-hostinger.md](./08-deploy-hostinger.md))
 - [x] Scripts backup/restore Postgres, `generate-secrets`, `deploy-vps.sh`
-- [ ] Webhook Stripe com `STRIPE_WEBHOOK_SECRET` real em **produção** (Dashboard Stripe)
+- [ ] Webhook Asaas com token real em **produção** (painel Asaas)
 - [ ] SMTP validado (SPF/DKIM) no domínio
-- [ ] Stripe Connect ativo (`STRIPE_SKIP_CONNECT_ON_REGISTER=false` após termos)
 - [x] `.dockerignore` e imagens enxutas
 
 > Após alterar `.env` no VPS: `docker compose -f docker-compose.prod.yml up -d` (não só `restart`).
 
 ## Comprador
 
-- [x] Teste API: compra (`STRIPE_DISABLED`) → e-mail (`test_fase_d.py`)
-- [x] Teste API: compra Stripe test + webhook (`test_webhook_stripe_flow.py`, `compra_teste_stripe.py`)
-- [x] Teste E2E browser: checkout com `STRIPE_DISABLED` (`e2e/compra-checkout.spec.ts`, `docker-compose.e2e.yml`)
-- [ ] Teste E2E browser com Stripe Elements (`4242…`, `E2E_STRIPE=1`)
+- [x] Teste API: compra (`ASAAS_DISABLED`) → e-mail (`test_fase_d.py`)
+- [x] Teste API: compra Asaas mock + webhook (`test_pagamentos_asaas.py`)
+- [x] Teste E2E browser: checkout com Asaas mock (`e2e/compra-checkout.spec.ts`, `docker-compose.e2e.yml`)
 - [x] Fila de e-mail resiliente (Redis)
 
 ## Comprador
@@ -56,7 +54,7 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 
 ## Organizador / financeiro Brasil
 
-- [ ] Conciliação Stripe Connect (valores reais vs. `tarifas_plataforma.py`)
+- [ ] Conciliação Asaas (valores reais vs. `tarifas_plataforma.py`)
 - [ ] NFSe e comprovante de repasse
 
 ## Admin plataforma
@@ -68,7 +66,7 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 ## Qualidade
 
 - [x] Testes E2E smoke (Playwright)
-- [x] Teste E2E fluxo de compra (modo STRIPE_DISABLED)
+- [x] Teste E2E fluxo de compra (Asaas mock)
 - [x] Avisos de config incompleta (`production_checks`)
 - [ ] Monitoramento (logs estruturados, alertas `/ready` 503)
 
@@ -77,6 +75,7 @@ Itens planejados após as fases A–C e o painel admin de marketing.
 ## Go-live (só no dia da publicação)
 
 1. DNS `A` → IP do VPS Hostinger  
-2. `.env` com chaves Stripe **live** + webhook produção  
-3. `docker compose -f docker-compose.prod.yml up -d --build`  
-4. Smoke manual + aba Produção no admin verde  
+2. `.env` com chaves Asaas **produção** + webhook configurado  
+3. `alembic upgrade head` (remove colunas Stripe legadas)  
+4. `docker compose -f docker-compose.prod.yml up -d --build`  
+5. Smoke manual + aba Produção no admin verde  

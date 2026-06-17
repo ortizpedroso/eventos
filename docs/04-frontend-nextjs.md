@@ -71,9 +71,10 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 
 | Componente | Função |
 |------------|--------|
-| **`comprar-ingresso.tsx`** | Fluxo Stripe Elements: cria intent via API, participante opcional (CPF/tel), `ConfirmForm` |
+| **`comprar-ingresso.tsx`** | Fluxo de compra: cria cobrança via API, participante opcional (CPF/tel), painel Asaas |
+| **`checkout-asaas-painel.tsx`** | Checkout PIX, cartão e fatura via Asaas |
+| **`compra-info-confianca.tsx`** | Bloco de confiança (denúncia, Asaas, links legais) |
 | **`oauth-login-buttons.tsx`** | Botões de login social (Google); lê `/api/auth/oauth-config` para habilitar/desabilitar |
-| **`compra-info-confianca.tsx`** | Bloco de confiança (denúncia, Stripe, links legais) |
 | **`evento-lotes-editor.tsx`** | UI de lotes no criar/editar; serialização para API |
 | **`evento-imagem-field.tsx`** | URL ou ficheiro para imagem do evento |
 | **`evento-hero-banner.tsx`** | Banner da página pública |
@@ -93,10 +94,10 @@ Em **`/conta/ingressos/[id]`**, se `ingresso.status === "pago"`:
 
 ---
 
-## Integração Stripe no front
+## Integração Asaas no front
 
 - **`components/checkout-asaas-painel.tsx`**: checkout PIX, cartão e fatura via Asaas.
-- **`comprar-ingresso.tsx`**: `<Elements clientSecret=...>` + `PaymentElement`; `return_url` para área de pagamentos após redirect methods (ex.: PIX).
+- **`comprar-ingresso.tsx`**: orquestra criação da cobrança e exibe o painel Asaas; `return_url` para a página do evento após pagamento.
 
 ---
 

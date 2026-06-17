@@ -18,7 +18,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 
 > **Hoje:** Patamar 1 completo. **Código do Patamar 2 (Asaas) está no repo** — PRs [#4](https://github.com/ortizpedroso/eventos/pull/4) e [#5](https://github.com/ortizpedroso/eventos/pull/5). Falta executar go-live no VPS (`.env`, webhook, SMTP, 1ª venda real).
 
-**Provedor de pagamento:** **Asaas** (principal) · Stripe (legado/fallback)
+**Provedor de pagamento:** **Asaas** (único)
 
 ---
 
@@ -199,8 +199,8 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 - [x] **Asaas** — customer no cadastro, split, webhook, reembolso
 - [x] **Onboarding organizador** — `walletId`, criar subconta, antecipação cartão (opt-in)
 - [x] Validação: evento sem wallet **não vende** (proteção split)
-- [x] Stripe Customer no cadastro *(legado)*
-- [x] Stripe Connect Express *(legado, quando não skipado)*
+- [x] Wallet Asaas do organizador no cadastro/edição de perfil
+- [x] Split de pagamento plataforma + organizador via Asaas
 
 ---
 
@@ -250,14 +250,14 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 - [x] Docker Compose dev e prod
 - [x] Caddy + guia Hostinger (doc 08) + **`/health` e `/ready` públicos**
 - [x] Webhook **Asaas** (`POST /api/webhooks/asaas`)
-- [x] Webhook Stripe *(legado, dev + testes)*
+- [x] Webhook Asaas *(dev + testes)*
 - [x] Fila de e-mail (worker)
 - [x] Rate limit (portaria, registro, checkout, busca portaria)
 - [x] **pytest 115+** (`ASAAS_DISABLED=true` em testes)
 - [x] **QA API 24/24** (`scripts/qa-funcional.py`)
 - [x] **E2E smoke 4/4** + compra checkout + fluxo org/cliente
 - [x] Testes integração Asaas (`test_pagamentos_asaas.py`, `test_organizador_asaas.py`)
-- [x] `production_checks` (Asaas + Stripe + SMTP + CORS)
+- [x] `production_checks` (Asaas + SMTP + CORS)
 - [x] `.env.production.example` com Asaas
 - [x] Runbook go-live: **doc [11-go-live-asaas](./11-go-live-asaas.md)**
 

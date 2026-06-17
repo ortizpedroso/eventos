@@ -236,10 +236,10 @@ ENVIRONMENT=production
 - Verifique o ID/slug do evento
 - Liste eventos com `GET /api/eventos/`
 
-### "Erro Stripe"
-- Verifique se as chaves estão corretas no `.env`
-- Use chaves de teste (começam com `sk_test_`)
-- Confirme que o webhook secret está correto
+### "Erro Asaas"
+- Verifique se `ASAAS_API_KEY` e `ASAAS_WALLET_ID` estão corretos no `.env`
+- Use ambiente sandbox para testes (`ASAAS_ENVIRONMENT=sandbox`)
+- Confirme que o webhook Asaas aponta para `/api/webhooks/asaas`
 
 ### Porta 8000 ocupada
 ```bash
@@ -259,4 +259,4 @@ taskkill /PID <PID> /F
 
 ---
 
-**Desenvolvido com FastAPI + Stripe** ⚡💳
+**Desenvolvido com FastAPI + Asaas** ⚡💳

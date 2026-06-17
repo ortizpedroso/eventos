@@ -57,10 +57,7 @@ def notificar_ingresso_pago(ingresso_id: str) -> None:
 def _ingressos_por_ref(db: Session, payment_ref: str) -> list[Ingresso]:
     return (
         db.query(Ingresso)
-        .filter(
-            (Ingresso.asaas_payment_id == payment_ref)
-            | (Ingresso.stripe_payment_intent_id == payment_ref)
-        )
+        .filter(Ingresso.asaas_payment_id == payment_ref)
         .all()
     )
 
@@ -142,7 +139,7 @@ def _cancelar_ingressos_por_ref(
 
 def ingressos_lote_pendente(db: Session, ingresso: Ingresso) -> list[Ingresso]:
     """Ingressos do mesmo lote de compra (mesma reserva / mesmo payment ref)."""
-    ref = (ingresso.asaas_payment_id or ingresso.stripe_payment_intent_id or "").strip()
+    ref = (ingresso.asaas_payment_id or "").strip()
     if ref:
         return _ingressos_por_ref(db, ref)
     q = db.query(Ingresso).filter(

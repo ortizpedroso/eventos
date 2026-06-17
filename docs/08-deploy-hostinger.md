@@ -107,7 +107,7 @@ cd /opt/eventosbr
 
 ## Troubleshooting
 
-- [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) — webhook Stripe, Docker, admin.
+- [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) — webhook Asaas, Docker, admin.
 - Após mudar `.env`: `docker compose -f docker-compose.prod.yml up -d` (não só `restart`).
 - Logs: `docker compose -f docker-compose.prod.yml logs -f api web caddy`
 

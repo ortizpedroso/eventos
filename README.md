@@ -254,7 +254,7 @@ eventosbr/
 - **FastAPI** - Framework web
 - **SQLAlchemy** - ORM para banco de dados
 - **Pydantic** - Validação de dados
-- **Stripe** - Processamento de pagamentos
+- **Asaas** - Processamento de pagamentos (PIX, cartão)
 - **python-jose** - Autenticação com JWT
 - **python-slugify** - Geração de slugs
 
@@ -269,9 +269,9 @@ pip install -r requirements.txt
 - Verifique DATABASE_URL no .env
 - Para SQLite, certifique-se que a pasta existe
 
-### Erro: Stripe rejection
-- Verifique as credenciais no .env
-- Use chaves de teste (começa com `sk_test_` e `pk_test_`)
+### Erro: Pagamento Asaas rejeitado
+- Verifique `ASAAS_API_KEY` e `ASAAS_WALLET_ID` no `.env`
+- Use ambiente sandbox (`ASAAS_ENVIRONMENT=sandbox`) para testes
 
 ### Porta 8000 já em uso
 ```bash
@@ -298,4 +298,4 @@ Para issues e dúvidas, abra uma issue no repositório.
 
 ---
 
-**Desenvolvido com ❤️ usando FastAPI e Stripe**
+**Desenvolvido com ❤️ usando FastAPI e Asaas**

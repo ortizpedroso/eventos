@@ -19,7 +19,7 @@ Estes erros aparecem quando o VS Code não consegue encontrar as bibliotecas Pyt
 ```bash
 # 1. Configure o .env
 cp .env.example .env
-# Edite .env com suas chaves Stripe
+# Edite .env com suas chaves Asaas
 
 # 2. Inicie com Docker
 docker-compose up -d --build

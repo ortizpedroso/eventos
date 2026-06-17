@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 export const metadata: Metadata = {
   title: "Documentação do sistema | EventosBR",
   description:
-    "Arquitetura, API FastAPI, frontend Next.js, base de dados, pagamentos Stripe, lotes de ingressos e operação — EventosBR.",
+    "Arquitetura, API FastAPI, frontend Next.js, base de dados, pagamentos Asaas, lotes de ingressos e operação — EventosBR.",
 };
 
 const toc = [
@@ -48,7 +48,7 @@ export default function DocumentacaoPage() {
           </h1>
           <p className="mt-4 text-base text-zinc-600">
             Visão técnica do EventosBR: API em FastAPI, interface em Next.js, PostgreSQL (ou SQLite em
-            desenvolvimento), Redis na infraestrutura Docker e pagamentos com Stripe. O repositório inclui também
+            desenvolvimento), Redis na infraestrutura Docker e pagamentos com Asaas. O repositório inclui também
             ficheiros Markdown em <code className="rounded bg-zinc-200/80 px-1.5 py-0.5 text-xs">docs/</code> no
             código-fonte.
           </p>
@@ -87,7 +87,7 @@ export default function DocumentacaoPage() {
                 A <strong className="text-zinc-900">EventosBR</strong> permite a organizadores criarem eventos
                 (página pública por <strong className="text-zinc-900">slug</strong>), definirem{" "}
                 <strong className="text-zinc-900">lotes de ingressos</strong> (preço, ordem, capacidade, datas de
-                venda) e a participantes comprarem com <strong className="text-zinc-900">cartão</strong> via Stripe.
+                venda) e a participantes comprarem com <strong className="text-zinc-900">PIX ou cartão</strong> via Asaas.
                 Há fluxo de cancelamento com reembolso e relatórios para o organizador.
               </p>
               <ul className="list-disc space-y-1 pl-5">
@@ -95,7 +95,7 @@ export default function DocumentacaoPage() {
                   <strong className="text-zinc-900">API</strong>: Python, FastAPI, Pydantic, SQLAlchemy, Alembic.
                 </li>
                 <li>
-                  <strong className="text-zinc-900">Web</strong>: Next.js (App Router), TypeScript, Tailwind, Stripe.js.
+                  <strong className="text-zinc-900">Web</strong>: Next.js (App Router), TypeScript, Tailwind.
                 </li>
                 <li>
                   <strong className="text-zinc-900">Auth</strong>: JWT no header <code>Authorization: Bearer</code>.
@@ -144,9 +144,8 @@ export default function DocumentacaoPage() {
               <ul className="list-disc space-y-1 pl-5">
                 <li>
                   <code className="rounded bg-zinc-100 px-1">/api/auth</code> — registo, login,{" "}
-                  <code className="rounded bg-zinc-100 px-1">/me</code> (GET/PATCH); cria Stripe Customer e, para
-                  organizador, conta Connect Express (salvo flags de desactivação ou termos pendentes no Dashboard
-                  Stripe).
+                  <code className="rounded bg-zinc-100 px-1">/me</code> (GET/PATCH); organizadores configuram{" "}
+                  <code className="rounded bg-zinc-100 px-1">asaas_wallet_id</code> para receber repasses via split.
                 </li>
                 <li>
                   <code className="rounded bg-zinc-100 px-1">/api/eventos</code> — criar (organizador), atualizar por{" "}

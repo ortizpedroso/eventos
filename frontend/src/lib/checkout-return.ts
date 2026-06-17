@@ -1,4 +1,4 @@
-/** URL de retorno pós-pagamento Stripe — sempre na página do evento (checkout unificado). */
+/** URL de retorno pós-pagamento Asaas — sempre na página do evento (checkout unificado). */
 export function urlPosCompraEvento(eventoSlug: string, ingressoId: string): string {
   const qs = new URLSearchParams({
     compra: "ok",

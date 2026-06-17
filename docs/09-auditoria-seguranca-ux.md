@@ -104,13 +104,13 @@ Itens da rodada operacional (PR #3):
 - [x] **Correção `lembrete_evento.py`** — usava `EMAIL_HOST` inexistente; corrigido para `EMAIL_SERVER`.
 - [x] **Teste SMTP** — `python scripts/test-smtp.py destino@email.com`.
 - [x] **Endpoint admin** — `POST /api/admin/smtp-test` (header `X-Platform-Admin-Key`).
-- [x] **CSP validada em produção local** — `next start` retorna header com `nonce-`, Stripe e Google OAuth na allowlist.
+- [x] **CSP validada em produção local** — `next start` retorna header com `nonce-`, Asaas e Google OAuth na allowlist.
 - [x] **Scripts** — `scripts/migrate-db.sh`, `scripts/smoke-auditoria.sh`.
-- [x] **Testes** — `tests/test_smtp_client.py`, `tests/test_csp.py`; suite **66/66 passed** (`STRIPE_DISABLED=true`).
+- [x] **Testes** — `tests/test_smtp_client.py`, `tests/test_csp.py`; suite pytest completa.
 - [x] **Bugfix** — import `gerar_checkin_token` em `app/routes/eventos.py`.
 - [x] **Bugfix auth** — hidratação de `/auth` corrigida (`useSearchParams` removido do cliente; query via server component).
 - [x] **Bugfix check-in** — duplicata retorna `ok: false` em `ingresso_checkin.py` (organizador e portaria).
-- [x] **Bugfix teste** — `TestRetomarPagamento` desativa `STRIPE_DISABLED` durante o fluxo Stripe mockado.
+- [x] **Bugfix teste** — `TestRetomarPagamento` cobre retomada de cobrança Asaas pendente.
 - [x] **PR #2 mergeado** em `main` (auditoria completa).
 - [ ] **PR #3 mergeado** — [fix(ops): migração Postgres, SMTP, CSP e smoke](https://github.com/ortizpedroso/eventos/pull/3).
 
@@ -120,7 +120,7 @@ Itens da rodada operacional (PR #3):
 
 | Suite | Comando | Resultado |
 |-------|---------|-----------|
-| pytest | `STRIPE_DISABLED=true python3 -m pytest tests/` | **66/66** passed |
+| pytest | `python3 -m pytest tests/` | suite completa |
 | QA API (organizador + cliente + portaria) | `PYTHONPATH=. python3 scripts/qa-funcional.py` | **24/24** passed |
 | Smoke E2E | `npm run test:e2e` (smoke) | **4/4** passed |
 | E2E compra completa | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3001 npm run test:e2e` | OK em build de produção (`next start`) |
@@ -146,10 +146,8 @@ Ações que **não dependem mais de código**, apenas de deploy/configuração:
 
 Itens do [07 — Fase D](./07-fase-d-roadmap.md), fora do escopo da auditoria:
 
-- [ ] Webhook Stripe com `STRIPE_WEBHOOK_SECRET` real em produção.
-- [ ] Stripe Connect ativo (`STRIPE_SKIP_CONNECT_ON_REGISTER=false`).
-- [ ] Teste E2E browser com Stripe Elements (`E2E_STRIPE=1`).
-- [ ] Conciliação Stripe Connect e NFSe / comprovante de repasse.
+- [ ] Webhook Asaas com token real em produção (`ASAAS_WEBHOOK_ACCESS_TOKEN`).
+- [ ] Conciliação Asaas (valores reais vs. `tarifas_plataforma.py`) e NFSe / comprovante de repasse.
 - [ ] `MARKETING_WHATSAPP_WEBHOOK_URL` em produção (opcional).
 - [ ] SSO / lista de operadores no painel admin.
 - [ ] Monitoramento (logs estruturados, alertas `/ready` 503).
