@@ -123,6 +123,13 @@ def iniciar_cobranca_asaas(
                 db.refresh(ingresso)
                 if ingresso.status == "pago":
                     return {"ja_pago": True, "payment_id": pay_id}
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "Pagamento confirmado no gateway, mas o ingresso ainda não foi liberado. "
+                        "Aguarde alguns instantes ou contate o suporte."
+                    ),
+                )
             if body.metodo == "pix" and existing.get("billingType") == "PIX":
                 return resposta_checkout_asaas(existing) | {
                     "ingresso_id": ingresso.id,
@@ -240,13 +247,22 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
                 notificar_ingresso_pago(iid)
         else:
             db.commit()
-        return {
-            "client_secret": "",
-            "ingresso_id": ingresso.id,
-            "ja_pago": True,
-            "reservado_ate": None,
-            "evento_slug": ingresso.evento.slug,
-        }
+        db.refresh(ingresso)
+        if ingresso.status == "pago":
+            return {
+                "client_secret": "",
+                "ingresso_id": ingresso.id,
+                "ja_pago": True,
+                "reservado_ate": None,
+                "evento_slug": ingresso.evento.slug,
+            }
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Pagamento confirmado no gateway, mas o ingresso ainda não foi liberado. "
+                "Aguarde alguns instantes ou contate o suporte."
+            ),
+        )
 
     if status_eh_cancelado(payment.get("status")):
         raise HTTPException(

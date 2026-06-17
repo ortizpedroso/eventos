@@ -183,6 +183,9 @@ def liberar_vagas_apos_cancelamento(db: Session, evento_id: str, quantidade: int
     if not evento or not evento.lista_espera_habilitada:
         return 0
 
+    if janela_exclusiva_espera_ativa(db, evento_id):
+        return 0
+
     notificados = 0
     for _ in range(max(1, quantidade)):
         prox = (

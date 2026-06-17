@@ -577,6 +577,142 @@ def test_status_cobranca_pago_reflete_ingresso_local():
         db.close()
 
 
+def test_liberar_vagas_respeita_janela_exclusiva_ativa(monkeypatch):
+    from app.services.lista_espera import inscrever_espera, liberar_vagas_apos_cancelamento
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        entrada_a = inscrever_espera(db, ev, email="ativo@ex.com")
+        entrada_a.status = "notificado"
+        entrada_a.token_compra = f"tok-{uuid.uuid4().hex[:8]}"
+        entrada_a.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        entrada_b = inscrever_espera(db, ev, email="fila@ex.com")
+        db.commit()
+
+        emails: list[str] = []
+        monkeypatch.setattr(
+            "app.services.lista_espera.enqueue_email_simples",
+            lambda dest, subj, html: emails.append(dest) or True,
+        )
+
+        n = liberar_vagas_apos_cancelamento(db, ev.id, 1)
+        assert n == 0
+        assert emails == []
+
+        db.refresh(entrada_b)
+        assert entrada_b.status == "aguardando"
+    finally:
+        db.close()
+
+
+def test_retomar_asaas_nao_reporta_ja_pago_sem_ingresso_pago():
+    from unittest.mock import patch
+
+    import pytest
+    from fastapi import HTTPException
+
+    from app.services.pagamentos_asaas_handlers import retomar_pagamento_asaas
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="outro@ex.com",
+            valor=50.0,
+            status="pendente",
+            asaas_payment_id="pay_retomar",
+            reservado_ate=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30),
+        )
+        db.add(ing)
+        db.commit()
+        db.refresh(ing)
+
+        entrada = inscrever_espera(db, ev, email="fila@ex.com")
+        entrada.status = "notificado"
+        entrada.token_compra = f"tok-{uuid.uuid4().hex[:8]}"
+        entrada.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        db.commit()
+
+        with (
+            patch(
+                "app.services.pagamentos_asaas_handlers.obter_cobranca",
+                return_value={"status": "CONFIRMED", "id": "pay_retomar"},
+            ),
+            patch(
+                "app.services.pagamentos_asaas_handlers.marcar_ingressos_pi_pagos",
+                return_value=[],
+            ),
+        ):
+            with pytest.raises(HTTPException) as exc:
+                retomar_pagamento_asaas(db, ing)
+        assert exc.value.status_code == 409
+        assert ing.status == "pendente"
+    finally:
+        db.close()
+
+
+def test_iniciar_cobranca_nao_recria_quando_gateway_pago():
+    from unittest.mock import patch
+
+    import pytest
+    from fastapi import HTTPException
+
+    from app.services.pagamentos_asaas_handlers import (
+        AsaasCobrancaRequest,
+        iniciar_cobranca_asaas,
+    )
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        ev.asaas_wallet_id = "wallet-test"
+        ev.lista_espera_habilitada = False
+        db.commit()
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="buyer@ex.com",
+            valor=50.0,
+            status="pendente",
+            asaas_payment_id="pay_existente",
+            reservado_ate=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30),
+        )
+        db.add(ing)
+        db.commit()
+        db.refresh(ing)
+
+        with (
+            patch("app.services.pagamentos_asaas_handlers.settings") as s,
+            patch(
+                "app.services.pagamentos_asaas_handlers.obter_cobranca",
+                return_value={"status": "CONFIRMED", "id": "pay_existente", "billingType": "PIX"},
+            ),
+            patch(
+                "app.services.pagamentos_asaas_handlers.marcar_ingressos_pi_pagos",
+                return_value=[],
+            ),
+            patch("app.services.pagamentos_asaas_handlers.cancelar_cobranca_pendente") as cancel_mock,
+        ):
+            s.ASAAS_PLATFORM_WALLET_ID = "wallet-platform"
+            with pytest.raises(HTTPException) as exc:
+                iniciar_cobranca_asaas(
+                    db,
+                    org,
+                    AsaasCobrancaRequest(ingresso_id=ing.id, metodo="pix"),
+                )
+        assert exc.value.status_code == 409
+        cancel_mock.assert_not_called()
+        assert ing.asaas_payment_id == "pay_existente"
+    finally:
+        db.close()
+
+
 def test_api_lista_interesse():
     db = _db()
     try:
