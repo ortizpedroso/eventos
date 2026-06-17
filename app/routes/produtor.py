@@ -40,6 +40,7 @@ async def atualizar_perfil_publico(
     if body.social_site is not None:
         usuario_atual.social_site = body.social_site.strip()[:500] or None
     slug = garantir_slug_publico(db, usuario_atual)
+    db.commit()
     db.refresh(usuario_atual)
     return {"ok": True, "slug_publico": slug}
 

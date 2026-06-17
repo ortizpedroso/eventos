@@ -339,6 +339,8 @@ def marcar_espera_comprada(db: Session, evento_id: str, email: str) -> None:
         entrada.status = "comprado"
         entrada.token_compra = None
         entrada.token_expira_em = None
+        db.flush()
+        liberar_vagas_apos_cancelamento(db, evento_id, 1)
 
 
 def expirar_tokens_vencidos(db: Session) -> int:

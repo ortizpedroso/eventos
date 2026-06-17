@@ -772,6 +772,38 @@ def test_iniciar_cobranca_nova_409_se_pago_mas_nao_liberado():
         db.close()
 
 
+def test_marcar_espera_comprada_notifica_proximo(monkeypatch):
+    from app.services.lista_espera import inscrever_espera, marcar_espera_comprada
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        e1 = inscrever_espera(db, ev, email="primeiro@ex.com")
+        e1.status = "notificado"
+        e1.token_compra = f"tok-{uuid.uuid4().hex[:8]}"
+        e1.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        e2 = inscrever_espera(db, ev, email="segundo@ex.com")
+        db.commit()
+
+        emails: list[str] = []
+        monkeypatch.setattr(
+            "app.services.lista_espera.enqueue_email_simples",
+            lambda dest, subj, html: emails.append(dest) or True,
+        )
+
+        marcar_espera_comprada(db, ev.id, "primeiro@ex.com")
+        db.commit()
+
+        db.refresh(e1)
+        db.refresh(e2)
+        assert e1.status == "comprado"
+        assert e2.status == "notificado"
+        assert emails == ["segundo@ex.com"]
+    finally:
+        db.close()
+
+
 def test_liberar_vagas_quantidade_um_por_janela(monkeypatch):
     from app.services.lista_espera import inscrever_espera, liberar_vagas_apos_cancelamento
 
@@ -802,6 +834,39 @@ def test_liberar_vagas_quantidade_um_por_janela(monkeypatch):
         assert e3.status == "aguardando"
     finally:
         db.close()
+
+
+def test_produtor_patch_persiste_com_slug_existente():
+    from app.models import Usuario
+
+    email = f"org_prod_{uuid.uuid4().hex[:8]}@test.com"
+    reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={"email": email, "nome": "Org Prod", "senha": "senha12345", "tipo": "organizador"},
+    )
+    assert reg.status_code == 200, reg.text
+    token = reg.json()["access_token"]
+
+    db = _db()
+    try:
+        u = db.query(Usuario).filter(Usuario.email == email).first()
+        assert u is not None
+        u.slug_publico = f"slug-{uuid.uuid4().hex[:8]}"
+        db.commit()
+        slug = u.slug_publico
+    finally:
+        db.close()
+
+    patch = test_api.client.patch(
+        "/api/produtor/meu-perfil",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"bio": "Bio atualizada pelo patch"},
+    )
+    assert patch.status_code == 200, patch.text
+
+    pub = test_api.client.get(f"/api/produtor/{slug}")
+    assert pub.status_code == 200, pub.text
+    assert pub.json()["bio"] == "Bio atualizada pelo patch"
 
 
 def test_api_lista_interesse():

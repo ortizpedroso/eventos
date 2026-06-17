@@ -99,6 +99,7 @@ def cancelar_cobranca_pendente(payment_id: str) -> None:
         if e.status_code == 404:
             return
         logger.warning("Não foi possível cancelar cobrança Asaas %s: %s", payment_id, e)
+        raise
 
 
 def reembolsar_cobranca(payment_id: str, *, valor: float | None = None) -> dict[str, Any]:

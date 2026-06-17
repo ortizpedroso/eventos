@@ -135,7 +135,14 @@ def iniciar_cobranca_asaas(
                     "ingresso_id": ingresso.id,
                     "reservado_ate": ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None,
                 }
-            cancelar_cobranca_pendente(pay_id)
+            try:
+                cancelar_cobranca_pendente(pay_id)
+            except AsaasAPIError as e:
+                logger.warning("Falha ao cancelar cobrança Asaas %s: %s", pay_id, e)
+                raise HTTPException(
+                    status_code=503,
+                    detail="Não foi possível alterar o método de pagamento. Tente novamente em instantes.",
+                ) from e
             for ing in lote:
                 ing.asaas_payment_id = None
             db.commit()
