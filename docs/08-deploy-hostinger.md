@@ -33,7 +33,7 @@ Ficheiros principais:
 2. **Secrets** — `.\scripts\generate-secrets.ps1` (guardar no gestor de senhas).
 3. **Domínio na Hostinger** — registar; preparar zona DNS (ver Fase C).
 4. **E-mail** — criar `noreply@seudominio.com.br` (Hostinger Email ou Brevo/Resend).
-5. **Stripe** — continuar em **modo test**; webhook dev com CLI (`scripts/stripe-webhook-dev.ps1`).
+5. **Asaas** — sandbox ou produção; webhook em `https://<domínio>/api/webhooks/asaas` (ver [11-go-live-asaas.md](./11-go-live-asaas.md)).
 
 ## Fase B — Preparar o VPS (sem tráfego público ainda)
 
@@ -82,7 +82,7 @@ Ficheiros principais:
    - `ENVIRONMENT=production`, `DEBUG=False`
    - `CORS_ORIGINS=https://seudominio.com.br,https://www.seudominio.com.br`
    - `FRONTEND_PUBLIC_URL` / `NEXT_PUBLIC_API_URL` com HTTPS
-   - `STRIPE_DISABLED=true` (se não usar Stripe em paralelo)
+   - `ASAAS_DISABLED=true` (apenas dev/teste local)
 5. Recriar containers:
    ```bash
    ./scripts/deploy-vps.sh

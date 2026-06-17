@@ -5,7 +5,7 @@
 | Local | Uso |
 |-------|-----|
 | **Raiz `.env`** | API FastAPI (`config/settings.py` lê `env_file=".env"`) |
-| **Raiz `.env.example`** | Modelo para Postgres, Stripe, JWT, CORS, Redis, email |
+| **Raiz `.env.example`** | Modelo para Postgres, Asaas, JWT, CORS, Redis, email |
 | **`frontend/.env.local`** | `NEXT_PUBLIC_*`, `INTERNAL_API_URL` em Docker |
 | **`frontend/.env.local.example`** | Documentação das variáveis do Next |
 
@@ -15,12 +15,12 @@
 |----------|--------|
 | `DATABASE_URL` | Postgres em produção; SQLite possível em dev |
 | `SECRET_KEY` | Obrigatória se `ENVIRONMENT` ≠ `development` |
-| `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | Modo live vs test (`sk_live_` / `sk_test_`) |
-| `STRIPE_DISABLED` | Só desenvolvimento / emergência |
-| `STRIPE_SKIP_CONNECT_ON_REGISTER` | Contorna criação de conta Connect no registo |
+| `ASAAS_API_KEY` / `ASAAS_WEBHOOK_TOKEN` / `ASAAS_PLATFORM_WALLET_ID` | Produção Asaas |
+| `ASAAS_DISABLED` | Só desenvolvimento / emergência |
+| `PAYMENT_PROVIDER` | Sempre `asaas` |
 | `CORS_ORIGINS` | Lista separada por vírgulas; necessário se o front não usar proxy same-origin |
 | `ENVIRONMENT` | `development` ativa `create_tables()` no startup da API |
-| `DEBUG` | Influencia webhook Stripe (ver `webhooks.py`) |
+| `DEBUG` | Influencia webhook mock em desenvolvimento |
 
 ## Docker Compose (raiz)
 
@@ -50,7 +50,7 @@ O histórico está em **`alembic/versions/`**. Em CI/produção, preferir **semp
 python -m pytest tests/ -q
 ```
 
-Usam SQLite em memória e **não** chamam Stripe real (mocks).
+Usam SQLite em memória; pagamentos mockados com `ASAAS_DISABLED=true`.
 
 ## Observabilidade e saúde
 
@@ -96,7 +96,7 @@ Teste SMTP pelo painel admin: `POST /api/admin/smtp-test` com header `X-Platform
 
 1. Definir `ENVIRONMENT=production`, `DEBUG=False`, `SECRET_KEY` forte (`scripts/generate-secrets.ps1`).
 2. `DATABASE_URL` persistente; correr **`alembic upgrade head`** (automático no entrypoint do compose prod).
-3. Stripe: chaves live, webhook apontando para `https://<domínio>/api/webhooks/stripe`, secret correto.
-4. Frontend: `NEXT_PUBLIC_API_URL` com HTTPS; `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` live.
+3. Asaas: `ASAAS_API_KEY`, webhook em `https://<domínio>/api/webhooks/asaas`, `ASAAS_WEBHOOK_TOKEN` e `ASAAS_PLATFORM_WALLET_ID`.
+4. Frontend: `NEXT_PUBLIC_API_URL` com HTTPS; `NEXT_PUBLIC_PAYMENT_PROVIDER=asaas`.
 5. `CORS_ORIGINS` alinhado aos domínios reais do site.
 6. Backup agendado: `scripts/backup-postgres.sh`.

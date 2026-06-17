@@ -33,7 +33,7 @@ Copie `.env.production.example` → `.env` e preencha:
 | `PLATFORM_ADMIN_API_KEY` | Sim | Painel `/admin` |
 | `POSTGRES_PASSWORD` | Sim | Senha do Postgres |
 | `CORS_ORIGINS` | Sim | URLs HTTPS do site (sem `*`) |
-| `ASAAS_DISABLED` | Modo manutenção / testes |
+| `ASAAS_DISABLED` | Recomendado | `false` em produção; `true` só em dev/teste |
 
 Gerar secrets: `./scripts/generate-secrets.sh`
 
@@ -133,7 +133,6 @@ Manual:
 ## 8. Rollback / contingência
 
 - `ASAAS_DISABLED=true` — desativa cobranças (modo manutenção)
-- `PAYMENT_PROVIDER=stripe` + chaves Stripe — fallback legado
 - Restaurar DB: `./scripts/restore-postgres.sh`
 
 ---

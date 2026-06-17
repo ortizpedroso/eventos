@@ -9,7 +9,7 @@ export default async function globalSetup() {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (process.env.CI) {
-      throw new Error(`${msg}\nDica CI: inicie API com STRIPE_DISABLED=true ou use docker-compose.e2e.yml`);
+      throw new Error(`${msg}\nDica CI: inicie API com ASAAS_DISABLED=true ou use docker-compose.e2e.yml`);
     }
     console.warn(`[playwright] ${msg} — testes de compra podem falhar; smoke segue sem API.`);
   }

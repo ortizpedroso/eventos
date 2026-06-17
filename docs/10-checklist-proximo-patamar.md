@@ -133,12 +133,10 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 - [x] **Asaas — fatura** (redirect cartão/boleto/PIX)
 - [x] **Timer visível de reserva** no checkout Asaas
 - [x] Split organizador + plataforma (`ASAAS_PLATFORM_WALLET_ID`)
-- [x] Cartão via Stripe Payment Element *(legado)*
-- [x] PIX + QR Stripe *(legado)*
 - [x] Aceite de termo de compra
 - [x] Reserva de vaga com expiração (backend)
 - [x] Retomar pagamento pendente (`/api/pagamentos/retomar`)
-- [x] Modo `STRIPE_DISABLED` / `ASAAS_DISABLED` para testes
+- [x] Modo `ASAAS_DISABLED` para testes locais
 
 ### Pós-compra
 - [x] Lista de pagamentos (`/conta/pagamentos`)
@@ -255,7 +253,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 - [x] Webhook Stripe *(legado, dev + testes)*
 - [x] Fila de e-mail (worker)
 - [x] Rate limit (portaria, registro, checkout, busca portaria)
-- [x] **pytest 78/78** (`ASAAS_DISABLED=true`, `STRIPE_DISABLED=true`)
+- [x] **pytest 115+** (`ASAAS_DISABLED=true` em testes)
 - [x] **QA API 24/24** (`scripts/qa-funcional.py`)
 - [x] **E2E smoke 4/4** + compra checkout + fluxo org/cliente
 - [x] Testes integração Asaas (`test_pagamentos_asaas.py`, `test_organizador_asaas.py`)

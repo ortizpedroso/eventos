@@ -547,7 +547,7 @@ async def cancelar_ingresso(
         return {
             "mensagem": "Ingresso já estava cancelado",
             "valor_reembolso": cancelamento_existente.valor_reembolso,
-            "refund_id": cancelamento_existente.stripe_refund_id,
+            "refund_id": cancelamento_existente.asaas_refund_id,
             "idempotent": True,
         }
     
@@ -561,7 +561,6 @@ async def cancelar_ingresso(
 
     try:
         if skip_gateway_refund:
-            refund_id: str | None = None
             asaas_refund_id: str | None = None
             logger.warning(
                 "Cancelamento sem reembolso no gateway (modo teste): ingresso %s",
@@ -569,13 +568,11 @@ async def cancelar_ingresso(
             )
         else:
             asaas_refund_id = cancelar_com_reembolso_asaas(db, ingresso)
-            refund_id = None
 
         if cancelamento_existente:
             cancelamento = cancelamento_existente
             cancelamento.valor_reembolso = ingresso.valor
             cancelamento.status = "processado"
-            cancelamento.stripe_refund_id = refund_id
             cancelamento.asaas_refund_id = asaas_refund_id
             cancelamento.data_processamento = agora
         else:
@@ -583,7 +580,6 @@ async def cancelar_ingresso(
                 ingresso_id=ingresso.id,
                 valor_reembolso=ingresso.valor,
                 status="processado",
-                stripe_refund_id=refund_id,
                 asaas_refund_id=asaas_refund_id,
                 data_processamento=agora,
             )

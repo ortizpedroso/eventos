@@ -8,7 +8,7 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 |----------|------------------|
 | **`next.config.ts`** | `output: "standalone"` (imagem Docker); **`rewrites`**: `/api/:path*` → backend (`API_PROXY_TARGET` ou `INTERNAL_API_URL` ou `http://127.0.0.1:8000`); normalização para não duplicar `/api` no alvo; **`outputFileTracingRoot`**: raiz do monorepo para tracing correto |
 | **`package.json`** | `dev`: `next dev --webpack -p 3000` |
-| **`.env.local`** | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, opcionais de OAuth e email (ver `.env.local.example`) |
+| **`.env.local`** | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_PAYMENT_PROVIDER=asaas`, opcionais OAuth (ver `.env.local.example`) |
 
 ---
 
@@ -44,7 +44,7 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 | `IngressoListItem` | `id`, `evento`, `participante_nome/email`, `valor`, `status`, `data_compra`, **`repassado_para_nome`**, **`repassado_para_email`**, **`repassado_em`** |
 | `PagamentoListItem` | `id`, `evento`, `participante_*`, `valor`, `status`, `data_compra`, `data_limite_cancelamento` |
 | `TokenResponse` | `access_token`, `token_type`, `usuario` |
-| `CriarPagamentoResponse` | `client_secret`, `ingresso_id`, `stripe_disabled?`, `cortesia?`, `pix_disponivel?` |
+| `CriarPagamentoResponse` | `ingresso_id`, `aguardando_cobranca?`, `payments_disabled?`, `cortesia?`, `pix?` |
 
 ---
 
@@ -95,7 +95,7 @@ Em **`/conta/ingressos/[id]`**, se `ingresso.status === "pago"`:
 
 ## Integração Stripe no front
 
-- **`lib/stripe-client.ts`**: lazy load de `loadStripe` com publishable key.
+- **`components/checkout-asaas-painel.tsx`**: checkout PIX, cartão e fatura via Asaas.
 - **`comprar-ingresso.tsx`**: `<Elements clientSecret=...>` + `PaymentElement`; `return_url` para área de pagamentos após redirect methods (ex.: PIX).
 
 ---

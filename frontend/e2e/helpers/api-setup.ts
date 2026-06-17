@@ -1,5 +1,5 @@
 /**
- * Prepara evento publicado via API (requer STRIPE_DISABLED ou Stripe test no backend).
+ * Prepara evento publicado via API (requer ASAAS_DISABLED ou credenciais Asaas no backend).
  */
 
 const API = (process.env.PLAYWRIGHT_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
