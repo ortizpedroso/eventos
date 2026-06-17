@@ -60,7 +60,7 @@ if [ -z "$WEBHOOK_TOKEN" ]; then
   read -r -p "ASAAS_WEBHOOK_TOKEN (token forte para webhook): " WEBHOOK_TOKEN
   if [ -z "$WEBHOOK_TOKEN" ]; then
     WEBHOOK_TOKEN="$(openssl rand -hex 24 2>/dev/null || head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
-    echo "Gerado token: $WEBHOOK_TOKEN"
+    echo "Token de webhook gerado e gravado em $ENV_FILE (não exibido por segurança)."
   fi
 fi
 
@@ -93,7 +93,7 @@ DOMAIN="$(grep '^DOMAIN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || echo 'SEU_DO
 echo "Próximos passos:"
 echo "  1. ./scripts/deploy-vps.sh"
 echo "  2. Webhook Asaas → https://${DOMAIN}/api/webhooks/asaas"
-echo "     Token = ASAAS_WEBHOOK_TOKEN"
+echo "     Use o valor de ASAAS_WEBHOOK_TOKEN definido em $ENV_FILE"
 echo "  3. ./scripts/verify-production.sh"
 echo "  4. Organizadores: Financeiro → walletId"
 echo ""

@@ -28,6 +28,11 @@ def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
     ingresso.status = "pago"
     ingresso.reservado_ate = None
     registrar_uso_cupom(db, getattr(ingresso, "cupom_id", None))
+    email = (ingresso.participante_email or "").strip()
+    if email:
+        from app.services.lista_espera import marcar_espera_comprada
+
+        marcar_espera_comprada(db, ingresso.evento_id, email)
     return True
 
 

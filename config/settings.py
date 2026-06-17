@@ -119,6 +119,11 @@ class Settings(BaseSettings):
             return self.ASAAS_DISABLED
         return self.STRIPE_DISABLED
 
+    @property
+    def permite_ingresso_sem_gateway(self) -> bool:
+        """Atalhos sem cobrança real — apenas development/test."""
+        return self.ENVIRONMENT in ("development", "test")
+
 
 settings = Settings()
 

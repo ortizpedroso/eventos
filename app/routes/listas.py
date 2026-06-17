@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
+from app.deps.rate_limit import rate_limit_lista_publica
 from app.models import Evento, Usuario, get_db
 from app.routes.auth import get_usuario_atual_opcional
 from app.services.lista_espera import inscrever_espera, validar_token_espera
@@ -28,8 +29,10 @@ class InscricaoEsperaRequest(BaseModel):
 async def inscrever_lista_interesse(
     slug: str,
     body: InscricaoInteresseRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ):
+    rate_limit_lista_publica(request, slug)
     evento = db.query(Evento).filter(Evento.slug == slug, Evento.publicado.is_(True)).first()
     if not evento:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
@@ -43,9 +46,11 @@ async def inscrever_lista_interesse(
 async def inscrever_lista_espera(
     slug: str,
     body: InscricaoEsperaRequest,
+    request: Request,
     db: Session = Depends(get_db),
     usuario: Usuario | None = Depends(get_usuario_atual_opcional),
 ):
+    rate_limit_lista_publica(request, slug)
     evento = db.query(Evento).filter(Evento.slug == slug, Evento.publicado.is_(True)).first()
     if not evento:
         raise HTTPException(status_code=404, detail="Evento não encontrado")

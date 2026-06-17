@@ -7,8 +7,9 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from slugify import slugify
 
-from app.models import Evento, Usuario
+from app.models import Evento, Ingresso, Usuario
 from app.services.eventos_relacionados import listar_eventos_relacionados
+from app.services.ingresso_pago import marcar_ingresso_pago
 from app.services.lista_espera import (
     expirar_tokens_vencidos,
     inscrever_espera,
@@ -75,6 +76,13 @@ def test_urgencia_exato():
     assert b.ativo and "7" in (b.texto or "")
 
 
+def test_urgencia_sem_estoque_conhecido():
+    b = calcular_urgencia("exato", restantes=None)
+    assert not b.ativo
+    b2 = calcular_urgencia("faixa", restantes=None)
+    assert not b2.ativo
+
+
 def test_lista_interesse_dedup():
     db = _db()
     try:
@@ -121,6 +129,34 @@ def test_lista_espera_liberacao(monkeypatch):
         assert emails == ["fila@ex.com"]
         ok = validar_token_espera(db, ev, entrada.token_compra)
         assert ok is not None
+    finally:
+        db.close()
+
+
+def test_lista_espera_marcada_comprada_apos_pagamento():
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        entrada = inscrever_espera(db, ev, email="comprador@ex.com")
+        entrada.status = "notificado"
+        entrada.token_compra = "tok-test"
+        db.commit()
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="comprador@ex.com",
+            valor=50.0,
+            status="pendente",
+        )
+        db.add(ing)
+        db.commit()
+        db.refresh(ing)
+        assert marcar_ingresso_pago(db, ing)
+        db.commit()
+        db.refresh(entrada)
+        assert entrada.status == "comprado"
+        assert entrada.token_compra is None
     finally:
         db.close()
 

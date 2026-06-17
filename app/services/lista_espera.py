@@ -212,7 +212,7 @@ def marcar_espera_comprada(db: Session, evento_id: str, email: str) -> None:
     if entrada:
         entrada.status = "comprado"
         entrada.token_compra = None
-        db.commit()
+        entrada.token_expira_em = None
 
 
 def expirar_tokens_vencidos(db: Session) -> int:

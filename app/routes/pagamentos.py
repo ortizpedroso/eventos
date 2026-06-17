@@ -390,6 +390,11 @@ async def criar_pagamento(
     )
 
     if settings.payments_disabled:
+        if not settings.permite_ingresso_sem_gateway:
+            raise HTTPException(
+                status_code=503,
+                detail="Pagamentos temporariamente indisponíveis. Tente novamente mais tarde.",
+            )
         logger.warning("Pagamentos desativados: ingresso pago sem gateway evento %s", evento.id)
         return _ingressos_gratis("disabled")
 
@@ -594,6 +599,11 @@ async def retomar_pagamento(
                 "evento_slug": ingresso.evento.slug,
             }
         if settings.payments_disabled:
+            if not settings.permite_ingresso_sem_gateway:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Pagamentos temporariamente indisponíveis. Tente novamente mais tarde.",
+                )
             marcar_ingresso_pago(db, ingresso)
             db.commit()
             notificar_ingresso_pago(ingresso.id)
@@ -614,6 +624,11 @@ async def retomar_pagamento(
         )
 
     if settings.STRIPE_DISABLED:
+        if not settings.permite_ingresso_sem_gateway:
+            raise HTTPException(
+                status_code=503,
+                detail="Pagamentos temporariamente indisponíveis. Tente novamente mais tarde.",
+            )
         marcar_ingresso_pago(db, ingresso)
         db.commit()
         notificar_ingresso_pago(ingresso.id)

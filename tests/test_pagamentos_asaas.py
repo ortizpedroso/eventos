@@ -290,3 +290,31 @@ class TestPagamentosAsaas:
             )
         assert cob.status_code == 200, cob.text
         assert cob.json().get("pix")
+
+
+def test_webhook_asaas_rejeita_sem_token_producao():
+    with patch("app.routes.webhooks.settings") as s:
+        s.ASAAS_WEBHOOK_TOKEN = ""
+        s.ENVIRONMENT = "production"
+        s.ASAAS_E2E_MOCK = False
+        r = client.post(
+            "/api/webhooks/asaas",
+            content="{}",
+            headers={"content-type": "application/json"},
+        )
+    assert r.status_code == 503
+
+
+def test_split_asaas_taxa_por_ingresso():
+    from app.services.pagamento_asaas import split_para_evento
+    from app.services.tarifas_plataforma import taxa_ingresso
+
+    ev = Evento(asaas_wallet_id="wallet-org", nome="E")
+    with patch("app.services.pagamento_asaas.settings") as s:
+        s.ASAAS_PLATFORM_WALLET_ID = "wallet-platform"
+        splits = split_para_evento(ev, 100.0, quantidade=2)
+    taxa_esperada = round(2 * taxa_ingresso(50.0), 2)
+    liquido_esperado = round(100.0 - taxa_esperada, 2)
+    by_wallet = {x["walletId"]: x["fixedValue"] for x in splits}
+    assert by_wallet["wallet-platform"] == taxa_esperada
+    assert by_wallet["wallet-org"] == liquido_esperado

@@ -175,6 +175,7 @@ def iniciar_cobranca_asaas(
             credit_card_holder_info=body.credit_card_holder_info,
             remote_ip=body.remote_ip,
             installment_count=installment_count,
+            quantidade=len(lote),
         )
     except AsaasAPIError as e:
         logger.exception("Erro Asaas ao criar cobrança")

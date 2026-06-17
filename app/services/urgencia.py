@@ -19,10 +19,10 @@ class UrgenciaBadge:
 def calcular_urgencia(
     modo: str,
     *,
-    restantes: int,
+    restantes: int | None,
 ) -> UrgenciaBadge:
     modo = (modo or "desligado").strip().lower()
-    if modo == "desligado" or restantes <= 0:
+    if modo == "desligado" or restantes is None or restantes <= 0:
         return UrgenciaBadge(ativo=False, texto=None, restantes=restantes)
 
     if modo == "exato":

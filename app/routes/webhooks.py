@@ -50,17 +50,34 @@ def _parse_stripe_webhook_event(payload: bytes, sig_header: str | None) -> dict:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
 
+def _validar_token_webhook_asaas(token_header: str) -> None:
+    """Fail-closed: exige token configurado fora de dev/test com mock explícito."""
+    expected = (settings.ASAAS_WEBHOOK_TOKEN or "").strip()
+    if settings.ENVIRONMENT == "production":
+        if not expected:
+            logger.error("Webhook Asaas: ASAAS_WEBHOOK_TOKEN ausente em produção")
+            raise HTTPException(status_code=503, detail="Webhook not configured")
+        if token_header != expected:
+            logger.error("Webhook Asaas: token inválido")
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return
+    if not expected:
+        if settings.ASAAS_E2E_MOCK and settings.ENVIRONMENT in ("development", "test"):
+            logger.warning("Webhook Asaas sem token (ASAAS_E2E_MOCK)")
+            return
+        logger.error("Webhook Asaas: ASAAS_WEBHOOK_TOKEN ausente")
+        raise HTTPException(status_code=503, detail="Webhook not configured")
+    if token_header != expected:
+        logger.error("Webhook Asaas: token inválido")
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
 @router.post("/asaas")
 async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
     """Recebe eventos do Asaas (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.)."""
     payload = await request.body()
     token_header = request.headers.get("asaas-access-token", "")
-    expected = (settings.ASAAS_WEBHOOK_TOKEN or "").strip()
-    if expected and token_header != expected:
-        if settings.ENVIRONMENT == "production":
-            logger.error("Webhook Asaas: token inválido")
-            raise HTTPException(status_code=401, detail="Invalid token")
-        logger.warning("Webhook Asaas: token não confere (aceito em não-produção)")
+    _validar_token_webhook_asaas(token_header)
 
     try:
         event = json.loads(payload.decode("utf-8"))

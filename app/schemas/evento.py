@@ -207,7 +207,7 @@ def montar_evento_response(
         restantes = None
     urgencia = calcular_urgencia(
         getattr(evento, "urgencia_modo", "desligado") or "desligado",
-        restantes=restantes if restantes is not None else 999,
+        restantes=restantes,
     )
 
     base: dict[str, Any] = {
