@@ -255,6 +255,64 @@ def test_validar_compra_com_token_espera():
         db.close()
 
 
+def test_cancelar_pendentes_libera_lista_espera(monkeypatch):
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        fila = inscrever_espera(db, ev, email="proximo@ex.com")
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="outro@ex.com",
+            valor=50.0,
+            status="pendente",
+            asaas_payment_id="pay_cleanup",
+        )
+        db.add(ing)
+        db.commit()
+        emails: list[str] = []
+        monkeypatch.setattr(
+            "app.services.lista_espera.enqueue_email_simples",
+            lambda dest, subj, html: emails.append(dest) or True,
+        )
+        from app.services.ingresso_pago import cancelar_ingressos_pi_pendentes
+
+        n = cancelar_ingressos_pi_pendentes(db, "pay_cleanup")
+        assert n == 1
+        db.refresh(fila)
+        assert fila.status == "notificado"
+        assert emails == ["proximo@ex.com"]
+    finally:
+        db.close()
+
+
+def test_cancelar_reembolsados_marca_pago_como_cancelado():
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            valor=50.0,
+            status="pago",
+            asaas_payment_id="pay_refund",
+        )
+        db.add(ing)
+        db.commit()
+        db.refresh(ing)
+        from app.services.ingresso_pago import cancelar_ingressos_reembolsados
+
+        n = cancelar_ingressos_reembolsados(db, "pay_refund")
+        assert n == 1
+        db.commit()
+        db.refresh(ing)
+        assert ing.status == "cancelado"
+    finally:
+        db.close()
+
+
 def test_api_lista_interesse():
     db = _db()
     try:

@@ -62,14 +62,47 @@ def marcar_ingressos_pi_pagos(db: Session, payment_ref: str) -> list[str]:
 
 
 def cancelar_ingressos_pi_pendentes(db: Session, payment_ref: str) -> int:
-    """Cancela reservas pendentes ligadas ao pagamento externo."""
+    """Cancela reservas pendentes ligadas ao pagamento externo e avança lista de espera."""
+    return _cancelar_ingressos_por_ref(
+        db,
+        payment_ref,
+        status_permitidos=("pendente",),
+        liberar_espera=True,
+    )
+
+
+def cancelar_ingressos_reembolsados(db: Session, payment_ref: str) -> int:
+    """Cancela ingressos pagos ou pendentes após reembolso/cancelamento no gateway."""
+    return _cancelar_ingressos_por_ref(
+        db,
+        payment_ref,
+        status_permitidos=("pendente", "pago"),
+        liberar_espera=True,
+    )
+
+
+def _cancelar_ingressos_por_ref(
+    db: Session,
+    payment_ref: str,
+    *,
+    status_permitidos: tuple[str, ...],
+    liberar_espera: bool,
+) -> int:
+    vagas_por_evento: dict[str, int] = {}
     n = 0
     for ingresso in _ingressos_por_ref(db, payment_ref):
-        if ingresso.status != "pendente":
+        if ingresso.status not in status_permitidos:
             continue
         ingresso.status = "cancelado"
         ingresso.reservado_ate = None
         n += 1
+        if liberar_espera:
+            vagas_por_evento[ingresso.evento_id] = vagas_por_evento.get(ingresso.evento_id, 0) + 1
+    if liberar_espera and vagas_por_evento:
+        from app.services.lista_espera import liberar_vagas_apos_cancelamento
+
+        for evento_id, qtd in vagas_por_evento.items():
+            liberar_vagas_apos_cancelamento(db, evento_id, qtd)
     return n
 
 

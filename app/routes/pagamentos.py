@@ -403,6 +403,26 @@ async def criar_pagamento(
         logger.warning("Pagamentos desativados: ingresso pago sem gateway evento %s", evento.id)
         return _ingressos_gratis("disabled")
 
+    if settings.use_asaas:
+        if not (evento.asaas_wallet_id or "").strip():
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Este evento ainda não tem conta de repasse Asaas. "
+                    "O organizador deve configurar o walletId em Financeiro antes de vender ingressos."
+                ),
+            )
+        if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
+            raise HTTPException(
+                status_code=503,
+                detail="Pagamentos temporariamente indisponíveis. Contate o suporte.",
+            )
+    elif not usuario_atual.stripe_customer_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Cliente Stripe não encontrado. Refaça o cadastro ou contate o suporte.",
+        )
+
     # ── Reserva de vaga (Asaas e Stripe) ───────────────────────────────────
     try:
         reservar_vaga_lote(db, lote.id, quantidade)
@@ -437,30 +457,11 @@ async def criar_pagamento(
         db.refresh(ing)
 
     if settings.use_asaas:
-        if not (evento.asaas_wallet_id or "").strip():
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Este evento ainda não tem conta de repasse Asaas. "
-                    "O organizador deve configurar o walletId em Financeiro antes de vender ingressos."
-                ),
-            )
-        if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
-            raise HTTPException(
-                status_code=503,
-                detail="Pagamentos temporariamente indisponíveis. Contate o suporte.",
-            )
         return criar_resposta_asaas_apos_criar(
             novos=novos,
             valor_centavos=valor_centavos,
             reserva_ate=reserva_ate,
             quantidade=quantidade,
-        )
-
-    if not usuario_atual.stripe_customer_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Cliente Stripe não encontrado. Refaça o cadastro ou contate o suporte.",
         )
 
     primeiro = novos[0]
@@ -779,11 +780,12 @@ async def cancelar_ingresso(
 
         ingresso.status = "cancelado"
         db.add(cancelamento)
-        db.commit()
+        db.flush()
 
         from app.services.lista_espera import liberar_vagas_apos_cancelamento
 
         liberar_vagas_apos_cancelamento(db, ingresso.evento_id, 1)
+        db.commit()
 
         return {
             "mensagem": "Ingresso cancelado com sucesso",

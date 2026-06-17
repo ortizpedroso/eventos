@@ -45,9 +45,11 @@ def cancelar_reservas_expiradas() -> int:
         )
 
         pis_ja_cancelados: set[str] = set()
+        vagas_por_evento: dict[str, int] = {}
         for ing in expirados:
             ing.status = "cancelado"
             ing.reservado_ate = None
+            vagas_por_evento[ing.evento_id] = vagas_por_evento.get(ing.evento_id, 0) + 1
 
             pay_id = (ing.asaas_payment_id or ing.stripe_payment_intent_id or "").strip()
             if (
@@ -87,6 +89,11 @@ def cancelar_reservas_expiradas() -> int:
 
         if expirados:
             db.commit()
+            if vagas_por_evento:
+                from app.services.lista_espera import liberar_vagas_apos_cancelamento
+
+                for evento_id, qtd in vagas_por_evento.items():
+                    liberar_vagas_apos_cancelamento(db, evento_id, qtd)
 
         return len(expirados)
     except Exception:

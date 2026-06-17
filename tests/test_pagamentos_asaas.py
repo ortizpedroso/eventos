@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from config.database import Base
-from app.models import Evento, Usuario, get_db
+from app.models import Evento, Ingresso, Usuario, get_db
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -351,6 +351,49 @@ def test_reembolso_parcial_asaas_multi_ingresso():
             ref = cancelar_com_reembolso_asaas(db, ing1)
         mock_refund.assert_called_once_with("pay_multi", valor=50.0)
         assert ref == "ref_partial"
+    finally:
+        db.close()
+
+
+def test_webhook_asaas_refund_cancela_pago():
+    from tests import test_api as ta
+
+    db = ta.TestingSessionLocal()
+    try:
+        org = _registrar_organizador("refund")
+        ev = _criar_evento(org)
+        ing = Ingresso(
+            evento_id=ev["id"],
+            usuario_id="user-refund",
+            valor=50.0,
+            status="pago",
+            asaas_payment_id="pay_refund_wh",
+        )
+        db.add(ing)
+        db.commit()
+        iid = ing.id
+    finally:
+        db.close()
+
+    with patch("app.routes.webhooks.settings") as wh_settings:
+        wh_settings.ASAAS_WEBHOOK_TOKEN = "tok_test"
+        wh_settings.ENVIRONMENT = "test"
+        payload = {
+            "id": f"evt_{uuid.uuid4().hex[:8]}",
+            "event": "PAYMENT_REFUNDED",
+            "payment": {"id": "pay_refund_wh", "status": "REFUNDED"},
+        }
+        wh = client.post(
+            "/api/webhooks/asaas",
+            headers={"asaas-access-token": "tok_test", "content-type": "application/json"},
+            content=json.dumps(payload),
+        )
+    assert wh.status_code == 200
+    db = ta.TestingSessionLocal()
+    try:
+        ing = db.get(Ingresso, iid)
+        assert ing is not None
+        assert ing.status == "cancelado"
     finally:
         db.close()
 

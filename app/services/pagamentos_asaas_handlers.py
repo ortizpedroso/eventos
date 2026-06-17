@@ -200,6 +200,9 @@ def iniciar_cobranca_asaas(
 
 
 def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
+    lote_pendente = ingressos_lote_pendente(db, ingresso) or [ingresso]
+    valor_total_centavos = int(round(_valor_lote_reais(lote_pendente) * 100))
+
     pay_id = (ingresso.asaas_payment_id or "").strip()
     if not pay_id:
         return {
@@ -211,7 +214,7 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
             "reservado_ate": ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None,
             "participante_nome": ingresso.participante_nome,
             "participante_email": ingresso.participante_email,
-            "valor_centavos": int(round(float(ingresso.valor or 0) * 100)),
+            "valor_centavos": valor_total_centavos,
             "evento_slug": ingresso.evento.slug,
         }
 
@@ -250,7 +253,7 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
             "reservado_ate": ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None,
             "participante_nome": ingresso.participante_nome,
             "participante_email": ingresso.participante_email,
-            "valor_centavos": int(round(float(ingresso.valor or 0) * 100)),
+            "valor_centavos": valor_total_centavos,
             "evento_slug": ingresso.evento.slug,
         }
     )

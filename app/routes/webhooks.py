@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.models import Ingresso, StripeEvent, get_db
 from app.services.ingresso_pago import (
     cancelar_ingressos_pi_pendentes,
+    cancelar_ingressos_reembolsados,
     marcar_ingresso_pago,
     marcar_ingressos_pi_pagos,
     notificar_ingresso_pago,
@@ -101,7 +102,9 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
     try:
         if event_type in ("PAYMENT_RECEIVED", "PAYMENT_CONFIRMED") and pay_id:
             ingressos_recém_pagos = marcar_ingressos_pi_pagos(db, pay_id)
-        elif event_type in ("PAYMENT_DELETED", "PAYMENT_REFUNDED", "PAYMENT_OVERDUE") and pay_id:
+        elif event_type == "PAYMENT_REFUNDED" and pay_id:
+            cancelar_ingressos_reembolsados(db, pay_id)
+        elif event_type in ("PAYMENT_DELETED", "PAYMENT_OVERDUE") and pay_id:
             cancelar_ingressos_pi_pendentes(db, pay_id)
 
         if event_id:
