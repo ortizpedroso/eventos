@@ -9,6 +9,9 @@ from app.models.cancelamento import Cancelamento
 from app.models.stripe_event import StripeEvent
 from app.models.evento_cupom import EventoCupom
 from app.models.campanha_marketing import CampanhaMarketing, CampanhaEnvio
+from app.models.evento_lista_interesse import EventoListaInteresse
+from app.models.evento_lista_espera import EventoListaEspera
+from app.models.usuario_notificacao import UsuarioNotificacao
 
 __all__ = [
     "Base",
@@ -23,4 +26,7 @@ __all__ = [
     "EventoCupom",
     "CampanhaMarketing",
     "CampanhaEnvio",
+    "EventoListaInteresse",
+    "EventoListaEspera",
+    "UsuarioNotificacao",
 ]

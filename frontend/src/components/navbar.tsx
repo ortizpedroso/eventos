@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { NavbarCategoriasMenu } from "@/components/navbar-categorias-menu";
+import { EventosBRLogo } from "@/components/eventosbr-logo";
 import { fetchSession, logoutSession } from "@/lib/api";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
@@ -54,6 +55,7 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [pendentesCount, setPendentesCount] = useState(0);
+  const [buscaNav, setBuscaNav] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -135,6 +137,13 @@ export function Navbar() {
     return `Pagamentos (${pendentesCount})`;
   }
 
+  function submitBusca(e: React.FormEvent) {
+    e.preventDefault();
+    const q = buscaNav.trim();
+    router.push(q ? `/eventos?q=${encodeURIComponent(q)}` : "/eventos");
+    setMobileNavOpen(false);
+  }
+
   function PagamentosNavLink({
     href,
     className,
@@ -163,12 +172,19 @@ export function Navbar() {
       <div className="mx-auto flex w-full max-w-7xl flex-col px-4 py-2 sm:px-6 lg:px-8">
         <div className="flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 sm:gap-4">
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-6 lg:gap-10">
-            <Link
-              href="/"
-              className="shrink-0 truncate text-lg font-bold tracking-tight text-zinc-900 sm:text-xl"
-            >
-              EventosBR
-            </Link>
+            <EventosBRLogo className="shrink-0" />
+
+          <form onSubmit={submitBusca} className="hidden min-w-0 flex-1 max-w-xs lg:max-w-sm md:block" role="search">
+            <label htmlFor="nav-busca" className="sr-only">Buscar eventos</label>
+            <input
+              id="nav-busca"
+              type="search"
+              placeholder="Buscar eventos…"
+              value={buscaNav}
+              onChange={(e) => setBuscaNav(e.target.value)}
+              className="input w-full py-2 text-sm"
+            />
+          </form>
 
           <nav
             className="hidden min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-zinc-600 md:flex lg:gap-x-6"
@@ -334,6 +350,16 @@ export function Navbar() {
             className="w-full border-t border-zinc-200 py-2 md:hidden"
             aria-label="Principal"
           >
+            <form onSubmit={submitBusca} className="px-3 pb-2" role="search">
+              <input
+                type="search"
+                placeholder="Buscar eventos…"
+                value={buscaNav}
+                onChange={(e) => setBuscaNav(e.target.value)}
+                className="input w-full text-sm"
+                aria-label="Buscar eventos"
+              />
+            </form>
             {navClienteOuCarregando ? (
               <div className="flex flex-col gap-0.5">
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>

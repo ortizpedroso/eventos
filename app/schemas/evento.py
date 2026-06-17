@@ -73,6 +73,26 @@ class CriarEventoRequest(BaseModel):
     publicado: bool = True
     limite_ingressos_por_cpf: int | None = Field(default=None, ge=1, le=50)
     ingresso_lotes: list[IngressoLoteWrite] | None = None
+    urgencia_modo: str = Field(default="desligado", pattern="^(desligado|exato|faixa)$")
+    parcelamento_habilitado: bool = False
+    parcelamento_max: int = Field(default=2, ge=2, le=12)
+    aceita_interesse: bool = True
+    lista_espera_habilitada: bool = False
+    lista_espera_prazo_horas: int = Field(default=24, ge=12, le=48)
+
+    @field_validator("parcelamento_max")
+    @classmethod
+    def _parcelamento_max(cls, v: int) -> int:
+        if v not in (2, 3, 6, 12):
+            raise ValueError("parcelamento_max deve ser 2, 3, 6 ou 12")
+        return v
+
+    @field_validator("lista_espera_prazo_horas")
+    @classmethod
+    def _prazo_espera(cls, v: int) -> int:
+        if v not in (12, 24, 48):
+            raise ValueError("lista_espera_prazo_horas deve ser 12, 24 ou 48")
+        return v
 
     @field_validator("imagem_url", mode="before")
     @classmethod
@@ -124,6 +144,14 @@ class EventoResponse(BaseModel):
     preco_compra: float | None = None
     compra_disponivel: bool = False
     motivo_compra_indisponivel: str | None = None
+    urgencia_modo: str = "desligado"
+    urgencia_badge: str | None = None
+    urgencia_ativo: bool = False
+    parcelamento_habilitado: bool = False
+    parcelamento_max: int = 2
+    aceita_interesse: bool = True
+    lista_espera_habilitada: bool = False
+    lista_espera_prazo_horas: int = 24
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -141,6 +169,7 @@ def montar_evento_response(
         motivo_lote_indisponivel,
         resolver_lote_compra,
     )
+    from app.services.urgencia import calcular_urgencia
 
     lotes_orm = sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id))
     if ocupacao_por_lote is None:
@@ -171,6 +200,16 @@ def montar_evento_response(
         None if compra_disponivel else motivo_lote_indisponivel(db, evento, ocupacao_por_lote=ocupacao_por_lote)
     )
 
+    restantes: int | None = None
+    if cur is not None and cur.quantidade_maxima is not None:
+        restantes = max(0, cur.quantidade_maxima - ocupacao_por_lote.get(cur.id, 0))
+    elif cur is not None:
+        restantes = None
+    urgencia = calcular_urgencia(
+        getattr(evento, "urgencia_modo", "desligado") or "desligado",
+        restantes=restantes if restantes is not None else 999,
+    )
+
     base: dict[str, Any] = {
         "id": evento.id,
         "slug": evento.slug,
@@ -193,6 +232,14 @@ def montar_evento_response(
         "preco_compra": preco_compra,
         "compra_disponivel": compra_disponivel,
         "motivo_compra_indisponivel": motivo_compra_indisponivel,
+        "urgencia_modo": getattr(evento, "urgencia_modo", "desligado") or "desligado",
+        "urgencia_badge": urgencia.texto,
+        "urgencia_ativo": urgencia.ativo,
+        "parcelamento_habilitado": bool(getattr(evento, "parcelamento_habilitado", False)),
+        "parcelamento_max": int(getattr(evento, "parcelamento_max", 2) or 2),
+        "aceita_interesse": bool(getattr(evento, "aceita_interesse", True)),
+        "lista_espera_habilitada": bool(getattr(evento, "lista_espera_habilitada", False)),
+        "lista_espera_prazo_horas": int(getattr(evento, "lista_espera_prazo_horas", 24) or 24),
     }
     return EventoResponse.model_validate(base)
 

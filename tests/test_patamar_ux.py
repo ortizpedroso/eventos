@@ -1,0 +1,169 @@
+"""Testes patamar completo UX/produto."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+
+import pytest
+from slugify import slugify
+
+from app.models import Evento, Usuario
+from app.services.eventos_relacionados import listar_eventos_relacionados
+from app.services.lista_espera import inscrever_espera, liberar_vagas_apos_cancelamento, validar_token_espera
+from app.services.lista_interesse import inscrever_interesse
+from app.services.taxas_asaas_publicas import calcular_taxa_asaas, simular_parcelas
+from app.services.urgencia import calcular_urgencia
+from tests import test_api
+
+
+def _db():
+    return test_api.TestingSessionLocal()
+
+
+def _criar_evento(db, org_id: str, nome: str = "Show Teste") -> Evento:
+    ev = Evento(
+        nome=nome,
+        descricao="desc",
+        data_inicio=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7),
+        data_fim=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7, hours=3),
+        local="Rua A, 1",
+        cidade="São Paulo",
+        categoria="Shows",
+        preco_ingresso=50.0,
+        organizador_id=org_id,
+        slug=slugify(f"{nome}-{org_id[:8]}"),
+        publicado=True,
+        aceita_interesse=True,
+        lista_espera_habilitada=True,
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+    return ev
+
+
+def _criar_org(db) -> Usuario:
+    org = Usuario(
+        email=f"org-{slugify(str(datetime.now().timestamp()))}@ex.com",
+        nome="Org Teste",
+        senha_hash="x",
+        tipo="organizador",
+    )
+    db.add(org)
+    db.commit()
+    db.refresh(org)
+    return org
+
+
+def test_taxas_asaas_pix():
+    assert calcular_taxa_asaas(100.0, "pix") == 1.99
+
+
+def test_simular_parcelas():
+    r = simular_parcelas(120.0, 3)
+    assert r["parcelas"] == 3
+    assert r["valor_parcela"] == 40.0
+
+
+def test_urgencia_exato():
+    b = calcular_urgencia("exato", restantes=7)
+    assert b.ativo and "7" in (b.texto or "")
+
+
+def test_lista_interesse_dedup():
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        a = inscrever_interesse(db, ev, email="teste@exemplo.com", nome="A")
+        b = inscrever_interesse(db, ev, email="teste@exemplo.com", nome="B")
+        assert a.id == b.id
+    finally:
+        db.close()
+
+
+def test_lista_espera_fifo():
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        e1 = inscrever_espera(db, ev, email="a@ex.com", nome="A")
+        e2 = inscrever_espera(db, ev, email="b@ex.com", nome="B")
+        assert e1.posicao == 1
+        assert e2.posicao == 2
+    finally:
+        db.close()
+
+
+def test_lista_espera_liberacao(monkeypatch):
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        ev.lista_espera_prazo_horas = 24
+        db.commit()
+        entrada = inscrever_espera(db, ev, email="fila@ex.com")
+        emails: list[str] = []
+        monkeypatch.setattr(
+            "app.services.lista_espera.enqueue_email_simples",
+            lambda dest, subj, html: emails.append(dest) or True,
+        )
+        n = liberar_vagas_apos_cancelamento(db, ev.id, 1)
+        assert n == 1
+        db.refresh(entrada)
+        assert entrada.status == "notificado"
+        assert entrada.token_compra
+        assert emails == ["fila@ex.com"]
+        ok = validar_token_espera(db, ev, entrada.token_compra)
+        assert ok is not None
+    finally:
+        db.close()
+
+
+def test_eventos_relacionados_prioridade_organizador():
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, "Evento base")
+        outro = Evento(
+            nome="Outro do mesmo org",
+            descricao="d",
+            data_inicio=ev.data_inicio + timedelta(days=1),
+            data_fim=ev.data_fim + timedelta(days=1),
+            local="Local",
+            cidade=ev.cidade,
+            categoria=ev.categoria,
+            preco_ingresso=20,
+            organizador_id=ev.organizador_id,
+            slug=slugify("outro-org-test"),
+            publicado=True,
+        )
+        db.add(outro)
+        db.commit()
+        rel = listar_eventos_relacionados(db, ev, limite=4)
+        assert any(r.organizador_id == ev.organizador_id for r in rel)
+    finally:
+        db.close()
+
+
+def test_api_lista_interesse():
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        r = test_api.client.post(
+            f"/api/listas/interesse/{ev.slug}",
+            json={"email": "novo@exemplo.com", "nome": "Test"},
+        )
+        assert r.status_code == 200
+        assert r.json()["ok"] is True
+    finally:
+        db.close()
+
+
+def test_api_simuladores():
+    r = test_api.client.get("/api/simuladores/simular", params={"preco": 50, "metodo": "pix"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["preco_bruto"] == 50
+    assert "aviso_legal" in data

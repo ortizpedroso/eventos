@@ -1,5 +1,7 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends, Query
+from datetime import datetime
+
+from fastapi import APIRouter, HTTPException, Depends, Query, Response
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_
 from slugify import slugify
@@ -73,6 +75,12 @@ async def criar_evento(
         slug=slug,
         publicado=evento_data.publicado,
         limite_ingressos_por_cpf=evento_data.limite_ingressos_por_cpf,
+        urgencia_modo=evento_data.urgencia_modo,
+        parcelamento_habilitado=evento_data.parcelamento_habilitado,
+        parcelamento_max=evento_data.parcelamento_max,
+        aceita_interesse=evento_data.aceita_interesse,
+        lista_espera_habilitada=evento_data.lista_espera_habilitada,
+        lista_espera_prazo_horas=evento_data.lista_espera_prazo_horas,
         checkin_token=gerar_checkin_token(),
     )
 
@@ -111,6 +119,8 @@ async def atualizar_evento(
     if evento.organizador_id != usuario_atual.id:
         raise HTTPException(status_code=403, detail="Sem permissão para editar este evento")
 
+    era_publicado = evento.publicado
+
     evento.nome = body.nome
     evento.descricao = body.descricao
     evento.data_inicio = body.data_inicio
@@ -124,6 +134,19 @@ async def atualizar_evento(
     evento.publicado = body.publicado
     if "limite_ingressos_por_cpf" in body.model_fields_set:
         evento.limite_ingressos_por_cpf = body.limite_ingressos_por_cpf
+
+    if "urgencia_modo" in body.model_fields_set:
+        evento.urgencia_modo = body.urgencia_modo
+    if "parcelamento_habilitado" in body.model_fields_set:
+        evento.parcelamento_habilitado = body.parcelamento_habilitado
+    if "parcelamento_max" in body.model_fields_set:
+        evento.parcelamento_max = body.parcelamento_max
+    if "aceita_interesse" in body.model_fields_set:
+        evento.aceita_interesse = body.aceita_interesse
+    if "lista_espera_habilitada" in body.model_fields_set:
+        evento.lista_espera_habilitada = body.lista_espera_habilitada
+    if "lista_espera_prazo_horas" in body.model_fields_set:
+        evento.lista_espera_prazo_horas = body.lista_espera_prazo_horas
 
     if evento.data_fim < evento.data_inicio:
         raise HTTPException(
@@ -143,6 +166,12 @@ async def atualizar_evento(
     db.commit()
     db.refresh(evento)
     logger.info("Evento %s atualizado por %s", evento.id, usuario_atual.id)
+
+    from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
+
+    if deve_notificar_abertura(evento, era_publicado=era_publicado):
+        notificar_abertura_vendas(db, evento)
+
     return montar_evento_response(db, evento)
 
 
@@ -208,6 +237,8 @@ async def listar_eventos(
     q: str | None = Query(None, max_length=100, description="Busca por nome, descrição ou local"),
     categoria: str | None = Query(None, max_length=80),
     cidade: str | None = Query(None, max_length=120),
+    de: datetime | None = Query(None, description="Data início mínima (inclusive)"),
+    ate: datetime | None = Query(None, description="Data início máxima (inclusive)"),
     db: Session = Depends(get_db),
 ):
     """Lista eventos publicados na vitrine."""
@@ -230,6 +261,10 @@ async def listar_eventos(
             query = query.filter(Evento.categoria == categoria.strip())
         if cidade:
             query = query.filter(Evento.cidade.ilike(cidade.strip()))
+        if de is not None:
+            query = query.filter(Evento.data_inicio >= de)
+        if ate is not None:
+            query = query.filter(Evento.data_inicio <= ate)
 
         eventos = (
             query.order_by(Evento.data_inicio.asc())
@@ -241,6 +276,22 @@ async def listar_eventos(
     except Exception:
         logger.exception("Erro inesperado ao listar eventos públicos")
         raise HTTPException(status_code=500, detail=LISTA_EVENTOS_CLIENTE)
+
+
+@router.get("/{slug}/relacionados", response_model=list[EventoResponse])
+async def eventos_relacionados(slug: str, db: Session = Depends(get_db)):
+    """Até 4 eventos relacionados (organizador, depois cidade+categoria)."""
+    from app.services.eventos_relacionados import listar_eventos_relacionados
+
+    evento = (
+        db.query(Evento)
+        .options(selectinload(Evento.ingresso_lotes))
+        .filter(Evento.slug == slug, Evento.publicado.is_(True))
+        .first()
+    )
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+    return listar_eventos_relacionados(db, evento)
 
 
 @router.get("/{slug}", response_model=EventoResponse)
@@ -275,6 +326,24 @@ def _evento_do_organizador(db: Session, evento_id: str, usuario: Usuario) -> Eve
     if not evento or evento.organizador_id != usuario.id:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
     return evento
+
+
+@router.get("/id/{evento_id}/lista-interesse/export")
+async def exportar_lista_interesse(
+    evento_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """CSV de inscritos na lista de interesse."""
+    from app.services.lista_interesse import exportar_interesse_csv
+
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    csv_data = exportar_interesse_csv(db, evento.id)
+    return Response(
+        content=csv_data,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="interesse-{evento.slug}.csv"'},
+    )
 
 
 @router.get("/id/{evento_id}/link-portaria")
@@ -457,6 +526,12 @@ async def duplicar_evento(
         slug=slug,
         publicado=False,
         limite_ingressos_por_cpf=evento.limite_ingressos_por_cpf,
+        urgencia_modo=getattr(evento, "urgencia_modo", "desligado"),
+        parcelamento_habilitado=getattr(evento, "parcelamento_habilitado", False),
+        parcelamento_max=getattr(evento, "parcelamento_max", 2),
+        aceita_interesse=getattr(evento, "aceita_interesse", True),
+        lista_espera_habilitada=getattr(evento, "lista_espera_habilitada", False),
+        lista_espera_prazo_horas=getattr(evento, "lista_espera_prazo_horas", 24),
         checkin_token=gerar_checkin_token(),
     )
     db.add(copia)

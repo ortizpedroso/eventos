@@ -10,6 +10,7 @@ import { EventosGridSkeleton } from "@/components/eventos-grid-skeleton";
 import { apiFetch } from "@/lib/api";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 import { EVENTO_CATEGORIAS, categoriaFromQuery } from "@/lib/evento-categorias";
+import { intervaloFiltroData, type FiltroDataPreset } from "@/lib/filtro-data-eventos";
 import type { Evento } from "@/lib/types";
 
 type Props = {
@@ -45,6 +46,7 @@ export function EventosListaPublica({
   const [cidadesOpcoes, setCidadesOpcoes] = useState<{ cidade: string; total: number }[]>([]);
   const [somenteVendasAbertas, setSomenteVendasAbertas] = useState(false);
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("data_asc");
+  const [filtroData, setFiltroData] = useState<FiltroDataPreset>("");
 
   // Refs com valores correntes para evitar closures desatualizadas no debounce
   const categoriaRef = useRef(categoria);
@@ -55,18 +57,22 @@ export function EventosListaPublica({
   buscaDebouncedRef.current = buscaDebounced;
 
   const buildUrl = useCallback(
-    (overrides: { categoria?: string; cidade?: string; busca?: string }) => {
+    (overrides: { categoria?: string; cidade?: string; busca?: string; filtroData?: FiltroDataPreset }) => {
       const cat = overrides.categoria !== undefined ? overrides.categoria : categoriaRef.current;
       const cid = overrides.cidade !== undefined ? overrides.cidade : cidadeRef.current;
       const q = overrides.busca !== undefined ? overrides.busca : buscaDebouncedRef.current;
+      const fd = overrides.filtroData !== undefined ? overrides.filtroData : filtroData;
       const params = new URLSearchParams();
       if (cat) params.set("categoria", cat);
       if (q.trim()) params.set("q", q.trim());
       if (cid.trim()) params.set("cidade", cid.trim());
+      const { de, ate } = intervaloFiltroData(fd);
+      if (de) params.set("de", de);
+      if (ate) params.set("ate", ate);
       const qs = params.toString();
       return qs ? `${pathname}?${qs}` : pathname;
     },
-    [pathname],
+    [pathname, filtroData],
   );
 
   const atualizarCategoria = useCallback(
@@ -127,6 +133,9 @@ export function EventosListaPublica({
         if (buscaDebounced) params.set("q", buscaDebounced);
         if (categoria) params.set("categoria", categoria);
         if (cidade.trim()) params.set("cidade", cidade.trim());
+        const { de, ate } = intervaloFiltroData(filtroData);
+        if (de) params.set("de", de);
+        if (ate) params.set("ate", ate);
         const data = await apiFetch<Evento[]>(`/api/eventos?${params.toString()}`, {
           cache: "no-store",
         });
@@ -141,7 +150,7 @@ export function EventosListaPublica({
     return () => {
       cancelled = true;
     };
-  }, [retryCount, buscaDebounced, categoria, cidade]);
+  }, [retryCount, buscaDebounced, categoria, cidade, filtroData]);
 
   const eventosFiltrados = useMemo(() => {
     if (!eventos) return [];
@@ -183,6 +192,33 @@ export function EventosListaPublica({
             placeholder="Nome, local ou palavra-chave…"
             className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm"
           />
+        </div>
+
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por data">
+          {(
+            [
+              ["", "Todos"],
+              ["hoje", "Hoje"],
+              ["fim_de_semana", "Este fim de semana"],
+              ["semana", "Esta semana"],
+            ] as const
+          ).map(([val, label]) => (
+            <button
+              key={val || "todos"}
+              type="button"
+              onClick={() => {
+                setFiltroData(val);
+                router.replace(buildUrl({ filtroData: val }), { scroll: false });
+              }}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                filtroData === val
+                  ? "bg-emerald-700 text-white"
+                  : "border border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-emerald-300"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {cidadesOpcoes.length > 0 ? (

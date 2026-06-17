@@ -3,12 +3,14 @@ import type { Evento } from "@/lib/types";
 
 export async function fetchEventosPublicos(
   limit = 50,
-  opts?: { q?: string; categoria?: string; cidade?: string },
+  opts?: { q?: string; categoria?: string; cidade?: string; de?: string; ate?: string },
 ): Promise<Evento[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (opts?.q) params.set("q", opts.q);
   if (opts?.categoria) params.set("categoria", opts.categoria);
   if (opts?.cidade) params.set("cidade", opts.cidade);
+  if (opts?.de) params.set("de", opts.de);
+  if (opts?.ate) params.set("ate", opts.ate);
   return apiFetch<Evento[]>(`/api/eventos?${params.toString()}`, { cache: "no-store" });
 }
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Boolean, Integer
+from sqlalchemy import Column, String, DateTime, Boolean, Integer, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import uuid
@@ -43,6 +43,14 @@ class Usuario(Base):
     senha_reset_token = Column(String(64), nullable=True, index=True)
     senha_reset_expires = Column(DateTime, nullable=True)
 
+    # Perfil público (/produtor/[slug])
+    slug_publico = Column(String, unique=True, index=True, nullable=True)
+    bio = Column(Text, nullable=True)
+    foto_url = Column(Text, nullable=True)
+    social_instagram = Column(String, nullable=True)
+    social_whatsapp = Column(String, nullable=True)
+    social_site = Column(String, nullable=True)
+
     # Verificação de e-mail (compra rápida / reenvio)
     email_verificado = Column(Boolean, default=True, nullable=False)
     email_verificacao_token = Column(String(64), nullable=True, index=True)
@@ -59,6 +67,12 @@ class Usuario(Base):
         back_populates="usuario",
         foreign_keys="Ingresso.usuario_id",
     )
+    notificacoes = relationship(
+        "UsuarioNotificacao",
+        back_populates="usuario",
+        cascade="all, delete-orphan",
+    )
+    lista_espera = relationship("EventoListaEspera", back_populates="usuario")
 
     def __repr__(self):
         return f"<Usuario {self.email}>"

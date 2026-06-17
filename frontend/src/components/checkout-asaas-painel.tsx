@@ -15,6 +15,8 @@ type Props = {
   participanteEmail: string;
   participanteCpf?: string;
   reservadoAte?: string | null;
+  parcelamentoHabilitado?: boolean;
+  parcelamentoMax?: number;
   onSuccess: () => void;
 };
 
@@ -34,9 +36,12 @@ export function CheckoutAsaasPainel({
   participanteEmail,
   participanteCpf,
   reservadoAte,
+  parcelamentoHabilitado = false,
+  parcelamentoMax = 2,
   onSuccess,
 }: Props) {
   const [metodo, setMetodo] = useState<Metodo>("pix");
+  const [parcelas, setParcelas] = useState(1);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [pix, setPix] = useState<AsaasPixPayload | null>(null);
@@ -126,6 +131,9 @@ export function CheckoutAsaasPainel({
           addressNumber: cardNumeroEnd.trim() || "S/N",
           phone: tel || undefined,
         };
+        if (parcelamentoHabilitado && parcelas > 1) {
+          body.parcelas = parcelas;
+        }
       }
 
       const data = await apiFetch<
@@ -232,6 +240,26 @@ export function CheckoutAsaasPainel({
           Fatura
         </button>
       </div>
+
+      {metodo === "card" && parcelamentoHabilitado ? (
+        <div>
+          <label className="text-xs font-medium text-gray-600">Parcelas</label>
+          <select
+            className="mt-1 w-full rounded border px-2 py-2 text-sm"
+            value={parcelas}
+            onChange={(e) => setParcelas(Number(e.target.value))}
+          >
+            <option value={1}>À vista</option>
+            {[2, 3, 6, 12]
+              .filter((n) => n <= parcelamentoMax)
+              .map((n) => (
+                <option key={n} value={n}>
+                  {n}x de {(valorCentavos / 100 / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </option>
+              ))}
+          </select>
+        </div>
+      ) : null}
 
       {metodo === "card" ? (
         <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">

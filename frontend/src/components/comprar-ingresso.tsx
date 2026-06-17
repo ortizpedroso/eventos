@@ -11,6 +11,7 @@ import { useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CheckoutAsaasPainel } from "@/components/checkout-asaas-painel";
+import { CheckoutBadgesPagamento } from "@/components/checkout-badges-pagamento";
 import { CheckoutConfirmacaoIngresso } from "@/components/checkout-confirmacao-ingresso";
 import { CheckoutStepper } from "@/components/checkout-stepper";
 import { CheckoutAuthPanel } from "@/components/checkout-auth-panel";
@@ -55,6 +56,8 @@ type Props = {
   eventoDataInicio?: string;
   eventoDataFim?: string;
   eventoLocal?: string;
+  parcelamentoHabilitado?: boolean;
+  parcelamentoMax?: number;
 };
 
 type CheckoutStep = 1 | 2 | 3;
@@ -307,6 +310,8 @@ export function ComprarIngresso({
   eventoDataInicio,
   eventoDataFim,
   eventoLocal,
+  parcelamentoHabilitado = false,
+  parcelamentoMax = 2,
 }: Props) {
   const searchParams = useSearchParams();
   const [quantidade, setQuantidade] = useState(1);
@@ -1176,6 +1181,7 @@ export function ComprarIngresso({
           </div>
 
           {!ehCortesia ? <CheckoutPrecoDetalhe precoIngresso={precoReaisCheckout} /> : null}
+          <CheckoutBadgesPagamento />
           <button
             type="button"
             className="text-xs text-zinc-600 underline"
@@ -1197,6 +1203,8 @@ export function ComprarIngresso({
                 participanteEmail={participanteCheckout.email}
                 participanteCpf={participanteCheckout.cpf}
                 reservadoAte={reservadoAte?.toISOString()}
+                parcelamentoHabilitado={parcelamentoHabilitado}
+                parcelamentoMax={parcelamentoMax}
                 onSuccess={() => setStep(3)}
               />
             ) : (

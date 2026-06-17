@@ -8,8 +8,12 @@ import { useEffect, useMemo, useState } from "react";
 import { CompraInfoConfianca } from "@/components/compra-info-confianca";
 import { EventoCategoriaBadge } from "@/components/evento-categoria-badge";
 import { EventoHeroBanner } from "@/components/evento-hero-banner";
+import { EventoMapaLocal } from "@/components/evento-mapa-local";
 import { EventoPoliticaReembolso } from "@/components/evento-politica-reembolso";
+import { EventoRelacionados } from "@/components/evento-relacionados";
 import { EventoResumoRapido } from "@/components/evento-resumo-rapido";
+import { ListaEsperaForm } from "@/components/lista-espera-form";
+import { ListaInteresseForm } from "@/components/lista-interesse-form";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { apiFetch, fetchSession } from "@/lib/api";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
@@ -244,6 +248,23 @@ export function EventoPublicClient({
             motivoCompraIndisponivel={motivoCompraIndisponivel}
           />
 
+          {evento.urgencia_ativo && evento.urgencia_badge ? (
+            <p
+              className="inline-flex w-fit rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-950"
+              role="status"
+            >
+              {evento.urgencia_badge}
+            </p>
+          ) : null}
+
+          {!compraDisponivel && evento.aceita_interesse ? (
+            <ListaInteresseForm slug={evento.slug} />
+          ) : null}
+
+          {!compraDisponivel && evento.lista_espera_habilitada ? (
+            <ListaEsperaForm slug={evento.slug} />
+          ) : null}
+
           {!compraDisponivel ? (
             <div
               className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
@@ -284,6 +305,8 @@ export function EventoPublicClient({
                   eventoDataFim={evento.data_fim}
                   eventoLocal={evento.local}
                   mensagemConfirmacao={evento.mensagem_confirmacao}
+                  parcelamentoHabilitado={evento.parcelamento_habilitado}
+                  parcelamentoMax={evento.parcelamento_max}
                 />
               </div>
             </aside>
@@ -366,7 +389,9 @@ export function EventoPublicClient({
               ) : null}
             </section>
           </div>
+          <EventoMapaLocal local={evento.local} cidade={evento.cidade} />
           <CompraInfoConfianca />
+          <EventoRelacionados slug={evento.slug} />
         </div>
       ) : (
         <section

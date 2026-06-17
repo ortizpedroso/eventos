@@ -749,6 +749,10 @@ async def cancelar_ingresso(
         db.add(cancelamento)
         db.commit()
 
+        from app.services.lista_espera import liberar_vagas_apos_cancelamento
+
+        liberar_vagas_apos_cancelamento(db, ingresso.evento_id, 1)
+
         return {
             "mensagem": "Ingresso cancelado com sucesso",
             "valor_reembolso": ingresso.valor,

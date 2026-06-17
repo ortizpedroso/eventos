@@ -35,6 +35,17 @@ class Evento(Base):
     # Asaas split — wallet do organizador no momento da criação do evento
     asaas_wallet_id = Column(String, nullable=True)
 
+    # Urgência / escassez (desligado | exato | faixa)
+    urgencia_modo = Column(String(20), nullable=False, default="desligado")
+    # Parcelamento no cartão (Asaas)
+    parcelamento_habilitado = Column(Boolean, default=False, nullable=False)
+    parcelamento_max = Column(Integer, nullable=False, default=2)
+    # Lista de interesse (pré-venda)
+    aceita_interesse = Column(Boolean, default=True, nullable=False)
+    # Lista de espera (esgotado)
+    lista_espera_habilitada = Column(Boolean, default=False, nullable=False)
+    lista_espera_prazo_horas = Column(Integer, nullable=False, default=24)
+
     # Status
     publicado = Column(Boolean, default=True)
 
@@ -57,6 +68,16 @@ class Evento(Base):
     )
     cupons = relationship(
         "EventoCupom",
+        back_populates="evento",
+        cascade="all, delete-orphan",
+    )
+    lista_interesse = relationship(
+        "EventoListaInteresse",
+        back_populates="evento",
+        cascade="all, delete-orphan",
+    )
+    lista_espera = relationship(
+        "EventoListaEspera",
         back_populates="evento",
         cascade="all, delete-orphan",
     )

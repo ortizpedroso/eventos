@@ -52,6 +52,7 @@ def criar_cobranca_asaas(
     credit_card: dict | None = None,
     credit_card_holder_info: dict | None = None,
     remote_ip: str | None = None,
+    installment_count: int | None = None,
 ) -> dict[str, Any]:
     client = get_asaas_client()
     due = (date.today() + timedelta(days=1)).isoformat()
@@ -72,6 +73,8 @@ def criar_cobranca_asaas(
         payload["creditCardHolderInfo"] = credit_card_holder_info
         if remote_ip:
             payload["remoteIp"] = remote_ip
+        if installment_count and installment_count > 1:
+            payload["installmentCount"] = installment_count
 
     return client.post("/v3/payments", json=payload)
 

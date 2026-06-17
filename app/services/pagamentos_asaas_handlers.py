@@ -27,6 +27,7 @@ from app.services.pagamento_asaas import (
     status_eh_pago,
 )
 from app.services.usuario_asaas import garantir_customer_asaas
+from app.services.taxas_asaas_publicas import PARCELAMENTO_MINIMO_REAIS
 from app.utils.public_errors import PAGAMENTO_CLIENTE, REEMBOLSO_CLIENTE
 from config.settings import settings
 
@@ -39,6 +40,7 @@ class AsaasCobrancaRequest(BaseModel):
     credit_card: dict | None = None
     credit_card_holder_info: dict | None = None
     remote_ip: str | None = Field(default=None, max_length=45)
+    parcelas: int | None = Field(default=None, ge=1, le=12)
 
 
 def _validar_ingresso_pendente(ingresso: Ingresso | None, usuario: Usuario) -> Ingresso:
@@ -143,6 +145,20 @@ def iniciar_cobranca_asaas(
     if valor <= 0:
         raise HTTPException(status_code=400, detail="Valor inválido para cobrança.")
 
+    installment_count: int | None = None
+    if body.metodo == "card" and body.parcelas and body.parcelas > 1:
+        if not evento.parcelamento_habilitado:
+            raise HTTPException(status_code=400, detail="Parcelamento não disponível para este evento.")
+        max_p = int(evento.parcelamento_max or 2)
+        if body.parcelas > max_p:
+            raise HTTPException(status_code=400, detail=f"Máximo de {max_p}x para este evento.")
+        if valor < PARCELAMENTO_MINIMO_REAIS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Valor mínimo para parcelamento: R$ {PARCELAMENTO_MINIMO_REAIS:.2f}.",
+            )
+        installment_count = body.parcelas
+
     billing = "PIX" if body.metodo == "pix" else "CREDIT_CARD"
     if body.metodo == "invoice":
         billing = "UNDEFINED"
@@ -158,6 +174,7 @@ def iniciar_cobranca_asaas(
             credit_card=body.credit_card,
             credit_card_holder_info=body.credit_card_holder_info,
             remote_ip=body.remote_ip,
+            installment_count=installment_count,
         )
     except AsaasAPIError as e:
         logger.exception("Erro Asaas ao criar cobrança")
