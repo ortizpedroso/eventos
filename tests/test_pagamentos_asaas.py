@@ -511,6 +511,112 @@ def test_cobranca_card_remote_ip_do_servidor():
     assert captured.get("remote_ip") == "10.0.0.1"
 
 
+def test_iniciar_cobranca_nao_recria_se_obter_cobranca_falha():
+    import pytest
+    from datetime import datetime, timedelta, timezone
+    from fastapi import HTTPException
+
+    from app.services.asaas_client import AsaasAPIError
+    from app.services.pagamentos_asaas_handlers import AsaasCobrancaRequest, iniciar_cobranca_asaas
+    from tests import test_patamar_ux as tpu
+
+    db = tpu._db()
+    try:
+        org = tpu._criar_org(db)
+        ev = tpu._criar_evento(db, org.id)
+        ev.asaas_wallet_id = WALLET_ORG
+        ev.lista_espera_habilitada = False
+        db.commit()
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="buyer@ex.com",
+            valor=50.0,
+            status="pendente",
+            asaas_payment_id="pay_obter_fail",
+            reservado_ate=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30),
+        )
+        db.add(ing)
+        db.commit()
+        db.refresh(ing)
+        iid = ing.id
+    finally:
+        db.close()
+
+    with (
+        patch("app.services.pagamentos_asaas_handlers.settings") as s,
+        patch(
+            "app.services.pagamentos_asaas_handlers.obter_cobranca",
+            side_effect=AsaasAPIError("timeout", status_code=503),
+        ),
+        patch("app.services.pagamentos_asaas_handlers.criar_cobranca_asaas") as criar_mock,
+    ):
+        s.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+        db = tpu._db()
+        try:
+            ing = db.get(Ingresso, iid)
+            org = db.get(Usuario, ing.usuario_id)
+            with pytest.raises(HTTPException) as exc:
+                iniciar_cobranca_asaas(db, org, AsaasCobrancaRequest(ingresso_id=ing.id, metodo="pix"))
+            assert exc.value.status_code == 503
+            criar_mock.assert_not_called()
+            db.refresh(ing)
+            assert ing.asaas_payment_id == "pay_obter_fail"
+        finally:
+            db.close()
+
+
+def test_status_cobranca_pago_false_sem_403_quando_espera_bloqueia():
+    from datetime import datetime, timedelta, timezone
+
+    from app.models import EventoListaEspera
+    from app.services.pagamentos_asaas_handlers import status_cobranca_asaas
+    from tests import test_patamar_ux as tpu
+
+    db = tpu._db()
+    try:
+        org = tpu._criar_org(db)
+        ev = tpu._criar_evento(db, org.id)
+        entrada = EventoListaEspera(
+            evento_id=ev.id,
+            email="fila@ex.com",
+            posicao=1,
+            status="notificado",
+            token_compra=f"tok-{uuid.uuid4().hex[:8]}",
+            token_expira_em=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24),
+        )
+        db.add(entrada)
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="outro@ex.com",
+            valor=50.0,
+            status="pendente",
+            asaas_payment_id="pay_poll_espera",
+        )
+        db.add(ing)
+        db.commit()
+        iid = ing.id
+    finally:
+        db.close()
+
+    with patch(
+        "app.services.pagamentos_asaas_handlers.obter_cobranca",
+        return_value={"status": "CONFIRMED", "id": "pay_poll_espera"},
+    ):
+        db = tpu._db()
+        try:
+            ing = db.get(Ingresso, iid)
+            org = db.get(Usuario, ing.usuario_id)
+            out = status_cobranca_asaas(db, iid, org)
+            assert out["pago"] is False
+            assert out["status"] == "CONFIRMED"
+            db.refresh(ing)
+            assert ing.status == "pendente"
+        finally:
+            db.close()
+
+
 def test_split_cap_nao_excede_valor():
     from app.services.pagamento_asaas import split_para_evento
 

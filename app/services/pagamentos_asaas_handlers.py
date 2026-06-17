@@ -141,6 +141,10 @@ def iniciar_cobranca_asaas(
             db.commit()
         except AsaasAPIError as e:
             logger.warning("Cobrança Asaas anterior %s: %s", pay_id, e)
+            raise HTTPException(
+                status_code=503,
+                detail="Não foi possível consultar o pagamento anterior. Tente novamente em instantes.",
+            ) from e
 
     cpf = ingresso.participante_cpf or ""
     tel = ingresso.participante_telefone or usuario.telefone
@@ -332,7 +336,15 @@ def status_cobranca_asaas(db: Session, ingresso_id: str, usuario: Usuario) -> di
     if pago_gateway:
         from app.services.lista_espera import validar_espera_para_ingresso_pendente
 
-        validar_espera_para_ingresso_pendente(db, ingresso, None)
+        try:
+            validar_espera_para_ingresso_pendente(db, ingresso, None)
+        except HTTPException:
+            db.refresh(ingresso)
+            return {
+                "status": payment.get("status"),
+                "pago": False,
+                "payment_id": pay_id,
+            }
         pagos = marcar_ingressos_pi_pagos(db, pay_id)
         db.commit()
         for iid in pagos:

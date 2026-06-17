@@ -670,13 +670,22 @@ async def retomar_pagamento(
                 notificar_ingresso_pago(iid)
         else:
             db.commit()
-        return {
-            "client_secret": "",
-            "ingresso_id": ingresso.id,
-            "ja_pago": True,
-            "reservado_ate": None,
-            "evento_slug": ingresso.evento.slug,
-        }
+        db.refresh(ingresso)
+        if ingresso.status == "pago":
+            return {
+                "client_secret": "",
+                "ingresso_id": ingresso.id,
+                "ja_pago": True,
+                "reservado_ate": None,
+                "evento_slug": ingresso.evento.slug,
+            }
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Pagamento confirmado no gateway, mas o ingresso ainda não foi liberado. "
+                "Aguarde alguns instantes ou contate o suporte."
+            ),
+        )
 
     if intent.status == "canceled":
         raise HTTPException(

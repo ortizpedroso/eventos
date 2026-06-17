@@ -102,20 +102,9 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
     try:
         if event_type in ("PAYMENT_RECEIVED", "PAYMENT_CONFIRMED") and pay_id:
             ingressos_recém_pagos = marcar_ingressos_pi_pagos(db, pay_id)
-            if not ingressos_recém_pagos:
-                from app.services.ingresso_pago import _ingressos_por_ref
+            from app.services.ingresso_pago import exigir_fulfillment_pagamento
 
-                pendentes = [i for i in _ingressos_por_ref(db, pay_id) if i.status == "pendente"]
-                if pendentes:
-                    logger.error(
-                        "Webhook Asaas: pagamento %s confirmado mas %d ingresso(s) pendente(s) não liberado(s)",
-                        pay_id,
-                        len(pendentes),
-                    )
-                    raise HTTPException(
-                        status_code=422,
-                        detail="Pagamento confirmado no gateway, mas ingressos não foram liberados.",
-                    )
+            exigir_fulfillment_pagamento(db, pay_id, ingressos_recém_pagos)
         elif event_type == "PAYMENT_REFUNDED" and pay_id:
             cancelar_ingressos_reembolsados(db, pay_id)
         elif event_type in ("PAYMENT_DELETED", "PAYMENT_OVERDUE") and pay_id:
@@ -156,6 +145,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             payment_intent = event["data"]["object"]
             pi_id = payment_intent["id"]
             ingressos_recém_pagos = marcar_ingressos_pi_pagos(db, pi_id)
+            from app.services.ingresso_pago import exigir_fulfillment_pagamento
+
+            exigir_fulfillment_pagamento(db, pi_id, ingressos_recém_pagos)
             if ingressos_recém_pagos:
                 logger.info(
                     "Ingressos pagos via webhook PI %s: %s",

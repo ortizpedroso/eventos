@@ -74,6 +74,24 @@ def marcar_ingressos_pi_pagos(db: Session, payment_ref: str) -> list[str]:
     return alterados
 
 
+def exigir_fulfillment_pagamento(db: Session, payment_ref: str, marcados: list[str]) -> None:
+    """Falha com 422 se o gateway confirmou mas ingressos pendentes não foram liberados."""
+    if marcados:
+        return
+    pendentes = [i for i in _ingressos_por_ref(db, payment_ref) if i.status == "pendente"]
+    if not pendentes:
+        return
+    logger.error(
+        "Pagamento %s confirmado mas %d ingresso(s) pendente(s) não liberado(s)",
+        payment_ref,
+        len(pendentes),
+    )
+    raise HTTPException(
+        status_code=422,
+        detail="Pagamento confirmado no gateway, mas ingressos não foram liberados.",
+    )
+
+
 def cancelar_ingressos_pi_pendentes(db: Session, payment_ref: str) -> int:
     """Cancela reservas pendentes ligadas ao pagamento externo e avança lista de espera."""
     return _cancelar_ingressos_por_ref(
