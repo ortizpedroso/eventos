@@ -8,18 +8,15 @@ import {
   formatBrl,
   formatPercentual,
 } from "@/lib/tarifas-plataforma";
+import { AVISO_LEGAL_TAXAS, TAXA_PIX, calcularTaxaAsaas } from "@/lib/taxas-asaas-publicas";
+import { nomeProcessadorPagamento, paymentProviderAtivo } from "@/lib/payment-provider";
 
 type Props = {
   precoIngresso: number;
-  /** Texto maior no topo (etapa 1). */
   destaque?: boolean;
   className?: string;
 };
 
-/**
- * Explica o preço final: valor pago pelo comprador e composição da taxa EventosBR
- * (já embutida no preço da vitrine — sem acréscimo no checkout).
- */
 export function CheckoutPrecoDetalhe({ precoIngresso, destaque = false, className = "" }: Props) {
   if (!Number.isFinite(precoIngresso) || precoIngresso < 0.5) {
     return null;
@@ -27,6 +24,9 @@ export function CheckoutPrecoDetalhe({ precoIngresso, destaque = false, classNam
 
   const d = detalharTaxaIngresso(precoIngresso, TARIFA_PADRAO);
   if (!d) return null;
+
+  const processador = nomeProcessadorPagamento();
+  const taxaPixEst = paymentProviderAtivo() === "asaas" ? calcularTaxaAsaas(precoIngresso, "pix") : null;
 
   return (
     <div
@@ -45,15 +45,22 @@ export function CheckoutPrecoDetalhe({ precoIngresso, destaque = false, classNam
           Você paga <strong>{formatBrl(d.precoVenda)}</strong> — sem taxa extra no checkout.
         </li>
         <li>
-          Inclui taxa da plataforma ({formatPercentual(TARIFA_PADRAO.percentual)} +{" "}
+          Inclui taxa EventosBR ({formatPercentual(TARIFA_PADRAO.percentual)} +{" "}
           {formatBrl(TARIFA_PADRAO.fixoPorIngresso)} por ingresso):{" "}
           <strong>{formatBrl(d.taxaTotal)}</strong>
         </li>
+        {taxaPixEst != null ? (
+          <li className="text-emerald-800/80">
+            Taxa estimada de processamento ({processador}, PIX ~{formatBrl(TAXA_PIX)}): incluída na
+            operação do gateway, não cobrada em cima do preço exibido.
+          </li>
+        ) : null}
         <li className="text-emerald-800/80">
-          Repasse estimado ao organizador: {formatBrl(d.liquidoOrganizador)} (antes de tarifas do cartão/PIX
-          do Stripe).
+          Repasse estimado ao organizador: {formatBrl(d.liquidoOrganizador)} (antes de tarifas do{" "}
+          {processador}).
         </li>
       </ul>
+      <p className="mt-2 text-[10px] leading-relaxed text-emerald-800/70">{AVISO_LEGAL_TAXAS}</p>
       <p className="mt-2 text-[11px] text-emerald-800/70">
         <Link href="/planos" className="underline underline-offset-2 hover:text-emerald-900">
           Ver planos e taxas

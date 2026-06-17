@@ -32,6 +32,7 @@ function formatCountdown(ms: number): string {
 export function CheckoutAsaasPainel({
   ingressoId,
   valorFmt,
+  valorCentavos,
   participanteNome,
   participanteEmail,
   participanteCpf,

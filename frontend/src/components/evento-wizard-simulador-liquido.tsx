@@ -10,6 +10,7 @@ import {
   formatPercentual,
   parseValorMonetarioInput,
 } from "@/lib/tarifas-plataforma";
+import { calcularTaxaAsaas } from "@/lib/taxas-asaas-publicas";
 
 type Props = {
   /** Preço de venda do ingresso (string do input ou número). */
@@ -18,11 +19,6 @@ type Props = {
   ocultar?: boolean;
   className?: string;
 };
-
-/** Estimativa de taxa Asaas (PIX ~0,99%; cartão ~2,99% + R$0,49) — ilustrativo. */
-const ASAAS_PIX_EST = 0.0099;
-const ASAAS_CARTAO_EST = 0.0299;
-const ASAAS_FIXO_CARTAO = 0.49;
 
 export function EventoWizardSimuladorLiquido({ preco, ocultar, className = "" }: Props) {
   const precoNum = useMemo(() => {
@@ -37,9 +33,8 @@ export function EventoWizardSimuladorLiquido({ preco, ocultar, className = "" }:
 
   if (ocultar || !detalhe) return null;
 
-  const taxaPixEst = Math.round(detalhe.precoVenda * ASAAS_PIX_EST * 100) / 100;
-  const taxaCartaoEst =
-    Math.round((detalhe.precoVenda * ASAAS_CARTAO_EST + ASAAS_FIXO_CARTAO) * 100) / 100;
+  const taxaPixEst = calcularTaxaAsaas(detalhe.precoVenda, "pix");
+  const taxaCartaoEst = calcularTaxaAsaas(detalhe.precoVenda, "cartao_avista");
   const liquidoPixEst = Math.round((detalhe.liquidoOrganizador - taxaPixEst) * 100) / 100;
   const liquidoCartaoEst = Math.round((detalhe.liquidoOrganizador - taxaCartaoEst) * 100) / 100;
 
@@ -77,7 +72,7 @@ export function EventoWizardSimuladorLiquido({ preco, ocultar, className = "" }:
           <span className="font-semibold text-emerald-800">{formatBrl(detalhe.liquidoOrganizador)}</span>
         </li>
         <li className="flex justify-between gap-2 text-zinc-500">
-          <span>Est. taxa Asaas PIX (~0,99%)</span>
+          <span>Est. taxa Asaas PIX (R$ 1,99)</span>
           <span>− {formatBrl(taxaPixEst)}</span>
         </li>
         <li className="flex justify-between gap-2 font-medium text-emerald-900">

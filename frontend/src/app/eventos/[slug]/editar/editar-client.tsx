@@ -14,8 +14,10 @@ import {
   type LoteFormRow,
 } from "@/components/evento-lotes-editor";
 import { EventoImagemField } from "@/components/evento-imagem-field";
+import { EventoConfigAvancadaFields } from "@/components/evento-config-avancada-fields";
 import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
-import { apiFetch } from "@/lib/api";
+import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
+import { apiFetch, getApiBaseUrl } from "@/lib/api";
 import type { Evento, Usuario } from "@/lib/types";
 
 type Props = { slug: string };
@@ -34,6 +36,12 @@ type SalvarPayload = {
   mensagem_confirmacao?: string | null;
   publicado: boolean;
   limite_ingressos_por_cpf?: number | null;
+  urgencia_modo?: string;
+  parcelamento_habilitado?: boolean;
+  parcelamento_max?: number;
+  aceita_interesse?: boolean;
+  lista_espera_habilitada?: boolean;
+  lista_espera_prazo_horas?: number;
 };
 
 export function EditarEventoClient({ slug }: Props) {
@@ -48,6 +56,44 @@ export function EditarEventoClient({ slug }: Props) {
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>([]);
+  const [csvBusy, setCsvBusy] = useState(false);
+
+  async function baixarListaInteresse() {
+    if (!evento) return;
+    setCsvBusy(true);
+    try {
+      const base = getApiBaseUrl();
+      const res = await fetch(`${base}/api/eventos/id/${evento.id}/lista-interesse/export`, {
+        credentials: "include",
+        headers: { accept: "text/csv" },
+      });
+      if (!res.ok) {
+        let msg = `Erro ${res.status}`;
+        try {
+          const j = (await res.json()) as { detail?: string };
+          if (typeof j.detail === "string") msg = j.detail;
+        } catch {
+          // ignore
+        }
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition");
+      let filename = `interesse-${evento.slug}.csv`;
+      const m = cd?.match(/filename="([^"]+)"/);
+      if (m?.[1]) filename = m[1];
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao baixar CSV");
+    } finally {
+      setCsvBusy(false);
+    }
+  }
 
   useEffect(() => {
     setOrigin(typeof window !== "undefined" ? window.location.origin : "");
@@ -136,6 +182,7 @@ export function EditarEventoClient({ slug }: Props) {
       publicado,
       limite_ingressos_por_cpf:
         limite_ingressos_por_cpf && limite_ingressos_por_cpf >= 1 ? limite_ingressos_por_cpf : null,
+      ...parseEventoConfigFromForm(formData),
     };
 
     try {
@@ -409,6 +456,8 @@ export function EditarEventoClient({ slug }: Props) {
 
           <EventoImagemField value={imagemUrl} onChange={setImagemUrl} />
 
+          <EventoConfigAvancadaFields evento={evento} />
+
           <div className="mt-6 flex justify-end border-t border-zinc-100 pt-4">
             <button disabled={saving} className="btn-success px-8" type="submit">
               {saving ? "Salvando…" : "Salvar alterações"}
@@ -418,6 +467,22 @@ export function EditarEventoClient({ slug }: Props) {
 
         <div className="mt-6 border-t border-zinc-100 pt-6">
           <EventoCuponsEditor eventoId={evento.id} />
+          {evento.aceita_interesse !== false ? (
+            <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+              <p className="text-sm font-medium text-zinc-900">Lista de interesse</p>
+              <p className="mt-1 text-xs text-zinc-600">
+                Exporte e-mails de quem pediu aviso antes da abertura das vendas.
+              </p>
+              <button
+                type="button"
+                onClick={() => void baixarListaInteresse()}
+                disabled={csvBusy}
+                className="mt-3 text-sm font-medium text-emerald-800 underline disabled:opacity-60"
+              >
+                {csvBusy ? "Gerando CSV…" : "Baixar CSV"}
+              </button>
+            </div>
+          ) : null}
           <p className="mt-2 text-xs text-zinc-500">
             Cupons são salvos na hora em &quot;Adicionar&quot;. O botão acima guarda só os dados do evento.
           </p>

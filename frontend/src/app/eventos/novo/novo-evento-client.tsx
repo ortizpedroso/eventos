@@ -16,8 +16,10 @@ import {
   precoMinimoDosLotes,
   type LoteFormRow,
 } from "@/components/evento-lotes-editor";
+import { EventoConfigAvancadaFields } from "@/components/evento-config-avancada-fields";
 import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
 import { EventoWizardSimuladorLiquido } from "@/components/evento-wizard-simulador-liquido";
+import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
 import { EVENTO_CATEGORIAS, slugFromNome } from "@/lib/eventos";
 import { apiFetch } from "@/lib/api";
 
@@ -42,6 +44,12 @@ type CriarEventoPayload = {
   mensagem_confirmacao?: string | null;
   publicado: boolean;
   limite_ingressos_por_cpf?: number | null;
+  urgencia_modo?: string;
+  parcelamento_habilitado?: boolean;
+  parcelamento_max?: number;
+  aceita_interesse?: boolean;
+  lista_espera_habilitada?: boolean;
+  lista_espera_prazo_horas?: number;
 };
 
 function SectionTitle({ children }: { children: ReactNode }) {
@@ -209,6 +217,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
       publicado,
       limite_ingressos_por_cpf:
         limite_ingressos_por_cpf && limite_ingressos_por_cpf >= 1 ? limite_ingressos_por_cpf : null,
+      ...parseEventoConfigFromForm(formData),
     };
 
     try {
@@ -466,6 +475,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     vitrine; só o organizador logado acessa o link. Venda desativada até republicar.
                   </span>
                 </label>
+                <EventoConfigAvancadaFields />
                 <EventoVisibilidadeAvisosLegais />
               </div>
             </section>

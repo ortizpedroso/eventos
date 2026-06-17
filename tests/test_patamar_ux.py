@@ -9,7 +9,12 @@ from slugify import slugify
 
 from app.models import Evento, Usuario
 from app.services.eventos_relacionados import listar_eventos_relacionados
-from app.services.lista_espera import inscrever_espera, liberar_vagas_apos_cancelamento, validar_token_espera
+from app.services.lista_espera import (
+    expirar_tokens_vencidos,
+    inscrever_espera,
+    liberar_vagas_apos_cancelamento,
+    validar_token_espera,
+)
 from app.services.lista_interesse import inscrever_interesse
 from app.services.taxas_asaas_publicas import calcular_taxa_asaas, simular_parcelas
 from app.services.urgencia import calcular_urgencia
@@ -116,6 +121,34 @@ def test_lista_espera_liberacao(monkeypatch):
         assert emails == ["fila@ex.com"]
         ok = validar_token_espera(db, ev, entrada.token_compra)
         assert ok is not None
+    finally:
+        db.close()
+
+
+def test_lista_espera_expiracao_token(monkeypatch):
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        ev.lista_espera_prazo_horas = 24
+        db.commit()
+        e1 = inscrever_espera(db, ev, email="a@ex.com")
+        e2 = inscrever_espera(db, ev, email="b@ex.com")
+        monkeypatch.setattr(
+            "app.services.lista_espera.enqueue_email_simples",
+            lambda dest, subj, html: True,
+        )
+        liberar_vagas_apos_cancelamento(db, ev.id, 1)
+        db.refresh(e1)
+        assert e1.status == "notificado"
+        e1.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)
+        db.commit()
+        n = expirar_tokens_vencidos(db)
+        assert n >= 1
+        db.refresh(e1)
+        assert e1.status == "expirado"
+        db.refresh(e2)
+        assert e2.status == "notificado"
     finally:
         db.close()
 

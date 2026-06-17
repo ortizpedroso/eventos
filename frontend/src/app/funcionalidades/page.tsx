@@ -139,25 +139,19 @@ const destaques = [
       "Acompanhamento de vendas em tempo real",
     ],
     visual: (
-      <div className="relative flex h-full min-h-[320px] w-full overflow-hidden rounded-2xl ring-1 ring-zinc-200 lg:min-h-[400px]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80"
-          alt="Multidão animada em um evento com luzes"
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
-        />
-        {/* Overlay escuro para destacar o texto flutuante */}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 via-zinc-900/20 to-transparent" />
-        
-        {/* Selo flutuante premium */}
-        <div className="absolute bottom-6 left-6">
-          <div className="flex w-fit items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 backdrop-blur-md">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-            </span>
-            <span className="text-sm font-medium tracking-wide text-white">Vendas a todo vapor</span>
-          </div>
+      <div className="relative flex h-full min-h-[320px] w-full flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-900 via-emerald-800 to-zinc-900 p-6 ring-1 ring-emerald-700/40 lg:min-h-[400px]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.12),transparent_45%)]" />
+        <div className="absolute right-6 top-6 rounded-xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-emerald-100">Página do evento</p>
+          <p className="mt-1 text-lg font-bold text-white">Feijoada Comunitária 2026</p>
+          <p className="text-sm text-emerald-100">Ingressos a partir de R$ 35</p>
+        </div>
+        <div className="relative mt-auto flex w-fit items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 backdrop-blur-md">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          </span>
+          <span className="text-sm font-medium tracking-wide text-white">Vendas a todo vapor</span>
         </div>
       </div>
     ),
@@ -205,28 +199,26 @@ const destaques = [
       "Organize múltiplas portarias simultaneamente",
     ],
     visual: (
-      <div className="relative flex h-full min-h-[320px] w-full overflow-hidden rounded-2xl ring-1 ring-zinc-200 lg:min-h-[400px]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80"
-          alt="Público em um evento noturno"
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
-        />
-        {/* Overlay escuro para destacar o elemento flutuante */}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/20 to-transparent" />
-        
-        {/* Selo flutuante de Check-in de Sucesso */}
-        <div className="absolute bottom-6 left-6 right-6 sm:right-auto">
-          <div className="flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-black/50 p-4 backdrop-blur-md sm:w-auto">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-bold tracking-wide text-white">Acesso Liberado</p>
-              <p className="mt-0.5 text-xs font-medium text-zinc-300">TKT-8A9F • Ingresso VIP</p>
-            </div>
+      <div className="relative flex h-full min-h-[320px] w-full flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-violet-950 to-zinc-900 p-6 ring-1 ring-violet-800/40 lg:min-h-[400px]">
+        <div className="absolute left-1/2 top-10 h-40 w-40 -translate-x-1/2 rounded-2xl border-4 border-white/80 bg-white p-3 shadow-2xl">
+          <div className="grid h-full grid-cols-4 grid-rows-4 gap-1">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <div
+                key={i}
+                className={`rounded-sm ${i % 3 === 0 ? "bg-zinc-900" : "bg-zinc-200"}`}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="relative mt-auto flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-black/50 p-4 backdrop-blur-md sm:w-auto">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-bold tracking-wide text-white">Acesso liberado</p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-300">TKT-8A9F · Ingresso VIP</p>
           </div>
         </div>
       </div>

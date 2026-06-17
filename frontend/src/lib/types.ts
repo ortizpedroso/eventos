@@ -152,3 +152,13 @@ export type PagamentoListItem = {
   data_limite_cancelamento: string;
   reservado_ate?: string | null;
 };
+
+export type NotificacaoUsuario = {
+  id: string;
+  tipo: string;
+  titulo: string;
+  mensagem: string;
+  link: string | null;
+  lida: boolean;
+  data_criacao: string;
+};

@@ -38,6 +38,11 @@ export default defineConfig({
       testMatch: /compra-checkout-asaas\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "patamar",
+      testMatch: /patamar-ux\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
   ...(skipWebServer
     ? {}

@@ -9,6 +9,7 @@ import { fetchSession } from "@/lib/api";
 const LINKS_CLIENTE = [
   { href: "/conta/pagamentos", label: "Pagamentos" },
   { href: "/conta/ingressos", label: "Ingressos" },
+  { href: "/conta/notificacoes", label: "Notificações" },
   { href: "/conta/perfil", label: "Perfil" },
 ] as const;
 

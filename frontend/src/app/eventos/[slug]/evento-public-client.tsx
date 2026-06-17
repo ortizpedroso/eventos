@@ -307,6 +307,8 @@ export function EventoPublicClient({
                   mensagemConfirmacao={evento.mensagem_confirmacao}
                   parcelamentoHabilitado={evento.parcelamento_habilitado}
                   parcelamentoMax={evento.parcelamento_max}
+                  urgenciaAtivo={evento.urgencia_ativo}
+                  urgenciaBadge={evento.urgencia_badge}
                 />
               </div>
             </aside>

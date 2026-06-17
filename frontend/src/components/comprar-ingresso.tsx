@@ -58,6 +58,8 @@ type Props = {
   eventoLocal?: string;
   parcelamentoHabilitado?: boolean;
   parcelamentoMax?: number;
+  urgenciaAtivo?: boolean;
+  urgenciaBadge?: string | null;
 };
 
 type CheckoutStep = 1 | 2 | 3;
@@ -312,6 +314,8 @@ export function ComprarIngresso({
   eventoLocal,
   parcelamentoHabilitado = false,
   parcelamentoMax = 2,
+  urgenciaAtivo = false,
+  urgenciaBadge = null,
 }: Props) {
   const searchParams = useSearchParams();
   const [quantidade, setQuantidade] = useState(1);
@@ -910,6 +914,14 @@ export function ComprarIngresso({
 
           {!ehCortesia ? (
             <>
+              {urgenciaAtivo && urgenciaBadge ? (
+                <p
+                  className="inline-flex w-fit rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-950"
+                  role="status"
+                >
+                  {urgenciaBadge}
+                </p>
+              ) : null}
               <CheckoutPrecoDetalhe precoIngresso={precoReaisCheckout} destaque />
               {cupomPreview && cupomPreview.desconto_centavos > 0 ? (
                 <p className="text-xs text-emerald-800">
