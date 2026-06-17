@@ -398,6 +398,119 @@ def test_webhook_asaas_refund_cancela_pago():
         db.close()
 
 
+def test_webhook_asaas_422_quando_ingresso_nao_liberado():
+    from tests import test_api as ta
+
+    db = ta.TestingSessionLocal()
+    try:
+        org = _registrar_organizador("wh422")
+        ev = _criar_evento(org)
+        ev_db = db.query(Evento).filter(Evento.id == ev["id"]).first()
+        ev_db.lista_espera_habilitada = True
+        from app.services.lista_espera import inscrever_espera
+
+        entrada = inscrever_espera(db, ev_db, email="fila@ex.com")
+        entrada.status = "notificado"
+        entrada.token_compra = f"tok-{uuid.uuid4().hex[:8]}"
+        from datetime import datetime, timedelta, timezone
+
+        entrada.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        ing = Ingresso(
+            evento_id=ev["id"],
+            usuario_id="user-wh422",
+            participante_email="outro@ex.com",
+            valor=50.0,
+            status="pendente",
+            asaas_payment_id="pay_wh422",
+        )
+        db.add(ing)
+        db.commit()
+    finally:
+        db.close()
+
+    with patch("app.routes.webhooks.settings") as wh_settings:
+        wh_settings.ASAAS_WEBHOOK_TOKEN = "tok_test"
+        wh_settings.ENVIRONMENT = "test"
+        payload = {
+            "id": f"evt_{uuid.uuid4().hex[:8]}",
+            "event": "PAYMENT_CONFIRMED",
+            "payment": {"id": "pay_wh422", "status": "CONFIRMED"},
+        }
+        wh = client.post(
+            "/api/webhooks/asaas",
+            headers={"asaas-access-token": "tok_test", "content-type": "application/json"},
+            content=json.dumps(payload),
+        )
+    assert wh.status_code == 422
+
+
+def test_cobranca_card_remote_ip_do_servidor():
+    org = _registrar_organizador("rip")
+    cli = _registrar_cliente("rip")
+    ev = _criar_evento(org)
+
+    with patch("app.routes.pagamentos.settings") as route_settings:
+        route_settings.payments_disabled = False
+        route_settings.use_asaas = True
+        route_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+        criar = client.post(
+            "/api/pagamentos/criar",
+            headers={"Authorization": f"Bearer {cli}"},
+            json={
+                "evento_id": ev["id"],
+                "valor_centavos": 5000,
+                "participante_nome": "Rip",
+                "participante_email": "rip@test.com",
+                "participante_cpf": "52998224725",
+                "participante_telefone": "11987654321",
+                "termo_compra_aceito": True,
+            },
+        )
+    assert criar.status_code == 200, criar.text
+    iid = criar.json()["ingresso_id"]
+
+    captured: dict = {}
+
+    def _fake_criar(**kwargs):
+        captured.update(kwargs)
+        return {"id": "pay_rip", "status": "PENDING", "billingType": "CREDIT_CARD"}
+
+    with (
+        patch("app.routes.pagamentos.settings") as route_settings,
+        patch("app.services.pagamentos_asaas_handlers.settings") as svc_settings,
+        patch("app.deps.rate_limit.client_ip_from_request", return_value="10.0.0.1"),
+        patch("app.services.pagamentos_asaas_handlers.garantir_customer_asaas", return_value="cus_x"),
+        patch("app.services.pagamentos_asaas_handlers.criar_cobranca_asaas", side_effect=_fake_criar),
+    ):
+        route_settings.use_asaas = True
+        svc_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+        cob = client.post(
+            "/api/pagamentos/asaas/cobranca",
+            headers={"Authorization": f"Bearer {cli}", "X-Forwarded-For": "10.0.0.1"},
+            json={
+                "ingresso_id": iid,
+                "metodo": "card",
+                "remote_ip": "8.8.8.8",
+                "credit_card": {
+                    "holderName": "Rip",
+                    "number": "4111111111111111",
+                    "expiryMonth": "12",
+                    "expiryYear": "2030",
+                    "ccv": "123",
+                },
+                "credit_card_holder_info": {
+                    "name": "Rip",
+                    "email": "rip@test.com",
+                    "cpfCnpj": "52998224725",
+                    "postalCode": "01310100",
+                    "addressNumber": "1",
+                },
+            },
+        )
+    assert cob.status_code == 200, cob.text
+    assert captured.get("remote_ip") == "10.0.0.1"
+
+
 def test_split_cap_nao_excede_valor():
     from app.services.pagamento_asaas import split_para_evento
 

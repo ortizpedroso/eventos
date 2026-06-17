@@ -188,6 +188,8 @@ def liberar_vagas_apos_cancelamento(db: Session, evento_id: str, quantidade: int
 
     notificados = 0
     for _ in range(max(1, quantidade)):
+        if janela_exclusiva_espera_ativa(db, evento_id):
+            break
         prox = (
             db.query(EventoListaEspera)
             .filter(

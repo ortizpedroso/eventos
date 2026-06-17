@@ -713,6 +713,38 @@ def test_iniciar_cobranca_nao_recria_quando_gateway_pago():
         db.close()
 
 
+def test_liberar_vagas_quantidade_um_por_janela(monkeypatch):
+    from app.services.lista_espera import inscrever_espera, liberar_vagas_apos_cancelamento
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        e1 = inscrever_espera(db, ev, email="primeiro@ex.com")
+        e2 = inscrever_espera(db, ev, email="segundo@ex.com")
+        e3 = inscrever_espera(db, ev, email="terceiro@ex.com")
+        db.commit()
+
+        emails: list[str] = []
+        monkeypatch.setattr(
+            "app.services.lista_espera.enqueue_email_simples",
+            lambda dest, subj, html: emails.append(dest) or True,
+        )
+
+        n = liberar_vagas_apos_cancelamento(db, ev.id, 2)
+        assert n == 1
+        assert emails == ["primeiro@ex.com"]
+
+        db.refresh(e1)
+        db.refresh(e2)
+        db.refresh(e3)
+        assert e1.status == "notificado"
+        assert e2.status == "aguardando"
+        assert e3.status == "aguardando"
+    finally:
+        db.close()
+
+
 def test_api_lista_interesse():
     db = _db()
     try:

@@ -820,7 +820,7 @@ async def asaas_iniciar_cobranca(
         raise HTTPException(status_code=400, detail="Provedor Asaas não está ativo.")
     from app.deps.rate_limit import client_ip_from_request
 
-    if body.metodo == "card" and not body.remote_ip:
+    if body.metodo == "card":
         body = body.model_copy(update={"remote_ip": client_ip_from_request(request)})
     return iniciar_cobranca_asaas(db, usuario_atual, body)
 
