@@ -81,7 +81,6 @@ set_env_var "ASAAS_PLATFORM_WALLET_ID" "$PLATFORM_WALLET"
 set_env_var "ASAAS_WEBHOOK_TOKEN" "$WEBHOOK_TOKEN"
 set_env_var "ASAAS_ENVIRONMENT" "$ENVIRONMENT"
 set_env_var "ASAAS_DISABLED" "false"
-set_env_var "STRIPE_DISABLED" "true"
 
 echo ""
 echo "==> Asaas configurado em $ENV_FILE"

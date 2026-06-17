@@ -38,21 +38,6 @@ app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
-@pytest.fixture(autouse=True)
-def _stripe_mocks():
-    with (
-        patch("stripe.Customer.create") as customer_create,
-        patch("stripe.PaymentIntent.create") as payment_intent_create,
-    ):
-        customer_create.return_value = type("Customer", (), {"id": "cus_test"})()
-        payment_intent_create.return_value = type(
-            "PaymentIntent",
-            (),
-            {"id": "pi_test", "client_secret": "sec_test"},
-        )()
-        yield
-
-
 def _registrar_organizador(suffix: str) -> str:
     r = client.post(
         "/api/auth/registrar",
@@ -136,8 +121,8 @@ class TestCupons:
             json={"codigo": "DESC20", "tipo": "percentual", "valor": 0.2, "ativo": True},
         )
 
-        prev = settings.STRIPE_DISABLED
-        settings.STRIPE_DISABLED = True
+        prev = settings.ASAAS_DISABLED
+        settings.ASAAS_DISABLED = True
         try:
             r = client.post(
                 "/api/pagamentos/criar",
@@ -151,7 +136,7 @@ class TestCupons:
             )
             assert r.status_code == 200, r.text
         finally:
-            settings.STRIPE_DISABLED = prev
+            settings.ASAAS_DISABLED = prev
 
         bad = client.post(
             "/api/pagamentos/criar",
@@ -172,8 +157,8 @@ class TestComunicados:
         cli = _registrar_cliente("com1")
         ev = _criar_evento(org)
 
-        prev = settings.STRIPE_DISABLED
-        settings.STRIPE_DISABLED = True
+        prev = settings.ASAAS_DISABLED
+        settings.ASAAS_DISABLED = True
         try:
             ing = client.post(
                 "/api/pagamentos/criar",
@@ -182,7 +167,7 @@ class TestComunicados:
             )
             assert ing.status_code == 200, ing.text
         finally:
-            settings.STRIPE_DISABLED = prev
+            settings.ASAAS_DISABLED = prev
 
         with patch(
             "app.routes.organizador.enqueue_comunicado_evento",

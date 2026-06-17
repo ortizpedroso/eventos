@@ -97,9 +97,9 @@ def main() -> int:
         headers=cli_h,
         json={"evento_id": eid, "termo_compra_aceito": True, "valor_centavos": 5000},
     )
-    record(results, "Checkout STRIPE_DISABLED", pag.status_code == 200, pag.text[:100])
+    record(results, "Checkout ASAAS_DISABLED", pag.status_code == 200, pag.text[:100])
     ingresso_id = pag.json().get("ingresso_id", "") if pag.status_code == 200 else ""
-    record(results, "Ingresso confirmado", pag.json().get("stripe_disabled") is True if pag.status_code == 200 else False)
+    record(results, "Ingresso confirmado", pag.json().get("payments_disabled") is True if pag.status_code == 200 else False)
     record(results, "Meus ingressos", any(i["id"] == ingresso_id for i in c.get("/api/ingressos/meus", headers=cli_h).json()))
     record(results, "QR Code", c.get(f"/api/ingressos/{ingresso_id}/qr", headers=cli_h).status_code == 200 if ingresso_id else False)
 

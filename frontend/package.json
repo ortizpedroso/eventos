@@ -16,8 +16,6 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@stripe/react-stripe-js": "^6.3.0",
-    "@stripe/stripe-js": "^9.4.0",
     "geist": "^1.7.1",
     "html5-qrcode": "^2.3.8",
     "next": "16.2.6",

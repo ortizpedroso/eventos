@@ -1,12 +1,11 @@
 import json
 import logging
 import secrets
-import stripe
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Ingresso, StripeEvent, get_db
+from app.models import Ingresso, WebhookEvent, get_db
 from app.services.ingresso_pago import (
     cancelar_ingressos_pi_pendentes,
     cancelar_ingressos_reembolsados,
@@ -18,38 +17,6 @@ from config.settings import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-_WEBHOOK_PLACEHOLDER = "whsec_seu_webhook_secret_aqui"
-
-
-def _parse_stripe_webhook_event(payload: bytes, sig_header: str | None) -> dict:
-    """Valida assinatura em produção; em dev permite JSON sem whsec configurado."""
-    whsec = (settings.STRIPE_WEBHOOK_SECRET or "").strip()
-    dev_sem_secret = (
-        settings.ENVIRONMENT != "production"
-        and settings.DEBUG
-        and settings.ENVIRONMENT == "development"
-        and (not whsec or whsec == _WEBHOOK_PLACEHOLDER)
-    )
-    if dev_sem_secret:
-        logger.warning(
-            "Webhook Stripe: assinatura NÃO verificada (DEBUG+development e sem whsec real). "
-            "Configure STRIPE_WEBHOOK_SECRET para produção."
-        )
-        try:
-            return json.loads(payload.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as e:
-            logger.error("Payload JSON inválido no Webhook: %s", e)
-            raise HTTPException(status_code=400, detail="Invalid payload") from e
-
-    try:
-        return stripe.Webhook.construct_event(payload, sig_header, whsec)
-    except ValueError:
-        logger.error("Payload inválido recebido no Webhook")
-        raise HTTPException(status_code=400, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
-        logger.error("Assinatura inválida recebida no Webhook")
-        raise HTTPException(status_code=400, detail="Invalid signature")
 
 
 def _validar_token_webhook_asaas(token_header: str) -> None:
@@ -94,7 +61,7 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
     logger.info("Webhook Asaas: %s (%s)", event_type, event_id or pay_id)
 
     if event_id:
-        existente = db.get(StripeEvent, event_id)
+        existente = db.get(WebhookEvent, event_id)
         if existente:
             return {"status": "success", "idempotent": True}
 
@@ -111,78 +78,12 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
             cancelar_ingressos_pi_pendentes(db, pay_id)
 
         if event_id:
-            db.add(StripeEvent(id=event_id, tipo=event_type))
+            db.add(WebhookEvent(id=event_id, tipo=event_type))
         db.commit()
         for iid in ingressos_recém_pagos:
             notificar_ingresso_pago(iid)
     except IntegrityError:
         db.rollback()
-        return {"status": "success", "idempotent": True}
-
-    return {"status": "success"}
-
-
-@router.post("/stripe")
-async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-    """Recebe eventos do Stripe via Webhook"""
-    payload = await request.body()
-    sig_header = request.headers.get("stripe-signature")
-
-    event = _parse_stripe_webhook_event(payload, sig_header)
-
-    event_id = event.get("id")
-    event_type = event.get("type", "unknown")
-    logger.info("Webhook Stripe recebido: %s (%s)", event_type, event_id or "sem-id")
-
-    if event_id:
-        existente = db.get(StripeEvent, event_id)
-        if existente:
-            return {"status": "success", "idempotent": True}
-
-    ingressos_recém_pagos: list[str] = []
-    try:
-        if event_type == "payment_intent.succeeded":
-            payment_intent = event["data"]["object"]
-            pi_id = payment_intent["id"]
-            ingressos_recém_pagos = marcar_ingressos_pi_pagos(db, pi_id)
-            from app.services.ingresso_pago import exigir_fulfillment_pagamento
-
-            exigir_fulfillment_pagamento(db, pi_id, ingressos_recém_pagos)
-            if ingressos_recém_pagos:
-                logger.info(
-                    "Ingressos pagos via webhook PI %s: %s",
-                    pi_id,
-                    ", ".join(ingressos_recém_pagos),
-                )
-
-        elif event_type == "payment_intent.payment_failed":
-            payment_intent = event["data"]["object"]
-            n = cancelar_ingressos_pi_pendentes(db, payment_intent["id"])
-            if n:
-                logger.info(
-                    "Ingressos cancelados (pagamento falhou) PI %s: %d",
-                    payment_intent["id"],
-                    n,
-                )
-
-        elif event_type == "payment_intent.canceled":
-            payment_intent = event["data"]["object"]
-            n = cancelar_ingressos_pi_pendentes(db, payment_intent["id"])
-            if n:
-                logger.info(
-                    "Ingressos cancelados (PI expirado) %s: %d",
-                    payment_intent["id"],
-                    n,
-                )
-
-        if event_id:
-            db.add(StripeEvent(id=event_id, tipo=event_type))
-        db.commit()
-        for iid in ingressos_recém_pagos:
-            notificar_ingresso_pago(iid)
-    except IntegrityError:
-        db.rollback()
-        logger.info("Webhook duplicado (race): %s", event_id)
         return {"status": "success", "idempotent": True}
 
     return {"status": "success"}
@@ -190,7 +91,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/mock-payment")
 async def mock_payment(ingresso_id: str, db: Session = Depends(get_db)):
-    """(Apenas para Desenvolvimento) Simula a aprovação de um pagamento sem precisar do Stripe CLI"""
+    """(Apenas para Desenvolvimento) Simula a aprovação de um pagamento."""
     if (
         settings.ENVIRONMENT == "production"
         or not settings.DEBUG
@@ -209,9 +110,7 @@ async def mock_payment(ingresso_id: str, db: Session = Depends(get_db)):
         notificar_ingresso_pago(ingresso.id)
     else:
         db.commit()
-    logger.info(
-        "Ingresso %s pago com sucesso via MOCK (Stripe CLI ignorado)!", ingresso.id
-    )
+    logger.info("Ingresso %s pago com sucesso via MOCK!", ingresso.id)
 
     return {
         "status": "success",

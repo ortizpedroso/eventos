@@ -1,35 +1,22 @@
 "use client";
 
-import {
-  Elements,
-  PaymentElement,
-  useElements,
-  useStripe,
-} from "@stripe/react-stripe-js";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CheckoutAsaasPainel } from "@/components/checkout-asaas-painel";
 import { CheckoutBadgesPagamento } from "@/components/checkout-badges-pagamento";
 import { CheckoutConfirmacaoIngresso } from "@/components/checkout-confirmacao-ingresso";
 import { CheckoutStepper } from "@/components/checkout-stepper";
 import { CheckoutAuthPanel } from "@/components/checkout-auth-panel";
-import {
-  CheckoutPixPainel,
-  carregarPixDoIntent,
-  type PixDisplayData,
-} from "@/components/checkout-pix-painel";
 import { CheckoutPrecoDetalhe } from "@/components/checkout-preco-detalhe";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { authHrefParaComprarIngresso } from "@/lib/criar-evento-routes";
 import { apiFetch, fetchSession } from "@/lib/api";
 import { isDevCheckoutWarning, mapCheckoutError } from "@/lib/checkout-errors";
-import { urlPosCompraEventoAbsoluta } from "@/lib/checkout-return";
 import { CheckoutTermoResponsabilidade } from "@/components/checkout-termo-responsabilidade";
 import { TERMO_COMPRA_VERSAO } from "@/lib/termo-compra";
 import { formatCpfMask, isValidCpf, onlyDigits } from "@/lib/cpf";
-import { getStripe } from "@/lib/stripe-client";
 import { formatTelefoneBrMask, isTelefoneBrasilOk } from "@/lib/telefone-br";
 import type { CriarPagamentoResponse, IngressoLote, RetomarPagamentoResponse, Usuario } from "@/lib/types";
 import { urlRetomarPagamento } from "@/lib/reserva-pagamento";
@@ -64,235 +51,12 @@ type Props = {
 };
 
 type CheckoutStep = 1 | 2 | 3;
-type MetodoPagamento = "pix" | "card";
 
 export type ParticipanteCheckout = {
   nome: string;
   email: string;
   cpf?: string;
 };
-
-function ConfirmForm({
-  clientSecret,
-  valorFmt,
-  participante,
-  pixDisponivel,
-  onSuccess,
-  returnUrl,
-}: {
-  clientSecret: string;
-  valorFmt: string;
-  participante: ParticipanteCheckout;
-  pixDisponivel: boolean;
-  onSuccess: () => void;
-  returnUrl: string;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [pixData, setPixData] = useState<PixDisplayData | null>(null);
-  const [metodo, setMetodo] = useState<MetodoPagamento>(pixDisponivel ? "pix" : "card");
-  const [cpfPix, setCpfPix] = useState(participante.cpf ?? "");
-
-  useEffect(() => {
-    if (participante.cpf) setCpfPix(participante.cpf);
-  }, [participante.cpf]);
-
-  async function gerarPix(e: FormEvent) {
-    e.preventDefault();
-    if (!stripe) return;
-    const cpf = onlyDigits(cpfPix, 11);
-    if (!participante.nome.trim() || !participante.email.trim()) {
-      setMsg("Nome e e-mail do participante são obrigatórios para PIX.");
-      return;
-    }
-    if (!isValidCpf(cpf)) {
-      setMsg("Informe um CPF válido (11 dígitos) para gerar o PIX.");
-      return;
-    }
-
-    setBusy(true);
-    setMsg(null);
-    const pixResult = await stripe.confirmPixPayment(
-      clientSecret,
-      {
-        payment_method: {
-          billing_details: {
-            name: participante.nome.trim(),
-            email: participante.email.trim(),
-            tax_id: cpf,
-          } as { name: string; email: string; tax_id: string },
-        },
-        return_url: returnUrl,
-      },
-      { handleActions: false },
-    );
-    setBusy(false);
-
-    if (pixResult.error) {
-      setMsg(mapCheckoutError(pixResult.error.message ?? "Falha ao gerar o PIX."));
-      return;
-    }
-    const paymentIntent = pixResult.paymentIntent;
-    if (!paymentIntent) return;
-    if (paymentIntent.status === "succeeded") {
-      onSuccess();
-      return;
-    }
-    const pix = await carregarPixDoIntent(stripe, clientSecret, paymentIntent);
-    if (pix) {
-      setPixData(pix);
-      return;
-    }
-    setMsg(
-      "Não foi possível exibir o QR Code. Verifique se o PIX está ativo na sua conta Stripe (Dashboard → Configurações → Formas de pagamento).",
-    );
-  }
-
-  async function pagarCartao(e: FormEvent) {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-    setBusy(true);
-    setMsg(null);
-
-    const { error: submitError } = await elements.submit();
-    if (submitError) {
-      setBusy(false);
-      setMsg(mapCheckoutError(submitError.message ?? "Revise os dados do cartão."));
-      return;
-    }
-
-    const cardResult = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: returnUrl },
-      redirect: "if_required",
-    });
-    setBusy(false);
-
-    if (cardResult.error) {
-      setMsg(mapCheckoutError(cardResult.error.message ?? "Falha no pagamento"));
-      return;
-    }
-    const paymentIntent = cardResult.paymentIntent;
-    if (!paymentIntent) return;
-    if (paymentIntent.status === "succeeded") {
-      onSuccess();
-      return;
-    }
-    const pix = await carregarPixDoIntent(stripe, clientSecret, paymentIntent);
-    if (pix) {
-      setPixData(pix);
-      return;
-    }
-    if (paymentIntent.status === "processing") {
-      setMsg("Pagamento em processamento. Aguarde a confirmação.");
-      return;
-    }
-    setMsg("Não foi possível concluir o pagamento com cartão.");
-  }
-
-  if (pixData && stripe) {
-    return (
-      <CheckoutPixPainel
-        stripe={stripe}
-        clientSecret={clientSecret}
-        pix={pixData}
-        valorFmt={valorFmt}
-        onPago={onSuccess}
-        onExpirado={() => {
-          setPixData(null);
-          setMsg("O PIX expirou. Gere um novo código abaixo.");
-        }}
-      />
-    );
-  }
-
-  const tabClass = (ativo: boolean) =>
-    `flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-      ativo
-        ? "border-emerald-600 bg-emerald-50 text-emerald-900"
-        : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
-    }`;
-
-  return (
-    <div className="space-y-4">
-      {!pixDisponivel && isDevCheckoutWarning() ? (
-        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-          PIX indisponível nesta conta Stripe (ative em{" "}
-          <a
-            href="https://dashboard.stripe.com/settings/payment_methods"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium underline"
-          >
-            Formas de pagamento
-          </a>
-          ). Use cartão por agora.
-        </p>
-      ) : null}
-      <div className="flex gap-2" role="tablist" aria-label="Forma de pagamento">
-        {pixDisponivel ? (
-          <button type="button" role="tab" aria-selected={metodo === "pix"} className={tabClass(metodo === "pix")} onClick={() => setMetodo("pix")}>
-            PIX
-          </button>
-        ) : null}
-        <button type="button" role="tab" aria-selected={metodo === "card"} className={tabClass(metodo === "card")} onClick={() => setMetodo("card")}>
-          Cartão
-        </button>
-      </div>
-
-      {metodo === "pix" && pixDisponivel ? (
-        <form onSubmit={(e) => void gerarPix(e)} className="space-y-4">
-          <p className="text-xs text-zinc-600">
-            Gere o QR Code na hora. Pagamento para{" "}
-            <strong>{participante.nome}</strong> ({participante.email}).
-          </p>
-          <div>
-            <label className="text-xs font-medium text-zinc-700" htmlFor="pix_cpf">
-              CPF do pagador <span className="text-red-600">*</span>
-            </label>
-            <input
-              id="pix_cpf"
-              inputMode="numeric"
-              value={formatCpfMask(cpfPix)}
-              onChange={(ev) => setCpfPix(onlyDigits(ev.target.value, 11))}
-              maxLength={14}
-              className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
-              autoComplete="off"
-            />
-            <p className="mt-1 text-[11px] text-zinc-500">Exigido pelo Stripe para pagamentos PIX no Brasil.</p>
-          </div>
-          {msg ? (
-            <p className="text-sm text-red-600" role="alert">
-              {msg}
-            </p>
-          ) : null}
-          <button type="submit" disabled={!stripe || busy} className="btn-success w-full">
-            {busy ? "Gerando QR Code…" : "Gerar QR Code PIX"}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={(e) => void pagarCartao(e)} className="space-y-4">
-          <PaymentElement
-            options={{
-              layout: { type: "tabs", defaultCollapsed: false },
-              paymentMethodOrder: ["card"],
-            }}
-          />
-          {msg ? (
-            <p className="text-sm text-red-600" role="alert">
-              {msg}
-            </p>
-          ) : null}
-          <button type="submit" disabled={!stripe || busy} className="btn-success w-full">
-            {busy ? "Processando…" : "Pagar com cartão"}
-          </button>
-        </form>
-      )}
-    </div>
-  );
-}
 
 export function ComprarIngresso({
   eventoId,
@@ -366,7 +130,6 @@ export function ComprarIngresso({
   const authRegisterHref = authHrefParaComprarIngresso(eventoSlug, "register");
   const loteNomeExibicao = loteAtual?.nome ?? loteAtivoNome;
   const [step, setStep] = useState<CheckoutStep>(1);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [ingressoId, setIngressoId] = useState<string | null>(null);
   const [reservadoAte, setReservadoAte] = useState<Date | null>(null);
   const [segundosRestantes, setSegundosRestantes] = useState<number | null>(null);
@@ -384,8 +147,6 @@ export function ComprarIngresso({
   const [participanteCheckout, setParticipanteCheckout] = useState<ParticipanteCheckout | null>(
     null,
   );
-  const [pixDisponivel, setPixDisponivel] = useState(true);
-  const [paymentProvider, setPaymentProvider] = useState<"asaas" | "stripe">("asaas");
   const [codigoCupom, setCodigoCupom] = useState("");
   const [cupomPreview, setCupomPreview] = useState<{
     codigo: string;
@@ -406,13 +167,6 @@ export function ComprarIngresso({
   const sessaoCarregadaRef = useRef(sessaoInicialResolvida);
   const retomarTentadoRef = useRef(false);
   const posCompraProcessadoRef = useRef(false);
-
-  const stripePromise = useMemo(() => getStripe(), []);
-
-  const returnUrlPagamento = useMemo(() => {
-    if (!ingressoId || typeof window === "undefined") return "";
-    return urlPosCompraEventoAbsoluta(window.location.origin, eventoSlug, ingressoId);
-  }, [ingressoId, eventoSlug]);
 
   useEffect(() => {
     if (posCompraProcessadoRef.current) return;
@@ -544,27 +298,13 @@ export function ComprarIngresso({
           setEmailConfirmacao(pe);
         }
 
-        if (data.ja_pago || data.stripe_disabled || data.cortesia) {
-          setPagamentoModoTeste(Boolean(data.stripe_disabled && !data.cortesia));
+        if (data.ja_pago || data.payments_disabled || data.cortesia) {
+          setPagamentoModoTeste(Boolean(data.payments_disabled && !data.cortesia));
           setStep(3);
           return;
         }
 
-        if (data.payment_provider === "asaas" || data.aguardando_cobranca) {
-          setPaymentProvider("asaas");
-          setClientSecret(null);
-          setPixDisponivel(data.pix_disponivel !== false);
-          if (data.reservado_ate) setReservadoAte(new Date(data.reservado_ate));
-          setStep(2);
-          return;
-        }
-
-        setPaymentProvider("stripe");
-        setClientSecret(data.client_secret);
-        setPixDisponivel(data.pix_disponivel !== false);
-        if (data.reservado_ate) {
-          setReservadoAte(new Date(data.reservado_ate));
-        }
+        if (data.reservado_ate) setReservadoAte(new Date(data.reservado_ate));
         setStep(2);
       } catch (e) {
         setError(mapCheckoutError(e instanceof Error ? e.message : "Não foi possível retomar o pagamento"));
@@ -738,27 +478,14 @@ export function ComprarIngresso({
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (data.stripe_disabled || data.cortesia) {
-        setPagamentoModoTeste(Boolean(data.stripe_disabled && !data.cortesia));
+      if (data.payments_disabled || data.cortesia) {
+        setPagamentoModoTeste(Boolean(data.payments_disabled && !data.cortesia));
         setIngressoId(data.ingresso_id);
         setStep(3);
         return;
       }
       setIngressoId(data.ingresso_id);
-      if (data.payment_provider === "asaas" || data.aguardando_cobranca) {
-        setPaymentProvider("asaas");
-        setClientSecret(null);
-        setPixDisponivel(data.pix_disponivel !== false);
-        if (data.reservado_ate) setReservadoAte(new Date(data.reservado_ate));
-        setStep(2);
-        return;
-      }
-      setPaymentProvider("stripe");
-      setClientSecret(data.client_secret);
-      setPixDisponivel(data.pix_disponivel !== false);
-      if (data.reservado_ate) {
-        setReservadoAte(new Date(data.reservado_ate));
-      }
+      if (data.reservado_ate) setReservadoAte(new Date(data.reservado_ate));
       setStep(2);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Não foi possível iniciar o pagamento";
@@ -768,15 +495,11 @@ export function ComprarIngresso({
     }
   }
 
-  const stripePubOk = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-
   const timerFmt =
     segundosRestantes !== null
       ? `${String(Math.floor(segundosRestantes / 60)).padStart(2, "0")}:${String(segundosRestantes % 60).padStart(2, "0")}`
       : null;
   const timerExpirou = segundosRestantes === 0;
-  const avisoSemStripePub =
-    devCheckout && !stripePubOk && !process.env.NEXT_PUBLIC_STRIPE_DISABLED;
 
   const shellClass = embedded
     ? "mt-0 border-0 bg-transparent p-0 shadow-none [&_p]:text-justify"
@@ -806,7 +529,7 @@ export function ComprarIngresso({
         {pagamentoModoTeste ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950">
             <p className="font-medium">Modo teste (sem cobrança real)</p>
-            <p className="mt-1 text-xs">Ingresso registrado na API com STRIPE_DISABLED.</p>
+            <p className="mt-1 text-xs">Ingresso registrado na API com pagamentos desativados (modo teste).</p>
           </div>
         ) : null}
         <CheckoutConfirmacaoIngresso
@@ -832,16 +555,9 @@ export function ComprarIngresso({
     <div className={shellClass}>
       <CheckoutStepper current={step} />
 
-      {devCheckout && process.env.NEXT_PUBLIC_STRIPE_DISABLED === "true" ? (
+      {devCheckout && process.env.NEXT_PUBLIC_ASAAS_DISABLED === "true" ? (
         <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-          Modo de teste no site (STRIPE_DISABLED na API).
-        </p>
-      ) : null}
-
-      {avisoSemStripePub ? (
-        <p className="mb-3 text-sm text-amber-800">
-          Configure <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>{" "}
-          em <code className="rounded bg-amber-100 px-1">frontend/.env.local</code>.
+          Modo de teste no site (ASAAS_DISABLED na API).
         </p>
       ) : null}
 
@@ -1165,7 +881,7 @@ export function ComprarIngresso({
           )}
           </div>
         </div>
-      ) : step === 2 && ingressoId && (paymentProvider === "asaas" || (clientSecret && stripePubOk)) ? (
+      ) : step === 2 && ingressoId && participanteCheckout ? (
         <div className="space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-zinc-900">2. Pagamento</h2>
@@ -1211,14 +927,12 @@ export function ComprarIngresso({
             className="text-xs text-zinc-600 underline"
             onClick={() => {
               setStep(1);
-              setClientSecret(null);
               setReservadoAte(null);
             }}
           >
             ← Voltar aos dados
           </button>
           {!timerExpirou ? (
-            paymentProvider === "asaas" && participanteCheckout ? (
               <CheckoutAsaasPainel
                 ingressoId={ingressoId}
                 valorFmt={precoFmt}
@@ -1232,24 +946,6 @@ export function ComprarIngresso({
                 tokenEspera={tokenEspera}
                 onSuccess={() => setStep(3)}
               />
-            ) : (
-            <Elements
-              key={clientSecret}
-              stripe={stripePromise}
-              options={{ clientSecret: clientSecret!, appearance: { theme: "stripe" } }}
-            >
-              {clientSecret && participanteCheckout ? (
-                <ConfirmForm
-                  clientSecret={clientSecret}
-                  valorFmt={precoFmt}
-                  participante={participanteCheckout}
-                  pixDisponivel={pixDisponivel}
-                  onSuccess={() => setStep(3)}
-                  returnUrl={returnUrlPagamento}
-                />
-              ) : null}
-            </Elements>
-            )
           ) : null}
         </div>
       ) : (

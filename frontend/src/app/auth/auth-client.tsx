@@ -214,20 +214,6 @@ export default function AuthClient({
             ? "Email ou senha incorretos. Se acabou de reiniciar o Docker ou limpar a base de dados, cadastre-se de novo."
             : "Email ou senha incorretos. Verifique os dados ou use «Esqueci minha senha».",
         );
-      } else if (
-        isDev &&
-        (lower.includes("responsibilities of managing losses") ||
-          lower.includes("managing losses") ||
-          (lower.includes("responsabilidade") && lower.includes("perda")) ||
-          lower.includes("loss liability") ||
-          lower.includes("connected account agreement"))
-      ) {
-        setError(
-          [
-            "Stripe Connect: no Dashboard (dashboard.stripe.com) abra Settings → Connect e conclua/aceite os termos da plataforma, incluindo responsabilidade por perdas.",
-            "Enquanto isso, no arquivo .env da API: STRIPE_SKIP_CONNECT_ON_REGISTER=true permite cadastrar organizador sem criar conta Connect; STRIPE_DISABLED=true desliga Stripe por completo (apenas testes). Reinicie a API após alterar o .env.",
-          ].join("\n\n"),
-        );
       } else {
         setError(message);
       }

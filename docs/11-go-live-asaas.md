@@ -33,7 +33,7 @@ Copie `.env.production.example` → `.env` e preencha:
 | `PLATFORM_ADMIN_API_KEY` | Sim | Painel `/admin` |
 | `POSTGRES_PASSWORD` | Sim | Senha do Postgres |
 | `CORS_ORIGINS` | Sim | URLs HTTPS do site (sem `*`) |
-| `STRIPE_DISABLED` | Recomendado | `true` se só Asaas |
+| `ASAAS_DISABLED` | Modo manutenção / testes |
 
 Gerar secrets: `./scripts/generate-secrets.sh`
 

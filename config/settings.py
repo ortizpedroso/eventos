@@ -7,19 +7,9 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./eventos.db"
 
-    # Provedor de pagamento: asaas | stripe
+    # Pagamentos — Asaas
     PAYMENT_PROVIDER: str = "asaas"
 
-    # Stripe (legado / fallback)
-    STRIPE_SECRET_KEY: str = ""
-    STRIPE_PUBLISHABLE_KEY: str = ""
-    STRIPE_WEBHOOK_SECRET: str = ""
-    # true = cadastro e compra sem chamar a API Stripe (testes até a conta Stripe estar ok).
-    STRIPE_DISABLED: bool = False
-    # true = cadastro de organizador sem criar conta Connect (só Customer). Até aceitar termos em Settings > Connect.
-    STRIPE_SKIP_CONNECT_ON_REGISTER: bool = False
-
-    # Asaas (principal)
     ASAAS_API_KEY: str = ""
     ASAAS_WEBHOOK_TOKEN: str = ""
     # sandbox | production — se vazio, infere pela chave ($aact_prod_ = production)
@@ -98,16 +88,8 @@ class Settings(BaseSettings):
     @property
     def use_asaas(self) -> bool:
         if self.asaas_e2e_mock:
-            return (self.PAYMENT_PROVIDER or "asaas").lower() == "asaas" and not self.ASAAS_DISABLED
-        return (
-            (self.PAYMENT_PROVIDER or "asaas").lower() == "asaas"
-            and not self.ASAAS_DISABLED
-            and bool((self.ASAAS_API_KEY or "").strip())
-        )
-
-    @property
-    def use_stripe(self) -> bool:
-        return (self.PAYMENT_PROVIDER or "").lower() == "stripe" and not self.STRIPE_DISABLED
+            return not self.ASAAS_DISABLED
+        return not self.ASAAS_DISABLED and bool((self.ASAAS_API_KEY or "").strip())
 
     @property
     def asaas_base_url(self) -> str:
@@ -115,9 +97,7 @@ class Settings(BaseSettings):
 
     @property
     def payments_disabled(self) -> bool:
-        if self.use_asaas:
-            return self.ASAAS_DISABLED
-        return self.STRIPE_DISABLED
+        return self.ASAAS_DISABLED
 
     @property
     def permite_ingresso_sem_gateway(self) -> bool:
@@ -128,19 +108,11 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-if settings.ASAAS_DISABLED and settings.use_asaas:
+if settings.ASAAS_DISABLED:
     import logging as _logging
 
     _logging.getLogger(__name__).warning(
         "ASAAS_DISABLED está ativo: pagamentos Asaas desligados (modo teste local)."
-    )
-
-if settings.STRIPE_DISABLED:
-    import logging as _logging
-
-    _logging.getLogger(__name__).warning(
-        "STRIPE_DISABLED está ativo: cadastro e pagamentos não usam a API Stripe. "
-        "Não use em produção com dados reais."
     )
 
 if settings.ENVIRONMENT != "development" and not settings.SECRET_KEY:

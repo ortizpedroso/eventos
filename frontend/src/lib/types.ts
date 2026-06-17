@@ -84,12 +84,12 @@ export type CriarPagamentoResponse = {
   ingresso_id: string;
   ingresso_ids?: string[];
   quantidade?: number;
-  /** Provedor ativo: asaas | stripe */
-  payment_provider?: "asaas" | "stripe";
+  /** Provedor ativo: asaas */
+  payment_provider?: "asaas";
   /** Asaas: reserva criada, aguarda POST /asaas/cobranca */
   aguardando_cobranca?: boolean;
   /** Quando a API está com pagamentos desativados (teste). */
-  stripe_disabled?: boolean;
+  payments_disabled?: boolean;
   cortesia?: boolean;
   pix_disponivel?: boolean;
   pix?: AsaasPixPayload;
