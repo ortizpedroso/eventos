@@ -120,7 +120,9 @@ def iniciar_cobranca_asaas(
                 db.commit()
                 for iid in pagos:
                     notificar_ingresso_pago(iid)
-                return {"ja_pago": True, "payment_id": pay_id}
+                db.refresh(ingresso)
+                if ingresso.status == "pago":
+                    return {"ja_pago": True, "payment_id": pay_id}
             if body.metodo == "pix" and existing.get("billingType") == "PIX":
                 return resposta_checkout_asaas(existing) | {
                     "ingresso_id": ingresso.id,
@@ -194,7 +196,9 @@ def iniciar_cobranca_asaas(
         db.commit()
         for iid in pagos:
             notificar_ingresso_pago(iid)
-        return {"ja_pago": True, "payment_id": pid}
+        db.refresh(ingresso)
+        if ingresso.status == "pago":
+            return {"ja_pago": True, "payment_id": pid}
 
     out = resposta_checkout_asaas(payment)
     out["ingresso_id"] = ingresso.id
@@ -308,8 +312,8 @@ def status_cobranca_asaas(db: Session, ingresso_id: str, usuario: Usuario) -> di
     except AsaasAPIError as e:
         logger.exception("Erro ao consultar cobrança Asaas %s", pay_id)
         raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
-    pago = status_eh_pago(payment.get("status"))
-    if pago:
+    pago_gateway = status_eh_pago(payment.get("status"))
+    if pago_gateway:
         from app.services.lista_espera import validar_espera_para_ingresso_pendente
 
         validar_espera_para_ingresso_pendente(db, ingresso, None)
@@ -317,4 +321,9 @@ def status_cobranca_asaas(db: Session, ingresso_id: str, usuario: Usuario) -> di
         db.commit()
         for iid in pagos:
             notificar_ingresso_pago(iid)
-    return {"status": payment.get("status"), "pago": pago, "payment_id": pay_id}
+    db.refresh(ingresso)
+    return {
+        "status": payment.get("status"),
+        "pago": ingresso.status == "pago",
+        "payment_id": pay_id,
+    }

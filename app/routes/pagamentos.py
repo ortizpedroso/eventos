@@ -367,6 +367,10 @@ async def criar_pagamento(
             db.add(novo)
             db.flush()
             ids.append(novo.id)
+        if pe:
+            from app.services.lista_espera import marcar_espera_comprada
+
+            marcar_espera_comprada(db, evento.id, pe)
         db.commit()
         for iid in ids:
             enqueue_ticket_email(iid)

@@ -151,6 +151,32 @@ def _notificar_proximo(db: Session, evento: Evento, entrada: EventoListaEspera) 
     logger.info("Lista espera: notificado %s evento %s", entrada.email, evento.id)
 
 
+def expirar_espera_reserva_nao_concluida(db: Session, ingresso: Ingresso) -> bool:
+    """Expira entrada notificada do mesmo e-mail quando a reserva pendente é cancelada."""
+    evento = db.get(Evento, ingresso.evento_id)
+    if not evento or not evento.lista_espera_habilitada:
+        return False
+    email = (ingresso.participante_email or "").strip().lower()
+    if not email:
+        return False
+    entrada = (
+        db.query(EventoListaEspera)
+        .filter(
+            EventoListaEspera.evento_id == evento.id,
+            EventoListaEspera.email == email,
+            EventoListaEspera.status == "notificado",
+        )
+        .first()
+    )
+    if not entrada:
+        return False
+    entrada.status = "expirado"
+    entrada.token_compra = None
+    entrada.token_expira_em = None
+    db.flush()
+    return True
+
+
 def liberar_vagas_apos_cancelamento(db: Session, evento_id: str, quantidade: int = 1) -> int:
     """Chamar após cancelamento/liberação de vaga(s)."""
     evento = db.get(Evento, evento_id)

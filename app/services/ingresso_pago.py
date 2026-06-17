@@ -110,6 +110,9 @@ def _cancelar_ingressos_por_ref(
         ingresso.reservado_ate = None
         n += 1
         if liberar_espera:
+            from app.services.lista_espera import expirar_espera_reserva_nao_concluida
+
+            expirar_espera_reserva_nao_concluida(db, ingresso)
             vagas_por_evento[ingresso.evento_id] = vagas_por_evento.get(ingresso.evento_id, 0) + 1
     if liberar_espera and vagas_por_evento:
         from app.services.lista_espera import liberar_vagas_apos_cancelamento

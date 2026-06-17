@@ -51,6 +51,10 @@ def cancelar_reservas_expiradas() -> int:
             ing.reservado_ate = None
             vagas_por_evento[ing.evento_id] = vagas_por_evento.get(ing.evento_id, 0) + 1
 
+            from app.services.lista_espera import expirar_espera_reserva_nao_concluida
+
+            expirar_espera_reserva_nao_concluida(db, ing)
+
             pay_id = (ing.asaas_payment_id or ing.stripe_payment_intent_id or "").strip()
             if (
                 pay_id
