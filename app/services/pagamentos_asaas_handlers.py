@@ -37,6 +37,7 @@ class AsaasCobrancaRequest(BaseModel):
     credit_card_holder_info: dict | None = None
     remote_ip: str | None = Field(default=None, max_length=45)
     parcelas: int | None = Field(default=None, ge=1, le=12)
+    token_espera: str | None = Field(default=None, max_length=128)
 
 
 def _validar_ingresso_pendente(ingresso: Ingresso | None, usuario: Usuario) -> Ingresso:
@@ -88,6 +89,9 @@ def iniciar_cobranca_asaas(
         db.query(Ingresso).filter(Ingresso.id == body.ingresso_id).first(),
         usuario,
     )
+    from app.services.lista_espera import validar_espera_para_ingresso_pendente
+
+    validar_espera_para_ingresso_pendente(db, ingresso, body.token_espera)
     lote = ingressos_lote_pendente(db, ingresso)
     if not lote:
         lote = [ingresso]
@@ -306,6 +310,9 @@ def status_cobranca_asaas(db: Session, ingresso_id: str, usuario: Usuario) -> di
         raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
     pago = status_eh_pago(payment.get("status"))
     if pago:
+        from app.services.lista_espera import validar_espera_para_ingresso_pendente
+
+        validar_espera_para_ingresso_pendente(db, ingresso, None)
         pagos = marcar_ingressos_pi_pagos(db, pay_id)
         db.commit()
         for iid in pagos:

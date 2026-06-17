@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -224,7 +225,7 @@ def test_janela_exclusiva_espera():
         assert not janela_exclusiva_espera_ativa(db, ev.id)
         entrada = inscrever_espera(db, ev, email="fila@ex.com")
         entrada.status = "notificado"
-        entrada.token_compra = "tok-janela"
+        entrada.token_compra = f"tok-janela-{uuid.uuid4().hex[:8]}"
         entrada.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
         db.commit()
         assert janela_exclusiva_espera_ativa(db, ev.id)
@@ -309,6 +310,108 @@ def test_cancelar_reembolsados_marca_pago_como_cancelado():
         db.commit()
         db.refresh(ing)
         assert ing.status == "cancelado"
+    finally:
+        db.close()
+
+
+def test_validar_espera_para_ingresso_pendente_bloqueia_terceiro():
+    import pytest
+    from fastapi import HTTPException
+
+    from app.services.lista_espera import (
+        inscrever_espera,
+        validar_espera_para_ingresso_pendente,
+    )
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        entrada = inscrever_espera(db, ev, email="fila@ex.com")
+        entrada.status = "notificado"
+        entrada.token_compra = f"tok-janela-{uuid.uuid4().hex[:8]}"
+        entrada.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        db.commit()
+
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="outro@ex.com",
+            valor=50.0,
+            status="pendente",
+            reservado_ate=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30),
+        )
+        db.add(ing)
+        db.commit()
+
+        with pytest.raises(HTTPException) as exc:
+            validar_espera_para_ingresso_pendente(db, ing, None)
+        assert exc.value.status_code == 403
+    finally:
+        db.close()
+
+
+def test_validar_espera_para_ingresso_pendente_permite_notificado():
+    from app.services.lista_espera import (
+        inscrever_espera,
+        validar_espera_para_ingresso_pendente,
+    )
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        entrada = inscrever_espera(db, ev, email="fila@ex.com")
+        entrada.status = "notificado"
+        token = f"tok-janela-{uuid.uuid4().hex[:8]}"
+        entrada.token_compra = token
+        entrada.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        db.commit()
+
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="fila@ex.com",
+            valor=50.0,
+            status="pendente",
+            reservado_ate=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30),
+        )
+        db.add(ing)
+        db.commit()
+
+        validar_espera_para_ingresso_pendente(db, ing, None)
+        validar_espera_para_ingresso_pendente(db, ing, token)
+    finally:
+        db.close()
+
+
+def test_marcar_ingresso_pago_bloqueia_bypass_espera():
+    from app.services.lista_espera import inscrever_espera
+    from app.services.ingresso_pago import marcar_ingresso_pago
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        entrada = inscrever_espera(db, ev, email="fila@ex.com")
+        entrada.status = "notificado"
+        entrada.token_compra = f"tok-janela-{uuid.uuid4().hex[:8]}"
+        entrada.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        db.commit()
+
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="outro@ex.com",
+            valor=50.0,
+            status="pendente",
+            asaas_payment_id="pay_bypass",
+        )
+        db.add(ing)
+        db.commit()
+
+        assert marcar_ingresso_pago(db, ing) is False
+        assert ing.status == "pendente"
     finally:
         db.close()
 

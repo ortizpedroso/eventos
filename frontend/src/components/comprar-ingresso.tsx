@@ -516,10 +516,17 @@ export function ComprarIngresso({
 
     void (async () => {
       try {
+        const body: Record<string, unknown> = {
+          ingresso_id: ingressoRetomarId,
+          evento_id: eventoId,
+        };
+        if (tokenEspera?.trim()) {
+          body.token_espera = tokenEspera.trim();
+        }
         const data = await apiFetch<RetomarPagamentoResponse>("/api/pagamentos/retomar", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ingresso_id: ingressoRetomarId, evento_id: eventoId }),
+          body: JSON.stringify(body),
         });
 
         if (data.evento_slug && data.evento_slug !== eventoSlug) {
@@ -565,7 +572,7 @@ export function ComprarIngresso({
         setRetomandoPagamento(false);
       }
     })();
-  }, [ingressoRetomarId, logado, checandoSessao, eventoId, eventoSlug]);
+  }, [ingressoRetomarId, logado, checandoSessao, eventoId, eventoSlug, tokenEspera]);
 
   const recarregarSessaoPosAuth = useCallback(() => {
     void (async () => {
@@ -1222,6 +1229,7 @@ export function ComprarIngresso({
                 reservadoAte={reservadoAte?.toISOString()}
                 parcelamentoHabilitado={parcelamentoHabilitado}
                 parcelamentoMax={parcelamentoMax}
+                tokenEspera={tokenEspera}
                 onSuccess={() => setStep(3)}
               />
             ) : (

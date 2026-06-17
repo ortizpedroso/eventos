@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models import Ingresso
@@ -24,6 +25,18 @@ def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
             ingresso.id,
         )
         return False
+
+    if ingresso.status == "pendente":
+        from app.services.lista_espera import validar_espera_para_ingresso_pendente
+
+        try:
+            validar_espera_para_ingresso_pendente(db, ingresso, None)
+        except HTTPException:
+            logger.warning(
+                "Pagamento bloqueado por janela exclusiva da lista de espera (ingresso %s).",
+                ingresso.id,
+            )
+            return False
 
     ingresso.status = "pago"
     ingresso.reservado_ate = None

@@ -191,6 +191,56 @@ def janela_exclusiva_espera_ativa(db: Session, evento_id: str) -> bool:
     )
 
 
+def validar_espera_para_ingresso_pendente(
+    db: Session,
+    ingresso: Ingresso,
+    token: str | None = None,
+) -> None:
+    """Revalida janela exclusiva ao retomar, cobrar ou concluir pagamento pendente."""
+    evento = db.get(Evento, ingresso.evento_id)
+    if not evento or not evento.lista_espera_habilitada:
+        return
+    if not janela_exclusiva_espera_ativa(db, evento.id):
+        return
+
+    email = (ingresso.participante_email or "").strip()
+    if not email:
+        raise HTTPException(
+            status_code=403,
+            detail="Participante sem e-mail: não é possível validar a lista de espera.",
+        )
+
+    if token and token.strip():
+        validar_compra_com_token_espera(db, evento, token, email)
+        return
+
+    # Sem token na requisição: permite quem já está notificado com o mesmo e-mail
+    # (ex.: retomar compra iniciada pelo link da fila).
+    email_l = email.lower()
+    agora = _agora()
+    entrada = (
+        db.query(EventoListaEspera)
+        .filter(
+            EventoListaEspera.evento_id == evento.id,
+            EventoListaEspera.email == email_l,
+            EventoListaEspera.status == "notificado",
+            EventoListaEspera.token_expira_em.isnot(None),
+            EventoListaEspera.token_expira_em > agora,
+        )
+        .first()
+    )
+    if entrada:
+        return
+
+    raise HTTPException(
+        status_code=403,
+        detail=(
+            "Esta vaga está reservada para quem recebeu o link da lista de espera. "
+            "Use o e-mail enviado pela plataforma."
+        ),
+    )
+
+
 def validar_compra_com_token_espera(
     db: Session,
     evento: Evento,

@@ -151,6 +151,7 @@ class CancelarIngressoRequest(BaseModel):
 class RetomarPagamentoRequest(BaseModel):
     ingresso_id: str
     evento_id: str | None = None
+    token_espera: str | None = Field(default=None, max_length=128)
 
 
 class ValidarCupomRequest(BaseModel):
@@ -593,6 +594,10 @@ async def retomar_pagamento(
             status_code=400,
             detail="A reserva expirou. Inicie uma nova compra no evento.",
         )
+
+    from app.services.lista_espera import validar_espera_para_ingresso_pendente
+
+    validar_espera_para_ingresso_pendente(db, ingresso, body.token_espera)
 
     pi_id = (ingresso.asaas_payment_id or ingresso.stripe_payment_intent_id or "").strip()
     if settings.use_asaas:

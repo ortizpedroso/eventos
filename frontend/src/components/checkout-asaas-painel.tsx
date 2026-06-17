@@ -17,6 +17,7 @@ type Props = {
   reservadoAte?: string | null;
   parcelamentoHabilitado?: boolean;
   parcelamentoMax?: number;
+  tokenEspera?: string | null;
   onSuccess: () => void;
 };
 
@@ -39,6 +40,7 @@ export function CheckoutAsaasPainel({
   reservadoAte,
   parcelamentoHabilitado = false,
   parcelamentoMax = 2,
+  tokenEspera = null,
   onSuccess,
 }: Props) {
   const [metodo, setMetodo] = useState<Metodo>("pix");
@@ -97,6 +99,9 @@ export function CheckoutAsaasPainel({
         ingresso_id: ingressoId,
         metodo: metodo === "pix" ? "pix" : metodo === "card" ? "card" : "invoice",
       };
+      if (tokenEspera?.trim()) {
+        body.token_espera = tokenEspera.trim();
+      }
 
       if (metodo === "card") {
         const cpf = onlyDigits(cardCpf, 11);
