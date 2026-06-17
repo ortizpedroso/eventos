@@ -210,6 +210,13 @@ def iniciar_cobranca_asaas(
         db.refresh(ingresso)
         if ingresso.status == "pago":
             return {"ja_pago": True, "payment_id": pid}
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Pagamento confirmado no gateway, mas o ingresso ainda não foi liberado. "
+                "Aguarde alguns instantes ou contate o suporte."
+            ),
+        )
 
     out = resposta_checkout_asaas(payment)
     out["ingresso_id"] = ingresso.id

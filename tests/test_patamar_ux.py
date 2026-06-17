@@ -713,6 +713,65 @@ def test_iniciar_cobranca_nao_recria_quando_gateway_pago():
         db.close()
 
 
+def test_iniciar_cobranca_nova_409_se_pago_mas_nao_liberado():
+    from unittest.mock import patch
+
+    import pytest
+    from fastapi import HTTPException
+
+    from app.services.pagamentos_asaas_handlers import (
+        AsaasCobrancaRequest,
+        iniciar_cobranca_asaas,
+    )
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        ev.asaas_wallet_id = "wallet-test"
+        ev.lista_espera_habilitada = False
+        db.commit()
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="buyer@ex.com",
+            valor=50.0,
+            status="pendente",
+            reservado_ate=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30),
+        )
+        db.add(ing)
+        db.commit()
+        db.refresh(ing)
+
+        with (
+            patch("app.services.pagamentos_asaas_handlers.settings") as s,
+            patch(
+                "app.services.pagamentos_asaas_handlers.garantir_customer_asaas",
+                return_value="cus_x",
+            ),
+            patch(
+                "app.services.pagamentos_asaas_handlers.criar_cobranca_asaas",
+                return_value={"id": "pay_novo_card", "status": "CONFIRMED", "billingType": "CREDIT_CARD"},
+            ),
+            patch(
+                "app.services.pagamentos_asaas_handlers.marcar_ingressos_pi_pagos",
+                return_value=[],
+            ),
+        ):
+            s.ASAAS_PLATFORM_WALLET_ID = "wallet-platform"
+            with pytest.raises(HTTPException) as exc:
+                iniciar_cobranca_asaas(
+                    db,
+                    org,
+                    AsaasCobrancaRequest(ingresso_id=ing.id, metodo="card"),
+                )
+        assert exc.value.status_code == 409
+        assert ing.asaas_payment_id == "pay_novo_card"
+        assert ing.status == "pendente"
+    finally:
+        db.close()
+
+
 def test_liberar_vagas_quantidade_um_por_janela(monkeypatch):
     from app.services.lista_espera import inscrever_espera, liberar_vagas_apos_cancelamento
 
