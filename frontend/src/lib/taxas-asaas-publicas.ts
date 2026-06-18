@@ -1,7 +1,7 @@
 /** Espelho de app/services/taxas_asaas_publicas.py */
 
 export const AVISO_LEGAL_TAXAS =
-  "Valores estimativos. Taxas Asaas podem variar por conta, antecipação ou promoções. Não constitui oferta fiscal.";
+  "Valores estimativos. Taxas de processamento podem variar por conta, antecipação ou promoções. Não constitui oferta fiscal.";
 
 export const TAXA_PIX = 1.99;
 export const TAXA_BOLETO = 1.99;

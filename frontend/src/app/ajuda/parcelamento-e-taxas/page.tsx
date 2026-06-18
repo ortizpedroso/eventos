@@ -10,7 +10,7 @@ export default function AjudaParcelamentoTaxasPage() {
       <h1>Parcelamento e taxas</h1>
       <AjudaNav current="/ajuda/parcelamento-e-taxas" />
       <p>O organizador pode habilitar parcelamento no cartão (2x a 12x) por evento. O comprador vê o total antes de confirmar.</p>
-      <p>Taxas EventosBR e taxas de processamento Asaas (PIX, boleto, cartão) são estimadas nos simuladores de /planos e no painel do organizador.</p>
+      <p>Taxas EventosBR e taxas de processamento (PIX, boleto, cartão) são estimadas nos simuladores de /planos e no painel do organizador.</p>
       <p className="text-sm text-zinc-600">{AVISO_LEGAL_TAXAS}</p>
     </article>
   );

@@ -1,4 +1,4 @@
-import { nomeProcessadorPagamento } from "@/lib/payment-provider";
+import { labelPagamentoSeguro } from "@/lib/payment-provider";
 
 function IconPix({ className }: { className?: string }) {
   return (
@@ -25,7 +25,6 @@ function IconShield({ className }: { className?: string }) {
 }
 
 export function CheckoutBadgesPagamento() {
-  const proc = nomeProcessadorPagamento();
   return (
     <div className="flex flex-wrap items-center justify-center gap-3 py-3" aria-label="Formas de pagamento">
       <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-700">
@@ -35,7 +34,7 @@ export function CheckoutBadgesPagamento() {
         <IconCard className="h-4 w-4 text-emerald-700" /> Cartão
       </span>
       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900">
-        <IconShield className="h-4 w-4" /> Pagamento seguro via {proc}
+        <IconShield className="h-4 w-4" /> {labelPagamentoSeguro()}
       </span>
     </div>
   );

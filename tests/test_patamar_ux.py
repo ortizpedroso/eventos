@@ -46,6 +46,21 @@ def _setup_pre_venda(db, ev: Evento) -> None:
     db.refresh(ev)
 
 
+def _setup_aberto(db, ev: Evento) -> None:
+    db.add(
+        EventoIngressoLote(
+            evento_id=ev.id,
+            nome="Geral",
+            preco=50.0,
+            ordem=1,
+            quantidade_maxima=100,
+            ativo=True,
+        )
+    )
+    db.commit()
+    db.refresh(ev)
+
+
 def _setup_esgotado(db, ev: Evento) -> None:
     lote = EventoIngressoLote(
         evento_id=ev.id,
@@ -94,6 +109,8 @@ def _criar_evento(db, org_id: str, nome: str = "Show Teste", *, modo: str = "esg
         _setup_pre_venda(db, ev)
     elif modo == "esgotado":
         _setup_esgotado(db, ev)
+    elif modo == "aberto":
+        _setup_aberto(db, ev)
     return ev
 
 
@@ -278,6 +295,63 @@ def test_eventos_relacionados_prioridade_organizador():
         db.commit()
         rel = listar_eventos_relacionados(db, ev, limite=4)
         assert any(r.organizador_id == ev.organizador_id for r in rel)
+    finally:
+        db.close()
+
+
+def test_eventos_relacionados_exclui_esgotado():
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, "Evento base", modo="aberto")
+        esgotado = Evento(
+            nome="Esgotado mesmo org",
+            descricao="d",
+            data_inicio=ev.data_inicio + timedelta(days=2),
+            data_fim=ev.data_fim + timedelta(days=2),
+            local="Local",
+            cidade=ev.cidade,
+            categoria=ev.categoria,
+            preco_ingresso=20,
+            organizador_id=ev.organizador_id,
+            slug=slugify("esgotado-org-test"),
+            publicado=True,
+        )
+        db.add(esgotado)
+        db.commit()
+        db.refresh(esgotado)
+        _setup_esgotado(db, esgotado)
+        rel = listar_eventos_relacionados(db, ev, limite=4)
+        assert all(r.id != esgotado.id for r in rel)
+    finally:
+        db.close()
+
+
+def test_qr_preview_publico():
+    from app.services.ingresso_qr import ingresso_qr_payload
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, "Show QR", modo="aberto")
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_nome="João Silva",
+            participante_email="joao@ex.com",
+            valor=50.0,
+            status="pago",
+        )
+        db.add(ing)
+        db.commit()
+        db.refresh(ing)
+        codigo = ingresso_qr_payload(ing.id)
+        r = test_api.client.get("/api/ingressos/qr-preview", params={"c": codigo})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["evento"]["nome"] == "Show QR"
+        assert data["participante_nome"] == "João Silva"
+        assert data["codigo"] == codigo
     finally:
         db.close()
 

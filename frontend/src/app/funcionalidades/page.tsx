@@ -162,7 +162,7 @@ const destaques = [
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src="/marketing/checkout.png"
-        alt="Checkout seguro com Asaas"
+        alt="Checkout seguro com pagamento online"
         width={800}
         height={500}
         className="h-full min-h-[320px] w-full rounded-2xl object-cover shadow-xl ring-1 ring-emerald-200 lg:min-h-[400px]"

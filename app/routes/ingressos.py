@@ -19,6 +19,42 @@ from app.utils.privacy import mask_cpf, mask_telefone_br
 
 router = APIRouter()
 
+
+@router.get("/qr-preview")
+async def qr_preview_publico(c: str, db: Session = Depends(get_db)):
+    """Dados públicos mínimos do ingresso para a tela /ingresso/qr (código EBR1 assinado)."""
+    from app.services.ingresso_checkin import extrair_ingresso_id
+
+    ingresso_id = extrair_ingresso_id(c)
+    if not ingresso_id:
+        raise HTTPException(status_code=404, detail="Código inválido ou expirado")
+
+    ingresso = (
+        db.query(Ingresso)
+        .join(Evento)
+        .filter(Ingresso.id == ingresso_id)
+        .first()
+    )
+    if not ingresso:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+
+    status = (ingresso.status or "").lower()
+    if status not in ("pago", "usado"):
+        raise HTTPException(status_code=404, detail="Ingresso ainda não confirmado")
+
+    ev = ingresso.evento
+    return {
+        "codigo": ingresso_qr_payload(ingresso.id),
+        "status": ingresso.status,
+        "evento": {
+            "nome": ev.nome,
+            "data": ev.data_inicio.isoformat() if ev.data_inicio else None,
+            "local": ev.local,
+        },
+        "participante_nome": ingresso.participante_nome,
+    }
+
+
 @router.get("/meus")
 async def listar_meus_ingressos(
     usuario_atual: Usuario = Depends(get_usuario_atual),

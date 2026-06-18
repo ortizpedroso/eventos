@@ -59,7 +59,7 @@ function CenarioCard({
         Taxa EventosBR {pctLabel} + {formatBrl(fixoUnit)}/ingresso — total {formatBrl(c.taxaTotal)}
       </p>
       <p className="mt-1 text-xs text-zinc-500">
-        Est. taxa Asaas — {formatBrl(c.taxaAsaasEstimada)} · antes do gateway {formatBrl(c.liquidoAntesAsaas)}
+        Est. taxa de processamento — {formatBrl(c.taxaAsaasEstimada)} · antes do gateway {formatBrl(c.liquidoAntesAsaas)}
       </p>
     </div>
   );
@@ -89,7 +89,7 @@ export function PlanosSimuladorLucro() {
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
       <h2 className="text-xl font-semibold text-zinc-900">Simulador de lucro</h2>
       <p className="mt-2 text-sm text-zinc-600">
-        Estime quanto sobra após taxas EventosBR e tarifas ilustrativas do Asaas (mesma base do simulador do
+        Estime quanto sobra após taxas EventosBR e tarifas ilustrativas de processamento (mesma base do simulador do
         organizador).
       </p>
 
@@ -103,7 +103,7 @@ export function PlanosSimuladorLucro() {
           <input className={cell} value={qtdInput} onChange={(e) => setQtdInput(e.target.value.replace(/\D/g, ""))} />
         </label>
         <label className="flex flex-col gap-2 text-sm">
-          <span className="font-medium text-zinc-700">Método de pagamento (estimativa Asaas)</span>
+          <span className="font-medium text-zinc-700">Método de pagamento (estimativa de processamento)</span>
           <select
             className={`${cell} w-full`}
             value={metodoAsaas}

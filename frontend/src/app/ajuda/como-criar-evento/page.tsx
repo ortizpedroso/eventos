@@ -8,7 +8,7 @@ export default function AjudaCriarEventoPage() {
     <article className="mx-auto max-w-3xl py-12 px-4 prose prose-zinc">
       <h1>Como criar um evento</h1>
       <AjudaNav current="/ajuda/como-criar-evento" />
-      <p>Crie uma conta de organizador, configure sua conta Asaas em Financeiro e use o assistente em Organizador → Novo evento.</p>
+      <p>Crie uma conta de organizador, configure repasses em Financeiro e use o assistente em Organizador → Novo evento.</p>
       <p>Defina lotes, preços, urgência, parcelamento e listas de interesse/espera conforme sua estratégia de venda.</p>
     </article>
   );

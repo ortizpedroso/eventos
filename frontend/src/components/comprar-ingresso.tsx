@@ -886,7 +886,7 @@ export function ComprarIngresso({
           <div>
             <h2 className="text-sm font-semibold text-zinc-900">2. Pagamento</h2>
             <p className="mt-1 text-xs text-zinc-600">
-              PIX ou cartão via Asaas · total {precoFmt}
+              PIX ou cartão · total {precoFmt}
             </p>
           </div>
 

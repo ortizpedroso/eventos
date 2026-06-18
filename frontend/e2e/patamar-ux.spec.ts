@@ -37,15 +37,15 @@ test.describe("Patamar UX — vitrine e navbar", () => {
   });
 });
 
-test.describe("Checkout Asaas copy", () => {
-  test("página de planos menciona Asaas", async ({ page }) => {
+test.describe("Checkout — copy de pagamento", () => {
+  test("página de planos menciona taxas de processamento", async ({ page }) => {
     await page.goto("/planos");
-    await expect(page.getByText(/Asaas/i).first()).toBeVisible();
+    await expect(page.getByText(/processamento|taxas/i).first()).toBeVisible();
   });
 
-  test("home menciona Asaas nos simuladores", async ({ page }) => {
+  test("home menciona transparência de taxas", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/Asaas/i).first()).toBeVisible();
+    await expect(page.getByText(/taxas|PIX/i).first()).toBeVisible();
   });
 });
 

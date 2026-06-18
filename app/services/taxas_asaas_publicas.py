@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from typing import Literal
 
 AVISO_LEGAL = (
-    "Valores estimativos. Taxas Asaas podem variar por conta, antecipação ou promoções. "
-    "Não constitui oferta fiscal. Confira nos sites oficiais."
+    "Valores estimativos. Taxas de processamento podem variar por conta, antecipação ou promoções. "
+    "Não constitui oferta fiscal. Confira nos sites oficiais do gateway."
 )
 
 # Comparativo Sympla (ilustrativo — conferir no site oficial)

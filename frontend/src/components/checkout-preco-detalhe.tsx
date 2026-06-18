@@ -8,8 +8,7 @@ import {
   formatBrl,
   formatPercentual,
 } from "@/lib/tarifas-plataforma";
-import { AVISO_LEGAL_TAXAS, TAXA_PIX } from "@/lib/taxas-asaas-publicas";
-import { nomeProcessadorPagamento } from "@/lib/payment-provider";
+import { AVISO_LEGAL_TAXAS } from "@/lib/taxas-asaas-publicas";
 
 type Props = {
   precoIngresso: number;
@@ -24,8 +23,6 @@ export function CheckoutPrecoDetalhe({ precoIngresso, destaque = false, classNam
 
   const d = detalharTaxaIngresso(precoIngresso, TARIFA_PADRAO);
   if (!d) return null;
-
-  const processador = nomeProcessadorPagamento();
 
   return (
     <div
@@ -49,12 +46,12 @@ export function CheckoutPrecoDetalhe({ precoIngresso, destaque = false, classNam
           <strong>{formatBrl(d.taxaTotal)}</strong>
         </li>
         <li className="text-emerald-800/80">
-          Taxa estimada de processamento ({processador}, PIX ~{formatBrl(TAXA_PIX)}): incluída na
-          operação do gateway, não cobrada em cima do preço exibido.
+          Taxas de processamento do pagamento (PIX, cartão ou parcelas, conforme o método escolhido) estão
+          incluídas na operação do gateway — o preço exibido é o total que você paga.
         </li>
         <li className="text-emerald-800/80">
-          Repasse estimado ao organizador: {formatBrl(d.liquidoOrganizador)} (antes de tarifas do{" "}
-          {processador}).
+          Repasse estimado ao organizador: {formatBrl(d.liquidoOrganizador)} (antes das tarifas de
+          processamento do gateway).
         </li>
       </ul>
       <p className="mt-2 text-[10px] leading-relaxed text-emerald-800/70">{AVISO_LEGAL_TAXAS}</p>

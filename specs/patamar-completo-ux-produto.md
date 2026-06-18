@@ -58,12 +58,14 @@ Elevar o EventosBR ao próximo patamar de produto e confiança de mercado, imple
 - **Remover** exibição de host/API bruto ao usuário final.
 - **Concluído quando:** footer sem links `#` mortos por padrão (placeholders vazios = ocultar ícone, não link quebrado).
 
-### REQ-06 — Consistência Asaas no comprador
-- `compra-info-confianca.tsx` e `checkout-preco-detalhe.tsx` citam **Asaas** em todo copy visível ao comprador.
-- **Concluído quando:** página de evento + checkout Asaas sem texto contraditório.
+### REQ-06 — Consistência de pagamento no comprador
+- `compra-info-confianca.tsx` e `checkout-preco-detalhe.tsx` citam **gateway de pagamento certificado** (sem expor marca do provedor ao comprador).
+- Transparência de taxas: preço final, taxa EventosBR e nota de processamento **conforme método** (PIX, cartão, parcelas).
+- Painel do organizador (`/organizador/financeiro`) pode citar Asaas para configuração de repasses.
+- **Concluído quando:** página de evento + checkout sem texto contraditório nem menção a processadores legados.
 
 ### REQ-07 — Badges de pagamento no checkout
-- Exibir selos visuais: **PIX**, **Cartão**, **Pagamento seguro via Asaas** (ícones SVG, não emojis).
+- Exibir selos visuais: **PIX**, **Cartão**, **Pagamento seguro** (ícones SVG, não emojis).
 - **Concluído quando:** passo 2 do checkout mostra badges acima ou abaixo do formulário.
 
 ---
@@ -280,7 +282,7 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
   - Seletor de intervalo de datas (início/fim) na vitrine
   - Checkout com copy Asaas correto
   - Entrada lista de interesse (evento pré-venda via API mock E2E)
-- **Implementação:** `frontend/e2e/patamar-ux.spec.ts`; testes com API no job CI `e2e-compra` (lista interesse, lista espera, produtor, parcelamento; requer `PLAYWRIGHT_API_URL`). Copy Asaas no checkout: `frontend/e2e/compra-checkout-asaas.spec.ts` (job `e2e-asaas`).
+- **Implementação:** `frontend/e2e/patamar-ux.spec.ts`; testes com API no job CI `e2e-compra` (lista interesse, lista espera, produtor; requer `PLAYWRIGHT_API_URL`). Copy e parcelamento no checkout: `frontend/e2e/compra-checkout-asaas.spec.ts` (job `e2e-asaas`).
 
 ### REQ-35 — Revisão manual (Anexo C)
 - Build só é aprovada no `/review` quando Anexo C estiver 100% verificado.
@@ -344,7 +346,7 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 - [x] Navbar: busca funciona  
 - [x] Footer: sem links mortos; redes ocultas ou válidas  
 - [x] Página evento: mapa/link, relacionados, urgência, simulador comprador  
-- [x] Checkout: badges Asaas; sem texto de outro processador  
+- [x] Checkout: badges PIX/cartão/seguro; sem texto de outro processador  
 - [x] Vitrine: chips Hoje/Fim de semana/Semana; intervalo De/Até; sem calendário mensal  
 - [x] `/planos`: ícones SVG; comparativo Sympla com disclaimer; simulador com taxa Asaas  
 - [x] Wizard + Financeiro: simuladores coerentes  
@@ -353,7 +355,7 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 - [x] Lista espera: fila + e-mail + notificação conta + prazo 12/24/48h  
 - [x] Página pública organizador (`/produtor/{slug}`)  
 - [x] `/ajuda` + `/blog`  
-- [x] Wallet: “Em breve” + doc  
+- [x] Wallet: “Em breve” + doc; tela `/ingresso/qr` com evento e participante  
 - [ ] Mobile: sem regressão layout poluído — **validar no dispositivo real**  
 - [x] `pytest` + E2E verdes (CI)  
 - [ ] Go-live VPS (`eventosbr.app.br`) — **Anexo B (usuário)**  

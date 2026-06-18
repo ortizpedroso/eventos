@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models import Evento
 from app.schemas.evento import EventoResponse, montar_evento_response
-from app.services.ingresso_lotes import contar_ocupacao_por_lotes
+from app.services.ingresso_lotes import (
+    contar_ocupacao_por_lotes,
+    evento_tem_venda_aberta,
+    vendas_ainda_nao_abertas,
+)
 
 
 def listar_eventos_relacionados(
@@ -20,9 +24,19 @@ def listar_eventos_relacionados(
     resultados: list[Evento] = []
     vistos: set[str] = {excluir_id}
 
+    def _elegivel(e: Evento) -> bool:
+        """Publicado com venda aberta ou pré-venda (em breve)."""
+        if not e.publicado:
+            return False
+        if evento_tem_venda_aberta(db, e):
+            return True
+        return vendas_ainda_nao_abertas(db, e)
+
     def _adicionar(candidatos: list[Evento]) -> None:
         for e in candidatos:
             if e.id in vistos:
+                continue
+            if not _elegivel(e):
                 continue
             resultados.append(e)
             vistos.add(e.id)

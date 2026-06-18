@@ -16,9 +16,11 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 | **Patamar 4 — Diferenciação** | Transparência financeira, migração, CRM, selo confiança | 🟡 Parcial (simuladores + taxas públicas OK) |
 | **Patamar 5 — Escala** | App equipe offline, API pública, NFSe, assinatura ativa | 🔮 Futuro |
 
-> **Hoje:** Patamar 1 + **Patamar 3 (repo)** concluídos. Falta **go-live VPS** (Anexo B da spec) e validação mobile real.
+> **Hoje:** Patamar 1 + **Patamar 3 (repo)** concluídos no código. Falta **go-live VPS** (Anexo B) e validação mobile real.
 
-**Provedor de pagamento:** **Asaas** (único)
+**Provedor de pagamento:** **Asaas** (único no backend). Copy do **comprador** não expõe marca do gateway; organizador configura repasses em Financeiro.
+
+**Extras pós-spec (PR #10+):** máscara BRL em campos de valor (`InputValorBrl`); copy sem marca Asaas no checkout público.
 
 **Documentação consolidada:** [00-sistema-completo.md](./00-sistema-completo.md) · Spec: `specs/patamar-completo-ux-produto.md`
 
@@ -46,7 +48,6 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 
 ## Patamar 2 — Go-live (urgente — ops no VPS)
 
-- [ ] Merge [PR #7](https://github.com/ortizpedroso/eventos/pull/7) (Asaas only — remove Stripe)
 - [ ] `.env` produção: `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `ASAAS_PLATFORM_WALLET_ID` (doc [11-go-live-asaas](./11-go-live-asaas.md))
 - [ ] Webhook Asaas → `https://DOMINIO/api/webhooks/asaas`
 - [ ] SMTP + SPF/DKIM no domínio
@@ -287,7 +288,7 @@ Organizado por **prioridade de execução** e **patamar alvo**.
 *Código pronto no repo (PRs #4 e #5). Falta executar no VPS.*
 
 ### Deploy e operação (servidor)
-- [ ] Merge [PR #7](https://github.com/ortizpedroso/eventos/pull/7) (Asaas only — remove Stripe)
+- [ ] Deploy VPS + `.env` Asaas + SMTP + webhook (ver [11-go-live-asaas](./11-go-live-asaas.md))
 - [x] Template `.env.production.example` com Asaas
 - [x] `production_checks` valida Asaas (API, webhook, platform wallet)
 - [x] Caddy expõe `/health` e `/ready`
@@ -420,7 +421,7 @@ flowchart LR
 ```
 
 ### Sprint 0 — Go-live (1 bloco)
-1. Merge PR #7 + deploy VPS + `.env` Asaas + SMTP + webhook
+1. Deploy VPS + `.env` Asaas + SMTP + webhook
 2. `./scripts/verify-production.sh` + 1ª venda real
 
 ### Sprint 1 — Quick wins (equipe + conversão)
@@ -480,4 +481,4 @@ Considere que subiu de patamar quando:
 
 - `10-checklist-proximo-patamar.md` — Checklist mestre criado (jun/2026)
 - Roteiro executivo (Patamares 2–4 + sprints 0–4 + mobile) registrado no topo do doc (jun/2026)
-- Atualização: integração **Asaas only** (PR #7 — remove Stripe), go-live produção, Sprint 1 parcial — timer, busca portaria, duplicar UI, onboarding financeiro (17/06/2026)
+- Atualização: integração **Asaas only** (Stripe removido do código), go-live produção, revisão patamar + máscaras BRL (18/06/2026)

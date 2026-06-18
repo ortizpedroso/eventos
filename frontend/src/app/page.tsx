@@ -73,7 +73,7 @@ export default async function Home() {
           <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
             <h2 className="text-lg font-semibold text-emerald-700">Transparência e segurança</h2>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
-              Pagamentos processados via <strong>Asaas</strong> (PIX e cartão). Taxas estimadas visíveis nos simuladores.
+              Pagamentos via PIX e cartão com taxas estimadas visíveis nos simuladores.
               Reembolso automático dentro do prazo legal em Minha conta.
             </p>
           </div>

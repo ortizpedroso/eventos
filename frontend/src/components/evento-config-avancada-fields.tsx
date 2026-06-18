@@ -45,7 +45,7 @@ export function EventoConfigAvancadaFields({ evento, onParcelamentoChange }: Pro
               )
             }
           />
-          Parcelamento no cartão (Asaas)
+          Parcelamento no cartão
         </label>
         <label className="flex items-center gap-2 text-sm text-zinc-700">
           Máximo:

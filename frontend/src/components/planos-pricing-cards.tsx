@@ -68,7 +68,7 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
           </span>
         </div>
         <ul className="mt-8 space-y-3">
-          <Feature>PIX, cartão e pagamento seguro via Asaas</Feature>
+          <Feature>PIX, cartão e pagamento seguro</Feature>
           <Feature>Reembolso automatizado</Feature>
           <Feature>Recebimento direto na conta</Feature>
         </ul>

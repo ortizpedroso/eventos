@@ -238,7 +238,7 @@ export function CheckoutAsaasPainel({
         </p>
       )}
       <p className="text-sm text-gray-700">
-        Total: <strong>{valorFmt}</strong> — pagamento seguro via Asaas
+        Total: <strong>{valorFmt}</strong> — pagamento seguro
       </p>
       <div className="flex gap-2">
         <button
@@ -284,7 +284,7 @@ export function CheckoutAsaasPainel({
           </select>
           {parcelas > 1 ? (
             <p className="mt-2 text-xs text-zinc-600">
-              Total: <strong>{formatBrl(valorReais)}</strong> — taxa estimada Asaas ({parcelas}x):{" "}
+              Total: <strong>{formatBrl(valorReais)}</strong> — taxa estimada de processamento ({parcelas}x):{" "}
               <strong>{formatBrl(taxaParcelamentoEst)}</strong>
             </p>
           ) : null}
@@ -298,7 +298,9 @@ export function CheckoutAsaasPainel({
 
       {metodo === "card" ? (
         <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
-          <p className="text-xs text-zinc-600">Dados do cartão (processados pelo Asaas; não armazenamos o número).</p>
+          <p className="text-xs text-zinc-600">
+            Dados do cartão (processados pelo gateway de pagamento; não armazenamos o número).
+          </p>
           <input
             className="w-full rounded border px-3 py-2 text-sm"
             placeholder="Nome no cartão"
@@ -365,7 +367,7 @@ export function CheckoutAsaasPainel({
 
       {metodo === "invoice" && (
         <p className="text-xs text-gray-500">
-          Abriremos a fatura Asaas em nova aba (cartão, boleto ou PIX).
+          Abriremos a fatura de pagamento em nova aba (cartão, boleto ou PIX).
         </p>
       )}
       {msg && <p className="text-sm text-red-600">{msg}</p>}

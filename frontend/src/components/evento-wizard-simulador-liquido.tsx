@@ -68,7 +68,7 @@ export function EventoWizardSimuladorLiquido({
           <p className="text-sm font-semibold text-zinc-900">Quanto você recebe por ingresso</p>
           <p className="mt-1 text-xs leading-relaxed text-zinc-600">
             Estimativa após taxa EventosBR ({formatPercentual(TARIFA_PADRAO.percentual)} +{" "}
-            {formatBrl(TARIFA_PADRAO.fixoPorIngresso)}) e tarifas ilustrativas do Asaas.
+            {formatBrl(TARIFA_PADRAO.fixoPorIngresso)}) e tarifas ilustrativas de processamento.
           </p>
         </div>
         <Link
@@ -89,11 +89,11 @@ export function EventoWizardSimuladorLiquido({
           <span className="font-medium text-zinc-800">− {formatBrl(detalhe.taxaTotal)}</span>
         </li>
         <li className="flex justify-between gap-2 border-t border-dashed border-zinc-200 pt-1.5">
-          <span className="font-medium text-zinc-700">Líquido antes do Asaas</span>
+          <span className="font-medium text-zinc-700">Líquido antes do processamento</span>
           <span className="font-semibold text-emerald-800">{formatBrl(detalhe.liquidoOrganizador)}</span>
         </li>
         <li className="flex justify-between gap-2 text-zinc-500">
-          <span>Est. taxa Asaas PIX ({formatBrl(TAXA_PIX)})</span>
+          <span>Est. taxa processamento PIX ({formatBrl(TAXA_PIX)})</span>
           <span>− {formatBrl(taxaPixEst)}</span>
         </li>
         <li className="flex justify-between gap-2 font-medium text-emerald-900">
@@ -101,7 +101,7 @@ export function EventoWizardSimuladorLiquido({
           <span>{formatBrl(Math.max(0, liquidoPixEst))}</span>
         </li>
         <li className="flex justify-between gap-2 text-zinc-500">
-          <span>Est. taxa Asaas cartão à vista</span>
+          <span>Est. taxa processamento cartão à vista</span>
           <span>− {formatBrl(taxaCartaoEst)}</span>
         </li>
         <li className="flex justify-between gap-2 text-zinc-700">
@@ -111,7 +111,7 @@ export function EventoWizardSimuladorLiquido({
         {parcelamentoHabilitado && taxaParceladoEst != null && liquidoParceladoEst != null ? (
           <>
             <li className="flex justify-between gap-2 border-t border-dashed border-zinc-200 pt-1.5 text-zinc-500">
-              <span>Est. taxa Asaas cartão {parcelasAtivas}x</span>
+              <span>Est. taxa processamento cartão {parcelasAtivas}x</span>
               <span>− {formatBrl(taxaParceladoEst)}</span>
             </li>
             <li className="flex justify-between gap-2 font-medium text-amber-900">
