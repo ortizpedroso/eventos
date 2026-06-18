@@ -66,6 +66,16 @@ jobs:
         env:
           CI: true
 
+  prod-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar docker-compose.prod.yml
+        run: |
+          cp .env.production.example .env
+          docker compose -f docker-compose.prod.yml config --quiet
+          echo "docker-compose.prod.yml OK"
+
   e2e-compra:
     runs-on: ubuntu-latest
     needs: [api, web]

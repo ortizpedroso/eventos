@@ -6,6 +6,31 @@ Checklist operacional para publicar o EventosBR com **Asaas** como provedor de p
 
 ---
 
+## 0. Testar no GitHub (antes do deploy no VPS)
+
+Cada **pull request** dispara o CI (`.github/workflows/ci.yml`):
+
+| Job | O que valida |
+|-----|----------------|
+| `api` | `pytest` — 122+ testes da API |
+| `web` | `npm run build` do frontend |
+| `e2e` | Playwright smoke (páginas principais) |
+| `e2e-compra` | Stack Docker + compra com mock Asaas |
+| `prod-compose` | `docker-compose.prod.yml` válido |
+
+**Como ver:** abra o PR [#7](https://github.com/ortizpedroso/eventos/pull/7) → aba **Checks** (ou **Actions** no repositório).
+
+**Localmente (sem VPS):**
+```bash
+python -m pytest tests/ -q
+cd frontend && npm run build
+./scripts/smoke-auditoria.sh
+```
+
+O CI **não faz deploy** para o VPS — produção continua manual com `./scripts/deploy-vps.sh`.
+
+---
+
 ## Pré-requisitos
 
 - VPS com Docker (≥ 2 GB RAM)
@@ -50,9 +75,12 @@ nano .env
 
 A API executa `alembic upgrade head` automaticamente no arranque.
 
-Migrações Asaas obrigatórias:
+Migrações obrigatórias (head atual: `20260618_000024`):
 - `20260617_000020` — colunas `asaas_*` em usuários, eventos, ingressos
 - `20260617_000021` — subconta e antecipação do organizador
+- `20260618_000022` — `stripe_events` → `webhook_events`
+- `20260618_000023` — remove colunas Stripe; backfill wallet; refs legadas
+- `20260618_000024` — cifra `asaas_subaccount_api_key` (não rotacione `SECRET_KEY` após go-live sem re-cifrar)
 
 ---
 
@@ -130,7 +158,7 @@ Manual:
 
 ---
 
-## 8. Rollback / contingência
+## 9. Rollback / contingência
 
 - `ASAAS_DISABLED=true` — desativa cobranças (modo manutenção)
 - Restaurar DB: `./scripts/restore-postgres.sh`

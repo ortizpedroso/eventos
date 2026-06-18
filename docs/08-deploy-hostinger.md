@@ -69,7 +69,7 @@ Ficheiros principais:
 
 1. **DNS** na Hostinger (zona do domínio):
    - `A` `@` → IP do VPS
-   - `A` `www` → IP do VPS (ou `CNAME` para `@`)
+   - `A` `www` → IP do VPS (Caddy redireciona www → apex)
 2. **E-mail** — registos **SPF**, **DKIM** (painel Hostinger → Email → DNS).
 3. **Asaas produção** (provedor principal — ver `docs/11-go-live-asaas.md`)
    - `PAYMENT_PROVIDER=asaas`
@@ -82,7 +82,7 @@ Ficheiros principais:
    - `ENVIRONMENT=production`, `DEBUG=False`
    - `CORS_ORIGINS=https://seudominio.com.br,https://www.seudominio.com.br`
    - `FRONTEND_PUBLIC_URL` / `NEXT_PUBLIC_API_URL` com HTTPS
-   - `ASAAS_DISABLED=true` (apenas dev/teste local)
+   - `ASAAS_DISABLED=false` (não use `true` em produção)
 5. Recriar containers:
    ```bash
    ./scripts/deploy-vps.sh
