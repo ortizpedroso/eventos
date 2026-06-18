@@ -142,6 +142,7 @@ erDiagram
 - **`auth_provider`**: `email` (senha), `google` ou `apple`. Se OAuth, `senha_hash` pode ser `NULL`.
 - **`token_version`**: incrementado ao desativar conta ou alterar senha — invalida todos os JWTs anteriores.
 - **`asaas_wallet_id`**: carteira Asaas do organizador para split de pagamentos.
+- **`asaas_subaccount_api_key`**: chave da subconta Asaas, **cifrada em repouso** (prefixo `enc:v1:` + Fernet derivado de `SECRET_KEY`).
 - **`aceita_comunicacao_*`** + **`comunicacao_consentimento_em`**: opt-in LGPD para campanhas de marketing da plataforma.
 
 ---
@@ -237,3 +238,4 @@ Ficheiros em `alembic/versions/` com revisões encadeadas (`down_revision`).
 | `20260522_000013` | `ingressos.repassado_para_*` + `repassado_em` (repasse de ingresso) |
 | `20260618_000022` | Renomeia `stripe_events` → `webhook_events` |
 | `20260618_000023` | Remove colunas Stripe; backfill `asaas_wallet_id` em eventos; preserva refunds; mescla `stripe_events` |
+| `20260618_000024` | Cifra `usuarios.asaas_subaccount_api_key` em repouso (Fernet + SECRET_KEY) |
