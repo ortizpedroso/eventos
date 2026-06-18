@@ -562,10 +562,10 @@ def test_status_cobranca_pago_reflete_ingresso_local():
         with (
             patch(
                 "app.services.pagamentos_asaas_handlers.obter_cobranca",
-                return_value={"status": "CONFIRMED"},
+                return_value={"status": "CONFIRMED", "id": "pay_poll"},
             ),
             patch(
-                "app.services.pagamentos_asaas_handlers.marcar_ingressos_pi_pagos",
+                "app.services.pagamentos_asaas_handlers.processar_cobranca_confirmada_gateway",
                 return_value=[],
             ),
         ):
@@ -644,13 +644,14 @@ def test_retomar_asaas_nao_reporta_ja_pago_sem_ingresso_pago():
                 return_value={"status": "CONFIRMED", "id": "pay_retomar"},
             ),
             patch(
-                "app.services.pagamentos_asaas_handlers.marcar_ingressos_pi_pagos",
+                "app.services.pagamentos_asaas_handlers.processar_cobranca_confirmada_gateway",
                 return_value=[],
             ),
         ):
             with pytest.raises(HTTPException) as exc:
                 retomar_pagamento_asaas(db, ing)
         assert exc.value.status_code == 409
+        db.refresh(ing)
         assert ing.status == "pendente"
     finally:
         db.close()
@@ -694,7 +695,7 @@ def test_iniciar_cobranca_nao_recria_quando_gateway_pago():
                 return_value={"status": "CONFIRMED", "id": "pay_existente", "billingType": "PIX"},
             ),
             patch(
-                "app.services.pagamentos_asaas_handlers.marcar_ingressos_pi_pagos",
+                "app.services.pagamentos_asaas_handlers.processar_cobranca_confirmada_gateway",
                 return_value=[],
             ),
             patch("app.services.pagamentos_asaas_handlers.cancelar_cobranca_pendente") as cancel_mock,
@@ -754,7 +755,7 @@ def test_iniciar_cobranca_nova_409_se_pago_mas_nao_liberado():
                 return_value={"id": "pay_novo_card", "status": "CONFIRMED", "billingType": "CREDIT_CARD"},
             ),
             patch(
-                "app.services.pagamentos_asaas_handlers.marcar_ingressos_pi_pagos",
+                "app.services.pagamentos_asaas_handlers.processar_cobranca_confirmada_gateway",
                 return_value=[],
             ),
         ):

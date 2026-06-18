@@ -41,30 +41,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    from app.utils.secret_storage import decrypt_at_rest, is_encrypted_at_rest
-
-    bind = op.get_bind()
-    rows = bind.execute(
-        sa.text(
-            """
-            SELECT id, asaas_subaccount_api_key
-            FROM usuarios
-            WHERE asaas_subaccount_api_key IS NOT NULL
-              AND asaas_subaccount_api_key != ''
-            """
-        )
-    ).fetchall()
-
-    for row in rows:
-        user_id, stored = row[0], row[1]
-        if not stored or not is_encrypted_at_rest(stored):
-            continue
-        plain = decrypt_at_rest(stored)
-        if not plain:
-            continue
-        bind.execute(
-            sa.text(
-                "UPDATE usuarios SET asaas_subaccount_api_key = :plain WHERE id = :id"
-            ),
-            {"plain": plain, "id": user_id},
-        )
+    # Revisão forward-only: não decifrar chaves de subconta em texto plano.
+    pass

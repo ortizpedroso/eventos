@@ -62,6 +62,49 @@ def _ingressos_por_ref(db: Session, payment_ref: str) -> list[Ingresso]:
     )
 
 
+def _lock_ingressos_por_ref(db: Session, payment_ref: str) -> list[Ingresso]:
+    pay_id = (payment_ref or "").strip()
+    if not pay_id:
+        return []
+    return (
+        db.query(Ingresso)
+        .filter(Ingresso.asaas_payment_id == pay_id)
+        .with_for_update()
+        .all()
+    )
+
+
+def processar_cobranca_confirmada_gateway(
+    db: Session,
+    payment_ref: str,
+    *,
+    payment: dict | None = None,
+) -> list[str]:
+    """Consulta o Asaas, marca ingressos pagos ou reembolsa se fulfillment bloqueado."""
+    pay_id = (payment_ref or "").strip()
+    if not pay_id or pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:")):
+        return []
+
+    from app.services.asaas_client import AsaasAPIError
+    from app.services.pagamento_asaas import obter_cobranca, status_eh_pago
+
+    if payment is None:
+        try:
+            payment = obter_cobranca(pay_id)
+        except AsaasAPIError:
+            logger.exception("Falha ao consultar cobrança %s no gateway", pay_id)
+            return []
+    elif not isinstance(payment, dict):
+        payment = {}
+
+    if not status_eh_pago(payment.get("status")):
+        return []
+
+    marcados = marcar_ingressos_pi_pagos(db, pay_id)
+    exigir_fulfillment_pagamento(db, pay_id, marcados)
+    return marcados
+
+
 def marcar_ingressos_pi_pagos(db: Session, payment_ref: str) -> list[str]:
     """Marca todos os ingressos pendentes de um pagamento externo como pagos."""
     alterados: list[str] = []
@@ -75,13 +118,15 @@ def exigir_fulfillment_pagamento(db: Session, payment_ref: str, marcados: list[s
     """Reembolsa e cancela se o gateway confirmou mas ingressos não puderam ser liberados."""
     if marcados:
         return
-    pendentes = [i for i in _ingressos_por_ref(db, payment_ref) if i.status == "pendente"]
+
+    pay_id = (payment_ref or "").strip()
+    locked = _lock_ingressos_por_ref(db, pay_id)
+    pendentes = [i for i in locked if i.status == "pendente"]
     if not pendentes:
         return
 
     refunded = False
-    pay_id = (payment_ref or "").strip()
-    if pay_id and not pay_id.startswith(("disabled_", "cortesia_")):
+    if pay_id and not pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:")):
         from app.services.asaas_client import AsaasAPIError
         from app.services.pagamento_asaas import obter_cobranca, reembolsar_cobranca, status_eh_pago
 

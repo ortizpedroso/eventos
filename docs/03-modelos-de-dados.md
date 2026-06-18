@@ -237,5 +237,5 @@ Ficheiros em `alembic/versions/` com revisões encadeadas (`down_revision`).
 | `20260522_000012` | `eventos.checkin_token` (link portaria sem conta) |
 | `20260522_000013` | `ingressos.repassado_para_*` + `repassado_em` (repasse de ingresso) |
 | `20260618_000022` | Renomeia `stripe_events` → `webhook_events` |
-| `20260618_000023` | Remove colunas Stripe; backfill `asaas_wallet_id` em eventos; preserva refunds; mescla `stripe_events` |
+| `20260618_000023` | Remove colunas Stripe; backfill wallet; preserva refunds; `legacy_stripe:` em ingressos pagos; mescla `stripe_events` |
 | `20260618_000024` | Cifra `usuarios.asaas_subaccount_api_key` em repouso (Fernet + SECRET_KEY) |

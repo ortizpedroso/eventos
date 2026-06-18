@@ -28,6 +28,7 @@ def _table_exists(insp, table: str) -> bool:
 def upgrade() -> None:
     bind = op.get_bind()
     insp = sa.inspect(bind)
+    is_pg = bind.dialect.name == "postgresql"
 
     # Repasse: wallet Asaas do organizador → eventos sem wallet configurada.
     if (
@@ -36,17 +37,36 @@ def upgrade() -> None:
         and _column_exists(insp, "eventos", "asaas_wallet_id")
         and _column_exists(insp, "usuarios", "asaas_wallet_id")
     ):
-        op.execute(
-            """
-            UPDATE eventos AS e
-            SET asaas_wallet_id = u.asaas_wallet_id
-            FROM usuarios AS u
-            WHERE e.organizador_id = u.id
-              AND (e.asaas_wallet_id IS NULL OR e.asaas_wallet_id = '')
-              AND u.asaas_wallet_id IS NOT NULL
-              AND u.asaas_wallet_id != ''
-            """
-        )
+        if is_pg:
+            op.execute(
+                """
+                UPDATE eventos AS e
+                SET asaas_wallet_id = u.asaas_wallet_id
+                FROM usuarios AS u
+                WHERE e.organizador_id = u.id
+                  AND (e.asaas_wallet_id IS NULL OR e.asaas_wallet_id = '')
+                  AND u.asaas_wallet_id IS NOT NULL
+                  AND u.asaas_wallet_id != ''
+                """
+            )
+        else:
+            op.execute(
+                """
+                UPDATE eventos
+                SET asaas_wallet_id = (
+                    SELECT u.asaas_wallet_id
+                    FROM usuarios AS u
+                    WHERE u.id = eventos.organizador_id
+                )
+                WHERE (asaas_wallet_id IS NULL OR asaas_wallet_id = '')
+                  AND EXISTS (
+                    SELECT 1 FROM usuarios AS u
+                    WHERE u.id = eventos.organizador_id
+                      AND u.asaas_wallet_id IS NOT NULL
+                      AND u.asaas_wallet_id != ''
+                  )
+                """
+            )
 
     # Histórico de reembolsos: preservar IDs legados antes de dropar coluna Stripe.
     if (
@@ -64,8 +84,32 @@ def upgrade() -> None:
             """
         )
 
-    # Reservas pendentes só com PI Stripe não podem ser concluídas via Asaas — cancelar.
     if _table_exists(insp, "ingressos") and _column_exists(insp, "ingressos", "stripe_payment_intent_id"):
+        # Preserva referência de auditoria em vendas já concluídas (não são IDs Asaas).
+        if is_pg:
+            op.execute(
+                """
+                UPDATE ingressos
+                SET asaas_payment_id = 'legacy_stripe:' || stripe_payment_intent_id
+                WHERE status IN ('pago', 'usado')
+                  AND stripe_payment_intent_id IS NOT NULL
+                  AND stripe_payment_intent_id != ''
+                  AND (asaas_payment_id IS NULL OR asaas_payment_id = '')
+                """
+            )
+        else:
+            op.execute(
+                """
+                UPDATE ingressos
+                SET asaas_payment_id = 'legacy_stripe:' || stripe_payment_intent_id
+                WHERE status IN ('pago', 'usado')
+                  AND stripe_payment_intent_id IS NOT NULL
+                  AND stripe_payment_intent_id != ''
+                  AND (asaas_payment_id IS NULL OR asaas_payment_id = '')
+                """
+            )
+
+        # Reservas pendentes só com PI Stripe não podem ser concluídas via Asaas — cancelar.
         op.execute(
             """
             UPDATE ingressos
@@ -93,13 +137,21 @@ def upgrade() -> None:
         op.drop_column("cancelamentos", "stripe_refund_id")
 
     if _table_exists(insp, "stripe_events") and _table_exists(insp, "webhook_events"):
-        op.execute(
-            """
-            INSERT INTO webhook_events (id, tipo, data_recebimento)
-            SELECT id, tipo, data_recebimento FROM stripe_events
-            ON CONFLICT (id) DO NOTHING
-            """
-        )
+        if is_pg:
+            op.execute(
+                """
+                INSERT INTO webhook_events (id, tipo, data_recebimento)
+                SELECT id, tipo, data_recebimento FROM stripe_events
+                ON CONFLICT (id) DO NOTHING
+                """
+            )
+        else:
+            op.execute(
+                """
+                INSERT OR IGNORE INTO webhook_events (id, tipo, data_recebimento)
+                SELECT id, tipo, data_recebimento FROM stripe_events
+                """
+            )
         op.drop_table("stripe_events")
     elif _table_exists(insp, "stripe_events") and not _table_exists(insp, "webhook_events"):
         op.rename_table("stripe_events", "webhook_events")

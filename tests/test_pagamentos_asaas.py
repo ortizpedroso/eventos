@@ -222,7 +222,13 @@ class TestPagamentosAsaas:
             )
         assert cob.status_code == 200, cob.text
 
-        with patch("app.routes.webhooks.settings") as wh_settings:
+        with (
+            patch("app.routes.webhooks.settings") as wh_settings,
+            patch(
+                "app.services.pagamento_asaas.obter_cobranca",
+                return_value={"id": pay_id, "status": "RECEIVED"},
+            ),
+        ):
             wh_settings.ASAAS_WEBHOOK_TOKEN = "tok_test"
             wh_settings.ENVIRONMENT = "test"
             payload = {
@@ -237,7 +243,13 @@ class TestPagamentosAsaas:
             )
         assert wh.status_code == 200
 
-        with patch("app.routes.pagamentos.settings") as route_settings:
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch(
+                "app.services.pagamentos_asaas_handlers.obter_cobranca",
+                return_value={"id": pay_id, "status": "RECEIVED"},
+            ),
+        ):
             route_settings.use_asaas = True
             st = client.get(
                 f"/api/pagamentos/asaas/status/{iid}",
@@ -580,7 +592,7 @@ def test_iniciar_cobranca_nao_recria_se_obter_cobranca_falha():
             db.close()
 
 
-def test_status_cobranca_pago_false_sem_403_quando_espera_bloqueia():
+def test_status_cobranca_reembolsa_quando_espera_bloqueia():
     from datetime import datetime, timedelta, timezone
 
     from app.models import EventoListaEspera
@@ -614,9 +626,16 @@ def test_status_cobranca_pago_false_sem_403_quando_espera_bloqueia():
     finally:
         db.close()
 
-    with patch(
-        "app.services.pagamentos_asaas_handlers.obter_cobranca",
-        return_value={"status": "CONFIRMED", "id": "pay_poll_espera"},
+    with (
+        patch(
+            "app.services.pagamentos_asaas_handlers.obter_cobranca",
+            return_value={"status": "CONFIRMED", "id": "pay_poll_espera"},
+        ),
+        patch(
+            "app.services.pagamento_asaas.obter_cobranca",
+            return_value={"status": "CONFIRMED", "id": "pay_poll_espera"},
+        ),
+        patch("app.services.pagamento_asaas.reembolsar_cobranca") as mock_reembolso,
     ):
         db = tpu._db()
         try:
@@ -626,7 +645,8 @@ def test_status_cobranca_pago_false_sem_403_quando_espera_bloqueia():
             assert out["pago"] is False
             assert out["status"] == "CONFIRMED"
             db.refresh(ing)
-            assert ing.status == "pendente"
+            assert ing.status == "cancelado"
+            mock_reembolso.assert_called_once_with("pay_poll_espera")
         finally:
             db.close()
 
