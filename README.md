@@ -2,8 +2,6 @@
 
 Plataforma de eventos com reembolsos automáticos usando FastAPI, SQLAlchemy e **Asaas** (PIX e cartão).
 
-> **Branch `main` desatualizada?** O desenvolvimento recente está nos PRs abertos (#8–#11). Para ver o código e docs atuais no GitHub, abra o branch `cursor/patamar-review-fixes-final-bf71` ou faça merge do [PR #11](https://github.com/ortizpedroso/eventos/pull/11) em `main`.
-
 ## 📖 Documentação do sistema (técnica)
 
 Descrição da arquitetura, módulos backend, modelos de dados, frontend Next.js, pagamentos/lotes/webhooks Asaas e operação (env, Docker, Alembic):
