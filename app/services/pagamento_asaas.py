@@ -101,11 +101,26 @@ def cancelar_cobranca_pendente(payment_id: str) -> None:
         raise
 
 
-def reembolsar_cobranca(payment_id: str, *, valor: float | None = None) -> dict[str, Any]:
+def reembolsar_cobranca(
+    payment_id: str,
+    *,
+    valor: float | None = None,
+    idempotency_key: str | None = None,
+) -> dict[str, Any]:
     payload: dict[str, Any] | None = None
     if valor is not None and valor > 0:
         payload = {"value": round(valor, 2)}
-    return get_asaas_client().post(f"/v3/payments/{payment_id}/refund", json=payload)
+    key = idempotency_key or f"refund_{payment_id}"
+    return get_asaas_client().post(
+        f"/v3/payments/{payment_id}/refund",
+        json=payload,
+        idempotency_key=key[:128],
+    )
+
+
+def status_eh_reembolsado(status: str | None) -> bool:
+    s = (status or "").upper()
+    return s in {"REFUNDED", "REFUND_REQUESTED", "REFUND_IN_PROGRESS"}
 
 
 def status_eh_pago(status: str | None) -> bool:

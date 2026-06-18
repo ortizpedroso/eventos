@@ -445,6 +445,8 @@ class TestRecuperacaoSenha:
 
 class TestWebhookIdempotencia:
     def test_webhook_asaas_idempotente(self):
+        from unittest.mock import patch
+
         from config.settings import settings
 
         prev = settings.ASAAS_WEBHOOK_TOKEN
@@ -456,9 +458,13 @@ class TestWebhookIdempotencia:
                 "payment": {"id": "pay_test_123"},
             }
             headers = {"asaas-access-token": "tok_test", "content-type": "application/json"}
-            r1 = client.post("/api/webhooks/asaas", json=payload, headers=headers)
-            assert r1.status_code == 200
-            r2 = client.post("/api/webhooks/asaas", json=payload, headers=headers)
+            with patch(
+                "app.services.pagamento_asaas.obter_cobranca",
+                return_value={"id": "pay_test_123", "status": "RECEIVED"},
+            ):
+                r1 = client.post("/api/webhooks/asaas", json=payload, headers=headers)
+                assert r1.status_code == 200
+                r2 = client.post("/api/webhooks/asaas", json=payload, headers=headers)
             assert r2.status_code == 200
             assert r2.json().get("idempotent") is True
         finally:

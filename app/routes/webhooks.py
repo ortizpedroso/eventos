@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Ingresso, WebhookEvent, get_db
+from app.services.asaas_client import AsaasAPIError
 from app.services.ingresso_pago import (
     cancelar_ingressos_pi_pendentes,
     cancelar_ingressos_reembolsados,
@@ -68,9 +69,11 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
     ingressos_recém_pagos: list[str] = []
     try:
         if event_type in ("PAYMENT_RECEIVED", "PAYMENT_CONFIRMED") and pay_id:
-            from app.services.ingresso_pago import processar_cobranca_confirmada_gateway
-
-            ingressos_recém_pagos = processar_cobranca_confirmada_gateway(db, pay_id)
+            ingressos_recém_pagos = processar_cobranca_confirmada_gateway(
+                db,
+                pay_id,
+                raise_on_gateway_error=True,
+            )
         elif event_type == "PAYMENT_REFUNDED" and pay_id:
             cancelar_ingressos_reembolsados(db, pay_id)
         elif event_type in ("PAYMENT_DELETED", "PAYMENT_OVERDUE") and pay_id:
@@ -81,6 +84,10 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
         db.commit()
         for iid in ingressos_recém_pagos:
             notificar_ingresso_pago(iid)
+    except AsaasAPIError:
+        db.rollback()
+        logger.error("Webhook Asaas: gateway indisponível para pagamento %s", pay_id)
+        raise HTTPException(status_code=503, detail="Payment gateway unavailable") from None
     except IntegrityError:
         db.rollback()
         return {"status": "success", "idempotent": True}

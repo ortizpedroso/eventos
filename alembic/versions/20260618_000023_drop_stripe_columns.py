@@ -109,14 +109,39 @@ def upgrade() -> None:
                 """
             )
 
-        # Reservas pendentes só com PI Stripe não podem ser concluídas via Asaas — cancelar.
+        # Pendentes com PI Stripe real: preservar ref para reconciliação manual (não cancelar às cegas).
+        if is_pg:
+            op.execute(
+                """
+                UPDATE ingressos
+                SET asaas_payment_id = 'legacy_stripe:' || stripe_payment_intent_id
+                WHERE status = 'pendente'
+                  AND stripe_payment_intent_id IS NOT NULL
+                  AND stripe_payment_intent_id != ''
+                  AND stripe_payment_intent_id NOT LIKE 'disabled_%'
+                  AND (asaas_payment_id IS NULL OR asaas_payment_id = '')
+                """
+            )
+        else:
+            op.execute(
+                """
+                UPDATE ingressos
+                SET asaas_payment_id = 'legacy_stripe:' || stripe_payment_intent_id
+                WHERE status = 'pendente'
+                  AND stripe_payment_intent_id IS NOT NULL
+                  AND stripe_payment_intent_id != ''
+                  AND stripe_payment_intent_id NOT LIKE 'disabled_%'
+                  AND (asaas_payment_id IS NULL OR asaas_payment_id = '')
+                """
+            )
+
+        # Reservas de teste (disabled_*) sem Asaas — cancelar com segurança.
         op.execute(
             """
             UPDATE ingressos
             SET status = 'cancelado', reservado_ate = NULL
             WHERE status = 'pendente'
-              AND stripe_payment_intent_id IS NOT NULL
-              AND stripe_payment_intent_id != ''
+              AND stripe_payment_intent_id LIKE 'disabled_%'
               AND (asaas_payment_id IS NULL OR asaas_payment_id = '')
             """
         )
