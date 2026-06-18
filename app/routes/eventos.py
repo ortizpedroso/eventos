@@ -97,6 +97,17 @@ async def criar_evento(
 
     logger.info(f"Evento criado: {novo_evento.id} (slug: {novo_evento.slug})")
 
+    from app.services.ingresso_lotes import evento_tem_venda_aberta
+    from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
+
+    if deve_notificar_abertura(
+        novo_evento,
+        era_publicado=False,
+        tinha_venda_aberta=False,
+        tem_venda_aberta=evento_tem_venda_aberta(db, novo_evento),
+    ):
+        notificar_abertura_vendas(db, novo_evento)
+
     return montar_evento_response(db, novo_evento)
 
 

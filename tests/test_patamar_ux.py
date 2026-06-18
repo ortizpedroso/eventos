@@ -1142,6 +1142,68 @@ def test_notificar_interesse_escapa_html(monkeypatch):
         db.close()
 
 
+def test_publicar_evento_via_api_notifica_interesse(monkeypatch):
+    sent: list[str] = []
+    monkeypatch.setattr(
+        "app.services.lista_interesse.enqueue_email_simples",
+        lambda email, _a, _c: sent.append(email) or True,
+    )
+
+    suf = uuid.uuid4().hex[:8]
+    reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={
+            "email": f"org_pub_{suf}@test.com",
+            "nome": "Org",
+            "senha": "senha12345",
+            "tipo": "organizador",
+        },
+    )
+    token = reg.json()["access_token"]
+    criar = test_api.client.post(
+        "/api/eventos/criar",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "nome": f"Evento {suf}",
+            "descricao": "desc",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 50,
+            "categoria": "Outros",
+            "publicado": False,
+            "aceita_interesse": True,
+            "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
+        },
+    )
+    assert criar.status_code == 200
+    ev_id = criar.json()["id"]
+    db = _db()
+    try:
+        ev = db.get(Evento, ev_id)
+        assert ev is not None
+        inscrever_interesse(db, ev, email="interessado@ex.com", nome="Interessado")
+    finally:
+        db.close()
+
+    patch = test_api.client.patch(
+        f"/api/eventos/id/{ev_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "nome": f"Evento {suf}",
+            "descricao": "desc",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 50,
+            "categoria": "Outros",
+            "publicado": True,
+        },
+    )
+    assert patch.status_code == 200, patch.text
+    assert sent == ["interessado@ex.com"]
+
+
 def test_produtor_rejeita_url_javascript():
     email = f"org_js_{uuid.uuid4().hex[:8]}@test.com"
     reg = test_api.client.post(
