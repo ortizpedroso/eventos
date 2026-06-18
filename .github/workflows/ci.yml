@@ -84,7 +84,7 @@ jobs:
       - name: Instalar browsers Playwright
         working-directory: frontend
         run: npx playwright install chromium --with-deps
-      - name: Teste E2E compra (ASAAS_DISABLED)
+      - name: Teste E2E compra (Asaas mock)
         working-directory: frontend
         run: npm run test:e2e:compra
         env:

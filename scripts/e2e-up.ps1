@@ -1,4 +1,4 @@
-# Sobe stack E2E (API STRIPE_DISABLED + Postgres + Next).
+# Sobe stack E2E (API com ASAAS_E2E_MOCK + Postgres + Next).
 # Uso: .\scripts\e2e-up.ps1
 
 $ErrorActionPreference = "Stop"

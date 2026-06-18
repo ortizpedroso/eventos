@@ -907,7 +907,7 @@ export function ComprarIngresso({
               <button
                 type="button"
                 className="underline"
-                onClick={() => { setStep(1); setClientSecret(null); setReservadoAte(null); }}
+                onClick={() => { setStep(1); setReservadoAte(null); }}
               >
                 Tentar novamente
               </button>
