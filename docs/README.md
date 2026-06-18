@@ -2,6 +2,12 @@
 
 Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + **Asaas**). Use em conjunto com o [README da raiz](../README.md) para instalação rápida. No site público (Next.js) há uma página resumida em **`/documentacao`**.
 
+## Documento consolidado
+
+| Documento | Conteúdo |
+|-----------|----------|
+| **[00 — Sistema completo](./00-sistema-completo.md)** | **Visão única**: produto, funcionalidades, stack, API, frontend, integrações e **todas as tabelas do banco** |
+
 ## Índice
 
 | Documento | Conteúdo |

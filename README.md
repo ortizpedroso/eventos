@@ -6,7 +6,8 @@ Plataforma de eventos com reembolsos automáticos usando FastAPI, SQLAlchemy e *
 
 Descrição da arquitetura, módulos backend, modelos de dados, frontend Next.js, pagamentos/lotes/webhooks Asaas e operação (env, Docker, Alembic):
 
-**→ [docs/README.md](docs/README.md)** (índice completo em Markdown no repositório)
+- **→ [docs/00-sistema-completo.md](docs/00-sistema-completo.md)** — documento consolidado (produto, funcionalidades, tecnologias e tabelas do banco)
+- **→ [docs/README.md](docs/README.md)** — índice completo em Markdown no repositório
 
 No site (Next.js), a mesma informação está resumida na página pública **`/documentacao`**.
 
