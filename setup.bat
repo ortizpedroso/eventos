@@ -8,7 +8,7 @@ REM Cria .env a partir do exemplo
 if not exist ".env" (
     echo 📋 Criando arquivo .env...
     copy .env.example .env
-    echo ✅ Arquivo .env criado. Edite com suas configurações de Stripe!
+    echo ✅ Arquivo .env criado. Edite com suas configurações de Asaas e SMTP!
 ) else (
     echo ⚠️  Arquivo .env já existe. Pulando...
 )
@@ -44,7 +44,8 @@ echo.
 echo ✨ Setup completo!
 echo.
 echo 📝 Próximos passos:
-echo 1. Edite o arquivo .env com suas credenciais Stripe
-echo 2. Execute: python -m app.main
-echo 3. Acesse: http://localhost:8000/docs
+echo 1. Edite o arquivo .env com ASAAS_* (ou ASAAS_DISABLED=true para dev local)
+echo 2. Execute: docker compose up -d --build   ou   python -m app.main
+echo 3. Frontend: cd frontend ^&^& npm run dev
+echo 4. Acesse: http://localhost:3000
 echo.
