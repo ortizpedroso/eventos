@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { seedPreVendaEvent, waitForApiReady } from "./helpers/api-setup";
+
 test.describe("Patamar UX — vitrine e navbar", () => {
   test("busca na navbar redireciona para vitrine com q", async ({ page }) => {
     await page.goto("/");
@@ -19,6 +21,15 @@ test.describe("Patamar UX — vitrine e navbar", () => {
     await page.getByRole("button", { name: "Este fim de semana" }).click();
     await expect(page).toHaveURL(/de=/);
   });
+
+  test("seletor de intervalo de datas na vitrine", async ({ page }) => {
+    await page.goto("/eventos");
+    await page.getByTestId("filtro-data-de").fill("2026-12-01");
+    await page.getByTestId("filtro-data-ate").fill("2026-12-31");
+    await page.getByTestId("filtro-data-aplicar").click();
+    await expect(page).toHaveURL(/de=/);
+    await expect(page).toHaveURL(/ate=/);
+  });
 });
 
 test.describe("Checkout Asaas copy", () => {
@@ -30,5 +41,23 @@ test.describe("Checkout Asaas copy", () => {
   test("home menciona Asaas nos simuladores", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText(/Asaas/i).first()).toBeVisible();
+  });
+});
+
+test.describe("Lista de interesse pré-venda", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test("inscreve e-mail na lista de interesse", async ({ page }) => {
+    test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");
+
+    await waitForApiReady(90_000);
+    const { slug } = await seedPreVendaEvent();
+    const email = `interesse_e2e_${Date.now()}@test.com`;
+
+    await page.goto(`/eventos/${slug}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("lista-interesse-form")).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId("lista-interesse-email").fill(email);
+    await page.getByTestId("lista-interesse-submit").click();
+    await expect(page.getByText(/inscrição registrada|avisaremos/i)).toBeVisible({ timeout: 15_000 });
   });
 });

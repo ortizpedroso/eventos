@@ -134,6 +134,60 @@ export async function seedPublishedEvent(): Promise<SeededEvent> {
   };
 }
 
+/** Evento publicado com vendas futuras (lista de interesse pré-venda). */
+export async function seedPreVendaEvent(): Promise<SeededEvent> {
+  const suf = `${Date.now()}`;
+  const senha = "senha12345";
+  const orgEmail = `e2e_prevenda_org_${suf}@test.com`;
+  const vendasInicio = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19);
+
+  await api("POST", "/api/auth/registrar", {
+    email: orgEmail,
+    nome: "Org Pré-venda E2E",
+    senha,
+    tipo: "organizador",
+  });
+
+  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
+    email: orgEmail,
+    senha,
+  });
+
+  const ev = await api<{ id: string; slug: string; preco_compra?: number; preco_ingresso: number }>(
+    "POST",
+    "/api/eventos/criar",
+    {
+      nome: `E2E Pré-venda ${suf}`,
+      descricao: "Evento para teste lista de interesse",
+      data_inicio: "2026-12-20T19:00:00",
+      data_fim: "2026-12-20T23:00:00",
+      local: "São Paulo",
+      preco_ingresso: 30,
+      categoria: "Outros",
+      publicado: true,
+      aceita_interesse: true,
+      ingresso_lotes: [
+        {
+          nome: "Geral",
+          preco: 30,
+          ordem: 1,
+          ativo: true,
+          vendas_inicio: vendasInicio,
+        },
+      ],
+    },
+    orgToken,
+  );
+
+  return {
+    slug: ev.slug,
+    eventoId: ev.id,
+    precoReais: Number(ev.preco_compra ?? ev.preco_ingresso ?? 30),
+  };
+}
+
 export async function apiLogin(email: string, senha: string): Promise<string> {
   const { access_token } = await api<{ access_token: string }>("POST", "/api/auth/login", {
     email,

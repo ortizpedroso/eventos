@@ -33,7 +33,11 @@ export function ListaInteresseForm({ slug }: Props) {
   }
 
   return (
-    <form onSubmit={submit} className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+    <form
+      onSubmit={submit}
+      data-testid="lista-interesse-form"
+      className="rounded-xl border border-amber-200 bg-amber-50/50 p-4"
+    >
       <p className="text-sm font-medium text-amber-950">Vendas em breve — avise-me</p>
       <p className="mt-1 text-xs text-amber-900/80">Receba um e-mail quando os ingressos estiverem à venda.</p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -41,6 +45,7 @@ export function ListaInteresseForm({ slug }: Props) {
           type="email"
           required
           placeholder="Seu e-mail"
+          data-testid="lista-interesse-email"
           value={email}
           onChange={(ev) => setEmail(ev.target.value)}
           className="input flex-1"
@@ -52,7 +57,7 @@ export function ListaInteresseForm({ slug }: Props) {
           onChange={(ev) => setNome(ev.target.value)}
           className="input flex-1"
         />
-        <button type="submit" disabled={loading} className="btn-success shrink-0 px-4">
+        <button type="submit" disabled={loading} data-testid="lista-interesse-submit" className="btn-success shrink-0 px-4">
           {loading ? "…" : "Avisar-me"}
         </button>
       </div>

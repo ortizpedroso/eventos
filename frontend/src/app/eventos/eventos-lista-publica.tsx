@@ -10,7 +10,14 @@ import { EventosGridSkeleton } from "@/components/eventos-grid-skeleton";
 import { apiFetch } from "@/lib/api";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 import { EVENTO_CATEGORIAS, categoriaFromQuery } from "@/lib/evento-categorias";
-import { intervaloFiltroData, presetFromDeAte, type FiltroDataPreset } from "@/lib/filtro-data-eventos";
+import {
+  dateInputToIntervalo,
+  ehIntervaloCustomizado,
+  intervaloFiltroData,
+  isoToDateInputValue,
+  presetFromDeAte,
+  type FiltroDataPreset,
+} from "@/lib/filtro-data-eventos";
 import type { Evento } from "@/lib/types";
 
 type Props = {
@@ -47,6 +54,9 @@ export function EventosListaPublica({
   const [somenteVendasAbertas, setSomenteVendasAbertas] = useState(false);
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("data_asc");
   const [filtroData, setFiltroData] = useState<FiltroDataPreset>("");
+  const [dataDe, setDataDe] = useState("");
+  const [dataAte, setDataAte] = useState("");
+  const [erroIntervalo, setErroIntervalo] = useState<string | null>(null);
 
   // Refs com valores correntes para evitar closures desatualizadas no debounce
   const categoriaRef = useRef(categoria);
@@ -57,22 +67,39 @@ export function EventosListaPublica({
   buscaDebouncedRef.current = buscaDebounced;
 
   const buildUrl = useCallback(
-    (overrides: { categoria?: string; cidade?: string; busca?: string; filtroData?: FiltroDataPreset }) => {
+    (overrides: {
+      categoria?: string;
+      cidade?: string;
+      busca?: string;
+      filtroData?: FiltroDataPreset;
+      dataDe?: string;
+      dataAte?: string;
+    }) => {
       const cat = overrides.categoria !== undefined ? overrides.categoria : categoriaRef.current;
       const cid = overrides.cidade !== undefined ? overrides.cidade : cidadeRef.current;
       const q = overrides.busca !== undefined ? overrides.busca : buscaDebouncedRef.current;
       const fd = overrides.filtroData !== undefined ? overrides.filtroData : filtroData;
+      const deInput = overrides.dataDe !== undefined ? overrides.dataDe : dataDe;
+      const ateInput = overrides.dataAte !== undefined ? overrides.dataAte : dataAte;
       const params = new URLSearchParams();
       if (cat) params.set("categoria", cat);
       if (q.trim()) params.set("q", q.trim());
       if (cid.trim()) params.set("cidade", cid.trim());
-      const { de, ate } = intervaloFiltroData(fd);
-      if (de) params.set("de", de);
-      if (ate) params.set("ate", ate);
+
+      if (deInput.trim() && ateInput.trim()) {
+        const custom = dateInputToIntervalo(deInput, ateInput);
+        if (custom.de) params.set("de", custom.de);
+        if (custom.ate) params.set("ate", custom.ate);
+      } else if (fd) {
+        const { de, ate } = intervaloFiltroData(fd);
+        if (de) params.set("de", de);
+        if (ate) params.set("ate", ate);
+      }
+
       const qs = params.toString();
       return qs ? `${pathname}?${qs}` : pathname;
     },
-    [pathname, filtroData],
+    [pathname, filtroData, dataDe, dataAte],
   );
 
   const atualizarCategoria = useCallback(
@@ -103,8 +130,39 @@ export function EventosListaPublica({
     setCidade((atual) => (atual === cUrl ? atual : cUrl));
     const deUrl = searchParams.get("de")?.trim() ?? "";
     const ateUrl = searchParams.get("ate")?.trim() ?? "";
-    setFiltroData(presetFromDeAte(deUrl, ateUrl));
+    const preset = presetFromDeAte(deUrl, ateUrl);
+    setFiltroData(preset);
+    if (preset === "" && deUrl && ateUrl) {
+      setDataDe(isoToDateInputValue(deUrl));
+      setDataAte(isoToDateInputValue(ateUrl));
+    } else if (preset !== "") {
+      setDataDe("");
+      setDataAte("");
+    }
   }, [searchParams]);
+
+  function aplicarIntervaloCustom() {
+    if (!dataDe.trim() || !dataAte.trim()) {
+      setErroIntervalo("Informe data de início e fim.");
+      return;
+    }
+    const custom = dateInputToIntervalo(dataDe, dataAte);
+    if (!custom.de || !custom.ate) {
+      setErroIntervalo("Intervalo inválido. A data de início deve ser anterior ou igual à data de fim.");
+      return;
+    }
+    setErroIntervalo(null);
+    setFiltroData("");
+    router.replace(buildUrl({ filtroData: "", dataDe, dataAte }), { scroll: false });
+  }
+
+  function limparIntervaloCustom() {
+    setDataDe("");
+    setDataAte("");
+    setErroIntervalo(null);
+    setFiltroData("");
+    router.replace(buildUrl({ filtroData: "", dataDe: "", dataAte: "" }), { scroll: false });
+  }
 
   useEffect(() => {
     void (async () => {
@@ -185,7 +243,11 @@ export function EventosListaPublica({
     );
   }
 
-  const temFiltro = Boolean(categoria || buscaDebounced || cidade.trim());
+  const temFiltro = Boolean(categoria || buscaDebounced || cidade.trim() || filtroData || dataDe || dataAte);
+  const intervaloCustomAtivo = ehIntervaloCustomizado(
+    searchParams.get("de"),
+    searchParams.get("ate"),
+  );
 
   return (
     <div className="mx-auto mt-16 max-w-6xl sm:mt-20">
@@ -218,17 +280,70 @@ export function EventosListaPublica({
               type="button"
               onClick={() => {
                 setFiltroData(val);
-                router.replace(buildUrl({ filtroData: val }), { scroll: false });
+                setDataDe("");
+                setDataAte("");
+                setErroIntervalo(null);
+                router.replace(buildUrl({ filtroData: val, dataDe: "", dataAte: "" }), { scroll: false });
               }}
               className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                filtroData === val
-                  ? "bg-emerald-700 text-white"
-                  : "border border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-emerald-300"
+                val === ""
+                  ? !intervaloCustomAtivo && filtroData === ""
+                    ? "bg-emerald-700 text-white"
+                    : "border border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-emerald-300"
+                  : filtroData === val
+                    ? "bg-emerald-700 text-white"
+                    : "border border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-emerald-300"
               }`}
             >
               {label}
             </button>
           ))}
+        </div>
+
+        <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3">
+          <p className="text-xs font-medium text-zinc-700">Intervalo de datas (opcional)</p>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
+            <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-600">
+              De
+              <input
+                type="date"
+                value={dataDe}
+                onChange={(e) => setDataDe(e.target.value)}
+                data-testid="filtro-data-de"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-600">
+              Até
+              <input
+                type="date"
+                value={dataAte}
+                onChange={(e) => setDataAte(e.target.value)}
+                data-testid="filtro-data-ate"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+              />
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={aplicarIntervaloCustom}
+                data-testid="filtro-data-aplicar"
+                className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-800"
+              >
+                Aplicar
+              </button>
+              {dataDe || dataAte ? (
+                <button
+                  type="button"
+                  onClick={limparIntervaloCustom}
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:border-zinc-400"
+                >
+                  Limpar
+                </button>
+              ) : null}
+            </div>
+          </div>
+          {erroIntervalo ? <p className="mt-2 text-xs text-red-700">{erroIntervalo}</p> : null}
         </div>
 
         {cidadesOpcoes.length > 0 ? (

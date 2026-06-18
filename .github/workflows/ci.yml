@@ -102,6 +102,14 @@ jobs:
           PLAYWRIGHT_SKIP_WEBSERVER: "1"
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
           PLAYWRIGHT_API_URL: http://127.0.0.1:8000
+      - name: Teste E2E lista de interesse (patamar)
+        working-directory: frontend
+        run: npx playwright test --project=patamar -g "lista de interesse"
+        env:
+          CI: true
+          PLAYWRIGHT_SKIP_WEBSERVER: "1"
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          PLAYWRIGHT_API_URL: http://127.0.0.1:8000
 
   e2e-asaas:
     runs-on: ubuntu-latest

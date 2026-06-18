@@ -50,3 +50,28 @@ export function presetFromDeAte(de?: string | null, ate?: string | null): Filtro
   }
   return "";
 }
+
+/** Converte ISO da URL para valor de `<input type="date">` (YYYY-MM-DD). */
+export function isoToDateInputValue(iso?: string | null): string {
+  if (!iso?.trim()) return "";
+  const d = iso.trim().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : "";
+}
+
+/** Converte datas do seletor customizado em intervalo ISO para a API. */
+export function dateInputToIntervalo(de: string, ate: string): { de?: string; ate?: string } {
+  const deTrim = de.trim();
+  const ateTrim = ate.trim();
+  if (!deTrim || !ateTrim) return {};
+  const start = new Date(`${deTrim}T00:00:00`);
+  const end = new Date(`${ateTrim}T23:59:59`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return {};
+  if (start > end) return {};
+  return { de: start.toISOString(), ate: end.toISOString() };
+}
+
+/** True quando ?de=&ate= não corresponde a nenhum chip preset. */
+export function ehIntervaloCustomizado(de?: string | null, ate?: string | null): boolean {
+  if (!de?.trim() || !ate?.trim()) return false;
+  return presetFromDeAte(de, ate) === "";
+}

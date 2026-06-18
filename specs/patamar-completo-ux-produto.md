@@ -72,10 +72,10 @@ Elevar o EventosBR ao próximo patamar de produto e confiança de mercado, imple
 
 ### REQ-08 — Filtros de data (sem calendário visual)
 - Em `/eventos`, adicionar chips: **Hoje**, **Este fim de semana**, **Esta semana**.
-- Opcional: seletor de intervalo de datas (início/fim).
+- Seletor de intervalo de datas (início/fim) via `<input type="date">` + botão **Aplicar** (sem grade/calendário mensal).
 - **Não** implementar grade/calendário mensal (decisão explícita para evitar poluição).
 - Vista **padrão:** lista/grid atual.
-- **Concluído quando:** chips filtram resultados; URL reflete filtro (`?de=&ate=` ou parâmetros documentados).
+- **Concluído quando:** chips filtram resultados; intervalo customizado atualiza URL `?de=&ate=`; E2E cobre chip e intervalo.
 
 ### REQ-09 — Mapa na página do evento
 - Sempre exibir endereço + botão **“Abrir no Google Maps”** (link externo).
@@ -277,8 +277,10 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 - Cobrir no mínimo:
   - Busca navbar → vitrine
   - Filtro “Este fim de semana”
+  - Seletor de intervalo de datas (início/fim) na vitrine
   - Checkout com copy Asaas correto
-  - (Opcional mock) entrada lista de interesse
+  - Entrada lista de interesse (evento pré-venda via API mock E2E)
+- **Implementação:** `frontend/e2e/patamar-ux.spec.ts`; lista de interesse roda no job CI `e2e-compra` (requer `PLAYWRIGHT_API_URL`).
 
 ### REQ-35 — Revisão manual (Anexo C)
 - Build só é aprovada no `/review` quando Anexo C estiver 100% verificado.
@@ -343,7 +345,7 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 - [ ] Footer: sem links mortos; redes ocultas ou válidas  
 - [ ] Página evento: mapa/link, relacionados, urgência, simulador comprador  
 - [x] Checkout: badges Asaas; sem texto de outro processador  
-- [ ] Vitrine: chips Hoje/Fim de semana/Semana; sem calendário mensal  
+- [ ] Vitrine: chips Hoje/Fim de semana/Semana; intervalo De/Até; sem calendário mensal  
 - [ ] `/planos`: ícones SVG; comparativo Sympla com disclaimer  
 - [ ] Wizard + Financeiro: simuladores coerentes  
 - [ ] Parcelamento: toggle organizador 2/3/6/12x; checkout parcelas  
