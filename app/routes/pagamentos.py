@@ -2,7 +2,6 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
-import stripe
 from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, field_validator
@@ -19,7 +18,7 @@ from app.services.ingresso_lotes import (
     resolver_lote_compra,
     resolver_lote_por_id,
 )
-from app.services.ingresso_pago import marcar_ingresso_pago, marcar_ingressos_pi_pagos, notificar_ingresso_pago
+from app.services.ingresso_pago import marcar_ingresso_pago, notificar_ingresso_pago
 from app.services.pagamentos_asaas_handlers import (
     AsaasCobrancaRequest,
     cancelar_com_reembolso_asaas,
@@ -29,69 +28,17 @@ from app.services.pagamentos_asaas_handlers import (
     status_cobranca_asaas,
 )
 from app.services.ticket_email import enqueue_ticket_email
+from app.services.taxas_asaas_publicas import PARCELAMENTO_MINIMO_REAIS
 from app.utils.cpf import cpf_valido, normalizar_cpf
 from app.utils.ingresso_tipos import lote_e_cortesia
 from app.utils.privacy import mask_cpf, mask_telefone_br
-from app.utils.public_errors import PAGAMENTO_CLIENTE, REEMBOLSO_CLIENTE, STRIPE_CLIENTE
+from app.utils.public_errors import PAGAMENTO_CLIENTE, REEMBOLSO_CLIENTE
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-stripe.api_key = settings.STRIPE_SECRET_KEY
 
-
-def _stripe_erro_pix_inativo(err: stripe.error.StripeError) -> bool:
-    msg = str(err).lower()
-    return "pix" in msg and ("invalid" in msg or "not enabled" in msg or "not activated" in msg)
-
-
-# Janela do PIX: 30 minutos (1800s). A reserva do ingresso dura 35 min —
-# ligeiramente mais longa para cobrir latência de webhook no cancelamento do PI.
-_PIX_EXPIRY_SECONDS = 1800
 _RESERVA_MINUTOS = 35
-
-
-def _criar_payment_intent_brl(
-    *,
-    amount: int,
-    customer_id: str,
-    metadata: dict,
-    transfer_destination: str | None,
-    idempotency_key: str,
-) -> tuple[stripe.PaymentIntent, bool]:
-    """Cria PaymentIntent com card+pix. Retorna (intent, pix_disponivel).
-
-    idempotency_key garante que duplo clique ou retry de rede não cria
-    dois PaymentIntents distintos para o mesmo ingresso.
-    """
-    base: dict = {
-        "amount": amount,
-        "currency": "brl",
-        "customer": customer_id,
-        "metadata": metadata,
-    }
-    if transfer_destination:
-        base["transfer_data"] = {"destination": transfer_destination}
-
-    com_pix: dict = {
-        **base,
-        "payment_method_types": ["card", "pix"],
-        "payment_method_options": {"pix": {"expires_after_seconds": _PIX_EXPIRY_SECONDS}},
-    }
-    try:
-        return stripe.PaymentIntent.create(**com_pix, idempotency_key=idempotency_key), True
-    except stripe.error.InvalidRequestError as e:
-        if not _stripe_erro_pix_inativo(e):
-            raise
-        logger.warning(
-            "PIX não habilitado no Dashboard Stripe; PaymentIntent só com cartão (automatic_payment_methods)."
-        )
-        so_cartao: dict = {
-            **base,
-            "automatic_payment_methods": {"enabled": True, "allow_redirects": "never"},
-        }
-        return stripe.PaymentIntent.create(**so_cartao, idempotency_key=idempotency_key), False
-
 class CriarPagamentoRequest(BaseModel):
     evento_id: str
     lote_id: str | None = Field(default=None, max_length=64)
@@ -317,8 +264,11 @@ async def criar_pagamento(
             status_code=400,
             detail=f"Valor incorreto para o lote atual ({lote.nome}). Recarregue a página e tente novamente.",
         )
-    if not eh_cortesia and unit_centavos < 50:
-        raise HTTPException(status_code=400, detail="Valor mínimo de R$ 0,50 para ingressos pagos.")
+    if not eh_cortesia and unit_centavos < int(PARCELAMENTO_MINIMO_REAIS * 100):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Valor mínimo de R$ {PARCELAMENTO_MINIMO_REAIS:.2f} para ingressos pagos (Asaas).",
+        )
 
     limite_cpf = getattr(evento, "limite_ingressos_por_cpf", None)
     cpf_limite: str | None = p_cpf
@@ -346,7 +296,7 @@ async def criar_pagamento(
         agora = datetime.now(timezone.utc).replace(tzinfo=None)
         ids: list[str] = []
         for _ in range(quantidade):
-            fake_pi = f"{fake_prefix}_{uuid.uuid4().hex}"
+            fake_ref = f"{fake_prefix}_{uuid.uuid4().hex}"
             novo = Ingresso(
                 evento_id=evento.id,
                 usuario_id=usuario_atual.id,
@@ -359,7 +309,7 @@ async def criar_pagamento(
                 termo_compra_aceito_em=termo_aceite_em,
                 termo_compra_versao=termo_versao,
                 valor=unit_reais,
-                stripe_payment_intent_id=fake_pi,
+                asaas_payment_id=fake_ref,
                 status="pago",
                 data_compra=agora,
                 data_limite_cancelamento=agora + timedelta(days=10),
@@ -374,14 +324,16 @@ async def criar_pagamento(
         db.commit()
         for iid in ids:
             enqueue_ticket_email(iid)
-        return {
+        resp: dict = {
             "client_secret": "",
             "ingresso_id": ids[0],
             "ingresso_ids": ids,
             "quantidade": quantidade,
-            "stripe_disabled": True,
             "cortesia": eh_cortesia,
         }
+        if fake_prefix == "disabled":
+            resp["payments_disabled"] = True
+        return resp
 
     if eh_cortesia:
         logger.info(
@@ -408,27 +360,21 @@ async def criar_pagamento(
         logger.warning("Pagamentos desativados: ingresso pago sem gateway evento %s", evento.id)
         return _ingressos_gratis("disabled")
 
-    if settings.use_asaas:
-        if not (evento.asaas_wallet_id or "").strip():
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Este evento ainda não tem conta de repasse Asaas. "
-                    "O organizador deve configurar o walletId em Financeiro antes de vender ingressos."
-                ),
-            )
-        if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
-            raise HTTPException(
-                status_code=503,
-                detail="Pagamentos temporariamente indisponíveis. Contate o suporte.",
-            )
-    elif not usuario_atual.stripe_customer_id:
+    if not (evento.asaas_wallet_id or "").strip():
         raise HTTPException(
             status_code=400,
-            detail="Cliente Stripe não encontrado. Refaça o cadastro ou contate o suporte.",
+            detail=(
+                "Este evento ainda não tem conta de repasse Asaas. "
+                "O organizador deve configurar o walletId em Financeiro antes de vender ingressos."
+            ),
+        )
+    if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
+        raise HTTPException(
+            status_code=503,
+            detail="Pagamentos temporariamente indisponíveis. Contate o suporte.",
         )
 
-    # ── Reserva de vaga (Asaas e Stripe) ───────────────────────────────────
+    # ── Reserva de vaga ───────────────────────────────────────────────────
     try:
         reservar_vaga_lote(db, lote.id, quantidade)
     except ValueError as e:
@@ -449,7 +395,7 @@ async def criar_pagamento(
             cupom_id=cupom_id,
             cortesia_responsavel=resp_cortesia if eh_cortesia else None,
             valor=unit_reais,
-            stripe_payment_intent_id=None,
+            asaas_payment_id=None,
             status="pendente",
             reservado_ate=reserva_ate,
             termo_compra_aceito_em=termo_aceite_em,
@@ -461,55 +407,12 @@ async def criar_pagamento(
     for ing in novos:
         db.refresh(ing)
 
-    if settings.use_asaas:
-        return criar_resposta_asaas_apos_criar(
-            novos=novos,
-            valor_centavos=valor_centavos,
-            reserva_ate=reserva_ate,
-            quantidade=quantidade,
-        )
-
-    primeiro = novos[0]
-
-    try:
-        intent, pix_disponivel = _criar_payment_intent_brl(
-            amount=valor_centavos,
-            customer_id=usuario_atual.stripe_customer_id,
-            metadata={
-                "evento_id": evento.id,
-                "usuario_id": usuario_atual.id,
-                "participante_nome": (pn or "")[:450],
-                "participante_email": (pe or "")[:450],
-                "quantidade": str(quantidade),
-            },
-            transfer_destination=evento.stripe_account_id,
-            idempotency_key=f"pi_{primeiro.id}",
-        )
-        for ing in novos:
-            ing.stripe_payment_intent_id = intent.id
-        db.commit()
-
-        return {
-            "client_secret": intent.client_secret,
-            "ingresso_id": primeiro.id,
-            "ingresso_ids": [i.id for i in novos],
-            "quantidade": quantidade,
-            "pix_disponivel": pix_disponivel,
-            "valor_centavos": valor_centavos,
-            "cupom_aplicado": cupom_id is not None,
-            "reservado_ate": reserva_ate.isoformat() + "Z",
-        }
-
-    except stripe.error.StripeError as e:
-        logger.exception(
-            "Erro Stripe ao criar pagamento; cancelando reserva(s) %s",
-            ", ".join(i.id for i in novos),
-        )
-        for ing in novos:
-            ing.status = "cancelado"
-            ing.reservado_ate = None
-        db.commit()
-        raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
+    return criar_resposta_asaas_apos_criar(
+        novos=novos,
+        valor_centavos=valor_centavos,
+        reserva_ate=reserva_ate,
+        quantidade=quantidade,
+    )
 
 @router.get("/meus")
 async def listar_meus_pagamentos(
@@ -603,42 +506,7 @@ async def retomar_pagamento(
 
     validar_espera_para_ingresso_pendente(db, ingresso, body.token_espera)
 
-    pi_id = (ingresso.asaas_payment_id or ingresso.stripe_payment_intent_id or "").strip()
-    if settings.use_asaas:
-        if ingresso.status == "pago":
-            return {
-                "client_secret": "",
-                "ingresso_id": ingresso.id,
-                "ja_pago": True,
-                "reservado_ate": None,
-                "evento_slug": ingresso.evento.slug,
-            }
-        if settings.payments_disabled:
-            if not settings.permite_ingresso_sem_gateway:
-                raise HTTPException(
-                    status_code=503,
-                    detail="Pagamentos temporariamente indisponíveis. Tente novamente mais tarde.",
-                )
-            marcar_ingresso_pago(db, ingresso)
-            db.commit()
-            notificar_ingresso_pago(ingresso.id)
-            return {
-                "client_secret": "",
-                "ingresso_id": ingresso.id,
-                "ja_pago": True,
-                "payment_provider": "asaas",
-                "reservado_ate": None,
-                "evento_slug": ingresso.evento.slug,
-            }
-        return retomar_pagamento_asaas(db, ingresso)
-
-    if not pi_id or pi_id.startswith("cortesia_") or pi_id.startswith("disabled_"):
-        raise HTTPException(
-            status_code=400,
-            detail="Pagamento não disponível para retomada. Inicie uma nova compra.",
-        )
-
-    if settings.STRIPE_DISABLED:
+    if settings.payments_disabled:
         if not settings.permite_ingresso_sem_gateway:
             raise HTTPException(
                 status_code=503,
@@ -651,64 +519,12 @@ async def retomar_pagamento(
             "client_secret": "",
             "ingresso_id": ingresso.id,
             "ja_pago": True,
-            "stripe_disabled": True,
+            "payments_disabled": True,
+            "payment_provider": "asaas",
             "reservado_ate": None,
             "evento_slug": ingresso.evento.slug,
         }
-
-    try:
-        intent = stripe.PaymentIntent.retrieve(pi_id)
-    except stripe.error.StripeError as e:
-        logger.exception("Erro ao recuperar PaymentIntent %s", pi_id)
-        raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
-
-    if intent.status == "succeeded":
-        pagos = marcar_ingressos_pi_pagos(db, pi_id)
-        if pagos:
-            db.commit()
-            for iid in pagos:
-                notificar_ingresso_pago(iid)
-        else:
-            db.commit()
-        db.refresh(ingresso)
-        if ingresso.status == "pago":
-            return {
-                "client_secret": "",
-                "ingresso_id": ingresso.id,
-                "ja_pago": True,
-                "reservado_ate": None,
-                "evento_slug": ingresso.evento.slug,
-            }
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "Pagamento confirmado no gateway, mas o ingresso ainda não foi liberado. "
-                "Aguarde alguns instantes ou contate o suporte."
-            ),
-        )
-
-    if intent.status == "canceled":
-        raise HTTPException(
-            status_code=400,
-            detail="O pagamento anterior expirou. Inicie uma nova compra no evento.",
-        )
-
-    pix_disponivel = "pix" in (intent.payment_method_types or [])
-
-    return {
-        "client_secret": intent.client_secret,
-        "ingresso_id": ingresso.id,
-        "pix_disponivel": pix_disponivel,
-        "reservado_ate": (
-            ingresso.reservado_ate.isoformat() + "Z"
-            if ingresso.reservado_ate is not None
-            else None
-        ),
-        "participante_nome": ingresso.participante_nome,
-        "participante_email": ingresso.participante_email,
-        "valor_centavos": int(round(float(ingresso.valor or 0) * 100)),
-        "evento_slug": ingresso.evento.slug,
-    }
+    return retomar_pagamento_asaas(db, ingresso)
 
 @router.post("/cancelar")
 async def cancelar_ingresso(
@@ -735,7 +551,7 @@ async def cancelar_ingresso(
         return {
             "mensagem": "Ingresso já estava cancelado",
             "valor_reembolso": cancelamento_existente.valor_reembolso,
-            "refund_id": cancelamento_existente.stripe_refund_id,
+            "refund_id": cancelamento_existente.asaas_refund_id,
             "idempotent": True,
         }
     
@@ -744,46 +560,23 @@ async def cancelar_ingresso(
 
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
     skip_gateway_refund = settings.payments_disabled or (
-        (ingresso.asaas_payment_id or ingresso.stripe_payment_intent_id or "").startswith("disabled_")
+        (ingresso.asaas_payment_id or "").startswith("disabled_")
     )
 
     try:
         if skip_gateway_refund:
-            refund_id: str | None = None
             asaas_refund_id: str | None = None
             logger.warning(
                 "Cancelamento sem reembolso no gateway (modo teste): ingresso %s",
                 ingresso.id,
             )
-        elif settings.use_asaas:
-            asaas_refund_id = cancelar_com_reembolso_asaas(db, ingresso)
-            refund_id = None
         else:
-            outros_pagos = (
-                db.query(Ingresso)
-                .filter(
-                    Ingresso.stripe_payment_intent_id == ingresso.stripe_payment_intent_id,
-                    Ingresso.id != ingresso.id,
-                    Ingresso.status == "pago",
-                )
-                .count()
-            )
-            refund_kwargs: dict = {
-                "payment_intent": ingresso.stripe_payment_intent_id,
-                "reason": "requested_by_customer",
-                "idempotency_key": f"refund_{ingresso.id}",
-            }
-            if outros_pagos > 0:
-                refund_kwargs["amount"] = int(round(float(ingresso.valor or 0) * 100))
-            refund = stripe.Refund.create(**refund_kwargs)
-            refund_id = refund.id
-            asaas_refund_id = None
+            asaas_refund_id = cancelar_com_reembolso_asaas(db, ingresso)
 
         if cancelamento_existente:
             cancelamento = cancelamento_existente
             cancelamento.valor_reembolso = ingresso.valor
             cancelamento.status = "processado"
-            cancelamento.stripe_refund_id = refund_id
             cancelamento.asaas_refund_id = asaas_refund_id
             cancelamento.data_processamento = agora
         else:
@@ -791,7 +584,6 @@ async def cancelar_ingresso(
                 ingresso_id=ingresso.id,
                 valor_reembolso=ingresso.valor,
                 status="processado",
-                stripe_refund_id=refund_id,
                 asaas_refund_id=asaas_refund_id,
                 data_processamento=agora,
             )
@@ -808,11 +600,11 @@ async def cancelar_ingresso(
         return {
             "mensagem": "Ingresso cancelado com sucesso",
             "valor_reembolso": ingresso.valor,
-            "refund_id": refund_id,
+            "refund_id": asaas_refund_id,
         }
 
-    except stripe.error.StripeError as e:
-        logger.exception("Erro Stripe ao processar reembolso")
+    except Exception as e:
+        logger.exception("Erro ao processar reembolso")
         raise HTTPException(status_code=400, detail=REEMBOLSO_CLIENTE) from e
 
 

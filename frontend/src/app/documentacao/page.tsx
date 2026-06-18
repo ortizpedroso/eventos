@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 export const metadata: Metadata = {
   title: "Documentação do sistema | EventosBR",
   description:
-    "Arquitetura, API FastAPI, frontend Next.js, base de dados, pagamentos Stripe, lotes de ingressos e operação — EventosBR.",
+    "Arquitetura, API FastAPI, frontend Next.js, base de dados, pagamentos Asaas, lotes de ingressos e operação — EventosBR.",
 };
 
 const toc = [
@@ -48,7 +48,7 @@ export default function DocumentacaoPage() {
           </h1>
           <p className="mt-4 text-base text-zinc-600">
             Visão técnica do EventosBR: API em FastAPI, interface em Next.js, PostgreSQL (ou SQLite em
-            desenvolvimento), Redis na infraestrutura Docker e pagamentos com Stripe. O repositório inclui também
+            desenvolvimento), Redis na infraestrutura Docker e pagamentos com Asaas. O repositório inclui também
             ficheiros Markdown em <code className="rounded bg-zinc-200/80 px-1.5 py-0.5 text-xs">docs/</code> no
             código-fonte.
           </p>
@@ -87,7 +87,7 @@ export default function DocumentacaoPage() {
                 A <strong className="text-zinc-900">EventosBR</strong> permite a organizadores criarem eventos
                 (página pública por <strong className="text-zinc-900">slug</strong>), definirem{" "}
                 <strong className="text-zinc-900">lotes de ingressos</strong> (preço, ordem, capacidade, datas de
-                venda) e a participantes comprarem com <strong className="text-zinc-900">cartão</strong> via Stripe.
+                venda) e a participantes comprarem com <strong className="text-zinc-900">PIX ou cartão</strong> via Asaas.
                 Há fluxo de cancelamento com reembolso e relatórios para o organizador.
               </p>
               <ul className="list-disc space-y-1 pl-5">
@@ -95,7 +95,7 @@ export default function DocumentacaoPage() {
                   <strong className="text-zinc-900">API</strong>: Python, FastAPI, Pydantic, SQLAlchemy, Alembic.
                 </li>
                 <li>
-                  <strong className="text-zinc-900">Web</strong>: Next.js (App Router), TypeScript, Tailwind, Stripe.js.
+                  <strong className="text-zinc-900">Web</strong>: Next.js (App Router), TypeScript, Tailwind.
                 </li>
                 <li>
                   <strong className="text-zinc-900">Auth</strong>: JWT no header <code>Authorization: Bearer</code>.
@@ -144,9 +144,8 @@ export default function DocumentacaoPage() {
               <ul className="list-disc space-y-1 pl-5">
                 <li>
                   <code className="rounded bg-zinc-100 px-1">/api/auth</code> — registo, login,{" "}
-                  <code className="rounded bg-zinc-100 px-1">/me</code> (GET/PATCH); cria Stripe Customer e, para
-                  organizador, conta Connect Express (salvo flags de desactivação ou termos pendentes no Dashboard
-                  Stripe).
+                  <code className="rounded bg-zinc-100 px-1">/me</code> (GET/PATCH); organizadores configuram{" "}
+                  <code className="rounded bg-zinc-100 px-1">asaas_wallet_id</code> para receber repasses via split.
                 </li>
                 <li>
                   <code className="rounded bg-zinc-100 px-1">/api/eventos</code> — criar (organizador), atualizar por{" "}
@@ -166,7 +165,7 @@ export default function DocumentacaoPage() {
                   <code className="rounded bg-zinc-100 px-1">/organizador/participantes?formato=csv</code>).
                 </li>
                 <li>
-                  <code className="rounded bg-zinc-100 px-1">/api/webhooks</code> — Stripe (<code className="rounded bg-zinc-100 px-1">POST /stripe</code>) e mock de pagamento só em desenvolvimento.
+                  <code className="rounded bg-zinc-100 px-1">/api/webhooks</code> — Asaas (<code className="rounded bg-zinc-100 px-1">POST /asaas</code>) e mock de pagamento só em desenvolvimento.
                 </li>
               </ul>
               <p>
@@ -181,7 +180,7 @@ export default function DocumentacaoPage() {
                 Entidades principais: <strong className="text-zinc-900">Usuario</strong>,{" "}
                 <strong className="text-zinc-900">Evento</strong>, <strong className="text-zinc-900">EventoIngressoLote</strong>,{" "}
                 <strong className="text-zinc-900">Ingresso</strong>, <strong className="text-zinc-900">Cancelamento</strong>,{" "}
-                <strong className="text-zinc-900">StripeEvent</strong> (idempotência de webhooks). Chaves primárias em UUID string.
+                <strong className="text-zinc-900">WebhookEvent</strong> (idempotência de webhooks). Chaves primárias em UUID string.
               </p>
               <p>
                 O evento tem <code className="rounded bg-zinc-100 px-1">publicado</code> (vitrine e compra),{" "}
@@ -229,36 +228,39 @@ export default function DocumentacaoPage() {
                 <code className="rounded bg-zinc-100 px-1">POST /api/pagamentos/criar</code> resolve o{" "}
                 <strong className="text-zinc-900">lote atual</strong> por ordem, atividade, datas e capacidade; o
                 campo <code className="rounded bg-zinc-100 px-1">valor_centavos</code> tem de coincidir exatamente com
-                o preço desse lote. Cria-se um <code className="rounded bg-zinc-100 px-1">PaymentIntent</code> no Stripe
-                (com <code className="rounded bg-zinc-100 px-1">customer</code> do comprador) e um registo{" "}
-                <code className="rounded bg-zinc-100 px-1">Ingresso</code> em <code className="rounded bg-zinc-100 px-1">pendente</code>.
-                Se o evento tiver <code className="rounded bg-zinc-100 px-1">stripe_account_id</code>, usa-se{" "}
-                <code className="rounded bg-zinc-100 px-1">transfer_data.destination</code> para Connect.
+                o preço desse lote. Cria-se um registo <code className="rounded bg-zinc-100 px-1">Ingresso</code> em{" "}
+                <code className="rounded bg-zinc-100 px-1">pendente</code> com reserva de 35 minutos. O front chama{" "}
+                <code className="rounded bg-zinc-100 px-1">POST /api/pagamentos/asaas/cobranca</code> (PIX, cartão ou fatura).
+                Requer <code className="rounded bg-zinc-100 px-1">asaas_wallet_id</code> do organizador e split da plataforma.
               </p>
               <p>
-                Com <code className="rounded bg-zinc-100 px-1">STRIPE_DISABLED</code> na API, o fluxo pode concluir a
-                compra sem Stripe real (apenas para desenvolvimento controlado).
+                Com <code className="rounded bg-zinc-100 px-1">ASAAS_DISABLED</code> na API, o fluxo pode concluir a
+                compra sem cobrança real (apenas para desenvolvimento controlado).
               </p>
               <p>
                 Cancelamento: <code className="rounded bg-zinc-100 px-1">POST /api/pagamentos/cancelar</code> com
-                ingresso pago dentro do prazo; reembolso Stripe com chave de idempotência por ingresso.
+                ingresso pago dentro do prazo; reembolso via API Asaas.
               </p>
             </Section>
 
-            <Section id="webhooks" title="Webhooks Stripe">
+            <Section id="webhooks" title="Webhooks Asaas">
               <p>
-                <code className="rounded bg-zinc-100 px-1">POST /api/webhooks/stripe</code> valida o payload (
-                <code className="rounded bg-zinc-100 px-1">construct_event</code> quando há secret configurado). Eventos
-                duplicados são ignorados graças à tabela <code className="rounded bg-zinc-100 px-1">stripe_events</code>.
+                <code className="rounded bg-zinc-100 px-1">POST /api/webhooks/asaas</code> valida o header{" "}
+                <code className="rounded bg-zinc-100 px-1">asaas-access-token</code>. Eventos
+                duplicados são ignorados graças à tabela <code className="rounded bg-zinc-100 px-1">webhook_events</code>.
               </p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>
-                  <code className="rounded bg-zinc-100 px-1">payment_intent.succeeded</code> — marca o ingresso como{" "}
+                  <code className="rounded bg-zinc-100 px-1">PAYMENT_RECEIVED</code> /{" "}
+                  <code className="rounded bg-zinc-100 px-1">PAYMENT_CONFIRMED</code> — marca o ingresso como{" "}
                   <code className="rounded bg-zinc-100 px-1">pago</code>.
                 </li>
                 <li>
-                  <code className="rounded bg-zinc-100 px-1">payment_intent.payment_failed</code> — se ainda{" "}
-                  <code className="rounded bg-zinc-100 px-1">pendente</code>, passa a <code className="rounded bg-zinc-100 px-1">cancelado</code>.
+                  <code className="rounded bg-zinc-100 px-1">PAYMENT_REFUNDED</code> — cancela após reembolso.
+                </li>
+                <li>
+                  <code className="rounded bg-zinc-100 px-1">PAYMENT_OVERDUE</code> /{" "}
+                  <code className="rounded bg-zinc-100 px-1">PAYMENT_DELETED</code> — libera reserva pendente.
                 </li>
               </ul>
             </Section>
@@ -267,7 +269,7 @@ export default function DocumentacaoPage() {
               <p>
                 Variáveis principais na raiz: <code className="rounded bg-zinc-100 px-1">DATABASE_URL</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">SECRET_KEY</code> (obrigatória fora de development), chaves
-                Stripe, <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
+                Asaas (<code className="rounded bg-zinc-100 px-1">ASAAS_*</code>), <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">ENVIRONMENT</code>, <code className="rounded bg-zinc-100 px-1">DEBUG</code>.
               </p>
               <p>
@@ -278,7 +280,7 @@ export default function DocumentacaoPage() {
               </p>
               <p>
                 Testes automatizados: <code className="rounded bg-zinc-100 px-1">pytest tests/</code> (SQLite em memória,
-                Stripe mockado).
+                <code className="rounded bg-zinc-100 px-1"> ASAAS_DISABLED=true</code> por defeito).
               </p>
             </Section>
 

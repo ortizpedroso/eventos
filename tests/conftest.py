@@ -7,10 +7,8 @@ import pytest
 os.environ["ENVIRONMENT"] = "test"
 os.environ["RATE_LIMIT_USE_REDIS"] = "false"
 os.environ.setdefault("SECRET_KEY", "test-secret-key-with-at-least-32-chars-here")
-os.environ.setdefault("STRIPE_DISABLED", "true")
 os.environ.setdefault("ASAAS_DISABLED", "true")
 os.environ.setdefault("PAYMENT_PROVIDER", "asaas")
-os.environ.setdefault("STRIPE_SKIP_CONNECT_ON_REGISTER", "true")
 
 
 @pytest.fixture(scope="session", autouse=True)

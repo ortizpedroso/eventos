@@ -12,7 +12,11 @@ from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
 from app.services.asaas_client import AsaasAPIError
-from app.services.ingresso_pago import ingressos_lote_pendente, marcar_ingressos_pi_pagos, notificar_ingresso_pago
+from app.services.ingresso_pago import (
+    ingressos_lote_pendente,
+    notificar_ingresso_pago,
+    processar_cobranca_confirmada_gateway,
+)
 from app.services.pagamento_asaas import (
     cancelar_cobranca_pendente,
     criar_cobranca_asaas,
@@ -80,15 +84,35 @@ def criar_resposta_asaas_apos_criar(
     }
 
 
+def _lock_ingresso_e_lote(db: Session, ingresso_id: str, usuario: Usuario) -> Ingresso:
+    """Trava ingresso e lote pendente (SELECT FOR UPDATE) para evitar cobranças duplicadas."""
+    ingresso = (
+        db.query(Ingresso)
+        .filter(Ingresso.id == ingresso_id)
+        .with_for_update()
+        .first()
+    )
+    ingresso = _validar_ingresso_pendente(ingresso, usuario)
+    pay_id = (ingresso.asaas_payment_id or "").strip()
+    if pay_id:
+        db.query(Ingresso).filter(Ingresso.asaas_payment_id == pay_id).with_for_update().all()
+    else:
+        db.query(Ingresso).filter(
+            Ingresso.usuario_id == ingresso.usuario_id,
+            Ingresso.evento_id == ingresso.evento_id,
+            Ingresso.status == "pendente",
+            Ingresso.reservado_ate == ingresso.reservado_ate,
+        ).with_for_update().all()
+    db.refresh(ingresso)
+    return ingresso
+
+
 def iniciar_cobranca_asaas(
     db: Session,
     usuario: Usuario,
     body: AsaasCobrancaRequest,
 ) -> dict:
-    ingresso = _validar_ingresso_pendente(
-        db.query(Ingresso).filter(Ingresso.id == body.ingresso_id).first(),
-        usuario,
-    )
+    ingresso = _lock_ingresso_e_lote(db, body.ingresso_id, usuario)
     from app.services.lista_espera import validar_espera_para_ingresso_pendente
 
     validar_espera_para_ingresso_pendente(db, ingresso, body.token_espera)
@@ -116,7 +140,7 @@ def iniciar_cobranca_asaas(
         try:
             existing = obter_cobranca(pay_id)
             if status_eh_pago(existing.get("status")):
-                pagos = marcar_ingressos_pi_pagos(db, pay_id)
+                pagos = processar_cobranca_confirmada_gateway(db, pay_id)
                 db.commit()
                 for iid in pagos:
                     notificar_ingresso_pago(iid)
@@ -145,7 +169,7 @@ def iniciar_cobranca_asaas(
                 ) from e
             for ing in lote:
                 ing.asaas_payment_id = None
-            db.commit()
+            db.flush()
         except AsaasAPIError as e:
             logger.warning("Cobrança Asaas anterior %s: %s", pay_id, e)
             raise HTTPException(
@@ -196,6 +220,7 @@ def iniciar_cobranca_asaas(
             remote_ip=body.remote_ip,
             installment_count=installment_count,
             quantidade=len(lote),
+            idempotency_key=f"cobranca_{ingresso.id}",
         )
     except AsaasAPIError as e:
         logger.exception("Erro Asaas ao criar cobrança")
@@ -210,7 +235,7 @@ def iniciar_cobranca_asaas(
     db.commit()
 
     if status_eh_pago(payment.get("status")):
-        pagos = marcar_ingressos_pi_pagos(db, pid)
+        pagos = processar_cobranca_confirmada_gateway(db, pid)
         db.commit()
         for iid in pagos:
             notificar_ingresso_pago(iid)
@@ -258,13 +283,10 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
         raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
 
     if status_eh_pago(payment.get("status")):
-        pagos = marcar_ingressos_pi_pagos(db, pay_id)
-        if pagos:
-            db.commit()
-            for iid in pagos:
-                notificar_ingresso_pago(iid)
-        else:
-            db.commit()
+        pagos = processar_cobranca_confirmada_gateway(db, pay_id)
+        db.commit()
+        for iid in pagos:
+            notificar_ingresso_pago(iid)
         db.refresh(ingresso)
         if ingresso.status == "pago":
             return {
@@ -304,7 +326,7 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
 
 def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
     pay_id = (ingresso.asaas_payment_id or "").strip()
-    if not pay_id or pay_id.startswith("disabled_") or pay_id.startswith("cortesia_"):
+    if not pay_id or pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:")):
         return None
     outros_pagos = (
         db.query(Ingresso)
@@ -348,18 +370,7 @@ def status_cobranca_asaas(db: Session, ingresso_id: str, usuario: Usuario) -> di
         raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
     pago_gateway = status_eh_pago(payment.get("status"))
     if pago_gateway:
-        from app.services.lista_espera import validar_espera_para_ingresso_pendente
-
-        try:
-            validar_espera_para_ingresso_pendente(db, ingresso, None)
-        except HTTPException:
-            db.refresh(ingresso)
-            return {
-                "status": payment.get("status"),
-                "pago": False,
-                "payment_id": pay_id,
-            }
-        pagos = marcar_ingressos_pi_pagos(db, pay_id)
+        pagos = processar_cobranca_confirmada_gateway(db, pay_id, payment=payment)
         db.commit()
         for iid in pagos:
             notificar_ingresso_pago(iid)

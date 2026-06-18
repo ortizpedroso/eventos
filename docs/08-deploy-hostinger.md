@@ -33,7 +33,7 @@ Ficheiros principais:
 2. **Secrets** — `.\scripts\generate-secrets.ps1` (guardar no gestor de senhas).
 3. **Domínio na Hostinger** — registar; preparar zona DNS (ver Fase C).
 4. **E-mail** — criar `noreply@seudominio.com.br` (Hostinger Email ou Brevo/Resend).
-5. **Stripe** — continuar em **modo test**; webhook dev com CLI (`scripts/stripe-webhook-dev.ps1`).
+5. **Asaas** — sandbox ou produção; webhook em `https://<domínio>/api/webhooks/asaas` (ver [11-go-live-asaas.md](./11-go-live-asaas.md)).
 
 ## Fase B — Preparar o VPS (sem tráfego público ainda)
 
@@ -69,7 +69,7 @@ Ficheiros principais:
 
 1. **DNS** na Hostinger (zona do domínio):
    - `A` `@` → IP do VPS
-   - `A` `www` → IP do VPS (ou `CNAME` para `@`)
+   - `A` `www` → IP do VPS (Caddy redireciona www → apex)
 2. **E-mail** — registos **SPF**, **DKIM** (painel Hostinger → Email → DNS).
 3. **Asaas produção** (provedor principal — ver `docs/11-go-live-asaas.md`)
    - `PAYMENT_PROVIDER=asaas`
@@ -82,7 +82,7 @@ Ficheiros principais:
    - `ENVIRONMENT=production`, `DEBUG=False`
    - `CORS_ORIGINS=https://seudominio.com.br,https://www.seudominio.com.br`
    - `FRONTEND_PUBLIC_URL` / `NEXT_PUBLIC_API_URL` com HTTPS
-   - `STRIPE_DISABLED=true` (se não usar Stripe em paralelo)
+   - `ASAAS_DISABLED=false` (não use `true` em produção)
 5. Recriar containers:
    ```bash
    ./scripts/deploy-vps.sh
@@ -107,7 +107,7 @@ cd /opt/eventosbr
 
 ## Troubleshooting
 
-- [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) — webhook Stripe, Docker, admin.
+- [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) — webhook Asaas, Docker, admin.
 - Após mudar `.env`: `docker compose -f docker-compose.prod.yml up -d` (não só `restart`).
 - Logs: `docker compose -f docker-compose.prod.yml logs -f api web caddy`
 

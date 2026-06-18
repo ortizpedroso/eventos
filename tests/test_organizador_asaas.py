@@ -155,3 +155,49 @@ class TestOrganizadorAsaas:
         assert st.status_code == 200
         assert st.json()["tem_subconta"] is True
         assert st.json()["wallet_id"] == wallet
+
+    def test_subconta_api_key_criptografada_no_banco(self):
+        from app.models import Usuario
+        from app.services.organizador_asaas import criar_subconta_organizador
+        from app.utils.secret_storage import decrypt_at_rest, is_encrypted_at_rest
+
+        db = TestingSessionLocal()
+        try:
+            usuario = Usuario(
+                id=str(uuid.uuid4()),
+                email=f"enc_{uuid.uuid4().hex[:8]}@test.com",
+                nome="Org Enc",
+                senha_hash="x",
+                tipo="organizador",
+            )
+            db.add(usuario)
+            db.commit()
+
+            wallet = str(uuid.uuid4())
+            mock_resp = {"id": "acc_enc", "walletId": wallet, "apiKey": "sub_key_secret"}
+            with (
+                patch("app.services.organizador_asaas.settings") as mock_settings,
+                patch("app.services.organizador_asaas.get_asaas_client") as mock_client_factory,
+            ):
+                mock_settings.use_asaas = True
+                mock_client = MagicMock()
+                mock_client.post.return_value = mock_resp
+                mock_client_factory.return_value = mock_client
+                criar_subconta_organizador(
+                    db,
+                    usuario,
+                    cpf_cnpj="52998224725",
+                    telefone="11987654321",
+                    renda_mensal=8000,
+                    cep="89010025",
+                    endereco="Rua Teste",
+                    numero="100",
+                    bairro="Centro",
+                )
+
+            db.refresh(usuario)
+            assert is_encrypted_at_rest(usuario.asaas_subaccount_api_key)
+            assert decrypt_at_rest(usuario.asaas_subaccount_api_key) == "sub_key_secret"
+            assert usuario.asaas_subaccount_api_key != "sub_key_secret"
+        finally:
+            db.close()

@@ -8,7 +8,7 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 |----------|------------------|
 | **`next.config.ts`** | `output: "standalone"` (imagem Docker); **`rewrites`**: `/api/:path*` → backend (`API_PROXY_TARGET` ou `INTERNAL_API_URL` ou `http://127.0.0.1:8000`); normalização para não duplicar `/api` no alvo; **`outputFileTracingRoot`**: raiz do monorepo para tracing correto |
 | **`package.json`** | `dev`: `next dev --webpack -p 3000` |
-| **`.env.local`** | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, opcionais de OAuth e email (ver `.env.local.example`) |
+| **`.env.local`** | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_PAYMENT_PROVIDER=asaas`, opcionais OAuth (ver `.env.local.example`) |
 
 ---
 
@@ -44,7 +44,7 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 | `IngressoListItem` | `id`, `evento`, `participante_nome/email`, `valor`, `status`, `data_compra`, **`repassado_para_nome`**, **`repassado_para_email`**, **`repassado_em`** |
 | `PagamentoListItem` | `id`, `evento`, `participante_*`, `valor`, `status`, `data_compra`, `data_limite_cancelamento` |
 | `TokenResponse` | `access_token`, `token_type`, `usuario` |
-| `CriarPagamentoResponse` | `client_secret`, `ingresso_id`, `stripe_disabled?`, `cortesia?`, `pix_disponivel?` |
+| `CriarPagamentoResponse` | `ingresso_id`, `aguardando_cobranca?`, `payments_disabled?`, `cortesia?`, `pix?` |
 
 ---
 
@@ -71,9 +71,10 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 
 | Componente | Função |
 |------------|--------|
-| **`comprar-ingresso.tsx`** | Fluxo Stripe Elements: cria intent via API, participante opcional (CPF/tel), `ConfirmForm` |
+| **`comprar-ingresso.tsx`** | Fluxo de compra: cria cobrança via API, participante opcional (CPF/tel), painel Asaas |
+| **`checkout-asaas-painel.tsx`** | Checkout PIX, cartão e fatura via Asaas |
+| **`compra-info-confianca.tsx`** | Bloco de confiança (denúncia, Asaas, links legais) |
 | **`oauth-login-buttons.tsx`** | Botões de login social (Google); lê `/api/auth/oauth-config` para habilitar/desabilitar |
-| **`compra-info-confianca.tsx`** | Bloco de confiança (denúncia, Stripe, links legais) |
 | **`evento-lotes-editor.tsx`** | UI de lotes no criar/editar; serialização para API |
 | **`evento-imagem-field.tsx`** | URL ou ficheiro para imagem do evento |
 | **`evento-hero-banner.tsx`** | Banner da página pública |
@@ -93,10 +94,10 @@ Em **`/conta/ingressos/[id]`**, se `ingresso.status === "pago"`:
 
 ---
 
-## Integração Stripe no front
+## Integração Asaas no front
 
-- **`lib/stripe-client.ts`**: lazy load de `loadStripe` com publishable key.
-- **`comprar-ingresso.tsx`**: `<Elements clientSecret=...>` + `PaymentElement`; `return_url` para área de pagamentos após redirect methods (ex.: PIX).
+- **`components/checkout-asaas-painel.tsx`**: checkout PIX, cartão e fatura via Asaas.
+- **`comprar-ingresso.tsx`**: orquestra criação da cobrança e exibe o painel Asaas; `return_url` para a página do evento após pagamento.
 
 ---
 

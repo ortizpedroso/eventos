@@ -38,7 +38,7 @@ export function mapCheckoutError(raw: string): string {
   if (lower.includes("e-mail já") || lower.includes("email já") || lower.includes("409")) {
     return "Este e-mail já tem conta. Use «Entrar» ou «Continuar com Google».";
   }
-  if (lower.includes("stripe") && lower.includes("cliente")) {
+  if (lower.includes("pagamento") && (lower.includes("cliente") || lower.includes("asaas"))) {
     return "Não foi possível preparar o pagamento. Tente de novo em instantes ou entre em contato com o suporte.";
   }
   return msg;

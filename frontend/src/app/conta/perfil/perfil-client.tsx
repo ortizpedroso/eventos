@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { ContaNav } from "@/components/conta-nav";
+import { PerfilPublicoOrganizador } from "@/components/perfil-publico-organizador";
 import { apiFetch } from "@/lib/api";
 import type { Usuario } from "@/lib/types";
 import { onlyDigits } from "@/lib/cpf";
@@ -416,6 +417,7 @@ export function PerfilClient() {
           </div>
         </form>
       </section>
+      {user.tipo === "organizador" ? <PerfilPublicoOrganizador /> : null}
     </div>
   );
 }

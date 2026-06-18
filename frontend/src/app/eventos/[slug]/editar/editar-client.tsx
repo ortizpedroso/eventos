@@ -15,6 +15,7 @@ import {
 } from "@/components/evento-lotes-editor";
 import { EventoImagemField } from "@/components/evento-imagem-field";
 import { EventoConfigAvancadaFields } from "@/components/evento-config-avancada-fields";
+import { EventoWizardSimuladorLiquido } from "@/components/evento-wizard-simulador-liquido";
 import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
 import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
 import { apiFetch, getApiBaseUrl } from "@/lib/api";
@@ -394,6 +395,12 @@ export function EditarEventoClient({ slug }: Props) {
 
           <div className="grid gap-2">
             <EventoLotesEditor rows={loteRows} onChange={setLoteRows} />
+            <EventoWizardSimuladorLiquido
+              preco={precoMinimoDosLotes(loteRows)}
+              ocultar={precoMinimoDosLotes(loteRows) < 0.5}
+              parcelamentoHabilitado={evento.parcelamento_habilitado ?? false}
+              parcelamentoMax={evento.parcelamento_max ?? 2}
+            />
           </div>
 
           <div className="grid gap-2">

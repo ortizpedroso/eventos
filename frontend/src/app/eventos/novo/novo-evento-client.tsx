@@ -114,6 +114,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [formDataInicio, setFormDataInicio] = useState("");
   const [formLocal, setFormLocal] = useState("");
   const [formPublicado, setFormPublicado] = useState(true);
+  const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
+  const [parcelamentoMax, setParcelamentoMax] = useState(2);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -428,6 +430,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   <EventoWizardSimuladorLiquido
                     preco={precoSimples}
                     ocultar={eventoGratuito}
+                    parcelamentoHabilitado={parcelamentoHabilitado}
+                    parcelamentoMax={parcelamentoMax}
                   />
                 </div>
               ) : (
@@ -475,7 +479,23 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     vitrine; só o organizador logado acessa o link. Venda desativada até republicar.
                   </span>
                 </label>
-                <EventoConfigAvancadaFields />
+                <EventoConfigAvancadaFields
+                  onParcelamentoChange={(hab, max) => {
+                    setParcelamentoHabilitado(hab);
+                    setParcelamentoMax(max);
+                  }}
+                />
+                <EventoWizardSimuladorLiquido
+                  preco={modoSimples ? precoSimples : precoMinimoDosLotes(loteRows)}
+                  ocultar={
+                    eventoGratuito ||
+                    (modoSimples
+                      ? parseFloat(precoSimples.replace(",", ".")) < 0.5
+                      : precoMinimoDosLotes(loteRows) < 0.5)
+                  }
+                  parcelamentoHabilitado={parcelamentoHabilitado}
+                  parcelamentoMax={parcelamentoMax}
+                />
                 <EventoVisibilidadeAvisosLegais />
               </div>
             </section>

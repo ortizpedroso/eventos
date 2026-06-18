@@ -1,4 +1,4 @@
-# Stack para testes E2E locais (compra sem Stripe real).
+# Stack para testes E2E locais (compra sem cobrança real — ASAAS_DISABLED).
 # Projeto isolado (evita conflito de volume/senha com docker-compose.yml de dev).
 # Uso: docker compose -p eventosbr-e2e -f docker-compose.e2e.yml up -d --build --wait
 #      cd frontend && PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:e2e:compra
@@ -38,8 +38,8 @@ services:
       SECRET_KEY: e2e-secret-key-minimum-32-characters-long
       ENVIRONMENT: development
       DEBUG: "True"
-      STRIPE_DISABLED: "true"
-      STRIPE_SKIP_CONNECT_ON_REGISTER: "true"
+      ASAAS_DISABLED: "true"
+      PAYMENT_PROVIDER: asaas
       CORS_ORIGINS: http://127.0.0.1:3000,http://localhost:3000
       FRONTEND_PUBLIC_URL: http://127.0.0.1:3000
       PLATFORM_ADMIN_API_KEY: e2e-admin-key-for-tests-only
@@ -73,7 +73,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
-        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+        NEXT_PUBLIC_PAYMENT_PROVIDER: asaas
     ports:
       - "3000:3000"
     environment:

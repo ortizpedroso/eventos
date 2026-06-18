@@ -12,6 +12,7 @@ from app.models import Evento, Ingresso, Usuario
 from app.services.asaas_client import AsaasAPIError, AsaasClient, get_asaas_client
 from app.services.tarifas_plataforma import taxa_ingresso
 from app.utils.cpf import normalizar_cpf
+from app.utils.secret_storage import decrypt_at_rest, encrypt_at_rest
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def _digits(s: str | None, max_len: int) -> str:
 
 
 def _client_subconta(usuario: Usuario) -> AsaasClient | None:
-    key = (usuario.asaas_subaccount_api_key or "").strip()
+    key = decrypt_at_rest(usuario.asaas_subaccount_api_key)
     if not key:
         return None
     return AsaasClient(api_key=key)
@@ -170,7 +171,7 @@ def criar_subconta_organizador(
     usuario.asaas_account_id = account_id
     usuario.asaas_wallet_id = wallet_id
     if api_key:
-        usuario.asaas_subaccount_api_key = str(api_key)
+        usuario.asaas_subaccount_api_key = encrypt_at_rest(str(api_key))
     db.add(usuario)
     db.query(Evento).filter(Evento.organizador_id == usuario.id).update(
         {Evento.asaas_wallet_id: wallet_id},

@@ -222,7 +222,13 @@ class TestPagamentosAsaas:
             )
         assert cob.status_code == 200, cob.text
 
-        with patch("app.routes.webhooks.settings") as wh_settings:
+        with (
+            patch("app.routes.webhooks.settings") as wh_settings,
+            patch(
+                "app.services.pagamento_asaas.obter_cobranca",
+                return_value={"id": pay_id, "status": "RECEIVED"},
+            ),
+        ):
             wh_settings.ASAAS_WEBHOOK_TOKEN = "tok_test"
             wh_settings.ENVIRONMENT = "test"
             payload = {
@@ -237,7 +243,13 @@ class TestPagamentosAsaas:
             )
         assert wh.status_code == 200
 
-        with patch("app.routes.pagamentos.settings") as route_settings:
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch(
+                "app.services.pagamentos_asaas_handlers.obter_cobranca",
+                return_value={"id": pay_id, "status": "RECEIVED"},
+            ),
+        ):
             route_settings.use_asaas = True
             st = client.get(
                 f"/api/pagamentos/asaas/status/{iid}",
@@ -398,7 +410,7 @@ def test_webhook_asaas_refund_cancela_pago():
         db.close()
 
 
-def test_webhook_asaas_422_quando_ingresso_nao_liberado():
+def test_webhook_asaas_reembolsa_quando_ingresso_nao_liberado():
     from tests import test_api as ta
 
     db = ta.TestingSessionLocal()
@@ -428,9 +440,14 @@ def test_webhook_asaas_422_quando_ingresso_nao_liberado():
     finally:
         db.close()
 
-    with patch("app.routes.webhooks.settings") as wh_settings:
+    with (
+        patch("app.routes.webhooks.settings") as wh_settings,
+        patch("app.services.pagamento_asaas.obter_cobranca") as mock_obter,
+        patch("app.services.pagamento_asaas.reembolsar_cobranca") as mock_reembolso,
+    ):
         wh_settings.ASAAS_WEBHOOK_TOKEN = "tok_test"
         wh_settings.ENVIRONMENT = "test"
+        mock_obter.return_value = {"id": "pay_wh422", "status": "CONFIRMED"}
         payload = {
             "id": f"evt_{uuid.uuid4().hex[:8]}",
             "event": "PAYMENT_CONFIRMED",
@@ -441,7 +458,16 @@ def test_webhook_asaas_422_quando_ingresso_nao_liberado():
             headers={"asaas-access-token": "tok_test", "content-type": "application/json"},
             content=json.dumps(payload),
         )
-    assert wh.status_code == 422
+    assert wh.status_code == 200
+    mock_reembolso.assert_called_once_with("pay_wh422", idempotency_key="refund_pay_wh422")
+
+    db = ta.TestingSessionLocal()
+    try:
+        ing = db.query(Ingresso).filter(Ingresso.asaas_payment_id == "pay_wh422").first()
+        assert ing is not None
+        assert ing.status == "cancelado"
+    finally:
+        db.close()
 
 
 def test_cobranca_card_remote_ip_do_servidor():
@@ -566,7 +592,7 @@ def test_iniciar_cobranca_nao_recria_se_obter_cobranca_falha():
             db.close()
 
 
-def test_status_cobranca_pago_false_sem_403_quando_espera_bloqueia():
+def test_status_cobranca_reembolsa_quando_espera_bloqueia():
     from datetime import datetime, timedelta, timezone
 
     from app.models import EventoListaEspera
@@ -600,9 +626,16 @@ def test_status_cobranca_pago_false_sem_403_quando_espera_bloqueia():
     finally:
         db.close()
 
-    with patch(
-        "app.services.pagamentos_asaas_handlers.obter_cobranca",
-        return_value={"status": "CONFIRMED", "id": "pay_poll_espera"},
+    with (
+        patch(
+            "app.services.pagamentos_asaas_handlers.obter_cobranca",
+            return_value={"status": "CONFIRMED", "id": "pay_poll_espera"},
+        ),
+        patch(
+            "app.services.pagamento_asaas.obter_cobranca",
+            return_value={"status": "CONFIRMED", "id": "pay_poll_espera"},
+        ),
+        patch("app.services.pagamento_asaas.reembolsar_cobranca") as mock_reembolso,
     ):
         db = tpu._db()
         try:
@@ -612,9 +645,135 @@ def test_status_cobranca_pago_false_sem_403_quando_espera_bloqueia():
             assert out["pago"] is False
             assert out["status"] == "CONFIRMED"
             db.refresh(ing)
-            assert ing.status == "pendente"
+            assert ing.status == "cancelado"
+            mock_reembolso.assert_called_once_with("pay_poll_espera", idempotency_key="refund_pay_poll_espera")
         finally:
             db.close()
+
+
+def test_webhook_gateway_falha_retorna_503_sem_evento():
+    from app.models import WebhookEvent
+    from tests import test_api as ta
+
+    event_id = f"evt_{uuid.uuid4().hex[:8]}"
+    with (
+        patch("app.routes.webhooks.settings") as wh_settings,
+        patch(
+            "app.services.pagamento_asaas.obter_cobranca",
+            side_effect=__import__("app.services.asaas_client", fromlist=["AsaasAPIError"]).AsaasAPIError(
+                "indisponível"
+            ),
+        ),
+    ):
+        wh_settings.ASAAS_WEBHOOK_TOKEN = "tok_test"
+        wh_settings.ENVIRONMENT = "test"
+        wh = client.post(
+            "/api/webhooks/asaas",
+            headers={"asaas-access-token": "tok_test", "content-type": "application/json"},
+            content=json.dumps(
+                {
+                    "id": event_id,
+                    "event": "PAYMENT_CONFIRMED",
+                    "payment": {"id": "pay_gateway_down"},
+                }
+            ),
+        )
+    assert wh.status_code == 503
+
+    db = ta.TestingSessionLocal()
+    try:
+        assert db.get(WebhookEvent, event_id) is None
+    finally:
+        db.close()
+
+
+def test_orfao_ingresso_cancelado_reembolsa():
+    from app.services.ingresso_pago import processar_cobranca_confirmada_gateway
+    from tests import test_patamar_ux as tpu
+
+    db = tpu._db()
+    try:
+        org = tpu._criar_org(db)
+        ev = tpu._criar_evento(db, org.id)
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="late@ex.com",
+            valor=50.0,
+            status="cancelado",
+            asaas_payment_id="pay_late",
+        )
+        db.add(ing)
+        db.commit()
+
+        with (
+            patch(
+                "app.services.pagamento_asaas.obter_cobranca",
+                return_value={"id": "pay_late", "status": "CONFIRMED"},
+            ),
+            patch("app.services.pagamento_asaas.reembolsar_cobranca") as mock_reembolso,
+        ):
+            processar_cobranca_confirmada_gateway(
+                db,
+                "pay_late",
+                payment={"id": "pay_late", "status": "CONFIRMED"},
+            )
+        mock_reembolso.assert_called_once_with("pay_late", idempotency_key="refund_pay_late")
+        db.refresh(ing)
+        assert ing.status == "cancelado"
+    finally:
+        db.close()
+
+
+def test_reembolso_falha_mantem_reserva_pendente():
+    from app.services.ingresso_pago import processar_cobranca_confirmada_gateway
+    from tests import test_patamar_ux as tpu
+
+    db = tpu._db()
+    try:
+        org = tpu._criar_org(db)
+        ev = tpu._criar_evento(db, org.id)
+        ev.lista_espera_habilitada = True
+        db.commit()
+        from app.services.lista_espera import inscrever_espera
+        from datetime import datetime, timedelta, timezone
+
+        entrada = inscrever_espera(db, ev, email="fila@ex.com")
+        entrada.status = "notificado"
+        entrada.token_compra = f"tok-{uuid.uuid4().hex[:8]}"
+        entrada.token_expira_em = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="outro@ex.com",
+            valor=50.0,
+            status="pendente",
+            asaas_payment_id="pay_refund_fail",
+        )
+        db.add(ing)
+        db.commit()
+
+        from app.services.asaas_client import AsaasAPIError
+
+        with (
+            patch(
+                "app.services.pagamento_asaas.obter_cobranca",
+                return_value={"id": "pay_refund_fail", "status": "CONFIRMED"},
+            ),
+            patch(
+                "app.services.pagamento_asaas.reembolsar_cobranca",
+                side_effect=AsaasAPIError("falhou"),
+            ),
+        ):
+            processar_cobranca_confirmada_gateway(
+                db,
+                "pay_refund_fail",
+                payment={"id": "pay_refund_fail", "status": "CONFIRMED"},
+            )
+        db.refresh(ing)
+        assert ing.status == "pendente"
+    finally:
+        db.close()
 
 
 def test_split_cap_nao_excede_valor():

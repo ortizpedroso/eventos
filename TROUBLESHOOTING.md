@@ -9,7 +9,7 @@ Estes erros aparecem quando o VS Code não consegue encontrar as bibliotecas Pyt
 ```
 ❌ Não foi possível resolver a importação "fastapi"
 ❌ Não foi possível resolver a importação "sqlalchemy"
-❌ Não foi possível resolver a importação "stripe"
+❌ Não foi possível resolver a importação "pydantic"
 ```
 
 ### ✅ Solução (Escolha uma)
@@ -19,7 +19,7 @@ Estes erros aparecem quando o VS Code não consegue encontrar as bibliotecas Pyt
 ```bash
 # 1. Configure o .env
 cp .env.example .env
-# Edite .env com suas chaves Stripe
+# Edite .env com suas chaves Asaas
 
 # 2. Inicie com Docker
 docker-compose up -d --build
@@ -184,7 +184,7 @@ uvicorn app.main:app --reload
 # Ative o ambiente virtual primeiro!
 pip list
 
-# Deve conter: fastapi, sqlalchemy, stripe, pydantic, etc
+# Deve conter: fastapi, sqlalchemy, pydantic, etc
 ```
 
 ### Testar importações
@@ -192,7 +192,6 @@ pip list
 ```bash
 python -c "import fastapi; print('FastAPI OK')"
 python -c "import sqlalchemy; print('SQLAlchemy OK')"
-python -c "import stripe; print('Stripe OK')"
 ```
 
 ### Verificar conexão com banco de dados
@@ -323,51 +322,37 @@ Se ainda tiver problemas, compartilhe a mensagem de erro completa!
 
 ---
 
-## Stripe — Webhook e compra de teste
+## Asaas — Webhook e compra de teste
 
-### Pré-requisitos
+### Desenvolvimento sem cobrança real
 
-1. [Stripe CLI](https://stripe.com/docs/stripe-cli) instalado e `stripe login`
-2. `STRIPE_SECRET_KEY=sk_test_...` no `.env`
-3. API rodando (`docker compose up -d` ou `uvicorn`)
+Defina `ASAAS_DISABLED=true` no `.env` da API. O checkout marca o ingresso como pago sem chamar o Asaas.
 
-### Passo a passo (3 terminais)
+Alternativa: após criar ingresso pendente, `POST /api/webhooks/mock-payment?ingresso_id=...` (apenas `DEBUG` + `ENVIRONMENT=development`).
 
-**Terminal 1 — configurar `whsec` no `.env` (uma vez por sessão do `stripe listen`):**
+### Produção / sandbox Asaas
 
-```powershell
-.\scripts\stripe-webhook-setup.ps1
-docker compose up -d api
+1. Preencha `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `ASAAS_PLATFORM_WALLET_ID` no `.env`
+2. Configure webhook no painel Asaas → `https://SEU_DOMINIO/api/webhooks/asaas`
+3. Organizador informa `walletId` em **Financeiro** antes de vender
+
+Guia completo: [docs/11-go-live-asaas.md](docs/11-go-live-asaas.md).
+
+### E2E no browser
+
+```bash
+docker compose -p eventosbr-e2e -f docker-compose.e2e.yml up -d --build --wait
+cd frontend && npm run test:e2e:compra
 ```
-
-**Terminal 2 — encaminhar webhooks (deixar aberto):**
-
-```powershell
-.\scripts\stripe-webhook-dev.ps1
-```
-
-**Terminal 3 — compra automática de teste:**
-
-```powershell
-.\scripts\compra-teste-stripe.ps1
-```
-
-O script cria organizador, evento, PaymentIntent, confirma com cartão `pm_card_visa` e aguarda o ingresso ficar **pago** via webhook.
-
-### Compra manual no navegador
-
-1. Terminal com `stripe-webhook-dev.ps1` rodando
-2. Abra `http://localhost:3000/eventos/{slug}`
-3. Cartão de teste: `4242 4242 4242 4242`, validade qualquer futura, CVC `123`
 
 ### Erros comuns
 
 | Sintoma | Causa | Solução |
 |--------|--------|---------|
-| Ingresso fica `pendente` | Webhook não chegou | `stripe-webhook-dev.ps1` ativo + `whsec` no `.env` |
-| `Invalid signature` | `STRIPE_WEBHOOK_SECRET` diferente do `stripe listen` | Rode `stripe-webhook-setup.ps1` de novo |
-| `404` em `/api/admin/setup` | Container API antigo | `docker compose up -d --build api` |
+| Ingresso fica `pendente` | Webhook Asaas não chegou | Verifique URL e `ASAAS_WEBHOOK_TOKEN` no painel |
+| Checkout bloqueado | Sem `asaas_wallet_id` do organizador | Financeiro → walletId |
+| `503` pagamentos | `ASAAS_PLATFORM_WALLET_ID` ausente | Configure wallet da plataforma no `.env` |
 
 ---
 
-**Última atualização:** 15/05/2026
+**Última atualização:** 16/06/2026

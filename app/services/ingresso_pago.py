@@ -14,6 +14,10 @@ from app.services.ticket_email import enqueue_ticket_email
 logger = logging.getLogger(__name__)
 
 
+def _pay_id_reembolsavel(pay_id: str) -> bool:
+    return bool(pay_id) and not pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:"))
+
+
 def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
     """Marca como pago (sem commit). Retorna True se o status mudou."""
     if ingresso.status == "pago":
@@ -57,12 +61,153 @@ def notificar_ingresso_pago(ingresso_id: str) -> None:
 def _ingressos_por_ref(db: Session, payment_ref: str) -> list[Ingresso]:
     return (
         db.query(Ingresso)
-        .filter(
-            (Ingresso.asaas_payment_id == payment_ref)
-            | (Ingresso.stripe_payment_intent_id == payment_ref)
-        )
+        .filter(Ingresso.asaas_payment_id == payment_ref)
         .all()
     )
+
+
+def _lock_ingressos_por_ref(db: Session, payment_ref: str) -> list[Ingresso]:
+    pay_id = (payment_ref or "").strip()
+    if not pay_id:
+        return []
+    return (
+        db.query(Ingresso)
+        .filter(Ingresso.asaas_payment_id == pay_id)
+        .with_for_update()
+        .all()
+    )
+
+
+def _obter_cobranca_gateway(pay_id: str, *, raise_on_error: bool = False) -> dict | None:
+    from app.services.asaas_client import AsaasAPIError
+    from app.services.pagamento_asaas import obter_cobranca
+
+    try:
+        return obter_cobranca(pay_id)
+    except AsaasAPIError:
+        logger.exception("Falha ao consultar cobrança %s no gateway", pay_id)
+        if raise_on_error:
+            raise
+        return None
+
+
+def _tentar_reembolsar_gateway(pay_id: str, payment: dict) -> bool:
+    """Solicita reembolso no Asaas. Retorna True se já estava reembolsado ou se a API aceitou."""
+    from app.services.asaas_client import AsaasAPIError
+    from app.services.pagamento_asaas import reembolsar_cobranca, status_eh_pago, status_eh_reembolsado
+
+    status = (payment.get("status") or "").upper()
+    if status_eh_reembolsado(status):
+        return True
+    if not status_eh_pago(status):
+        return False
+
+    try:
+        reembolsar_cobranca(pay_id, idempotency_key=f"refund_{pay_id}")
+        return True
+    except AsaasAPIError:
+        logger.exception("Falha ao reembolsar pagamento órfão %s", pay_id)
+        return False
+
+
+def exigir_fulfillment_pagamento(
+    db: Session,
+    payment_ref: str,
+    marcados: list[str],
+    *,
+    payment: dict | None = None,
+    raise_on_gateway_error: bool = False,
+) -> None:
+    """Reembolsa no gateway se pago mas ingresso não pôde ser emitido; cancela só após reembolso OK."""
+    if marcados:
+        return
+
+    pay_id = (payment_ref or "").strip()
+    if not pay_id or not _pay_id_reembolsavel(pay_id):
+        return
+
+    locked = _lock_ingressos_por_ref(db, pay_id)
+    if any(i.status == "pago" for i in locked):
+        return
+
+    pendentes = [i for i in locked if i.status == "pendente"]
+    cancelados = [i for i in locked if i.status == "cancelado"]
+    if not pendentes and not cancelados:
+        return
+
+    if payment is None:
+        payment = _obter_cobranca_gateway(pay_id, raise_on_error=raise_on_gateway_error)
+    if not payment:
+        return
+
+    from app.services.pagamento_asaas import status_eh_pago, status_eh_reembolsado
+
+    status = payment.get("status")
+    if status_eh_reembolsado(status):
+        if pendentes:
+            cancelar_ingressos_pi_pendentes(db, pay_id)
+        return
+
+    if not status_eh_pago(status):
+        return
+
+    refunded = _tentar_reembolsar_gateway(pay_id, payment)
+    if not refunded:
+        logger.error(
+            "Pagamento %s confirmado no gateway mas ingresso(s) não liberado(s); "
+            "reembolso falhou — reservas mantidas para reconciliação manual",
+            pay_id,
+        )
+        return
+
+    if pendentes:
+        n = cancelar_ingressos_pi_pendentes(db, pay_id)
+        logger.warning(
+            "Pagamento %s órfão: reembolsado automaticamente; %d reserva(s) cancelada(s)",
+            pay_id,
+            n,
+        )
+    else:
+        logger.warning(
+            "Pagamento %s órfão em ingresso(s) já cancelado(s): reembolsado automaticamente",
+            pay_id,
+        )
+
+
+def processar_cobranca_confirmada_gateway(
+    db: Session,
+    payment_ref: str,
+    *,
+    payment: dict | None = None,
+    raise_on_gateway_error: bool = False,
+) -> list[str]:
+    """Consulta o Asaas, marca ingressos pagos ou reembolsa se fulfillment bloqueado."""
+    pay_id = (payment_ref or "").strip()
+    if not pay_id or pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:")):
+        return []
+
+    if payment is None:
+        payment = _obter_cobranca_gateway(pay_id, raise_on_error=raise_on_gateway_error)
+    elif not isinstance(payment, dict):
+        payment = {}
+
+    if not payment:
+        return []
+
+    from app.services.pagamento_asaas import status_eh_pago
+
+    if not status_eh_pago(payment.get("status")):
+        return []
+
+    marcados = marcar_ingressos_pi_pagos(db, pay_id)
+    exigir_fulfillment_pagamento(
+        db,
+        pay_id,
+        marcados,
+        payment=payment,
+        raise_on_gateway_error=raise_on_gateway_error,
+    )
+    return marcados
 
 
 def marcar_ingressos_pi_pagos(db: Session, payment_ref: str) -> list[str]:
@@ -72,24 +217,6 @@ def marcar_ingressos_pi_pagos(db: Session, payment_ref: str) -> list[str]:
         if marcar_ingresso_pago(db, ingresso):
             alterados.append(ingresso.id)
     return alterados
-
-
-def exigir_fulfillment_pagamento(db: Session, payment_ref: str, marcados: list[str]) -> None:
-    """Falha com 422 se o gateway confirmou mas ingressos pendentes não foram liberados."""
-    if marcados:
-        return
-    pendentes = [i for i in _ingressos_por_ref(db, payment_ref) if i.status == "pendente"]
-    if not pendentes:
-        return
-    logger.error(
-        "Pagamento %s confirmado mas %d ingresso(s) pendente(s) não liberado(s)",
-        payment_ref,
-        len(pendentes),
-    )
-    raise HTTPException(
-        status_code=422,
-        detail="Pagamento confirmado no gateway, mas ingressos não foram liberados.",
-    )
 
 
 def cancelar_ingressos_pi_pendentes(db: Session, payment_ref: str) -> int:
@@ -142,7 +269,7 @@ def _cancelar_ingressos_por_ref(
 
 def ingressos_lote_pendente(db: Session, ingresso: Ingresso) -> list[Ingresso]:
     """Ingressos do mesmo lote de compra (mesma reserva / mesmo payment ref)."""
-    ref = (ingresso.asaas_payment_id or ingresso.stripe_payment_intent_id or "").strip()
+    ref = (ingresso.asaas_payment_id or "").strip()
     if ref:
         return _ingressos_por_ref(db, ref)
     q = db.query(Ingresso).filter(

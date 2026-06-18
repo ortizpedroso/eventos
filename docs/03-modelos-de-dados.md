@@ -24,8 +24,7 @@ erDiagram
     string auth_provider "email|google|apple"
     string auth_provider_id
     string tipo "cliente|organizador"
-    string stripe_customer_id
-    string stripe_account_id
+    string asaas_wallet_id
     bool ativo
     int token_version
     bool aceita_comunicacao_email
@@ -47,7 +46,6 @@ erDiagram
     float preco_ingresso
     string categoria
     text mensagem_confirmacao
-    string stripe_account_id
     bool publicado
     int limite_ingressos_por_cpf "null=sem limite"
     string checkin_token UK "link portaria"
@@ -86,7 +84,7 @@ erDiagram
     string participante_cpf
     string participante_telefone
     string cortesia_responsavel
-    string stripe_payment_intent_id UK
+    string asaas_payment_id UK
     float valor
     string status "pendente|pago|cancelado|usado"
     datetime data_compra
@@ -106,13 +104,12 @@ erDiagram
     string ingresso_id FK UK
     float valor_reembolso
     string status "pendente|processado|falhou"
-    string stripe_refund_id
     datetime data_solicitacao
     datetime data_processamento
   }
 
-  STRIPE_EVENT {
-    string id PK "evt_..."
+  WEBHOOK_EVENT {
+    string id PK
     string tipo
     datetime data_recebimento
   }
@@ -144,8 +141,8 @@ erDiagram
 - **`tipo`**: `cliente` ou `organizador` (normalizado no registo).
 - **`auth_provider`**: `email` (senha), `google` ou `apple`. Se OAuth, `senha_hash` pode ser `NULL`.
 - **`token_version`**: incrementado ao desativar conta ou alterar senha — invalida todos os JWTs anteriores.
-- **`stripe_customer_id`**: necessário para `PaymentIntent` com `customer`.
-- **`stripe_account_id`**: conta Connect Express do organizador; copiada para o evento na criação.
+- **`asaas_wallet_id`**: carteira Asaas do organizador para split de pagamentos.
+- **`asaas_subaccount_api_key`**: chave da subconta Asaas, **cifrada em repouso** (prefixo `enc:v1:` + Fernet derivado de `SECRET_KEY`).
 - **`aceita_comunicacao_*`** + **`comunicacao_consentimento_em`**: opt-in LGPD para campanhas de marketing da plataforma.
 
 ---
@@ -156,7 +153,7 @@ erDiagram
 - **`publicado`**: `false` = pausado — oculto na listagem pública e compra bloqueada; dono autenticado ainda pode ver pelo slug.
 - **`data_fim`**: obrigatória na BD; a API pode preencher com `data_inicio` se omitida no pedido.
 - **`preco_ingresso`**: mantido como **menor preço entre lotes ativos** após operações de lotes (também serve como vitrine "a partir de").
-- **`limite_ingressos_por_cpf`**: `NULL` = sem limite; verificado no serviço `cpf_limite.py` antes de criar o `PaymentIntent`.
+- **`limite_ingressos_por_cpf`**: `NULL` = sem limite; verificado no serviço `cpf_limite.py` antes de criar a cobrança.
 - **`checkin_token`**: string aleatória de 64 chars (índice único); usada no link `/portaria/{id}?k=...` para colaboradores sem conta.
 
 ---
@@ -185,10 +182,10 @@ erDiagram
 - **`usuario_id`**: quem paga (responsável financeiro — não muda no repasse).
 - **`participante_*`**: quem vai ao evento; pode diferir do pagador e é **atualizado no repasse**.
 - **`cortesia_responsavel`**: nome/identificação de quem emitiu a cortesia.
-- **`status`**: `pendente` → `pago` (webhook Stripe) → `usado` (check-in) | `cancelado`.
-- **`lote_id`**: FK para o lote; preenchido na criação do `PaymentIntent`.
+- **`status`**: `pendente` → `pago` (webhook Asaas) → `usado` (check-in) | `cancelado`.
+- **`lote_id`**: FK para o lote; preenchido na criação da cobrança.
 - **`cupom_id`**: FK para o cupom aplicado (pode ser `NULL`).
-- **`stripe_payment_intent_id`**: único; em modo `STRIPE_DISABLED` prefixado com `disabled_`.
+- **`asaas_payment_id`**: ID da cobrança Asaas; único por ingresso pago.
 - **`checkin_em` / `checkin_por_id`**: data e operador do check-in na portaria.
 - **Campos de repasse** (`repassado_para_*` + `repassado_em`): gravados ao chamar `POST /api/ingressos/{id}/repassar`; `usuario_id` **não é alterado** (o comprador original permanece dono financeiro).
 
@@ -197,14 +194,14 @@ erDiagram
 ## Tabela `cancelamentos`
 
 - Relação **1:1** com ingresso (`ingresso_id` único).
-- Guarda estado do reembolso e `stripe_refund_id` quando aplicável.
+- Guarda estado do reembolso via API Asaas quando aplicável.
 - **`status`**: `pendente`, `processado`, `falhou`.
 
 ---
 
-## Tabela `stripe_events`
+## Tabela `webhook_events`
 
-- **`id`**: ID do evento Stripe (`evt_...`) — garante **idempotência** do webhook (reprocessamento seguro).
+- **`id`**: ID do evento Asaas — garante **idempotência** do webhook (reprocessamento seguro).
 
 ---
 
@@ -226,7 +223,7 @@ Ficheiros em `alembic/versions/` com revisões encadeadas (`down_revision`).
 
 | Revisão | Descrição |
 |---------|-----------|
-| `20260511_000001` | Init — tabelas base (`usuarios`, `eventos`, `ingressos`, `cancelamentos`, `stripe_events`) |
+| `20260511_000001` | Init — tabelas base (`usuarios`, `eventos`, `ingressos`, `cancelamentos`, `webhook_events` legado) |
 | `20260511_000002` | `eventos.preco_ingresso` |
 | `20260512_000003` | `ingressos.participante_*` (nome, email) |
 | `20260512_000004` | `eventos.imagem_url` como `Text` |
@@ -239,3 +236,6 @@ Ficheiros em `alembic/versions/` com revisões encadeadas (`down_revision`).
 | `20260520_000011` | OAuth: `usuarios.auth_provider`, `auth_provider_id`, `token_version` |
 | `20260522_000012` | `eventos.checkin_token` (link portaria sem conta) |
 | `20260522_000013` | `ingressos.repassado_para_*` + `repassado_em` (repasse de ingresso) |
+| `20260618_000022` | Renomeia `stripe_events` → `webhook_events` |
+| `20260618_000023` | Remove colunas Stripe; backfill wallet; `legacy_stripe:`; pendente real preservado p/ reconciliação |
+| `20260618_000024` | Cifra `usuarios.asaas_subaccount_api_key` em repouso (Fernet + SECRET_KEY) |

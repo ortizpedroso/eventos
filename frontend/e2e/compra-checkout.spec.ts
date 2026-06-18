@@ -3,10 +3,10 @@ import { expect, test } from "@playwright/test";
 import { seedPublishedEvent, waitForApiReady } from "./helpers/api-setup";
 
 /**
- * Fluxo completo no browser com STRIPE_DISABLED=true na API.
+ * Fluxo completo no browser com ASAAS_DISABLED=true na API.
  * Local: docker compose -f docker-compose.e2e.yml up -d && npm run test:e2e:compra
  */
-test.describe("Checkout — compra sem Stripe real", () => {
+test.describe("Checkout — compra com Asaas mock", () => {
   test.describe.configure({ mode: "serial" });
 
   test.beforeAll(async () => {

@@ -7,13 +7,15 @@ export SECRET_KEY="${SECRET_KEY:-test-secret-key-with-at-least-32-chars-here}"
 export ENVIRONMENT="${ENVIRONMENT:-development}"
 export DATABASE_URL="${DATABASE_URL:-sqlite:///./eventos_smoke.db}"
 
+ALEMBIC_HEAD="20260618_000024"
+
 echo "==> 1/4 pytest (suite completa)"
 python3 -m pytest tests/ -q
 
 echo "==> 2/4 alembic current (se Postgres disponível)"
 if [[ "${DATABASE_URL}" == postgresql* ]]; then
   alembic upgrade head
-  alembic current | grep -q "20260617_000021" && echo "Migração 20260617_000021 OK"
+  alembic current | grep -q "$ALEMBIC_HEAD" && echo "Migração $ALEMBIC_HEAD OK"
 else
   echo "Pule migração Postgres (DATABASE_URL não é postgresql)"
 fi

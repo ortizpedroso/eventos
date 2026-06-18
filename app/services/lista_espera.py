@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Evento, EventoListaEspera, Ingresso, Usuario, UsuarioNotificacao
 from app.services.notificacao_email import enqueue_email_simples
+from app.utils.html_escape import assunto_email_seguro, esc
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -133,9 +134,10 @@ def _notificar_proximo(db: Session, evento: Evento, entrada: EventoListaEspera) 
 
     base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
     link = f"{base}/eventos/{evento.slug}?espera={token}"
-    assunto = f"Vaga disponível: {evento.nome}"
+    nome = esc(evento.nome)
+    assunto = f"Vaga disponível: {assunto_email_seguro(evento.nome)}"
     corpo = (
-        f"<p>Uma vaga foi liberada para <strong>{evento.nome}</strong>.</p>"
+        f"<p>Uma vaga foi liberada para <strong>{nome}</strong>.</p>"
         f"<p>Você tem <strong>{prazo} horas</strong> para concluir a compra.</p>"
         f'<p><a href="{link}">Comprar agora</a></p>'
     )
@@ -144,7 +146,7 @@ def _notificar_proximo(db: Session, evento: Evento, entrada: EventoListaEspera) 
         db,
         entrada.usuario_id,
         titulo="Vaga na lista de espera",
-        mensagem=f"Compre seu ingresso para {evento.nome} em até {prazo}h.",
+        mensagem=f"Compre seu ingresso para {assunto_email_seguro(evento.nome)} em até {prazo}h.",
         link=link,
     )
     db.commit()
@@ -340,7 +342,6 @@ def marcar_espera_comprada(db: Session, evento_id: str, email: str) -> None:
         entrada.token_compra = None
         entrada.token_expira_em = None
         db.flush()
-        liberar_vagas_apos_cancelamento(db, evento_id, 1)
 
 
 def expirar_tokens_vencidos(db: Session) -> int:

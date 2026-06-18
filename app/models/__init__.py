@@ -6,7 +6,7 @@ from app.models.evento import Evento
 from app.models.ingresso import Ingresso
 from app.models.evento_ingresso_lote import EventoIngressoLote
 from app.models.cancelamento import Cancelamento
-from app.models.stripe_event import StripeEvent
+from app.models.webhook_event import WebhookEvent
 from app.models.evento_cupom import EventoCupom
 from app.models.campanha_marketing import CampanhaMarketing, CampanhaEnvio
 from app.models.evento_lista_interesse import EventoListaInteresse
@@ -22,7 +22,7 @@ __all__ = [
     "Ingresso",
     "EventoIngressoLote",
     "Cancelamento",
-    "StripeEvent",
+    "WebhookEvent",
     "EventoCupom",
     "CampanhaMarketing",
     "CampanhaEnvio",

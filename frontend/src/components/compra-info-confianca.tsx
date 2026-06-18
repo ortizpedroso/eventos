@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { nomeProcessadorPagamento, paymentProviderAtivo } from "@/lib/payment-provider";
+import { nomeProcessadorPagamento } from "@/lib/payment-provider";
 
 function IconLock({ className }: { className?: string }) {
   return (
@@ -33,7 +33,6 @@ function IconFlag({ className }: { className?: string }) {
 /** Bloco de credibilidade na página pública do evento (largura total, abaixo dos cards Sobre / Comprar). */
 export function CompraInfoConfianca() {
   const processador = nomeProcessadorPagamento();
-  const isAsaas = paymentProviderAtivo() === "asaas";
   const emailDenuncia = process.env.NEXT_PUBLIC_EMAIL_DENUNCIAS?.trim();
   const emailContato = process.env.NEXT_PUBLIC_EMAIL_CONTATO?.trim();
   const denunciaMailto = emailDenuncia
@@ -99,20 +98,9 @@ export function CompraInfoConfianca() {
             Pagamento
           </p>
           <p className="mt-2">
-            {isAsaas ? (
-              <>
-                PIX e cartão são processados pelo{" "}
-                <strong className="font-medium text-zinc-700">Asaas</strong>, instituição de pagamento
-                regulada. A EventosBR <strong className="font-medium text-zinc-700">não armazena</strong> o número
-                completo do cartão.
-              </>
-            ) : (
-              <>
-                O cartão é tratado pelo{" "}
-                <strong className="font-medium text-zinc-700">Stripe</strong>. A EventosBR{" "}
-                <strong className="font-medium text-zinc-700">não armazena</strong> o número completo do cartão.
-              </>
-            )}
+            PIX e cartão são processados pelo{" "}
+            <strong className="font-medium text-zinc-700">Asaas</strong>, instituição de pagamento regulada. A
+            EventosBR <strong className="font-medium text-zinc-700">não armazena</strong> o número completo do cartão.
           </p>
           <p className="mt-2 text-zinc-500">
             Pagamento seguro via {processador}. Parcelamento, quando disponível, segue as opções do checkout.

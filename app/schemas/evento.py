@@ -65,7 +65,7 @@ class CriarEventoRequest(BaseModel):
     local: str
     cidade: str | None = None
     imagem_url: Optional[str] = Field(default=None, max_length=2048)
-    # Reais (ex.: 49.9). Mínimo alinhado ao Stripe para ingressos pagos.
+    # Reais (ex.: 49.9). Mínimo de R$ 5 para ingressos pagos (regra Asaas).
     preco_ingresso: float = Field(ge=0, le=500_000)
     categoria: str = Field(default="Outros", min_length=1, max_length=80)
     mensagem_confirmacao: Optional[str] = Field(default=None, max_length=2000)

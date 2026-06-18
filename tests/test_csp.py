@@ -1,16 +1,16 @@
-"""Garante que a CSP de produção cobre Stripe e Google OAuth."""
+"""Garante que a CSP de produção cobre Google OAuth e Asaas."""
 
 from pathlib import Path
 
 
-def test_csp_fonte_cobre_stripe_google_e_nonce():
+def test_csp_fonte_cobre_google_oauth_e_nonce():
     text = Path("frontend/src/lib/csp.ts").read_text(encoding="utf-8")
     for fragment in (
         "strict-dynamic",
-        "https://js.stripe.com",
         "https://accounts.google.com",
         "https://apis.google.com",
         "https://oauth2.googleapis.com",
+        "https://api.asaas.com",
         "'nonce-${nonce}'",
     ):
         assert fragment in text, f"CSP sem {fragment}"

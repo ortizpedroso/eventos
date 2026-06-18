@@ -70,7 +70,6 @@ async def criar_evento(
         categoria=evento_data.categoria.strip() or "Outros",
         mensagem_confirmacao=evento_data.mensagem_confirmacao,
         organizador_id=usuario_atual.id,
-        stripe_account_id=usuario_atual.stripe_account_id,
         asaas_wallet_id=usuario_atual.asaas_wallet_id,
         slug=slug,
         publicado=evento_data.publicado,
@@ -98,6 +97,17 @@ async def criar_evento(
 
     logger.info(f"Evento criado: {novo_evento.id} (slug: {novo_evento.slug})")
 
+    from app.services.ingresso_lotes import evento_tem_venda_aberta
+    from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
+
+    if deve_notificar_abertura(
+        novo_evento,
+        era_publicado=False,
+        tinha_venda_aberta=False,
+        tem_venda_aberta=evento_tem_venda_aberta(db, novo_evento),
+    ):
+        notificar_abertura_vendas(db, novo_evento)
+
     return montar_evento_response(db, novo_evento)
 
 
@@ -120,6 +130,9 @@ async def atualizar_evento(
         raise HTTPException(status_code=403, detail="Sem permissão para editar este evento")
 
     era_publicado = evento.publicado
+    from app.services.ingresso_lotes import evento_tem_venda_aberta
+
+    tinha_venda_aberta = evento_tem_venda_aberta(db, evento) if era_publicado else False
 
     evento.nome = body.nome
     evento.descricao = body.descricao
@@ -169,7 +182,13 @@ async def atualizar_evento(
 
     from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
 
-    if deve_notificar_abertura(evento, era_publicado=era_publicado):
+    tem_venda_aberta = evento_tem_venda_aberta(db, evento)
+    if deve_notificar_abertura(
+        evento,
+        era_publicado=era_publicado,
+        tinha_venda_aberta=tinha_venda_aberta,
+        tem_venda_aberta=tem_venda_aberta,
+    ):
         notificar_abertura_vendas(db, evento)
 
     return montar_evento_response(db, evento)
@@ -521,7 +540,6 @@ async def duplicar_evento(
         categoria=evento.categoria,
         mensagem_confirmacao=evento.mensagem_confirmacao,
         organizador_id=usuario_atual.id,
-        stripe_account_id=usuario_atual.stripe_account_id,
         asaas_wallet_id=usuario_atual.asaas_wallet_id,
         slug=slug,
         publicado=False,

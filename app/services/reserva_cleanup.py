@@ -1,9 +1,9 @@
 """Job periódico: cancela reservas de ingressos pendentes que expiraram.
 
 Camadas de proteção contra vagas fantasmas:
-  1. payment_intent.canceled webhook → cancela na hora (PIX expirado, etc.)
-  2. Este job (a cada 5 min) → safety net para reservas sem PI ou webhook perdido
-  3. Cancela o PI Stripe correspondente para evitar pagamentos tardios
+  1. Webhook Asaas (PAYMENT_OVERDUE / PAYMENT_DELETED) → cancela na hora
+  2. Este job (a cada 5 min) → safety net para reservas sem cobrança ou webhook perdido
+  3. Cancela a cobrança Asaas correspondente para evitar pagamentos tardios
 """
 
 from __future__ import annotations
@@ -12,8 +12,6 @@ import logging
 import threading
 import time
 from datetime import datetime, timezone
-
-import stripe
 
 from config.database import SessionLocal
 from config.settings import settings
@@ -27,8 +25,6 @@ _thread: threading.Thread | None = None
 
 def cancelar_reservas_expiradas() -> int:
     """Executa um ciclo de limpeza em sessão própria. Retorna o número cancelado."""
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-
     from app.models import Ingresso  # import tardio para evitar circular
 
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -44,7 +40,7 @@ def cancelar_reservas_expiradas() -> int:
             .all()
         )
 
-        pis_ja_cancelados: set[str] = set()
+        pagamentos_ja_cancelados: set[str] = set()
         vagas_por_evento: dict[str, int] = {}
         for ing in expirados:
             ing.status = "cancelado"
@@ -55,39 +51,24 @@ def cancelar_reservas_expiradas() -> int:
 
             expirar_espera_reserva_nao_concluida(db, ing)
 
-            pay_id = (ing.asaas_payment_id or ing.stripe_payment_intent_id or "").strip()
+            pay_id = (ing.asaas_payment_id or "").strip()
             if (
                 pay_id
-                and pay_id not in pis_ja_cancelados
+                and pay_id not in pagamentos_ja_cancelados
                 and not pay_id.startswith(("disabled_", "cortesia_"))
             ):
-                if settings.use_asaas and ing.asaas_payment_id:
-                    try:
-                        from app.services.pagamento_asaas import cancelar_cobranca_pendente
+                try:
+                    from app.services.pagamento_asaas import cancelar_cobranca_pendente
 
-                        cancelar_cobranca_pendente(pay_id)
-                        pis_ja_cancelados.add(pay_id)
-                    except Exception:
-                        logger.warning(
-                            "Não foi possível cancelar cobrança Asaas %s do ingresso %s",
-                            pay_id,
-                            ing.id,
-                            exc_info=True,
-                        )
-                elif ing.stripe_payment_intent_id and settings.use_stripe:
-                    try:
-                        stripe.PaymentIntent.cancel(pay_id)
-                        pis_ja_cancelados.add(pay_id)
-                        logger.debug("PI %s cancelado pelo cleanup (ingresso %s)", pay_id, ing.id)
-                    except stripe.error.InvalidRequestError:
-                        pis_ja_cancelados.add(pay_id)
-                    except Exception:
-                        logger.warning(
-                            "Não foi possível cancelar PI %s do ingresso %s",
-                            pay_id,
-                            ing.id,
-                            exc_info=True,
-                        )
+                    cancelar_cobranca_pendente(pay_id)
+                    pagamentos_ja_cancelados.add(pay_id)
+                except Exception:
+                    logger.warning(
+                        "Não foi possível cancelar cobrança Asaas %s do ingresso %s",
+                        pay_id,
+                        ing.id,
+                        exc_info=True,
+                    )
 
             logger.info("Reserva expirada cancelada: ingresso %s", ing.id)
 

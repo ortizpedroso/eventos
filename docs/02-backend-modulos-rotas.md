@@ -7,7 +7,7 @@ Raiz Python da API: pacote `app/` e `config/`. Ponto de entrada: **`app/main.py`
 | Bloco | Função |
 |-------|--------|
 | `load_dotenv()` | Carrega `.env` da raiz antes de importar settings |
-| `lifespan` | Avisos Stripe placeholder; `create_tables()` só se `ENVIRONMENT=development` |
+| `lifespan` | Avisos Asaas; `create_tables()` só se `ENVIRONMENT=development` |
 | `CORSMiddleware` | Origens de `CORS_ORIGINS` (lista ou `*`) |
 | `include_router` | Monta todos os routers sob `/api/...` |
 | `GET /health` | Liveness: processo responde (sem consultar a BD) |
@@ -16,7 +16,7 @@ Raiz Python da API: pacote `app/` e `config/`. Ponto de entrada: **`app/main.py`
 
 ## `config/settings.py` (`settings`)
 
-Instância única **`settings`** (Pydantic `BaseSettings`): lê variáveis de ambiente e `.env`. Campos relevantes: `DATABASE_URL`, chaves Stripe, `STRIPE_DISABLED`, `STRIPE_SKIP_CONNECT_ON_REGISTER`, JWT (`SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`), `CORS_ORIGINS`, `ENVIRONMENT`, `DEBUG`.  
+Instância única **`settings`** (Pydantic `BaseSettings`): lê variáveis de ambiente e `.env`. Campos relevantes: `DATABASE_URL`, chaves Asaas (`ASAAS_*`), `ASAAS_DISABLED`, JWT (`SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`), `CORS_ORIGINS`, `ENVIRONMENT`, `DEBUG`.  
 **Regra:** fora de `development`, `SECRET_KEY` obrigatório (senão `RuntimeError` ao importar).
 
 ## `config/database.py`
@@ -35,7 +35,7 @@ Instância única **`settings`** (Pydantic `BaseSettings`): lê variáveis de am
 
 | Rota | Método | Autenticação | Descrição |
 |------|--------|--------------|-----------|
-| `/registrar` | POST | — | Cria `Usuario`; opcionalmente Stripe `Customer` e, se organizador, `Account` Express |
+| `/registrar` | POST | — | Cria `Usuario`; opcionalmente customer Asaas |
 | `/login` | POST | — | Valida email/senha; devolve JWT + cookie HttpOnly |
 | `/logout` | POST | — | Encerra sessão (remove cookie HttpOnly) |
 | `/me` | GET | Bearer/cookie | Lê utilizador fresco da BD; `Cache-Control: no-store` |
@@ -74,9 +74,10 @@ Instância única **`settings`** (Pydantic `BaseSettings`): lê variáveis de am
 
 | Rota | Descrição |
 |------|-----------|
-| `POST /criar` | Valida evento publicado, participante (CPF/telefone se terceiro), resolve **lote atual** (`resolver_lote_compra`), exige `valor_centavos` igual ao preço do lote; cria `Ingresso` + Stripe `PaymentIntent` (ou modo `STRIPE_DISABLED`) |
+| `POST /criar` | Valida evento publicado, participante, resolve **lote atual**, exige `valor_centavos`; cria `Ingresso` pendente + resposta Asaas (`aguardando_cobranca`) ou modo `ASAAS_DISABLED` |
 | `GET /meus` | Lista ingressos do utilizador; filtro opcional `?status=` |
-| `POST /cancelar` | Cancela ingresso **pago** dentro do prazo; `Refund` Stripe ou skip se `STRIPE_DISABLED` / PI fake |
+| `POST /asaas/cobranca` | Gera cobrança PIX/cartão/fatura para ingresso reservado |
+| `POST /cancelar` | Cancela ingresso **pago** dentro do prazo; reembolso Asaas ou skip se `ASAAS_DISABLED` |
 
 ---
 
@@ -172,7 +173,7 @@ Todas as rotas exigem `require_platform_admin` (via `app/deps/platform_admin.py`
 
 | Rota | Descrição |
 |------|-----------|
-| `POST /stripe` | Valida payload (`construct_event` ou JSON em dev sem secret); idempotência com tabela **`stripe_events`**; trata `payment_intent.succeeded` / `payment_intent.payment_failed` |
+| `POST /asaas` | Valida token `asaas-access-token`; idempotência com tabela **`webhook_events`**; trata `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_REFUNDED`, etc. |
 | `POST /mock-payment` | **Só** `DEBUG` + `development`: marca ingresso como pago (ferramenta local) |
 
 ---
@@ -198,7 +199,7 @@ Todas as rotas exigem `require_platform_admin` (via `app/deps/platform_admin.py`
 | `oauth_verify.py` | Valida Google ID tokens (`google-auth` library) |
 | `oauth_usuario.py` | Encontra ou cria `Usuario` a partir de payload OAuth Google |
 | `oauth_vincular.py` | Vincula conta Google a conta com senha existente (exige senha atual) |
-| `usuario_stripe.py` | Cria `stripe.Customer` e `stripe.Account` (Connect Express) no registo |
+| `usuario_asaas.py` | Cria customer/wallet Asaas no registo (quando configurado) |
 | `cpf_limite.py` | Aplica `limite_ingressos_por_cpf` por evento |
 | `cupom_desconto.py` | Valida e aplica cupões de desconto por evento |
 | `metricas_evento.py` | Métricas operacionais por evento (capacidade, conversão) |
@@ -244,4 +245,4 @@ Ver [03-modelos-de-dados.md](./03-modelos-de-dados.md). Import central em **`app
 
 ## Testes automatizados
 
-`tests/` — `TestClient` contra app com BD **SQLite em memória** e `dependency_overrides` em `get_db`; Stripe mockado com `unittest.mock.patch`. Cobertura inclui fluxos de compra, cancelamento, check-in, OAuth e cupons.
+`tests/` — `TestClient` contra app com BD **SQLite em memória**; `ASAAS_DISABLED=true` por defeito em `conftest.py`.

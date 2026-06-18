@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
 import secrets
-import stripe
 
 from app.models import Usuario, get_db
 from app.schemas.usuario import (
@@ -46,7 +45,7 @@ from app.services.email_verificacao import (
     preparar_verificacao_email,
 )
 from app.utils.auth_cookie import AUTH_COOKIE_NAME, clear_auth_cookie, set_auth_cookie
-from app.utils.public_errors import PAGAMENTO_CLIENTE, STRIPE_CLIENTE
+from app.utils.public_errors import PAGAMENTO_CLIENTE
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -56,8 +55,6 @@ oauth2_scheme_optional = OAuth2PasswordBearer(
     tokenUrl="/api/auth/login",
     auto_error=False,
 )
-
-stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 def _normalizar_telefone_usuario(valor: str | None) -> str | None:
@@ -98,43 +95,6 @@ def _aplicar_preferencias_comunicacao(
         usuario.comunicacao_consentimento_em = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _stripe_error_all_text(err: Exception) -> str:
-    """Junta mensagens do SDK Stripe (string, user_message, JSON error.*)."""
-    parts: list[str] = [str(err)]
-    if isinstance(err, stripe.error.StripeError):
-        um = getattr(err, "user_message", None)
-        if um:
-            parts.append(str(um))
-        body = getattr(err, "json_body", None)
-        if isinstance(body, dict):
-            sub = body.get("error")
-            if isinstance(sub, dict):
-                for key in ("message", "type", "code", "param", "doc_url"):
-                    v = sub.get(key)
-                    if v:
-                        parts.append(str(v))
-    return " ".join(parts).lower()
-
-
-def _stripe_connect_platform_terms_missing(err: Exception) -> bool:
-    """Stripe Connect: plataforma precisa aceitar termos (loss liability) antes de criar contas Express."""
-    text = _stripe_error_all_text(err)
-    if "managing losses" in text or "loss liability" in text:
-        return True
-    if "responsibilities" in text and "losses" in text:
-        return True
-    if "connected account agreement" in text or "stripe connected account" in text:
-        if "accept" in text or "must" in text or "aceitar" in text or "precisa" in text:
-            return True
-    if "responsabilidade" in text and ("perda" in text or "perdas" in text):
-        return True
-    if "aceitar" in text and ("conect" in text or "connect" in text) and ("termo" in text or "terms" in text or "perda" in text):
-        return True
-    if "platform" in text and "loss" in text and ("accept" in text or "agreement" in text):
-        return True
-    return False
-
-
 @router.post("/registrar", response_model=Token)
 async def registrar(
     usuario_data: UsuarioCreate,
@@ -156,8 +116,6 @@ async def registrar(
     if usuario_existente:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
 
-    stripe_customer_id: str | None = None
-    stripe_account_id: str | None = None
     asaas_customer_id: str | None = None
     asaas_wallet_id: str | None = None
     asaas_account_id: str | None = None
@@ -170,20 +128,17 @@ async def registrar(
                 tipo=usuario_data.tipo,
                 telefone=_normalizar_telefone_usuario(usuario_data.telefone),
             )
-            stripe_customer_id = prov.get("stripe_customer_id")
-            stripe_account_id = prov.get("stripe_account_id")
             asaas_customer_id = prov.get("asaas_customer_id")
             asaas_wallet_id = prov.get("asaas_wallet_id")
             asaas_account_id = prov.get("asaas_account_id")
         except Exception as e:
-            if settings.use_asaas:
-                from app.services.asaas_client import AsaasAPIError
+            from app.services.asaas_client import AsaasAPIError
 
-                if isinstance(e, AsaasAPIError):
-                    logger.exception("Erro Asaas no registo")
-                    raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
-            logger.exception("Erro no provedor de pagamento no registo")
-            raise HTTPException(status_code=400, detail=STRIPE_CLIENTE) from e
+            if isinstance(e, AsaasAPIError):
+                logger.exception("Erro Asaas no registo")
+            else:
+                logger.exception("Erro no provedor de pagamento no registo")
+            raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
     else:
         logger.warning(
             "Pagamentos desativados: registro de %s (%s) sem customer/conta",
@@ -206,8 +161,6 @@ async def registrar(
         senha_hash=hash_password(usuario_data.senha),
         tipo=usuario_data.tipo,
         email_verificado=True,
-        stripe_customer_id=stripe_customer_id,
-        stripe_account_id=stripe_account_id,
         asaas_customer_id=asaas_customer_id,
         asaas_wallet_id=asaas_wallet_id,
         asaas_account_id=asaas_account_id,
@@ -279,12 +232,10 @@ async def compra_rapida(
         logger.info("Compra rápida: sessão reutilizada para %s", email)
         return _token_response(existente, response)
 
-    stripe_customer_id: str | None = None
     asaas_customer_id: str | None = None
     if not settings.payments_disabled:
         try:
             prov = criar_pagamento_para_novo_usuario(email=email, nome=nome, tipo="cliente")
-            stripe_customer_id = prov.get("stripe_customer_id")
             asaas_customer_id = prov.get("asaas_customer_id")
         except Exception as e:
             logger.exception("Erro provedor pagamento na compra rápida: %s", e)
@@ -299,7 +250,6 @@ async def compra_rapida(
         tipo="cliente",
         auth_provider="email",
         email_verificado=False,
-        stripe_customer_id=stripe_customer_id,
         asaas_customer_id=asaas_customer_id,
     )
     db.add(novo_usuario)
@@ -702,22 +652,6 @@ async def atualizar_perfil(
 
     db.commit()
     db.refresh(usuario)
-
-    if not settings.STRIPE_DISABLED and usuario.stripe_customer_id:
-        try:
-            stripe.Customer.modify(
-                usuario.stripe_customer_id,
-                name=usuario.nome,
-                email=usuario.email,
-            )
-        except stripe.error.StripeError as e:
-            logger.warning("Não foi possível sincronizar dados no Stripe Customer: %s", e)
-
-    if not settings.STRIPE_DISABLED and usuario.stripe_account_id and email_mudou:
-        try:
-            stripe.Account.modify(usuario.stripe_account_id, email=usuario.email)
-        except stripe.error.StripeError as e:
-            logger.warning("Não foi possível sincronizar o email na conta Stripe Connect: %s", e)
 
     return UsuarioResponse.model_validate(usuario)
 

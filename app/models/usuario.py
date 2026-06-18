@@ -16,10 +16,6 @@ class Usuario(Base):
     auth_provider_id = Column(String(255), nullable=True, index=True)
     tipo = Column(String)  # "cliente" ou "organizador"
 
-    # Stripe (legado)
-    stripe_customer_id = Column(String, nullable=True)
-    stripe_account_id = Column(String, nullable=True)
-
     # Asaas
     asaas_customer_id = Column(String, nullable=True)
     asaas_wallet_id = Column(String, nullable=True)

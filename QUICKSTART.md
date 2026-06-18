@@ -8,7 +8,7 @@ cd eventosbr
 
 # 2. Configure variáveis de ambiente
 cp .env.example .env
-# Edite .env com suas chaves Stripe
+# Edite .env com chaves Asaas e SECRET_KEY
 
 # 3. Inicie com Docker
 docker-compose up -d --build
@@ -110,7 +110,7 @@ curl -X POST "http://localhost:8000/api/auth/registrar" \
 # Salvar token do cliente
 CLIENT_TOKEN="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
 
-# Criar pagamento (intenção de pagamento Stripe)
+# Criar pagamento (reserva + checkout Asaas)
 curl -X POST "http://localhost:8000/api/pagamentos/criar" \
   -H "Authorization: Bearer $CLIENT_TOKEN" \
   -H "Content-Type: application/json" \
@@ -121,8 +121,8 @@ curl -X POST "http://localhost:8000/api/pagamentos/criar" \
 
 # Resposta:
 {
-  "client_secret": "pi_1234567890_secret_abcdefgh",
-  "ingresso_id": "ingresso-uuid"
+  "ingresso_id": "ingresso-uuid",
+  "aguardando_cobranca": true
 }
 ```
 
@@ -148,39 +148,29 @@ curl -X POST "http://localhost:8000/api/auth/login" \
 
 ## 💳 Processamento de Pagamento
 
-### Fluxo Stripe
+### Fluxo Asaas
 
-1. **Backend cria PaymentIntent**
+1. **Backend reserva ingresso**
    ```
    POST /api/pagamentos/criar
    ```
 
-2. **Frontend captura `client_secret`**
-   - Use a biblioteca Stripe.js do frontend
+2. **Frontend inicia cobrança**
+   ```
+   POST /api/pagamentos/asaas/cobranca
+   ```
 
-3. **Frontend confirma pagamento**
-   - Stripe envia webhook para backend
+3. **Comprador paga** (PIX, cartão ou fatura)
 
-4. **Backend processa webhook**
-   - Atualiza status do ingresso para "pago"
-   - Confirma transação
+4. **Asaas envia webhook** → backend marca ingresso como `pago`
 
-### Webhook em desenvolvimento (Windows)
+### Webhook em desenvolvimento
 
-Requer [Stripe CLI](https://stripe.com/docs/stripe-cli) (`stripe login`).
+Sem Asaas real: `ASAAS_DISABLED=true` na API ou `POST /api/webhooks/mock-payment?ingresso_id=...` (apenas `DEBUG` + `development`).
 
-```powershell
-.\scripts\stripe-webhook-setup.ps1    # grava whsec no .env
-docker compose restart api
-.\scripts\stripe-webhook-dev.ps1      # terminal A — deixe aberto
-.\scripts\compra-teste-stripe.ps1     # terminal B — compra automática
-```
+Produção: configure webhook no painel Asaas → [docs/11-go-live-asaas.md](docs/11-go-live-asaas.md).
 
-Sem CLI: após criar o ingresso pendente, use `POST /api/webhooks/mock-payment?ingresso_id=...` (apenas `DEBUG` + `ENVIRONMENT=development`).
-
-Detalhes e erros comuns: [TROUBLESHOOTING.md](TROUBLESHOOTING.md#stripe--webhook-e-compra-de-teste).
-
-### E2E compra no browser (sem Stripe real)
+### E2E compra no browser (sem cobrança real)
 
 ```powershell
 .\scripts\e2e-up.ps1          # projeto Docker eventosbr-e2e (isolado do dev)
@@ -218,10 +208,11 @@ Ver [docs/08-deploy-hostinger.md](docs/08-deploy-hostinger.md) e `.env.productio
 ## 🔧 Variáveis de Ambiente
 
 ```env
-# Essencial para Stripe
-STRIPE_SECRET_KEY=sk_test_seu_chave
-STRIPE_PUBLISHABLE_KEY=pk_test_sua_chave
-STRIPE_WEBHOOK_SECRET=whsec_seu_secret
+# Essencial para Asaas (produção)
+ASAAS_API_KEY=$aact_prod_...
+ASAAS_WEBHOOK_TOKEN=token-forte
+ASAAS_PLATFORM_WALLET_ID=wallet-plataforma
+PAYMENT_PROVIDER=asaas
 
 # Segurança
 SECRET_KEY=sua_chave_secreta_min_32_chars
@@ -245,10 +236,10 @@ ENVIRONMENT=production
 - Verifique o ID/slug do evento
 - Liste eventos com `GET /api/eventos/`
 
-### "Erro Stripe"
-- Verifique se as chaves estão corretas no `.env`
-- Use chaves de teste (começam com `sk_test_`)
-- Confirme que o webhook secret está correto
+### "Erro Asaas"
+- Verifique se `ASAAS_API_KEY` e `ASAAS_WALLET_ID` estão corretos no `.env`
+- Use ambiente sandbox para testes (`ASAAS_ENVIRONMENT=sandbox`)
+- Confirme que o webhook Asaas aponta para `/api/webhooks/asaas`
 
 ### Porta 8000 ocupada
 ```bash
@@ -268,4 +259,4 @@ taskkill /PID <PID> /F
 
 ---
 
-**Desenvolvido com FastAPI + Stripe** ⚡💳
+**Desenvolvido com FastAPI + Asaas** ⚡💳

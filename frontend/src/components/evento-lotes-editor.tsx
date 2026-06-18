@@ -201,7 +201,7 @@ export function EventoLotesEditor({ rows, onChange, className = "", showCalculad
           <span className="text-sm text-emerald-950">
             <strong className="font-semibold">Evento gratuito</strong>
             <span className="mt-0.5 block text-xs leading-relaxed text-emerald-900/90">
-              Participantes não pagam ingresso (sem Stripe). No checkout é pedido quem autorizou a
+              Participantes não pagam ingresso (cortesia). No checkout é pedido quem autorizou a
               cortesia — só para seu controle interno. Você também pode usar o tipo{" "}
               <em>Cortesia (grátis)</em> em um lote específico, junto com lotes pagos.
             </span>

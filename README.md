@@ -1,10 +1,10 @@
 # EventosBR API 🎉
 
-Plataforma de eventos com reembolsos automáticos usando FastAPI, SQLAlchemy e Stripe.
+Plataforma de eventos com reembolsos automáticos usando FastAPI, SQLAlchemy e **Asaas**.
 
 ## 📖 Documentação do sistema (técnica)
 
-Descrição da arquitetura, módulos backend, modelos de dados, frontend Next.js, pagamentos/lotes/webhooks Stripe e operação (env, Docker, Alembic):
+Descrição da arquitetura, módulos backend, modelos de dados, frontend Next.js, pagamentos/lotes/webhooks Asaas e operação (env, Docker, Alembic):
 
 **→ [docs/README.md](docs/README.md)** (índice completo em Markdown no repositório)
 
@@ -15,7 +15,7 @@ No site (Next.js), a mesma informação está resumida na página pública **`/d
 - ✅ Autenticação com JWT
 - ✅ Gerenciamento de eventos
 - ✅ Sistema de ingressos
-- ✅ Integração com Stripe para pagamentos
+- ✅ Integração com Asaas para pagamentos (PIX, cartão, fatura)
 - ✅ Reembolsos automáticos
 - ✅ Webhooks para sincronização
 - ✅ Documentação automática (Swagger)
@@ -24,7 +24,7 @@ No site (Next.js), a mesma informação está resumida na página pública **`/d
 
 - Python 3.11+
 - Docker & Docker Compose (opcional)
-- Conta Stripe (para testes)
+- Conta Asaas (sandbox ou produção) para pagamentos reais
 
 ## 🔧 Instalação
 
@@ -38,7 +38,7 @@ cd eventosbr
 # Copie o arquivo de configuração
 cp .env.example .env
 
-# Configure suas variáveis de ambiente (especialmente Stripe)
+# Configure suas variáveis de ambiente (Asaas, SECRET_KEY, etc.)
 nano .env
 
 # Inicie os containers
@@ -84,10 +84,12 @@ Crie um arquivo `.env` na raiz do projeto:
 # Database
 DATABASE_URL=sqlite:///./eventos.db
 
-# Stripe
-STRIPE_SECRET_KEY=sk_test_seu_chave_secreta
-STRIPE_PUBLISHABLE_KEY=pk_test_sua_chave_publica
-STRIPE_WEBHOOK_SECRET=whsec_seu_webhook_secret
+# Pagamentos — Asaas
+PAYMENT_PROVIDER=asaas
+ASAAS_API_KEY=
+ASAAS_WEBHOOK_TOKEN=
+ASAAS_PLATFORM_WALLET_ID=
+ASAAS_DISABLED=false
 
 # JWT
 SECRET_KEY=sua-chave-secreta-muito-segura-aqui
@@ -108,7 +110,7 @@ Após iniciar a aplicação, acesse:
 
 ## 🖥️ Frontend (Next.js)
 
-O painel web fica em `frontend/` (Next.js + TypeScript + Tailwind + Stripe.js).
+O painel web fica em `frontend/` (Next.js + TypeScript + Tailwind + checkout Asaas).
 
 ### Rodar localmente (API + front)
 
@@ -119,7 +121,7 @@ O painel web fica em `frontend/` (Next.js + TypeScript + Tailwind + Stripe.js).
 ```bash
 cd frontend
 cp .env.local.example .env.local
-# Ajuste NEXT_PUBLIC_API_URL e NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+# Ajuste NEXT_PUBLIC_API_URL se necessário
 npm install
 npm run dev
 ```
@@ -128,7 +130,7 @@ npm run dev
 
 ### Docker (API + Postgres + Redis + Web)
 
-Na raiz do projeto, com `.env` preenchido (Stripe + `SECRET_KEY` + opcional `CORS_ORIGINS`):
+Na raiz do projeto, com `.env` preenchido (`SECRET_KEY`, Asaas, etc.):
 
 ```bash
 docker compose up -d --build
@@ -137,7 +139,7 @@ docker compose up -d --build
 - API: http://localhost:8000  
 - Frontend: http://localhost:3000  
 
-O serviço `web` recebe `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` a partir de `STRIPE_PUBLISHABLE_KEY` no `.env` na build.
+O serviço `web` recebe `NEXT_PUBLIC_PAYMENT_PROVIDER=asaas` na build.
 
 ### `ERR_CONNECTION_REFUSED` em `http://localhost:3000`
 
@@ -173,7 +175,7 @@ A API continua em **`http://localhost:8000`** (`/docs`).
 
 ### Webhooks
 
-- `POST /api/webhooks/stripe` - Webhook do Stripe
+- `POST /api/webhooks/asaas` - Webhook do Asaas
 
 ## 🧪 Testando a API
 
@@ -252,7 +254,7 @@ eventosbr/
 - **FastAPI** - Framework web
 - **SQLAlchemy** - ORM para banco de dados
 - **Pydantic** - Validação de dados
-- **Stripe** - Processamento de pagamentos
+- **Asaas** - Processamento de pagamentos (PIX, cartão)
 - **python-jose** - Autenticação com JWT
 - **python-slugify** - Geração de slugs
 
@@ -267,9 +269,9 @@ pip install -r requirements.txt
 - Verifique DATABASE_URL no .env
 - Para SQLite, certifique-se que a pasta existe
 
-### Erro: Stripe rejection
-- Verifique as credenciais no .env
-- Use chaves de teste (começa com `sk_test_` e `pk_test_`)
+### Erro: Pagamento Asaas rejeitado
+- Verifique `ASAAS_API_KEY` e `ASAAS_WALLET_ID` no `.env`
+- Use ambiente sandbox (`ASAAS_ENVIRONMENT=sandbox`) para testes
 
 ### Porta 8000 já em uso
 ```bash
@@ -296,4 +298,4 @@ Para issues e dúvidas, abra uma issue no repositório.
 
 ---
 
-**Desenvolvido com ❤️ usando FastAPI e Stripe**
+**Desenvolvido com ❤️ usando FastAPI e Asaas**

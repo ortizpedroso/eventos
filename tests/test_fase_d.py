@@ -85,13 +85,13 @@ def _criar_evento(org_token: str) -> dict:
 
 
 class TestFluxoCompra:
-    def test_compra_stripe_disabled_ingresso_pago_e_email_enfileirado(self):
+    def test_compra_asaas_disabled_ingresso_pago_e_email_enfileirado(self):
         org = _registrar_organizador("fluxo1")
         cli = _registrar_cliente("fluxo1")
         ev = _criar_evento(org)
 
-        prev = settings.STRIPE_DISABLED
-        settings.STRIPE_DISABLED = True
+        prev = settings.ASAAS_DISABLED
+        settings.ASAAS_DISABLED = True
         try:
             with patch("app.routes.pagamentos.enqueue_ticket_email") as mock_mail:
                 r = client.post(
@@ -109,7 +109,7 @@ class TestFluxoCompra:
                 )
                 assert r.status_code == 200, r.text
                 body = r.json()
-                assert body.get("stripe_disabled") is True
+                assert body.get("payments_disabled") is True
                 ingresso_id = body["ingresso_id"]
                 mock_mail.assert_called_once_with(ingresso_id)
 
@@ -124,4 +124,4 @@ class TestFluxoCompra:
             assert ing["status"] == "pago"
             assert ing.get("participante_email") == "maria@test.com"
         finally:
-            settings.STRIPE_DISABLED = prev
+            settings.ASAAS_DISABLED = prev

@@ -37,7 +37,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+          NEXT_PUBLIC_PAYMENT_PROVIDER: asaas
 
   e2e:
     runs-on: ubuntu-latest
@@ -58,13 +58,23 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+          NEXT_PUBLIC_PAYMENT_PROVIDER: asaas
       - name: Instalar browsers Playwright
         run: npx playwright install chromium --with-deps
       - name: Testes E2E smoke
         run: npm run test:e2e
         env:
           CI: true
+
+  prod-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar docker-compose.prod.yml
+        run: |
+          cp .env.production.example .env
+          docker compose -f docker-compose.prod.yml config --quiet
+          echo "docker-compose.prod.yml OK"
 
   e2e-compra:
     runs-on: ubuntu-latest
@@ -84,7 +94,7 @@ jobs:
       - name: Instalar browsers Playwright
         working-directory: frontend
         run: npx playwright install chromium --with-deps
-      - name: Teste E2E compra (STRIPE_DISABLED)
+      - name: Teste E2E compra (Asaas mock)
         working-directory: frontend
         run: npm run test:e2e:compra
         env:

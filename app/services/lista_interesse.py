@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Evento, EventoListaInteresse
 from app.services.notificacao_email import enqueue_email_simples
+from app.utils.html_escape import assunto_email_seguro, esc
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +76,10 @@ def notificar_abertura_vendas(db: Session, evento: Evento) -> int:
 
     base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
     link = f"{base}/eventos/{evento.slug}"
-    assunto = f"Vendas abertas: {evento.nome}"
+    nome = esc(evento.nome)
+    assunto = f"Vendas abertas: {assunto_email_seguro(evento.nome)}"
     corpo = (
-        f"<p>As vendas de ingressos para <strong>{evento.nome}</strong> estão abertas!</p>"
+        f"<p>As vendas de ingressos para <strong>{nome}</strong> estão abertas!</p>"
         f'<p><a href="{link}">Comprar ingresso</a></p>'
     )
     enviados = 0
@@ -88,6 +90,16 @@ def notificar_abertura_vendas(db: Session, evento: Evento) -> int:
     return enviados
 
 
-def deve_notificar_abertura(evento: Evento, *, era_publicado: bool) -> bool:
-    """True quando evento passa a publicado e aceita interesse."""
-    return bool(evento.publicado and evento.aceita_interesse and not era_publicado)
+def deve_notificar_abertura(
+    evento: Evento,
+    *,
+    era_publicado: bool,
+    tinha_venda_aberta: bool = False,
+    tem_venda_aberta: bool = False,
+) -> bool:
+    """True na primeira publicação ou quando vendas passam a estar abertas (lote elegível)."""
+    if not evento.aceita_interesse or not evento.publicado:
+        return False
+    if not era_publicado:
+        return True
+    return not tinha_venda_aberta and tem_venda_aberta

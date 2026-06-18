@@ -50,6 +50,9 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
 
     await page.getByTestId("checkout-continuar").click();
 
+    await expect(page.getByText(/Pagamento seguro via Asaas/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Stripe/i)).not.toBeVisible();
+
     await expect(page.getByRole("button", { name: "Gerar PIX" })).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: "Gerar PIX" }).click();
 

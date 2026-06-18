@@ -26,4 +26,9 @@ test.describe("Checkout Asaas copy", () => {
     await page.goto("/planos");
     await expect(page.getByText(/Asaas/i).first()).toBeVisible();
   });
+
+  test("home menciona Asaas nos simuladores", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText(/Asaas/i).first()).toBeVisible();
+  });
 });

@@ -1,4 +1,4 @@
-# Executa teste E2E de compra (requer stack e2e ou API em :8000 com STRIPE_DISABLED).
+# Executa teste E2E de compra (requer stack e2e ou API em :8000 com ASAAS_E2E_MOCK).
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location (Join-Path $root "frontend")

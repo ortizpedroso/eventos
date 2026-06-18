@@ -35,27 +35,6 @@ def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
-@pytest.fixture(autouse=True)
-def _mock_stripe_calls():
-    """
-    Evita chamadas externas ao Stripe durante os testes.
-    """
-    with (
-        patch("stripe.Customer.create") as customer_create,
-        patch("stripe.Account.create") as account_create,
-        patch("stripe.PaymentIntent.create") as payment_intent_create,
-        patch("stripe.Refund.create") as refund_create,
-    ):
-        customer_create.return_value = type("Customer", (), {"id": "cus_test_123"})()
-        account_create.return_value = type("Account", (), {"id": "acct_test_123"})()
-        payment_intent_create.return_value = type(
-            "PaymentIntent",
-            (),
-            {"id": "pi_test_123", "client_secret": "pi_test_secret_123"},
-        )()
-        refund_create.return_value = type("Refund", (), {"id": "re_test_123"})()
-        yield
-
 class TestHealth:
     def test_health_check(self):
         """Liveness: responde 200 sem depender da BD."""
@@ -422,84 +401,6 @@ class TestCompraRapidaPerfil:
         assert me.json()["email_verificado"] is True
 
 
-class TestRetomarPagamento:
-    def test_retomar_pagamento_pendente(self):
-        from config.settings import settings
-
-        prev = settings.STRIPE_DISABLED
-        settings.STRIPE_DISABLED = False
-        try:
-            org = client.post(
-                "/api/auth/registrar",
-                json={
-                    "email": "org_ret@test.com",
-                    "nome": "Org",
-                    "senha": "senha12345",
-                    "tipo": "organizador",
-                },
-            ).json()["access_token"]
-            cli = client.post(
-                "/api/auth/registrar",
-                json={
-                    "email": "cli_ret@test.com",
-                    "nome": "Cli",
-                    "senha": "senha12345",
-                    "tipo": "cliente",
-                },
-            ).json()["access_token"]
-
-            ev = client.post(
-                "/api/eventos/criar",
-                headers={"Authorization": f"Bearer {org}"},
-                json={
-                    "nome": "Evento Retomar",
-                    "descricao": "d",
-                    "data_inicio": "2026-12-01T10:00:00",
-                    "data_fim": "2026-12-01T22:00:00",
-                    "local": "SP",
-                    "preco_ingresso": 50,
-                    "categoria": "Outros",
-                    "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
-                },
-            ).json()
-
-            pay = client.post(
-                "/api/pagamentos/criar",
-                headers={"Authorization": f"Bearer {cli}"},
-                json={
-                    "evento_id": ev["id"],
-                    "valor_centavos": 5000,
-                    "termo_compra_aceito": True,
-                },
-            )
-            assert pay.status_code == 200, pay.text
-            ingresso_id = pay.json()["ingresso_id"]
-
-            with patch("stripe.PaymentIntent.retrieve") as retrieve:
-                retrieve.return_value = type(
-                    "PaymentIntent",
-                    (),
-                    {
-                        "id": "pi_test_123",
-                        "client_secret": "pi_test_secret_123",
-                        "status": "requires_payment_method",
-                        "payment_method_types": ["card", "pix"],
-                    },
-                )()
-                ret = client.post(
-                    "/api/pagamentos/retomar",
-                    headers={"Authorization": f"Bearer {cli}"},
-                    json={"ingresso_id": ingresso_id, "evento_id": ev["id"]},
-                )
-            assert ret.status_code == 200, ret.text
-            body = ret.json()
-            assert body["ingresso_id"] == ingresso_id
-            assert body["client_secret"] == "pi_test_secret_123"
-            assert body.get("evento_slug")
-        finally:
-            settings.STRIPE_DISABLED = prev
-
-
 class TestRecuperacaoSenha:
     def test_solicitar_e_redefinir_senha(self):
         client.post(
@@ -543,22 +444,31 @@ class TestRecuperacaoSenha:
 
 
 class TestWebhookIdempotencia:
-    def test_webhook_idempotente(self):
-        payload = b'{"id":"evt_test_123","type":"payment_intent.succeeded","data":{"object":{"id":"pi_test_123"}}}'
+    def test_webhook_asaas_idempotente(self):
+        from unittest.mock import patch
 
-        with patch("stripe.Webhook.construct_event") as construct_event:
-            construct_event.return_value = {
-                "id": "evt_test_123",
-                "type": "payment_intent.succeeded",
-                "data": {"object": {"id": "pi_test_123"}},
+        from config.settings import settings
+
+        prev = settings.ASAAS_WEBHOOK_TOKEN
+        settings.ASAAS_WEBHOOK_TOKEN = "tok_test"
+        try:
+            payload = {
+                "id": "evt_asaas_test_123",
+                "event": "PAYMENT_RECEIVED",
+                "payment": {"id": "pay_test_123"},
             }
-
-            r1 = client.post("/api/webhooks/stripe", data=payload, headers={"stripe-signature": "sig"})
-            assert r1.status_code == 200
-
-            r2 = client.post("/api/webhooks/stripe", data=payload, headers={"stripe-signature": "sig"})
+            headers = {"asaas-access-token": "tok_test", "content-type": "application/json"}
+            with patch(
+                "app.services.pagamento_asaas.obter_cobranca",
+                return_value={"id": "pay_test_123", "status": "RECEIVED"},
+            ):
+                r1 = client.post("/api/webhooks/asaas", json=payload, headers=headers)
+                assert r1.status_code == 200
+                r2 = client.post("/api/webhooks/asaas", json=payload, headers=headers)
             assert r2.status_code == 200
             assert r2.json().get("idempotent") is True
+        finally:
+            settings.ASAAS_WEBHOOK_TOKEN = prev
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

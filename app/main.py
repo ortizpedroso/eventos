@@ -33,30 +33,11 @@ async def lifespan(app: FastAPI):
     elif settings.use_asaas:
         key = (settings.ASAAS_API_KEY or "").strip()
         if not key:
-            logger.warning("ASAAS_API_KEY ausente com PAYMENT_PROVIDER=asaas.")
+            logger.warning("ASAAS_API_KEY ausente.")
         if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
             logger.warning("ASAAS_PLATFORM_WALLET_ID ausente — split da plataforma não funcionará.")
         if not (settings.ASAAS_WEBHOOK_TOKEN or "").strip() and settings.ENVIRONMENT == "production":
             logger.warning("ASAAS_WEBHOOK_TOKEN ausente — webhook Asaas sem autenticação em produção.")
-    if settings.STRIPE_DISABLED:
-        logger.warning("STRIPE_DISABLED ativo na API — cadastro e compras sem Stripe.")
-    sk = (settings.STRIPE_SECRET_KEY or "").strip()
-    if (
-        not settings.use_asaas
-        and sk
-        and (
-            sk.endswith("aqui")
-            or "seu_chave" in sk.lower()
-            or "cole_aqui" in sk.lower()
-            or len(sk) < 50
-        )
-    ):
-        logger.warning(
-            "STRIPE_SECRET_KEY parece placeholder ou inválida (tamanho %s). "
-            "No Windows, variável de ambiente do sistema pode SOBRESCREVER o .env — "
-            "confira STRIPE_SECRET_KEY em Propriedades do sistema e reinicie a API.",
-            len(sk),
-        )
     if settings.ENVIRONMENT == "development":
         create_tables()
     if settings.ENVIRONMENT == "production":
