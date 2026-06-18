@@ -188,6 +188,250 @@ export async function seedPreVendaEvent(): Promise<SeededEvent> {
   };
 }
 
+/** Evento esgotado com lista de espera habilitada. */
+export async function seedSoldOutWaitlistEvent(): Promise<SeededEvent> {
+  const suf = `${Date.now()}`;
+  const senha = "senha12345";
+  const orgEmail = `e2e_espera_org_${suf}@test.com`;
+  const cliEmail = `e2e_espera_cli_${suf}@test.com`;
+
+  await api("POST", "/api/auth/registrar", {
+    email: orgEmail,
+    nome: "Org Espera E2E",
+    senha,
+    tipo: "organizador",
+  });
+
+  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
+    email: orgEmail,
+    senha,
+  });
+
+  const ev = await api<{ id: string; slug: string; preco_compra?: number; preco_ingresso: number }>(
+    "POST",
+    "/api/eventos/criar",
+    {
+      nome: `E2E Esgotado ${suf}`,
+      descricao: "Evento esgotado para lista de espera",
+      data_inicio: "2026-12-20T19:00:00",
+      data_fim: "2026-12-20T23:00:00",
+      local: "São Paulo",
+      preco_ingresso: 25,
+      categoria: "Outros",
+      publicado: true,
+      lista_espera_habilitada: true,
+      ingresso_lotes: [
+        { nome: "Único", preco: 25, ordem: 1, ativo: true, quantidade_maxima: 1 },
+      ],
+    },
+    orgToken,
+  );
+
+  await api("POST", "/api/auth/registrar", {
+    email: cliEmail,
+    nome: "Comprador E2E",
+    senha,
+    tipo: "cliente",
+  });
+
+  const { access_token: cliToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
+    email: cliEmail,
+    senha,
+  });
+
+  await api(
+    "POST",
+    "/api/pagamentos/criar",
+    {
+      evento_id: ev.id,
+      valor_centavos: 2500,
+      participante_nome: "Comprador",
+      participante_email: cliEmail,
+      participante_cpf: "52998224725",
+      participante_telefone: "11987654321",
+      termo_compra_aceito: true,
+    },
+    cliToken,
+  );
+
+  return {
+    slug: ev.slug,
+    eventoId: ev.id,
+    precoReais: Number(ev.preco_compra ?? ev.preco_ingresso ?? 25),
+  };
+}
+
+/** Organizador com perfil público /produtor/{slug}. */
+export async function seedPublicProducer(): Promise<{ slug: string; nome: string }> {
+  const suf = `${Date.now()}`;
+  const senha = "senha12345";
+  const orgEmail = `e2e_produtor_${suf}@test.com`;
+
+  await api("POST", "/api/auth/registrar", {
+    email: orgEmail,
+    nome: `Produtor E2E ${suf}`,
+    senha,
+    tipo: "organizador",
+  });
+
+  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
+    email: orgEmail,
+    senha,
+  });
+
+  const perfil = await api<{ slug_publico: string; nome: string }>(
+    "PATCH",
+    "/api/produtor/meu-perfil",
+    {
+      bio: "Produtor de testes E2E",
+      social_instagram: "@eventosbr",
+    },
+    orgToken,
+  );
+
+  await api(
+    "POST",
+    "/api/eventos/criar",
+    {
+      nome: `Show Público ${suf}`,
+      descricao: "Evento visível no perfil",
+      data_inicio: "2026-12-20T19:00:00",
+      data_fim: "2026-12-20T23:00:00",
+      local: "São Paulo",
+      preco_ingresso: 40,
+      categoria: "Música",
+      publicado: true,
+      ingresso_lotes: [{ nome: "Geral", preco: 40, ordem: 1, ativo: true }],
+    },
+    orgToken,
+  );
+
+  return { slug: perfil.slug_publico, nome: perfil.nome };
+}
+
+/** Evento com parcelamento habilitado. */
+export async function seedParcelamentoEvent(): Promise<SeededEvent> {
+  const suf = `${Date.now()}`;
+  const senha = "senha12345";
+  const orgEmail = `e2e_parc_org_${suf}@test.com`;
+
+  await api("POST", "/api/auth/registrar", {
+    email: orgEmail,
+    nome: "Org Parcelamento",
+    senha,
+    tipo: "organizador",
+  });
+
+  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
+    email: orgEmail,
+    senha,
+  });
+
+  const ev = await api<{ id: string; slug: string }>(
+    "POST",
+    "/api/eventos/criar",
+    {
+      nome: `E2E Parcelado ${suf}`,
+      descricao: "Evento com parcelamento",
+      data_inicio: "2026-12-20T19:00:00",
+      data_fim: "2026-12-20T23:00:00",
+      local: "São Paulo",
+      preco_ingresso: 60,
+      categoria: "Outros",
+      publicado: true,
+      parcelamento_habilitado: true,
+      parcelamento_max: 3,
+      ingresso_lotes: [{ nome: "Geral", preco: 60, ordem: 1, ativo: true }],
+    },
+    orgToken,
+  );
+
+  await api(
+    "PATCH",
+    `/api/eventos/id/${ev.id}`,
+    {
+      nome: `E2E Parcelado ${suf}`,
+      descricao: "Evento com parcelamento",
+      data_inicio: "2026-12-20T19:00:00",
+      data_fim: "2026-12-20T23:00:00",
+      local: "São Paulo",
+      preco_ingresso: 60,
+      categoria: "Outros",
+      publicado: true,
+      parcelamento_habilitado: true,
+      parcelamento_max: 3,
+    },
+    orgToken,
+  );
+
+  return { slug: ev.slug, eventoId: ev.id, precoReais: 60 };
+}
+
+/** Evento com parcelamento no stack Asaas mock (E2E asaas). */
+export async function seedParcelamentoEventAsaas(): Promise<SeededEvent> {
+  const suf = `${Date.now()}`;
+  const senha = "senha12345";
+  const orgEmail = `e2e_parc_asaas_org_${suf}@test.com`;
+
+  await api("POST", "/api/auth/registrar", {
+    email: orgEmail,
+    nome: "Org Parcelamento Asaas",
+    senha,
+    tipo: "organizador",
+  });
+
+  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
+    email: orgEmail,
+    senha,
+  });
+
+  await api(
+    "PUT",
+    "/api/organizador/asaas/wallet",
+    { wallet_id: "e2e-org-wallet-parc", sincronizar_eventos: true },
+    orgToken,
+  );
+
+  const ev = await api<{ id: string; slug: string }>(
+    "POST",
+    "/api/eventos/criar",
+    {
+      nome: `E2E Parcelado Asaas ${suf}`,
+      descricao: "Parcelamento E2E",
+      data_inicio: "2026-12-20T19:00:00",
+      data_fim: "2026-12-20T23:00:00",
+      local: "São Paulo",
+      preco_ingresso: 60,
+      categoria: "Outros",
+      publicado: true,
+      parcelamento_habilitado: true,
+      parcelamento_max: 3,
+      ingresso_lotes: [{ nome: "Geral", preco: 60, ordem: 1, ativo: true }],
+    },
+    orgToken,
+  );
+
+  await api(
+    "PATCH",
+    `/api/eventos/id/${ev.id}`,
+    {
+      nome: `E2E Parcelado Asaas ${suf}`,
+      descricao: "Parcelamento E2E",
+      data_inicio: "2026-12-20T19:00:00",
+      data_fim: "2026-12-20T23:00:00",
+      local: "São Paulo",
+      preco_ingresso: 60,
+      categoria: "Outros",
+      publicado: true,
+      parcelamento_habilitado: true,
+      parcelamento_max: 3,
+    },
+    orgToken,
+  );
+
+  return { slug: ev.slug, eventoId: ev.id, precoReais: 60 };
+}
+
 export async function apiLogin(email: string, senha: string): Promise<string> {
   const { access_token } = await api<{ access_token: string }>("POST", "/api/auth/login", {
     email,

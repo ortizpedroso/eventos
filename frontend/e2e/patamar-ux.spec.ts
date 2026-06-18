@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 
-import { seedPreVendaEvent, waitForApiReady } from "./helpers/api-setup";
+import {
+  seedPreVendaEvent,
+  seedPublicProducer,
+  seedSoldOutWaitlistEvent,
+  waitForApiReady,
+} from "./helpers/api-setup";
 
 test.describe("Patamar UX — vitrine e navbar", () => {
   test("busca na navbar redireciona para vitrine com q", async ({ page }) => {
@@ -59,5 +64,34 @@ test.describe("Lista de interesse pré-venda", () => {
     await page.getByTestId("lista-interesse-email").fill(email);
     await page.getByTestId("lista-interesse-submit").click();
     await expect(page.getByText(/inscrição registrada|avisaremos/i)).toBeVisible({ timeout: 15_000 });
+  });
+});
+
+test.describe("Lista de espera (esgotado)", () => {
+  test("inscreve na fila quando esgotado", async ({ page }) => {
+    test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");
+
+    await waitForApiReady(90_000);
+    const { slug } = await seedSoldOutWaitlistEvent();
+    const email = `espera_e2e_${Date.now()}@test.com`;
+
+    await page.goto(`/eventos/${slug}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("lista-espera-form")).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId("lista-espera-email").fill(email);
+    await page.getByTestId("lista-espera-submit").click();
+    await expect(page.getByText(/fila|posição|inscrição/i)).toBeVisible({ timeout: 15_000 });
+  });
+});
+
+test.describe("Perfil público do produtor", () => {
+  test("renderiza página /produtor/{slug}", async ({ page }) => {
+    test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");
+
+    await waitForApiReady(90_000);
+    const { slug, nome } = await seedPublicProducer();
+
+    await page.goto(`/produtor/${slug}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: new RegExp(nome, "i") })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/eventos/i).first()).toBeVisible();
   });
 });

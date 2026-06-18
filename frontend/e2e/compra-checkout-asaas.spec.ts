@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   apiLogin,
+  seedParcelamentoEventAsaas,
   seedPublishedEventAsaas,
   simularWebhookAsaasPago,
   waitForApiReady,
@@ -69,6 +70,36 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
 
     await expect(page.getByTestId("checkout-confirmacao")).toBeVisible({ timeout: 45_000 });
     await expect(page.getByRole("heading", { name: /compra confirmada/i })).toBeVisible();
+  });
+
+  test("exibe seletor de parcelas no cartão", async ({ page }) => {
+    const { slug } = await seedParcelamentoEventAsaas();
+    const suf = Date.now();
+    const email = `e2e_parc_ui_${suf}@test.com`;
+    const senha = "senha12345";
+
+    await page.goto("/auth?mode=register", { waitUntil: "networkidle" });
+    await page.waitForSelector("form[data-auth-ready=true]", { timeout: 15_000 });
+    await page.locator("#email").fill(email);
+    await page.locator("#nome").fill("Cliente Parcelado");
+    await page.locator("#senha").fill(senha);
+    await page.getByRole("button", { name: "Cadastrar", exact: true }).click();
+    await page.waitForURL((url) => !url.pathname.startsWith("/auth"), { timeout: 30_000 });
+
+    await page.goto(`/eventos/${slug}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: /sobre o evento/i })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await page.getByRole("button", { name: /li o termo/i }).click();
+    await page.getByRole("checkbox", { name: /li e aceito o termo/i }).check();
+    await page.getByTestId("checkout-continuar").click();
+
+    await expect(page.getByText(/Pagamento seguro via Asaas/i)).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /cartão/i }).click();
+    await expect(page.getByTestId("checkout-parcelas")).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId("checkout-parcelas").selectOption("3");
+    await expect(page.getByText(/3x/i).first()).toBeVisible();
   });
 });
 

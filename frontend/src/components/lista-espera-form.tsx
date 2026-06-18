@@ -31,13 +31,21 @@ export function ListaEsperaForm({ slug }: Props) {
   }
 
   return (
-    <form onSubmit={submit} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+    <form onSubmit={submit} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4" data-testid="lista-espera-form">
       <p className="text-sm font-medium text-zinc-900">Lista de espera</p>
       <p className="mt-1 text-xs text-zinc-600">Esgotado? Entre na fila e avisaremos por e-mail quando liberar vaga.</p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <input type="email" required placeholder="E-mail" value={email} onChange={(ev) => setEmail(ev.target.value)} className="input flex-1" />
+        <input
+          type="email"
+          required
+          placeholder="E-mail"
+          value={email}
+          onChange={(ev) => setEmail(ev.target.value)}
+          className="input flex-1"
+          data-testid="lista-espera-email"
+        />
         <input type="text" placeholder="Nome" value={nome} onChange={(ev) => setNome(ev.target.value)} className="input flex-1" />
-        <button type="submit" disabled={loading} className="btn-outline shrink-0 px-4">
+        <button type="submit" disabled={loading} data-testid="lista-espera-submit" className="btn-outline shrink-0 px-4">
           {loading ? "…" : "Entrar na fila"}
         </button>
       </div>

@@ -141,8 +141,10 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/organizador.svg"
+        src="/marketing/organizador.png"
         alt="Painel do organizador EventosBR"
+        width={800}
+        height={500}
         className="h-full min-h-[320px] w-full rounded-2xl object-cover ring-1 ring-emerald-700/40 lg:min-h-[400px]"
       />
     ),
@@ -159,8 +161,10 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/checkout.svg"
+        src="/marketing/checkout.png"
         alt="Checkout seguro com Asaas"
+        width={800}
+        height={500}
         className="h-full min-h-[320px] w-full rounded-2xl object-cover shadow-xl ring-1 ring-emerald-200 lg:min-h-[400px]"
       />
     ),
@@ -177,8 +181,10 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/portaria.svg"
+        src="/marketing/portaria.png"
         alt="Check-in na portaria com QR Code"
+        width={800}
+        height={500}
         className="h-full min-h-[320px] w-full rounded-2xl object-cover ring-1 ring-violet-800/40 lg:min-h-[400px]"
       />
     ),

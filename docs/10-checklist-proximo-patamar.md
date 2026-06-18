@@ -2,7 +2,7 @@
 
 Documento mestre de **produto**, **operação** e **diferenciação** do EventosBR — consolidando fases A–D, auditoria (doc 09), top 10 aprovado e estratégia de migração vs Sympla/Even3.
 
-**Última atualização:** 17/06/2026
+**Última atualização:** 18/06/2026
 
 ---
 
@@ -11,14 +11,16 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 | Nível | Descrição | Situação |
 |-------|-----------|----------|
 | **Patamar 1 — MVP sólido** | Compra, pagamento, ingresso, check-in, painel organizador | ✅ Concluído |
-| **Patamar 2 — Produção confiável** | Deploy real, **Asaas** live, SMTP, webhook, monitoramento | 🟡 ~90% (código pronto; falta VPS + credenciais) |
-| **Patamar 3 — Paridade Sympla** | Parcelamento, lista espera, portaria equipe, página organizador | 🟡 ~15% (Sprint 1 parcial) |
-| **Patamar 4 — Diferenciação** | Transparência financeira, migração, CRM, selo confiança | ⏳ Planejado |
+| **Patamar 2 — Produção confiável** | Deploy real, **Asaas** live, SMTP, webhook, monitoramento | 🟡 Código pronto; falta VPS + credenciais (`eventosbr.app.br` → 502) |
+| **Patamar 3 — Paridade Sympla (UX produto)** | Parcelamento, listas, página organizador, simuladores, vitrine | ✅ **Código concluído** (spec `patamar-completo-ux-produto.md`) |
+| **Patamar 4 — Diferenciação** | Transparência financeira, migração, CRM, selo confiança | 🟡 Parcial (simuladores + taxas públicas OK) |
 | **Patamar 5 — Escala** | App equipe offline, API pública, NFSe, assinatura ativa | 🔮 Futuro |
 
-> **Hoje:** Patamar 1 completo. **Código do Patamar 2 (Asaas only) está no repo** — PR [#7](https://github.com/ortizpedroso/eventos/pull/7) (remove Stripe). Falta executar go-live no VPS (`.env`, webhook, SMTP, 1ª venda real).
+> **Hoje:** Patamar 1 + **Patamar 3 (repo)** concluídos. Falta **go-live VPS** (Anexo B da spec) e validação mobile real.
 
 **Provedor de pagamento:** **Asaas** (único)
+
+**Documentação consolidada:** [00-sistema-completo.md](./00-sistema-completo.md) · Spec: `specs/patamar-completo-ux-produto.md`
 
 ---
 
@@ -26,15 +28,15 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 
 | Área | Temos | Falta (próximo patamar) |
 |------|-------|-------------------------|
-| Comprador / checkout | 21/24 core | 3 melhorias |
-| Organizador / eventos | 26/29 | 5 melhorias |
-| Portaria / equipe | 10/12 | 2 melhorias |
-| Financeiro / **Asaas** | 14/16 | 2 críticos (ops VPS) |
-| Segurança / UX (auditoria) | 36/36 repo | merge PRs + ops VPS |
-| Admin plataforma | 6/8 | 2 itens |
-| Diferenciação (migração) | 6/15 | 9 itens |
-| Qualidade / testes | 10/10 | 0 itens (E2E Asaas mock) |
-| **Total estimado** | **~128 itens OK** | **~24 itens abertos** |
+| Comprador / checkout | 24/24 core patamar | validação mobile |
+| Organizador / eventos | 29/29 patamar UX | operadores múltiplos (futuro) |
+| Portaria / equipe | 12/12 | — |
+| Financeiro / **Asaas** | 14/16 código | 2 críticos (ops VPS) |
+| Segurança / UX (auditoria) | 36/36 repo | ops VPS |
+| Admin plataforma | 8/8 | — |
+| Diferenciação (migração) | 8/15 | migração Sympla, Wallet, selo |
+| Qualidade / testes | 11/11 | — (141 pytest + E2E CI) |
+| **Total estimado** | **~142 itens OK** | **~8 itens abertos (ops + futuro)** |
 
 ---
 
@@ -59,10 +61,10 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 |---|------|--------|
 | 1 | Temporizador de reserva no checkout | ✅ Feito |
 | 2 | Busca manual na portaria | ✅ Feito |
-| 3 | Lista de interesse + lista de espera | ⏳ Pendente |
-| 4 | Parcelamento no cartão | ⏳ Pendente |
+| 3 | Lista de interesse + lista de espera | ✅ Feito |
+| 4 | Parcelamento no cartão | ✅ Feito |
 | 5 | Múltiplos operadores com permissões | ⏳ Pendente |
-| 6 | Página pública do organizador | ⏳ Pendente |
+| 6 | Página pública do organizador | ✅ Feito (`/produtor/{slug}`) |
 | 7 | Formulário customizável na inscrição | ⏳ Pendente |
 | 8 | Importação CSV | ⏳ Pendente |
 | 9 | Certificados com validação | ⏳ Pendente |
@@ -86,7 +88,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 |--------|------|--------|
 | **0** | Go-live (deploy, SMTP, webhook **Asaas**) | 🟡 Código pronto; falta VPS |
 | **1** | Quick wins (timer, busca portaria, duplicar UI, simulador) | ✅ 4/4 feitos |
-| **2** | Receita (lista espera/interesse, parcelamento, página organizador) | ⏳ |
+| **2** | Receita (lista espera/interesse, parcelamento, página organizador) | ✅ Concluído no repo |
 | **3** | Equipe + migração (operadores, PWA, importação Sympla, selo) | ⏳ |
 | **4** | Profundidade (formulário custom, certificados, Wallet, conciliação) | ⏳ |
 
