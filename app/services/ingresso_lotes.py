@@ -221,6 +221,38 @@ def motivo_lote_indisponivel(
     return "Ingressos esgotados no lote atual. Recarregue a página — pode ter aberto um novo lote."
 
 
+def classificar_motivo_compra_indisponivel(motivo: str | None) -> str | None:
+    """Código estável para UI/API: pre_venda | esgotado | encerrado | outro."""
+    if not motivo:
+        return None
+    m = motivo.lower()
+    if "não começaram" in m or "não tem lotes" in m or "período de venda no momento" in m:
+        return "pre_venda"
+    if "esgotad" in m:
+        return "esgotado"
+    if "encerrou" in m:
+        return "encerrado"
+    return "outro"
+
+
+def vendas_ainda_nao_abertas(db: Session, evento: Evento, *, ocupacao_por_lote: dict[str, int] | None = None) -> bool:
+    if evento_tem_venda_aberta(db, evento):
+        return False
+    codigo = classificar_motivo_compra_indisponivel(
+        motivo_lote_indisponivel(db, evento, ocupacao_por_lote=ocupacao_por_lote)
+    )
+    return codigo == "pre_venda"
+
+
+def ingressos_esgotados_sem_vaga(db: Session, evento: Evento, *, ocupacao_por_lote: dict[str, int] | None = None) -> bool:
+    if evento_tem_venda_aberta(db, evento):
+        return False
+    codigo = classificar_motivo_compra_indisponivel(
+        motivo_lote_indisponivel(db, evento, ocupacao_por_lote=ocupacao_por_lote)
+    )
+    return codigo == "esgotado"
+
+
 def preco_minimo_lotes_ativos(db: Session, evento_id: str) -> float | None:
     lotes = (
         db.query(EventoIngressoLote)

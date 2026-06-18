@@ -48,6 +48,28 @@ def usuario_tem_ingresso_pago(db: Session, evento_id: str, email: str, usuario_i
     return q.first() is not None
 
 
+def expirar_janelas_espera_ativas(db: Session, evento_id: str) -> int:
+    """Expira notificações ativas (ex.: organizador desabilitou a lista de espera)."""
+    agora = _agora()
+    ativos = (
+        db.query(EventoListaEspera)
+        .filter(
+            EventoListaEspera.evento_id == evento_id,
+            EventoListaEspera.status == "notificado",
+            EventoListaEspera.token_expira_em.isnot(None),
+            EventoListaEspera.token_expira_em > agora,
+        )
+        .all()
+    )
+    for ent in ativos:
+        ent.status = "expirado"
+        ent.token_compra = None
+        ent.token_expira_em = None
+    if ativos:
+        db.commit()
+    return len(ativos)
+
+
 def inscrever_espera(
     db: Session,
     evento: Evento,
@@ -56,8 +78,15 @@ def inscrever_espera(
     nome: str | None = None,
     usuario: Usuario | None = None,
 ) -> EventoListaEspera:
+    from app.services.ingresso_lotes import ingressos_esgotados_sem_vaga
+
     if not evento.lista_espera_habilitada:
         raise HTTPException(status_code=400, detail="Lista de espera não está habilitada para este evento.")
+    if not ingressos_esgotados_sem_vaga(db, evento):
+        raise HTTPException(
+            status_code=400,
+            detail="Lista de espera só está disponível quando os ingressos estão esgotados.",
+        )
 
     email_norm = email.strip().lower()
     if not email_norm or "@" not in email_norm:
@@ -231,7 +260,7 @@ def validar_espera_para_ingresso_pendente(
 ) -> None:
     """Revalida janela exclusiva ao retomar, cobrar ou concluir pagamento pendente."""
     evento = db.get(Evento, ingresso.evento_id)
-    if not evento or not evento.lista_espera_habilitada:
+    if not evento:
         return
     if not janela_exclusiva_espera_ativa(db, evento.id):
         return
@@ -281,8 +310,6 @@ def validar_compra_com_token_espera(
     email_participante: str,
 ) -> None:
     """Exige token válido enquanto houver janela exclusiva da lista de espera."""
-    if not evento.lista_espera_habilitada:
-        return
     if not janela_exclusiva_espera_ativa(db, evento.id):
         return
     if not token or not token.strip():

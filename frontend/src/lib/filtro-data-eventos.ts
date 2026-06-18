@@ -31,3 +31,22 @@ export function intervaloFiltroData(preset: FiltroDataPreset): { de?: string; at
 
   return {};
 }
+
+function isoDateKey(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+/** Infere chip ativo a partir de ?de=&ate= na URL. */
+export function presetFromDeAte(de?: string | null, ate?: string | null): FiltroDataPreset {
+  if (!de?.trim() || !ate?.trim()) return "";
+  const deKey = isoDateKey(de.trim());
+  const ateKey = isoDateKey(ate.trim());
+  const presets: FiltroDataPreset[] = ["hoje", "fim_de_semana", "semana"];
+  for (const p of presets) {
+    const exp = intervaloFiltroData(p);
+    if (exp.de && exp.ate && isoDateKey(exp.de) === deKey && isoDateKey(exp.ate) === ateKey) {
+      return p;
+    }
+  }
+  return "";
+}

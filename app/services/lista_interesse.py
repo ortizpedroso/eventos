@@ -17,6 +17,15 @@ from app.utils.html_escape import assunto_email_seguro, esc
 logger = logging.getLogger(__name__)
 
 
+def listar_interesse(db: Session, evento_id: str) -> list[EventoListaInteresse]:
+    return (
+        db.query(EventoListaInteresse)
+        .filter(EventoListaInteresse.evento_id == evento_id)
+        .order_by(EventoListaInteresse.data_criacao.asc())
+        .all()
+    )
+
+
 def inscrever_interesse(
     db: Session,
     evento: Evento,
@@ -24,6 +33,16 @@ def inscrever_interesse(
     email: str,
     nome: str | None = None,
 ) -> EventoListaInteresse:
+    from app.services.ingresso_lotes import vendas_ainda_nao_abertas
+
+    if not evento.aceita_interesse:
+        raise HTTPException(status_code=400, detail="Este evento não aceita lista de interesse.")
+    if not vendas_ainda_nao_abertas(db, evento):
+        raise HTTPException(
+            status_code=400,
+            detail="Lista de interesse só aceita inscrições antes da abertura das vendas.",
+        )
+
     email_norm = email.strip().lower()
     if not email_norm or "@" not in email_norm:
         raise HTTPException(status_code=400, detail="E-mail inválido.")
@@ -101,5 +120,5 @@ def deve_notificar_abertura(
     if not evento.aceita_interesse or not evento.publicado:
         return False
     if not era_publicado:
-        return True
+        return tem_venda_aberta
     return not tinha_venda_aberta and tem_venda_aberta

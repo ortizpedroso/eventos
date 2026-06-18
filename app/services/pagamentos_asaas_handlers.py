@@ -339,10 +339,11 @@ def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
     )
     valor = float(ingresso.valor or 0)
     try:
+        idem_key = f"refund_{pay_id}_{ingresso.id}"
         if outros_pagos > 0:
-            result = reembolsar_cobranca(pay_id, valor=valor)
+            result = reembolsar_cobranca(pay_id, valor=valor, idempotency_key=idem_key)
         else:
-            result = reembolsar_cobranca(pay_id)
+            result = reembolsar_cobranca(pay_id, idempotency_key=idem_key)
         return result.get("id") or pay_id
     except AsaasAPIError as e:
         logger.exception("Erro Asaas reembolso")

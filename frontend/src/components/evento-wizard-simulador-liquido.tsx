@@ -10,7 +10,7 @@ import {
   formatPercentual,
   parseValorMonetarioInput,
 } from "@/lib/tarifas-plataforma";
-import { AVISO_LEGAL_TAXAS, calcularTaxaAsaas } from "@/lib/taxas-asaas-publicas";
+import { AVISO_LEGAL_TAXAS, TAXA_PIX, calcularTaxaAsaas } from "@/lib/taxas-asaas-publicas";
 
 type Props = {
   /** Preço de venda do ingresso (string do input ou número). */
@@ -93,7 +93,7 @@ export function EventoWizardSimuladorLiquido({
           <span className="font-semibold text-emerald-800">{formatBrl(detalhe.liquidoOrganizador)}</span>
         </li>
         <li className="flex justify-between gap-2 text-zinc-500">
-          <span>Est. taxa Asaas PIX (R$ 1,99)</span>
+          <span>Est. taxa Asaas PIX ({formatBrl(TAXA_PIX)})</span>
           <span>− {formatBrl(taxaPixEst)}</span>
         </li>
         <li className="flex justify-between gap-2 font-medium text-emerald-900">

@@ -33,6 +33,7 @@ export type Evento = {
   /** False quando lotes esgotados ou fora do período de vendas. */
   compra_disponivel?: boolean;
   motivo_compra_indisponivel?: string | null;
+  compra_indisponivel_codigo?: "pre_venda" | "esgotado" | "encerrado" | "outro" | null;
   ingresso_lotes?: IngressoLote[];
   categoria: string;
   mensagem_confirmacao?: string | null;

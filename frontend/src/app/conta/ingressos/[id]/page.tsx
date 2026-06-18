@@ -430,6 +430,14 @@ export default function IngressoDetalhePage() {
               </p>
             </div>
           ) : null}
+          <button
+            type="button"
+            disabled
+            title="Em breve — Apple Wallet e Google Wallet"
+            className="mx-auto mt-4 block w-full max-w-xs cursor-not-allowed rounded-lg border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm text-zinc-500"
+          >
+            Adicionar à Carteira (em breve)
+          </button>
         </section>
       )}
 

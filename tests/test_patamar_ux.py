@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from slugify import slugify
 
-from app.models import Evento, Ingresso, Usuario
+from app.models import Evento, EventoIngressoLote, Ingresso, Usuario, UsuarioNotificacao
 from app.services.eventos_relacionados import listar_eventos_relacionados
 from app.services.ingresso_pago import marcar_ingresso_pago
 from app.services.lista_espera import (
@@ -28,7 +28,49 @@ def _db():
     return test_api.TestingSessionLocal()
 
 
-def _criar_evento(db, org_id: str, nome: str = "Show Teste") -> Evento:
+def _setup_pre_venda(db, ev: Evento) -> None:
+    futuro = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=2)
+    db.add(
+        EventoIngressoLote(
+            evento_id=ev.id,
+            nome="1º lote",
+            preco=50.0,
+            ordem=1,
+            quantidade_maxima=100,
+            ativo=True,
+            vendas_inicio=futuro,
+        )
+    )
+    db.commit()
+    db.refresh(ev)
+
+
+def _setup_esgotado(db, ev: Evento) -> None:
+    lote = EventoIngressoLote(
+        evento_id=ev.id,
+        nome="Geral",
+        preco=50.0,
+        ordem=1,
+        quantidade_maxima=1,
+        ativo=True,
+    )
+    db.add(lote)
+    db.flush()
+    db.add(
+        Ingresso(
+            evento_id=ev.id,
+            lote_id=lote.id,
+            usuario_id=ev.organizador_id,
+            participante_email="ocupante@ex.com",
+            valor=50.0,
+            status="pago",
+        )
+    )
+    db.commit()
+    db.refresh(ev)
+
+
+def _criar_evento(db, org_id: str, nome: str = "Show Teste", *, modo: str = "esgotado") -> Evento:
     ev = Evento(
         nome=nome,
         descricao="desc",
@@ -47,6 +89,10 @@ def _criar_evento(db, org_id: str, nome: str = "Show Teste") -> Evento:
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    if modo == "pre_venda":
+        _setup_pre_venda(db, ev)
+    elif modo == "esgotado":
+        _setup_esgotado(db, ev)
     return ev
 
 
@@ -89,7 +135,7 @@ def test_lista_interesse_dedup():
     db = _db()
     try:
         org = _criar_org(db)
-        ev = _criar_evento(db, org.id)
+        ev = _criar_evento(db, org.id, modo="pre_venda")
         a = inscrever_interesse(db, ev, email="teste@exemplo.com", nome="A")
         b = inscrever_interesse(db, ev, email="teste@exemplo.com", nome="B")
         assert a.id == b.id
@@ -117,7 +163,16 @@ def test_lista_espera_liberacao(monkeypatch):
         ev = _criar_evento(db, org.id)
         ev.lista_espera_prazo_horas = 24
         db.commit()
-        entrada = inscrever_espera(db, ev, email="fila@ex.com")
+        comprador = Usuario(
+            email=f"comprador-{uuid.uuid4().hex[:8]}@ex.com",
+            nome="Comprador",
+            senha_hash="x",
+            tipo="cliente",
+        )
+        db.add(comprador)
+        db.commit()
+        db.refresh(comprador)
+        entrada = inscrever_espera(db, ev, email="fila@ex.com", usuario=comprador)
         emails: list[str] = []
         monkeypatch.setattr(
             "app.services.lista_espera.enqueue_email_simples",
@@ -131,6 +186,15 @@ def test_lista_espera_liberacao(monkeypatch):
         assert emails == ["fila@ex.com"]
         ok = validar_token_espera(db, ev, entrada.token_compra)
         assert ok is not None
+        notif = (
+            db.query(UsuarioNotificacao)
+            .filter(
+                UsuarioNotificacao.usuario_id == comprador.id,
+                UsuarioNotificacao.tipo == "lista_espera",
+            )
+            .first()
+        )
+        assert notif is not None
     finally:
         db.close()
 
@@ -874,7 +938,7 @@ def test_api_lista_interesse():
     db = _db()
     try:
         org = _criar_org(db)
-        ev = _criar_evento(db, org.id)
+        ev = _criar_evento(db, org.id, modo="pre_venda")
         r = test_api.client.post(
             f"/api/listas/interesse/{ev.slug}",
             json={"email": "novo@exemplo.com", "nome": "Test"},
@@ -923,19 +987,31 @@ def test_notificar_abertura_vendas_ao_publicar(monkeypatch):
 
     monkeypatch.setattr("app.services.lista_interesse.enqueue_email_simples", _enqueue)
 
+    from app.services.ingresso_lotes import evento_tem_venda_aberta
     from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
 
     db = _db()
     try:
         org = _criar_org(db)
-        ev = _criar_evento(db, org.id)
+        ev = _criar_evento(db, org.id, modo="pre_venda")
         ev.publicado = False
         db.commit()
         db.refresh(ev)
         inscrever_interesse(db, ev, email="a@ex.com", nome="A")
         inscrever_interesse(db, ev, email="b@ex.com", nome="B")
         ev.publicado = True
-        assert deve_notificar_abertura(ev, era_publicado=False)
+        db.commit()
+        db.refresh(ev)
+        assert not deve_notificar_abertura(
+            ev, era_publicado=False, tem_venda_aberta=evento_tem_venda_aberta(db, ev)
+        )
+        lote = ev.ingresso_lotes[0]
+        lote.vendas_inicio = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)
+        db.commit()
+        db.refresh(ev)
+        assert deve_notificar_abertura(
+            ev, era_publicado=False, tem_venda_aberta=evento_tem_venda_aberta(db, ev)
+        )
         n = notificar_abertura_vendas(db, ev)
         assert n == 2
         assert set(sent) == {"a@ex.com", "b@ex.com"}
@@ -1131,7 +1207,7 @@ def test_notificar_interesse_escapa_html(monkeypatch):
     db = _db()
     try:
         org = _criar_org(db)
-        ev = _criar_evento(db, org.id, nome="<script>alert(1)</script>")
+        ev = _criar_evento(db, org.id, nome="<script>alert(1)</script>", modo="pre_venda")
         ev.publicado = True
         inscrever_interesse(db, ev, email="teste@ex.com")
         notificar_abertura_vendas(db, ev)
@@ -1160,6 +1236,7 @@ def test_publicar_evento_via_api_notifica_interesse(monkeypatch):
         },
     )
     token = reg.json()["access_token"]
+    futuro = (datetime.now(timezone.utc) + timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%S")
     criar = test_api.client.post(
         "/api/eventos/criar",
         headers={"Authorization": f"Bearer {token}"},
@@ -1173,7 +1250,15 @@ def test_publicar_evento_via_api_notifica_interesse(monkeypatch):
             "categoria": "Outros",
             "publicado": False,
             "aceita_interesse": True,
-            "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
+            "ingresso_lotes": [
+                {
+                    "nome": "Geral",
+                    "preco": 50,
+                    "ordem": 1,
+                    "ativo": True,
+                    "vendas_inicio": futuro,
+                }
+            ],
         },
     )
     assert criar.status_code == 200
@@ -1186,6 +1271,8 @@ def test_publicar_evento_via_api_notifica_interesse(monkeypatch):
     finally:
         db.close()
 
+    aberto = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%S")
+    lote_id = criar.json()["ingresso_lotes"][0]["id"]
     patch = test_api.client.patch(
         f"/api/eventos/id/{ev_id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -1198,6 +1285,16 @@ def test_publicar_evento_via_api_notifica_interesse(monkeypatch):
             "preco_ingresso": 50,
             "categoria": "Outros",
             "publicado": True,
+            "ingresso_lotes": [
+                {
+                    "id": lote_id,
+                    "nome": "Geral",
+                    "preco": 50,
+                    "ordem": 1,
+                    "ativo": True,
+                    "vendas_inicio": aberto,
+                }
+            ],
         },
     )
     assert patch.status_code == 200, patch.text
@@ -1278,3 +1375,187 @@ def test_pagamento_rejeita_valor_abaixo_minimo_asaas():
         )
     assert criar.status_code == 400
     assert "5" in criar.json()["detail"]
+
+
+def test_deve_notificar_abertura_exige_venda_aberta_na_criacao():
+    from app.services.lista_interesse import deve_notificar_abertura
+
+    ev = Evento(
+        nome="Show",
+        descricao="d",
+        data_inicio=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7),
+        data_fim=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7, hours=3),
+        local="SP",
+        preco_ingresso=50.0,
+        organizador_id="x",
+        slug="show-criacao",
+        publicado=True,
+        aceita_interesse=True,
+    )
+    assert not deve_notificar_abertura(ev, era_publicado=False, tem_venda_aberta=False)
+    assert deve_notificar_abertura(ev, era_publicado=False, tem_venda_aberta=True)
+
+
+def test_lista_interesse_rejeita_apos_abertura():
+    from fastapi import HTTPException
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, modo="esgotado")
+        with pytest.raises(HTTPException) as exc:
+            inscrever_interesse(db, ev, email="tarde@ex.com")
+        assert exc.value.status_code == 400
+    finally:
+        db.close()
+
+
+def test_lista_espera_rejeita_com_estoque():
+    from fastapi import HTTPException
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        ev.lista_espera_habilitada = True
+        lote = ev.ingresso_lotes[0]
+        db.query(Ingresso).filter(Ingresso.evento_id == ev.id).delete()
+        lote.quantidade_maxima = 10
+        db.commit()
+        db.refresh(ev)
+        with pytest.raises(HTTPException) as exc:
+            inscrever_espera(db, ev, email="cedo@ex.com")
+        assert exc.value.status_code == 400
+    finally:
+        db.close()
+
+
+def test_export_lista_interesse_csv():
+    from app.services.lista_interesse import exportar_interesse_csv
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, modo="pre_venda")
+        inscrever_interesse(db, ev, email="a@ex.com", nome="A")
+        csv_data = exportar_interesse_csv(db, ev.id)
+        assert "email,nome,data_criacao" in csv_data
+        assert "a@ex.com" in csv_data
+    finally:
+        db.close()
+
+
+def test_export_lista_interesse_csv_api():
+    suf = uuid.uuid4().hex[:8]
+    reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={
+            "email": f"org_csv_{suf}@test.com",
+            "nome": "Org",
+            "senha": "senha12345",
+            "tipo": "organizador",
+        },
+    )
+    token = reg.json()["access_token"]
+    futuro = (datetime.now(timezone.utc) + timedelta(days=3)).strftime("%Y-%m-%dT%H:%M:%S")
+    criar = test_api.client.post(
+        "/api/eventos/criar",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "nome": f"CSV {suf}",
+            "descricao": "d",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 50,
+            "categoria": "Outros",
+            "publicado": True,
+            "aceita_interesse": True,
+            "ingresso_lotes": [
+                {
+                    "nome": "Geral",
+                    "preco": 50,
+                    "ordem": 1,
+                    "ativo": True,
+                    "vendas_inicio": futuro,
+                }
+            ],
+        },
+    )
+    assert criar.status_code == 200, criar.text
+    ev_id = criar.json()["id"]
+    slug = criar.json()["slug"]
+    ins = test_api.client.post(
+        f"/api/listas/interesse/{slug}",
+        json={"email": "csv@ex.com", "nome": "CSV"},
+    )
+    assert ins.status_code == 200, ins.text
+    r = test_api.client.get(
+        f"/api/eventos/id/{ev_id}/lista-interesse/export",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200, r.text
+    assert "text/csv" in r.headers.get("content-type", "")
+    assert "csv@ex.com" in r.text
+
+
+def test_evento_pausado_nao_aparece_vitrine():
+    from fastapi.testclient import TestClient
+
+    from tests.test_api import app
+
+    anon = TestClient(app)
+    suf = uuid.uuid4().hex[:8]
+    reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={
+            "email": f"org_pause_{suf}@test.com",
+            "nome": "Org",
+            "senha": "senha12345",
+            "tipo": "organizador",
+        },
+    )
+    token = reg.json()["access_token"]
+    criar = test_api.client.post(
+        "/api/eventos/criar",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "nome": f"Pausado {suf}",
+            "descricao": "d",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 50,
+            "categoria": "Outros",
+            "publicado": False,
+            "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
+        },
+    )
+    assert criar.status_code == 200
+    slug = criar.json()["slug"]
+    ev_id = criar.json()["id"]
+    assert criar.json().get("publicado") is False
+    lista = test_api.client.get("/api/eventos")
+    assert all(e["slug"] != slug for e in lista.json())
+    pub = anon.get(f"/api/eventos/{slug}")
+    assert pub.status_code == 404
+    org_view = test_api.client.get(
+        f"/api/eventos/{slug}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert org_view.status_code == 200
+    patch = test_api.client.patch(
+        f"/api/eventos/id/{ev_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "nome": f"Pausado {suf}",
+            "descricao": "d",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 50,
+            "categoria": "Outros",
+            "publicado": True,
+        },
+    )
+    assert patch.status_code == 200

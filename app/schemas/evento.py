@@ -144,6 +144,7 @@ class EventoResponse(BaseModel):
     preco_compra: float | None = None
     compra_disponivel: bool = False
     motivo_compra_indisponivel: str | None = None
+    compra_indisponivel_codigo: str | None = None
     urgencia_modo: str = "desligado"
     urgencia_badge: str | None = None
     urgencia_ativo: bool = False
@@ -165,6 +166,7 @@ def montar_evento_response(
 ) -> EventoResponse:
     from app.services.ingresso_lotes import (
         agora_utc_naive,
+        classificar_motivo_compra_indisponivel,
         contar_ocupacao_por_lotes,
         lote_elegivel_compra,
         motivo_lote_indisponivel,
@@ -234,6 +236,9 @@ def montar_evento_response(
         "preco_compra": preco_compra,
         "compra_disponivel": compra_disponivel,
         "motivo_compra_indisponivel": motivo_compra_indisponivel,
+        "compra_indisponivel_codigo": (
+            None if compra_disponivel else classificar_motivo_compra_indisponivel(motivo_compra_indisponivel)
+        ),
         "urgencia_modo": getattr(evento, "urgencia_modo", "desligado") or "desligado",
         "urgencia_badge": urgencia.texto,
         "urgencia_ativo": urgencia.ativo,

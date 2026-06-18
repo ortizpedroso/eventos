@@ -157,7 +157,12 @@ async def atualizar_evento(
     if "aceita_interesse" in body.model_fields_set:
         evento.aceita_interesse = body.aceita_interesse
     if "lista_espera_habilitada" in body.model_fields_set:
+        desabilitou_espera = evento.lista_espera_habilitada and not body.lista_espera_habilitada
         evento.lista_espera_habilitada = body.lista_espera_habilitada
+        if desabilitou_espera:
+            from app.services.lista_espera import expirar_janelas_espera_ativas
+
+            expirar_janelas_espera_ativas(db, evento.id)
     if "lista_espera_prazo_horas" in body.model_fields_set:
         evento.lista_espera_prazo_horas = body.lista_espera_prazo_horas
 
@@ -345,6 +350,27 @@ def _evento_do_organizador(db: Session, evento_id: str, usuario: Usuario) -> Eve
     if not evento or evento.organizador_id != usuario.id:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
     return evento
+
+
+@router.get("/id/{evento_id}/lista-interesse")
+async def listar_lista_interesse(
+    evento_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Inscritos na lista de interesse (organizador)."""
+    from app.services.lista_interesse import listar_interesse
+
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    rows = listar_interesse(db, evento.id)
+    return [
+        {
+            "email": r.email,
+            "nome": r.nome,
+            "data_criacao": r.data_criacao.isoformat() if r.data_criacao else None,
+        }
+        for r in rows
+    ]
 
 
 @router.get("/id/{evento_id}/lista-interesse/export")

@@ -361,7 +361,11 @@ def test_reembolso_parcial_asaas_multi_ingresso():
         with patch("app.services.pagamentos_asaas_handlers.reembolsar_cobranca") as mock_refund:
             mock_refund.return_value = {"id": "ref_partial"}
             ref = cancelar_com_reembolso_asaas(db, ing1)
-        mock_refund.assert_called_once_with("pay_multi", valor=50.0)
+        mock_refund.assert_called_once_with(
+            "pay_multi",
+            valor=50.0,
+            idempotency_key=f"refund_pay_multi_{ing1.id}",
+        )
         assert ref == "ref_partial"
     finally:
         db.close()
@@ -421,6 +425,19 @@ def test_webhook_asaas_reembolsa_quando_ingresso_nao_liberado():
         ev_db.lista_espera_habilitada = True
         from app.services.lista_espera import inscrever_espera
 
+        for lote in list(ev_db.ingresso_lotes or []):
+            lote.quantidade_maxima = 1
+            db.add(
+                Ingresso(
+                    evento_id=ev_db.id,
+                    lote_id=lote.id,
+                    participante_email="ocupante@ex.com",
+                    valor=50.0,
+                    status="pago",
+                )
+            )
+        db.commit()
+        db.refresh(ev_db)
         entrada = inscrever_espera(db, ev_db, email="fila@ex.com")
         entrada.status = "notificado"
         entrada.token_compra = f"tok-{uuid.uuid4().hex[:8]}"

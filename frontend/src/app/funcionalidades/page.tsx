@@ -217,6 +217,26 @@ export default function FuncionalidadesPage() {
         </p>
       </div>
 
+      {/* Âncoras para links da home (REQ-03) */}
+      <div className="mx-auto mt-16 max-w-7xl px-4 sm:mt-20 sm:px-6 lg:px-8">
+        <div className="grid gap-8 md:grid-cols-2">
+          <section id="compra-rapida" className="scroll-mt-24 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="text-xl font-bold text-zinc-900">Compra rápida</h2>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+              Finalize em minutos com e-mail e CPF — sem cadastro completo obrigatório. Ideal para quem
+              quer garantir o ingresso no celular.
+            </p>
+          </section>
+          <section id="repasse" className="scroll-mt-24 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="text-xl font-bold text-zinc-900">Repasse oficial de ingresso</h2>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+              Transfira seu ingresso para outra pessoa de forma segura, com rastreio em Minha conta e
+              validação na portaria.
+            </p>
+          </section>
+        </div>
+      </div>
+
       {/* Seção Zigue-Zague */}
       <div className="mx-auto mt-16 max-w-7xl px-4 sm:mt-24 sm:px-6 lg:px-8">
         <div className="space-y-24">

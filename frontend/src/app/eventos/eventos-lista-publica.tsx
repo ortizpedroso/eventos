@@ -10,7 +10,7 @@ import { EventosGridSkeleton } from "@/components/eventos-grid-skeleton";
 import { apiFetch } from "@/lib/api";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 import { EVENTO_CATEGORIAS, categoriaFromQuery } from "@/lib/evento-categorias";
-import { intervaloFiltroData, type FiltroDataPreset } from "@/lib/filtro-data-eventos";
+import { intervaloFiltroData, presetFromDeAte, type FiltroDataPreset } from "@/lib/filtro-data-eventos";
 import type { Evento } from "@/lib/types";
 
 type Props = {
@@ -101,6 +101,9 @@ export function EventosListaPublica({
     setBuscaDebounced((atual) => (atual === qUrl ? atual : qUrl));
     const cUrl = searchParams.get("cidade")?.trim() ?? "";
     setCidade((atual) => (atual === cUrl ? atual : cUrl));
+    const deUrl = searchParams.get("de")?.trim() ?? "";
+    const ateUrl = searchParams.get("ate")?.trim() ?? "";
+    setFiltroData(presetFromDeAte(deUrl, ateUrl));
   }, [searchParams]);
 
   useEffect(() => {
@@ -133,9 +136,16 @@ export function EventosListaPublica({
         if (buscaDebounced) params.set("q", buscaDebounced);
         if (categoria) params.set("categoria", categoria);
         if (cidade.trim()) params.set("cidade", cidade.trim());
-        const { de, ate } = intervaloFiltroData(filtroData);
-        if (de) params.set("de", de);
-        if (ate) params.set("ate", ate);
+        const deUrl = searchParams.get("de")?.trim();
+        const ateUrl = searchParams.get("ate")?.trim();
+        if (deUrl && ateUrl) {
+          params.set("de", deUrl);
+          params.set("ate", ateUrl);
+        } else {
+          const { de, ate } = intervaloFiltroData(filtroData);
+          if (de) params.set("de", de);
+          if (ate) params.set("ate", ate);
+        }
         const data = await apiFetch<Evento[]>(`/api/eventos?${params.toString()}`, {
           cache: "no-store",
         });
@@ -150,7 +160,7 @@ export function EventosListaPublica({
     return () => {
       cancelled = true;
     };
-  }, [retryCount, buscaDebounced, categoria, cidade, filtroData]);
+  }, [retryCount, buscaDebounced, categoria, cidade, filtroData, searchParams]);
 
   const eventosFiltrados = useMemo(() => {
     if (!eventos) return [];

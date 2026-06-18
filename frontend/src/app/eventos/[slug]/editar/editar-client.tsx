@@ -58,6 +58,21 @@ export function EditarEventoClient({ slug }: Props) {
   const [imagemUrl, setImagemUrl] = useState("");
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>([]);
   const [csvBusy, setCsvBusy] = useState(false);
+  const [interesseRows, setInteresseRows] = useState<{ email: string; nome: string | null; data_criacao: string | null }[]>([]);
+  const [interesseLoadErr, setInteresseLoadErr] = useState<string | null>(null);
+
+  async function carregarListaInteresse(eventoId: string) {
+    setInteresseLoadErr(null);
+    try {
+      const rows = await apiFetch<{ email: string; nome: string | null; data_criacao: string | null }[]>(
+        `/api/eventos/id/${eventoId}/lista-interesse`,
+      );
+      setInteresseRows(rows);
+    } catch (e) {
+      setInteresseRows([]);
+      setInteresseLoadErr(e instanceof Error ? e.message : "Não foi possível carregar a lista.");
+    }
+  }
 
   async function baixarListaInteresse() {
     if (!evento) return;
@@ -118,6 +133,9 @@ export function EditarEventoClient({ slug }: Props) {
           setNomeParaSlug(ev.nome);
           setImagemUrl(ev.imagem_url ?? "");
           setLoteRows(eventoLotesToRows(ev));
+          if (ev.aceita_interesse !== false) {
+            void carregarListaInteresse(ev.id);
+          }
         }
       } catch (e) {
         if (!cancelled) {
@@ -478,8 +496,32 @@ export function EditarEventoClient({ slug }: Props) {
             <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
               <p className="text-sm font-medium text-zinc-900">Lista de interesse</p>
               <p className="mt-1 text-xs text-zinc-600">
-                Exporte e-mails de quem pediu aviso antes da abertura das vendas.
+                Inscritos que pediram aviso antes da abertura das vendas ({interesseRows.length}).
               </p>
+              {interesseLoadErr ? (
+                <p className="mt-2 text-xs text-red-700">{interesseLoadErr}</p>
+              ) : interesseRows.length > 0 ? (
+                <div className="mt-3 max-h-48 overflow-auto rounded border border-zinc-200 bg-white">
+                  <table className="w-full text-left text-xs">
+                    <thead className="sticky top-0 bg-zinc-50 text-zinc-600">
+                      <tr>
+                        <th className="px-2 py-1.5 font-medium">E-mail</th>
+                        <th className="px-2 py-1.5 font-medium">Nome</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {interesseRows.map((row) => (
+                        <tr key={row.email} className="border-t border-zinc-100">
+                          <td className="px-2 py-1.5 font-mono text-zinc-800">{row.email}</td>
+                          <td className="px-2 py-1.5 text-zinc-700">{row.nome || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-zinc-500">Nenhuma inscrição ainda.</p>
+              )}
               <button
                 type="button"
                 onClick={() => void baixarListaInteresse()}

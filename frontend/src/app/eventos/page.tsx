@@ -9,7 +9,7 @@ import { fetchEventosPublicos } from "@/lib/eventos-publicos";
 import { EventosListaPublica } from "./eventos-lista-publica";
 
 type PageProps = {
-  searchParams: Promise<{ categoria?: string; q?: string; cidade?: string }>;
+  searchParams: Promise<{ categoria?: string; q?: string; cidade?: string; de?: string; ate?: string }>;
 };
 
 function buscaFromQuery(raw: string | undefined): string {
@@ -44,6 +44,8 @@ export default async function EventosListPage({ searchParams }: PageProps) {
   const categoriaInicial = categoriaFromQuery(sp.categoria);
   const buscaInicial = buscaFromQuery(sp.q);
   const cidadeInicial = sp.cidade?.trim() ?? "";
+  const deInicial = sp.de?.trim() ?? "";
+  const ateInicial = sp.ate?.trim() ?? "";
 
   let eventosIniciais = null;
   try {
@@ -51,6 +53,8 @@ export default async function EventosListPage({ searchParams }: PageProps) {
       categoria: categoriaInicial || undefined,
       q: buscaInicial || undefined,
       cidade: cidadeInicial || undefined,
+      de: deInicial || undefined,
+      ate: ateInicial || undefined,
     });
   } catch {
     eventosIniciais = null;

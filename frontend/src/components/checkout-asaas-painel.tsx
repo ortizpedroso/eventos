@@ -5,7 +5,16 @@ import { FormEvent, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { mapCheckoutError } from "@/lib/checkout-errors";
 import { formatCpfMask, onlyDigits } from "@/lib/cpf";
+import {
+  AVISO_LEGAL_TAXAS,
+  PARCELAMENTO_MINIMO_REAIS,
+  calcularTaxaAsaas,
+} from "@/lib/taxas-asaas-publicas";
 import type { AsaasPixPayload, CriarPagamentoResponse } from "@/lib/types";
+
+function formatBrl(valor: number): string {
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 type Props = {
   ingressoId: string;
@@ -60,6 +69,14 @@ export function CheckoutAsaasPainel({
   const [cardCep, setCardCep] = useState("");
   const [cardNumeroEnd, setCardNumeroEnd] = useState("");
   const [cardTel, setCardTel] = useState("");
+
+  const valorReais = valorCentavos / 100;
+  const parcelamentoAtivo =
+    parcelamentoHabilitado && valorCentavos >= PARCELAMENTO_MINIMO_REAIS * 100;
+  const taxaParcelamentoEst =
+    metodo === "card" && parcelas > 1
+      ? calcularTaxaAsaas(valorReais, "cartao_parcelado", parcelas)
+      : 0;
 
   useEffect(() => {
     if (!reservadoAte) return;
@@ -247,7 +264,7 @@ export function CheckoutAsaasPainel({
         </button>
       </div>
 
-      {metodo === "card" && parcelamentoHabilitado ? (
+      {metodo === "card" && parcelamentoAtivo ? (
         <div>
           <label className="text-xs font-medium text-gray-600">Parcelas</label>
           <select
@@ -260,11 +277,22 @@ export function CheckoutAsaasPainel({
               .filter((n) => n <= parcelamentoMax)
               .map((n) => (
                 <option key={n} value={n}>
-                  {n}x de {(valorCentavos / 100 / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  {n}x de {formatBrl(valorReais / n)}
                 </option>
               ))}
           </select>
+          {parcelas > 1 ? (
+            <p className="mt-2 text-xs text-zinc-600">
+              Total: <strong>{formatBrl(valorReais)}</strong> — taxa estimada Asaas ({parcelas}x):{" "}
+              <strong>{formatBrl(taxaParcelamentoEst)}</strong>
+            </p>
+          ) : null}
+          <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">{AVISO_LEGAL_TAXAS}</p>
         </div>
+      ) : metodo === "card" && parcelamentoHabilitado && !parcelamentoAtivo ? (
+        <p className="text-xs text-amber-800">
+          Parcelamento disponível a partir de {formatBrl(PARCELAMENTO_MINIMO_REAIS)}.
+        </p>
       ) : null}
 
       {metodo === "card" ? (

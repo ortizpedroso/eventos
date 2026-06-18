@@ -38,6 +38,13 @@ async def inscrever_lista_interesse(
         raise HTTPException(status_code=404, detail="Evento não encontrado")
     if not evento.aceita_interesse:
         raise HTTPException(status_code=400, detail="Este evento não aceita lista de interesse.")
+    from app.services.ingresso_lotes import vendas_ainda_nao_abertas
+
+    if not vendas_ainda_nao_abertas(db, evento):
+        raise HTTPException(
+            status_code=400,
+            detail="Lista de interesse só aceita inscrições antes da abertura das vendas.",
+        )
     row = inscrever_interesse(db, evento, email=str(body.email), nome=body.nome)
     return {"ok": True, "email": row.email, "mensagem": "Inscrição registrada. Avisaremos quando as vendas abrirem."}
 

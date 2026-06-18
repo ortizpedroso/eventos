@@ -204,6 +204,11 @@ export function EventoPublicClient({
   const fmtInicio = formatEventoDataHora(evento.data_inicio);
   const compraDisponivel = evento.compra_disponivel ?? Boolean(evento.lote_compra_id);
   const motivoCompraIndisponivel = evento.motivo_compra_indisponivel ?? null;
+  const codigoCompraIndisponivel = evento.compra_indisponivel_codigo ?? null;
+  const mostraListaInteresse =
+    !compraDisponivel && evento.aceita_interesse && codigoCompraIndisponivel === "pre_venda";
+  const mostraListaEspera =
+    !compraDisponivel && evento.lista_espera_habilitada && codigoCompraIndisponivel === "esgotado";
   const janelaEsperaExclusiva = Boolean(evento.espera_janela_exclusiva_ativa);
   const podeComprarComEspera =
     compraDisponivel &&
@@ -286,11 +291,11 @@ export function EventoPublicClient({
             </p>
           ) : null}
 
-          {!compraDisponivel && evento.aceita_interesse ? (
+          {mostraListaInteresse ? (
             <ListaInteresseForm slug={evento.slug} />
           ) : null}
 
-          {!compraDisponivel && evento.lista_espera_habilitada ? (
+          {mostraListaEspera ? (
             <ListaEsperaForm slug={evento.slug} />
           ) : null}
 
