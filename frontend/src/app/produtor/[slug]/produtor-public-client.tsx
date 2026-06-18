@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { EventoCardVitrine } from "@/components/evento-card-vitrine";
 import { apiFetch } from "@/lib/api";
+import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
+import { resolveUrlPublicaHref } from "@/lib/url-publica";
 import type { Evento } from "@/lib/types";
 
 type Perfil = {
@@ -30,12 +32,17 @@ export function ProdutorPublicClient({ slug }: { slug: string }) {
   if (err) return <p className="py-12 text-center text-zinc-600">{err}</p>;
   if (!perfil) return <p className="py-12 text-center text-zinc-500">Carregando…</p>;
 
+  const fotoSrc = resolveEventoImagemSrc(perfil.foto_url);
+  const instagramHref = resolveUrlPublicaHref(perfil.social_instagram);
+  const whatsappHref = resolveUrlPublicaHref(perfil.social_whatsapp);
+  const siteHref = resolveUrlPublicaHref(perfil.social_site);
+
   return (
     <div className="mx-auto max-w-6xl py-12 px-4">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        {perfil.foto_url ? (
+        {fotoSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={perfil.foto_url} alt="" className="h-24 w-24 rounded-full object-cover" />
+          <img src={fotoSrc} alt="" className="h-24 w-24 rounded-full object-cover" />
         ) : (
           <div className="flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-800">
             {perfil.nome.charAt(0)}
@@ -44,11 +51,11 @@ export function ProdutorPublicClient({ slug }: { slug: string }) {
         <div>
           <h1 className="text-3xl font-bold text-zinc-900">{perfil.nome}</h1>
           {perfil.bio ? <p className="mt-2 max-w-xl text-zinc-600">{perfil.bio}</p> : null}
-          {(perfil.social_instagram || perfil.social_whatsapp || perfil.social_site) ? (
+          {(instagramHref || whatsappHref || siteHref) ? (
             <div className="mt-3 flex flex-wrap gap-3 text-sm">
-              {perfil.social_instagram ? (
+              {instagramHref ? (
                 <a
-                  href={perfil.social_instagram}
+                  href={instagramHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-medium text-emerald-800 underline-offset-2 hover:underline"
@@ -56,9 +63,9 @@ export function ProdutorPublicClient({ slug }: { slug: string }) {
                   Instagram
                 </a>
               ) : null}
-              {perfil.social_whatsapp ? (
+              {whatsappHref ? (
                 <a
-                  href={perfil.social_whatsapp}
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-medium text-emerald-800 underline-offset-2 hover:underline"
@@ -66,9 +73,9 @@ export function ProdutorPublicClient({ slug }: { slug: string }) {
                   WhatsApp
                 </a>
               ) : null}
-              {perfil.social_site ? (
+              {siteHref ? (
                 <a
-                  href={perfil.social_site}
+                  href={siteHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-medium text-emerald-800 underline-offset-2 hover:underline"

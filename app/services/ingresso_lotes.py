@@ -118,6 +118,19 @@ def lote_elegivel_compra(
     return True
 
 
+def evento_tem_venda_aberta(db: Session, evento: Evento) -> bool:
+    """True se algum lote ativo está elegível para compra agora."""
+    if not evento.publicado:
+        return False
+    lotes = list(evento.ingresso_lotes or [])
+    if not lotes:
+        return float(evento.preco_ingresso or 0) > 0
+    lote_ids = [l.id for l in lotes]
+    occ = contar_ocupacao_por_lotes(db, lote_ids)
+    agora = agora_utc_naive()
+    return any(lote_elegivel_compra(db, l, agora, ocupacao_por_lote=occ) for l in lotes)
+
+
 def resolver_lote_compra(
     db: Session,
     evento: Evento,

@@ -28,6 +28,7 @@ from app.services.pagamentos_asaas_handlers import (
     status_cobranca_asaas,
 )
 from app.services.ticket_email import enqueue_ticket_email
+from app.services.taxas_asaas_publicas import PARCELAMENTO_MINIMO_REAIS
 from app.utils.cpf import cpf_valido, normalizar_cpf
 from app.utils.ingresso_tipos import lote_e_cortesia
 from app.utils.privacy import mask_cpf, mask_telefone_br
@@ -263,8 +264,11 @@ async def criar_pagamento(
             status_code=400,
             detail=f"Valor incorreto para o lote atual ({lote.nome}). Recarregue a página e tente novamente.",
         )
-    if not eh_cortesia and unit_centavos < 50:
-        raise HTTPException(status_code=400, detail="Valor mínimo de R$ 0,50 para ingressos pagos.")
+    if not eh_cortesia and unit_centavos < int(PARCELAMENTO_MINIMO_REAIS * 100):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Valor mínimo de R$ {PARCELAMENTO_MINIMO_REAIS:.2f} para ingressos pagos (Asaas).",
+        )
 
     limite_cpf = getattr(evento, "limite_ingressos_por_cpf", None)
     cpf_limite: str | None = p_cpf

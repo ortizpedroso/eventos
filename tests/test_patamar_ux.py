@@ -773,7 +773,7 @@ def test_iniciar_cobranca_nova_409_se_pago_mas_nao_liberado():
         db.close()
 
 
-def test_marcar_espera_comprada_notifica_proximo(monkeypatch):
+def test_marcar_espera_comprada_nao_notifica_proximo(monkeypatch):
     from app.services.lista_espera import inscrever_espera, marcar_espera_comprada
 
     db = _db()
@@ -799,8 +799,8 @@ def test_marcar_espera_comprada_notifica_proximo(monkeypatch):
         db.refresh(e1)
         db.refresh(e2)
         assert e1.status == "comprado"
-        assert e2.status == "notificado"
-        assert emails == ["segundo@ex.com"]
+        assert e2.status == "aguardando"
+        assert emails == []
     finally:
         db.close()
 
@@ -1089,3 +1089,130 @@ def test_parcelamento_cobranca_installment_count():
         )
     assert cob.status_code == 200, cob.text
     assert captured.get("installment_count") == 3
+
+
+def test_deve_notificar_abertura_quando_lote_abre():
+    from app.services.lista_interesse import deve_notificar_abertura
+
+    ev = Evento(
+        nome="Show",
+        descricao="d",
+        data_inicio=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7),
+        data_fim=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7, hours=3),
+        local="SP",
+        preco_ingresso=50.0,
+        organizador_id="x",
+        slug="show-x",
+        publicado=True,
+        aceita_interesse=True,
+    )
+    assert not deve_notificar_abertura(
+        ev, era_publicado=True, tinha_venda_aberta=False, tem_venda_aberta=False
+    )
+    assert deve_notificar_abertura(
+        ev, era_publicado=True, tinha_venda_aberta=False, tem_venda_aberta=True
+    )
+    assert not deve_notificar_abertura(
+        ev, era_publicado=True, tinha_venda_aberta=True, tem_venda_aberta=True
+    )
+
+
+def test_notificar_interesse_escapa_html(monkeypatch):
+    sent: list[tuple[str, str, str]] = []
+
+    def _cap(email: str, assunto: str, corpo: str) -> bool:
+        sent.append((email, assunto, corpo))
+        return True
+
+    monkeypatch.setattr("app.services.lista_interesse.enqueue_email_simples", _cap)
+
+    from app.services.lista_interesse import notificar_abertura_vendas
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, nome="<script>alert(1)</script>")
+        ev.publicado = True
+        inscrever_interesse(db, ev, email="teste@ex.com")
+        notificar_abertura_vendas(db, ev)
+        assert sent
+        assert "<script>" not in sent[0][2]
+        assert "&lt;script&gt;" in sent[0][2]
+    finally:
+        db.close()
+
+
+def test_produtor_rejeita_url_javascript():
+    email = f"org_js_{uuid.uuid4().hex[:8]}@test.com"
+    reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={"email": email, "nome": "Org", "senha": "senha12345", "tipo": "organizador"},
+    )
+    token = reg.json()["access_token"]
+    patch = test_api.client.patch(
+        "/api/produtor/meu-perfil",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"social_instagram": "javascript:alert(1)"},
+    )
+    assert patch.status_code == 422
+
+
+def test_pagamento_rejeita_valor_abaixo_minimo_asaas():
+    from unittest.mock import patch
+
+    suf = uuid.uuid4().hex[:8]
+    org_reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={
+            "email": f"org_min_{suf}@test.com",
+            "nome": "Org",
+            "senha": "senha12345",
+            "tipo": "organizador",
+        },
+    )
+    org_token = org_reg.json()["access_token"]
+    ev_resp = test_api.client.post(
+        "/api/eventos/criar",
+        headers={"Authorization": f"Bearer {org_token}"},
+        json={
+            "nome": f"Barato {suf}",
+            "descricao": "d",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 3,
+            "categoria": "Outros",
+            "publicado": True,
+            "ingresso_lotes": [{"nome": "Geral", "preco": 3, "ordem": 1, "ativo": True}],
+        },
+    )
+    assert ev_resp.status_code == 200
+    ev = ev_resp.json()
+    cli_reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={
+            "email": f"cli_min_{suf}@test.com",
+            "nome": "Cli",
+            "senha": "senha12345",
+            "tipo": "cliente",
+        },
+    )
+    cli_token = cli_reg.json()["access_token"]
+    with patch("app.routes.pagamentos.settings") as route_settings:
+        route_settings.payments_disabled = False
+        route_settings.use_asaas = True
+        criar = test_api.client.post(
+            "/api/pagamentos/criar",
+            headers={"Authorization": f"Bearer {cli_token}"},
+            json={
+                "evento_id": ev["id"],
+                "valor_centavos": 300,
+                "participante_nome": "Comprador",
+                "participante_email": f"cli_min_{suf}@test.com",
+                "participante_cpf": "52998224725",
+                "participante_telefone": "11987654321",
+                "termo_compra_aceito": True,
+            },
+        )
+    assert criar.status_code == 400
+    assert "5" in criar.json()["detail"]

@@ -119,6 +119,9 @@ async def atualizar_evento(
         raise HTTPException(status_code=403, detail="Sem permissão para editar este evento")
 
     era_publicado = evento.publicado
+    from app.services.ingresso_lotes import evento_tem_venda_aberta
+
+    tinha_venda_aberta = evento_tem_venda_aberta(db, evento) if era_publicado else False
 
     evento.nome = body.nome
     evento.descricao = body.descricao
@@ -168,7 +171,13 @@ async def atualizar_evento(
 
     from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
 
-    if deve_notificar_abertura(evento, era_publicado=era_publicado):
+    tem_venda_aberta = evento_tem_venda_aberta(db, evento)
+    if deve_notificar_abertura(
+        evento,
+        era_publicado=era_publicado,
+        tinha_venda_aberta=tinha_venda_aberta,
+        tem_venda_aberta=tem_venda_aberta,
+    ):
         notificar_abertura_vendas(db, evento)
 
     return montar_evento_response(db, evento)
