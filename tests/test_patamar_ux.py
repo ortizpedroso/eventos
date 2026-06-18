@@ -1559,3 +1559,46 @@ def test_evento_pausado_nao_aparece_vitrine():
         },
     )
     assert patch.status_code == 200
+
+
+def test_lista_espera_rejeita_quem_ja_tem_ingresso():
+    from fastapi import HTTPException
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        inscrever_espera(db, ev, email="comprador@ex.com")
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            participante_email="comprador@ex.com",
+            valor=50.0,
+            status="pago",
+        )
+        db.add(ing)
+        db.commit()
+        with pytest.raises(HTTPException) as exc:
+            inscrever_espera(db, ev, email="comprador@ex.com")
+        assert exc.value.status_code == 400
+        assert "já possui ingresso" in str(exc.value.detail).lower()
+    finally:
+        db.close()
+
+
+def test_lista_espera_dedup_email():
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        a = inscrever_espera(db, ev, email="fila@ex.com", nome="A")
+        b = inscrever_espera(db, ev, email="fila@ex.com", nome="B")
+        assert a.id == b.id
+        assert a.posicao == b.posicao
+    finally:
+        db.close()
+
+
+def test_taxas_asaas_parcelamento_7_12x():
+    taxa = calcular_taxa_asaas(100.0, "cartao_parcelado", parcelas=10)
+    assert taxa > calcular_taxa_asaas(100.0, "cartao_parcelado", parcelas=3)
