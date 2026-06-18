@@ -12,9 +12,7 @@ export function HomeHeroVisual({ eventos }: Props) {
     .filter(Boolean)
     .slice(0, 4) as string[];
 
-  const bg =
-    imagens[0] ??
-    "linear-gradient(135deg, rgba(4,120,87,0.15) 0%, rgba(24,24,27,0.05) 50%, rgba(4,120,87,0.08) 100%)";
+  const fallbackHero = "/hero-default.svg";
 
   return (
     <div
@@ -23,11 +21,7 @@ export function HomeHeroVisual({ eventos }: Props) {
     >
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={
-          imagens[0]
-            ? { backgroundImage: `url(${imagens[0]})` }
-            : { background: bg }
-        }
+        style={{ backgroundImage: `url(${imagens[0] ?? fallbackHero})` }}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/70 via-zinc-900/30 to-transparent" />
       {imagens.length > 1 ? (

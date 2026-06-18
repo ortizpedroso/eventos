@@ -21,6 +21,25 @@ class PerfilPublicoUpdate(BaseModel):
     social_site: str | None = Field(default=None, max_length=500)
 
 
+@router.get("/meu-perfil")
+async def obter_meu_perfil_publico(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    if usuario_atual.tipo != "organizador":
+        raise HTTPException(status_code=403, detail="Apenas organizadores")
+    slug = garantir_slug_publico(db, usuario_atual)
+    db.commit()
+    return {
+        "slug_publico": slug,
+        "bio": usuario_atual.bio,
+        "foto_url": usuario_atual.foto_url,
+        "social_instagram": usuario_atual.social_instagram,
+        "social_whatsapp": usuario_atual.social_whatsapp,
+        "social_site": usuario_atual.social_site,
+    }
+
+
 @router.patch("/meu-perfil")
 async def atualizar_perfil_publico(
     body: PerfilPublicoUpdate,

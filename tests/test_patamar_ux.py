@@ -891,3 +891,201 @@ def test_api_simuladores():
     data = r.json()
     assert data["preco_bruto"] == 50
     assert "aviso_legal" in data
+
+
+def test_simuladores_coerencia_api():
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, taxa_ingresso
+    from app.services.taxas_asaas_publicas import AVISO_LEGAL, calcular_taxa_asaas
+
+    preco = 100.0
+    r = test_api.client.get(
+        "/api/simuladores/simular",
+        params={"preco": preco, "metodo": "cartao_parcelado", "parcelas": 3},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    taxa_plat = taxa_ingresso(preco, TARIFA_PADRAO)
+    taxa_asaas = calcular_taxa_asaas(preco, "cartao_parcelado", parcelas=3)
+    liquido = round(max(0.0, preco - taxa_plat - taxa_asaas), 2)
+    assert data["taxa_eventosbr"] == round(taxa_plat, 2)
+    assert data["taxa_asaas_estimada"] == taxa_asaas
+    assert data["liquido_organizador"] == liquido
+    assert data["aviso_legal"] == AVISO_LEGAL
+    assert data["parcelamento"]["parcelas"] == 3
+
+
+def test_notificar_abertura_vendas_ao_publicar(monkeypatch):
+    sent: list[str] = []
+
+    def _enqueue(email: str, _assunto: str, _corpo: str) -> bool:
+        sent.append(email)
+        return True
+
+    monkeypatch.setattr("app.services.lista_interesse.enqueue_email_simples", _enqueue)
+
+    from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id)
+        ev.publicado = False
+        db.commit()
+        db.refresh(ev)
+        inscrever_interesse(db, ev, email="a@ex.com", nome="A")
+        inscrever_interesse(db, ev, email="b@ex.com", nome="B")
+        ev.publicado = True
+        assert deve_notificar_abertura(ev, era_publicado=False)
+        n = notificar_abertura_vendas(db, ev)
+        assert n == 2
+        assert set(sent) == {"a@ex.com", "b@ex.com"}
+    finally:
+        db.close()
+
+
+def test_parcelamento_config_persiste():
+    email = f"org_parc_{uuid.uuid4().hex[:8]}@test.com"
+    reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={"email": email, "nome": "Org Parc", "senha": "senha12345", "tipo": "organizador"},
+    )
+    assert reg.status_code == 200
+    token = reg.json()["access_token"]
+    criar = test_api.client.post(
+        "/api/eventos/criar",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "nome": "Show Parcelado",
+            "descricao": "desc",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 80,
+            "categoria": "Música",
+            "publicado": True,
+            "ingresso_lotes": [{"nome": "Geral", "preco": 80, "ordem": 1, "ativo": True}],
+        },
+    )
+    assert criar.status_code == 200
+    ev = criar.json()
+    patch = test_api.client.patch(
+        f"/api/eventos/id/{ev['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "nome": ev["nome"],
+            "descricao": ev["descricao"],
+            "data_inicio": ev["data_inicio"],
+            "data_fim": ev["data_fim"],
+            "local": ev["local"],
+            "preco_ingresso": 80,
+            "categoria": ev["categoria"],
+            "publicado": True,
+            "parcelamento_habilitado": True,
+            "parcelamento_max": 6,
+        },
+    )
+    assert patch.status_code == 200, patch.text
+    body = patch.json()
+    assert body["parcelamento_habilitado"] is True
+    assert body["parcelamento_max"] == 6
+
+
+def test_parcelamento_cobranca_installment_count():
+    from unittest.mock import patch
+
+    WALLET_ORG = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    WALLET_PLATFORM = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+    suf = uuid.uuid4().hex[:8]
+
+    org_reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={
+            "email": f"org_inst_{suf}@test.com",
+            "nome": "Org Inst",
+            "senha": "senha12345",
+            "tipo": "organizador",
+        },
+    )
+    org_token = org_reg.json()["access_token"]
+    db = _db()
+    try:
+        org_user = db.query(Usuario).filter(Usuario.email == f"org_inst_{suf}@test.com").first()
+        assert org_user is not None
+        org_user.asaas_wallet_id = WALLET_ORG
+        db.commit()
+    finally:
+        db.close()
+
+    ev_resp = test_api.client.post(
+        "/api/eventos/criar",
+        headers={"Authorization": f"Bearer {org_token}"},
+        json={
+            "nome": f"Parc {suf}",
+            "descricao": "d",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 120,
+            "categoria": "Música",
+            "publicado": True,
+            "parcelamento_habilitado": True,
+            "parcelamento_max": 3,
+            "ingresso_lotes": [{"nome": "Geral", "preco": 120, "ordem": 1, "ativo": True}],
+        },
+    )
+    assert ev_resp.status_code == 200
+    ev = ev_resp.json()
+
+    cli_reg = test_api.client.post(
+        "/api/auth/registrar",
+        json={
+            "email": f"cli_inst_{suf}@test.com",
+            "nome": "Cli",
+            "senha": "senha12345",
+            "tipo": "cliente",
+        },
+    )
+    cli_token = cli_reg.json()["access_token"]
+
+    with patch("app.routes.pagamentos.settings") as route_settings:
+        route_settings.payments_disabled = False
+        route_settings.use_asaas = True
+        route_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+        criar = test_api.client.post(
+            "/api/pagamentos/criar",
+            headers={"Authorization": f"Bearer {cli_token}"},
+            json={
+                "evento_id": ev["id"],
+                "valor_centavos": 12000,
+                "participante_nome": "Comprador",
+                "participante_email": f"cli_inst_{suf}@test.com",
+                "participante_cpf": "52998224725",
+                "participante_telefone": "11987654321",
+                "termo_compra_aceito": True,
+            },
+        )
+    assert criar.status_code == 200
+    iid = criar.json()["ingresso_id"]
+
+    mock_payment = {"id": f"pay_{suf}", "status": "PENDING", "billingType": "CREDIT_CARD"}
+    captured: dict = {}
+
+    def _criar(**kwargs):
+        captured.update(kwargs)
+        return mock_payment
+
+    with (
+        patch("app.routes.pagamentos.settings") as route_settings,
+        patch("app.services.pagamentos_asaas_handlers.settings") as svc_settings,
+        patch("app.services.pagamentos_asaas_handlers.garantir_customer_asaas", return_value="cus_x"),
+        patch("app.services.pagamentos_asaas_handlers.criar_cobranca_asaas", side_effect=_criar),
+    ):
+        route_settings.use_asaas = True
+        svc_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+        cob = test_api.client.post(
+            "/api/pagamentos/asaas/cobranca",
+            headers={"Authorization": f"Bearer {cli_token}"},
+            json={"ingresso_id": iid, "metodo": "card", "parcelas": 3},
+        )
+    assert cob.status_code == 200, cob.text
+    assert captured.get("installment_count") == 3

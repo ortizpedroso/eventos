@@ -139,21 +139,12 @@ const destaques = [
       "Acompanhamento de vendas em tempo real",
     ],
     visual: (
-      <div className="relative flex h-full min-h-[320px] w-full flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-900 via-emerald-800 to-zinc-900 p-6 ring-1 ring-emerald-700/40 lg:min-h-[400px]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.12),transparent_45%)]" />
-        <div className="absolute right-6 top-6 rounded-xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-emerald-100">Página do evento</p>
-          <p className="mt-1 text-lg font-bold text-white">Feijoada Comunitária 2026</p>
-          <p className="text-sm text-emerald-100">Ingressos a partir de R$ 35</p>
-        </div>
-        <div className="relative mt-auto flex w-fit items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 backdrop-blur-md">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-          </span>
-          <span className="text-sm font-medium tracking-wide text-white">Vendas a todo vapor</span>
-        </div>
-      </div>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/marketing/organizador.svg"
+        alt="Painel do organizador EventosBR"
+        className="h-full min-h-[320px] w-full rounded-2xl object-cover ring-1 ring-emerald-700/40 lg:min-h-[400px]"
+      />
     ),
   },
   {
@@ -166,27 +157,12 @@ const destaques = [
       "Recebimento direto na sua conta, sem dor de cabeça",
     ],
     visual: (
-      <div className="relative flex h-full min-h-[320px] w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-emerald-50 p-6 shadow-xl ring-1 ring-emerald-200 lg:min-h-[400px]">
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-10" />
-        <div className="relative w-full max-w-[280px] rounded-xl bg-white p-5 shadow-lg ring-1 ring-zinc-200/50">
-          <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-zinc-900">Pagamento aprovado</p>
-              <p className="text-xs text-zinc-500">R$ 150,00 via Cartão</p>
-            </div>
-          </div>
-          <div className="mt-4 space-y-2">
-            <div className="h-2 w-full rounded bg-zinc-100" />
-            <div className="h-2 w-4/5 rounded bg-zinc-100" />
-            <div className="h-2 w-2/3 rounded bg-zinc-100" />
-          </div>
-        </div>
-      </div>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/marketing/checkout.svg"
+        alt="Checkout seguro com Asaas"
+        className="h-full min-h-[320px] w-full rounded-2xl object-cover shadow-xl ring-1 ring-emerald-200 lg:min-h-[400px]"
+      />
     ),
   },
   {
@@ -199,29 +175,12 @@ const destaques = [
       "Organize múltiplas portarias simultaneamente",
     ],
     visual: (
-      <div className="relative flex h-full min-h-[320px] w-full flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-violet-950 to-zinc-900 p-6 ring-1 ring-violet-800/40 lg:min-h-[400px]">
-        <div className="absolute left-1/2 top-10 h-40 w-40 -translate-x-1/2 rounded-2xl border-4 border-white/80 bg-white p-3 shadow-2xl">
-          <div className="grid h-full grid-cols-4 grid-rows-4 gap-1">
-            {Array.from({ length: 16 }).map((_, i) => (
-              <div
-                key={i}
-                className={`rounded-sm ${i % 3 === 0 ? "bg-zinc-900" : "bg-zinc-200"}`}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="relative mt-auto flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-black/50 p-4 backdrop-blur-md sm:w-auto">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-bold tracking-wide text-white">Acesso liberado</p>
-            <p className="mt-0.5 text-xs font-medium text-zinc-300">TKT-8A9F · Ingresso VIP</p>
-          </div>
-        </div>
-      </div>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/marketing/portaria.svg"
+        alt="Check-in na portaria com QR Code"
+        className="h-full min-h-[320px] w-full rounded-2xl object-cover ring-1 ring-violet-800/40 lg:min-h-[400px]"
+      />
     ),
   },
 ];

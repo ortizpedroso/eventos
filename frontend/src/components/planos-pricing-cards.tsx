@@ -1,3 +1,11 @@
+import {
+  MENSALIDADE_ASSINATURA_MENSAL,
+  TARIFA_ASSINATURA,
+  TARIFA_PADRAO,
+  formatBrl,
+  formatPercentual,
+} from "@/lib/tarifas-plataforma";
+
 function IconCheck({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -52,8 +60,12 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         <h3 className="text-xl font-semibold text-emerald-700">Eventos pagos</h3>
         <p className="mt-2 text-sm text-zinc-500">Shows, festas e produções profissionais.</p>
         <div className="mt-6 flex flex-wrap items-baseline gap-x-1">
-          <span className="text-4xl font-bold text-zinc-900">10%</span>
-          <span className="text-sm font-semibold text-zinc-600">+ R$ 2,00 /ingresso</span>
+          <span className="text-4xl font-bold text-zinc-900">
+            {formatPercentual(TARIFA_PADRAO.percentual)}
+          </span>
+          <span className="text-sm font-semibold text-zinc-600">
+            + {formatBrl(TARIFA_PADRAO.fixoPorIngresso)} /ingresso
+          </span>
         </div>
         <ul className="mt-8 space-y-3">
           <Feature>PIX, cartão e pagamento seguro via Asaas</Feature>
@@ -74,12 +86,16 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         <h3 className="mt-1 text-xl font-semibold text-emerald-900">Assinatura mensal</h3>
         <div className="mt-6 space-y-2">
           <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-2xl font-bold text-zinc-900">R$ 500</span>
+            <span className="text-2xl font-bold text-zinc-900">{formatBrl(MENSALIDADE_ASSINATURA_MENSAL)}</span>
             <span className="text-sm text-zinc-600">/mês</span>
           </div>
           <div className="flex flex-wrap items-baseline gap-x-1 border-t border-emerald-200/80 pt-2">
-            <span className="text-3xl font-bold text-zinc-900">6%</span>
-            <span className="text-sm font-semibold text-zinc-600">+ R$ 0,30 /ingresso</span>
+            <span className="text-3xl font-bold text-zinc-900">
+              {formatPercentual(TARIFA_ASSINATURA.percentual)}
+            </span>
+            <span className="text-sm font-semibold text-zinc-600">
+              + {formatBrl(TARIFA_ASSINATURA.fixoPorIngresso)} /ingresso
+            </span>
           </div>
         </div>
         <ul className="mt-8 space-y-3">

@@ -4,9 +4,10 @@ import type { Evento } from "@/lib/types";
 
 type Props = {
   evento?: Evento | null;
+  onParcelamentoChange?: (habilitado: boolean, max: number) => void;
 };
 
-export function EventoConfigAvancadaFields({ evento }: Props) {
+export function EventoConfigAvancadaFields({ evento, onParcelamentoChange }: Props) {
   return (
     <fieldset className="space-y-4 rounded-lg border border-zinc-200 p-4">
       <legend className="px-1 text-sm font-semibold text-zinc-900">Vendas avançadas</legend>
@@ -34,6 +35,15 @@ export function EventoConfigAvancadaFields({ evento }: Props) {
             name="parcelamento_habilitado"
             value="true"
             defaultChecked={evento?.parcelamento_habilitado ?? false}
+            onChange={(e) =>
+              onParcelamentoChange?.(
+                e.target.checked,
+                Number(
+                  (e.target.form?.elements.namedItem("parcelamento_max") as HTMLSelectElement | null)
+                    ?.value ?? evento?.parcelamento_max ?? 2,
+                ),
+              )
+            }
           />
           Parcelamento no cartão (Asaas)
         </label>
@@ -43,6 +53,15 @@ export function EventoConfigAvancadaFields({ evento }: Props) {
             name="parcelamento_max"
             className="rounded border border-zinc-300 px-2 py-1 text-sm"
             defaultValue={String(evento?.parcelamento_max ?? 2)}
+            onChange={(e) => {
+              const hab =
+                (
+                  e.target.form?.elements.namedItem("parcelamento_habilitado") as
+                    | HTMLInputElement
+                    | null
+                )?.checked ?? false;
+              onParcelamentoChange?.(hab, Number(e.target.value));
+            }}
           >
             <option value="2">2x</option>
             <option value="3">3x</option>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   TARIFA_PADRAO,
@@ -10,7 +10,7 @@ import {
   formatPercentual,
   parseValorMonetarioInput,
 } from "@/lib/tarifas-plataforma";
-import { calcularTaxaAsaas } from "@/lib/taxas-asaas-publicas";
+import { AVISO_LEGAL_TAXAS, calcularTaxaAsaas } from "@/lib/taxas-asaas-publicas";
 
 type Props = {
   /** Preço de venda do ingresso (string do input ou número). */
@@ -18,9 +18,19 @@ type Props = {
   /** Ocultar quando evento gratuito. */
   ocultar?: boolean;
   className?: string;
+  parcelamentoHabilitado?: boolean;
+  parcelamentoMax?: number;
 };
 
-export function EventoWizardSimuladorLiquido({ preco, ocultar, className = "" }: Props) {
+export function EventoWizardSimuladorLiquido({
+  preco,
+  ocultar,
+  className = "",
+  parcelamentoHabilitado = false,
+  parcelamentoMax = 2,
+}: Props) {
+  const [parcelasSim, setParcelasSim] = useState(2);
+
   const precoNum = useMemo(() => {
     if (typeof preco === "number") return preco;
     return parseValorMonetarioInput(preco);
@@ -31,12 +41,23 @@ export function EventoWizardSimuladorLiquido({ preco, ocultar, className = "" }:
     return detalharTaxaIngresso(precoNum, TARIFA_PADRAO);
   }, [precoNum]);
 
+  const maxParcelas = Math.min(12, Math.max(2, parcelamentoMax || 2));
+
   if (ocultar || !detalhe) return null;
 
   const taxaPixEst = calcularTaxaAsaas(detalhe.precoVenda, "pix");
   const taxaCartaoEst = calcularTaxaAsaas(detalhe.precoVenda, "cartao_avista");
+  const parcelasAtivas = parcelamentoHabilitado ? Math.min(parcelasSim, maxParcelas) : 1;
+  const taxaParceladoEst =
+    parcelamentoHabilitado && parcelasAtivas > 1
+      ? calcularTaxaAsaas(detalhe.precoVenda, "cartao_parcelado", parcelasAtivas)
+      : null;
   const liquidoPixEst = Math.round((detalhe.liquidoOrganizador - taxaPixEst) * 100) / 100;
   const liquidoCartaoEst = Math.round((detalhe.liquidoOrganizador - taxaCartaoEst) * 100) / 100;
+  const liquidoParceladoEst =
+    taxaParceladoEst != null
+      ? Math.round((detalhe.liquidoOrganizador - taxaParceladoEst) * 100) / 100
+      : null;
 
   return (
     <div
@@ -80,19 +101,45 @@ export function EventoWizardSimuladorLiquido({ preco, ocultar, className = "" }:
           <span>{formatBrl(Math.max(0, liquidoPixEst))}</span>
         </li>
         <li className="flex justify-between gap-2 text-zinc-500">
-          <span>Est. taxa Asaas cartão (~2,99% + R$0,49)</span>
+          <span>Est. taxa Asaas cartão à vista</span>
           <span>− {formatBrl(taxaCartaoEst)}</span>
         </li>
         <li className="flex justify-between gap-2 text-zinc-700">
-          <span>Líquido estimado (cartão)</span>
+          <span>Líquido estimado (cartão à vista)</span>
           <span className="font-medium">{formatBrl(Math.max(0, liquidoCartaoEst))}</span>
         </li>
+        {parcelamentoHabilitado && taxaParceladoEst != null && liquidoParceladoEst != null ? (
+          <>
+            <li className="flex justify-between gap-2 border-t border-dashed border-zinc-200 pt-1.5 text-zinc-500">
+              <span>Est. taxa Asaas cartão {parcelasAtivas}x</span>
+              <span>− {formatBrl(taxaParceladoEst)}</span>
+            </li>
+            <li className="flex justify-between gap-2 font-medium text-amber-900">
+              <span>Líquido estimado (parcelado {parcelasAtivas}x)</span>
+              <span>{formatBrl(Math.max(0, liquidoParceladoEst))}</span>
+            </li>
+          </>
+        ) : null}
       </ul>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
-        Valores ilustrativos. Tarifas reais do Asaas variam por método e antecipação. Configure o
-        walletId em Financeiro antes de vender ingressos pagos.
-      </p>
+      {parcelamentoHabilitado ? (
+        <label className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-700">
+          Simular parcelamento:
+          <select
+            value={parcelasSim}
+            onChange={(e) => setParcelasSim(Number(e.target.value))}
+            className="rounded border border-zinc-300 px-2 py-1 text-xs"
+          >
+            {[2, 3, 6, 12].filter((n) => n <= maxParcelas).map((n) => (
+              <option key={n} value={n}>
+                {n}x
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">{AVISO_LEGAL_TAXAS}</p>
     </div>
   );
 }

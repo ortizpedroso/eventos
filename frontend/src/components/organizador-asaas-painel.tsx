@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import { formatCpfMask, onlyDigits } from "@/lib/cpf";
+import { AVISO_LEGAL_TAXAS } from "@/lib/taxas-asaas-publicas";
 
 type AsaasStatus = {
   asaas_ativo: boolean;
@@ -33,6 +34,15 @@ type Simulacao = {
   simulacao?: Record<string, unknown>;
 };
 
+type SimuladorBreakdown = {
+  preco_bruto: number;
+  taxa_eventosbr: number;
+  taxa_asaas_estimada: number;
+  liquido_organizador: number;
+  aviso_legal: string;
+  parcelamento?: { parcelas: number; valor_parcela: number; valor_total: number } | null;
+};
+
 function fmtBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -53,7 +63,10 @@ export function OrganizadorAsaasPainel() {
   const [numero, setNumero] = useState("");
   const [bairro, setBairro] = useState("");
   const [simValor, setSimValor] = useState("100");
+  const [simMetodo, setSimMetodo] = useState<"pix" | "cartao_avista" | "cartao_parcelado">("pix");
+  const [simParcelas, setSimParcelas] = useState(2);
   const [simulacao, setSimulacao] = useState<Simulacao | null>(null);
+  const [breakdown, setBreakdown] = useState<SimuladorBreakdown | null>(null);
 
   const carregar = useCallback(async () => {
     setError(null);
@@ -146,14 +159,24 @@ export function OrganizadorAsaasPainel() {
     setError(null);
     try {
       const valor = Number(simValor.replace(",", "."));
-      const r = await apiFetch<Simulacao>("/api/organizador/asaas/antecipacao/simular", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ valor_reais: valor }),
+      const params = new URLSearchParams({
+        preco: String(valor),
+        metodo: simMetodo,
+        parcelas: String(simMetodo === "cartao_parcelado" ? simParcelas : 1),
       });
-      setSimulacao(r);
+      const [rAnt, rBreak] = await Promise.all([
+        apiFetch<Simulacao>("/api/organizador/asaas/antecipacao/simular", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ valor_reais: valor }),
+        }),
+        apiFetch<SimuladorBreakdown>(`/api/simuladores/simular?${params.toString()}`),
+      ]);
+      setSimulacao(rAnt);
+      setBreakdown(rBreak);
     } catch (err) {
       setSimulacao(null);
+      setBreakdown(null);
       setError(err instanceof Error ? err.message : "Não foi possível simular.");
     } finally {
       setBusy(false);
@@ -348,7 +371,7 @@ export function OrganizadorAsaasPainel() {
       <form onSubmit={simular} className="mt-6 border-t border-zinc-100 pt-5">
         <h3 className="text-sm font-semibold text-zinc-900">Simulador de líquido</h3>
         <p className="mt-1 text-xs text-zinc-500">
-          Estimativa após taxa EventosBR e antecipação ilustrativa no cartão.
+          Estimativa após taxa EventosBR, taxa Asaas e antecipação ilustrativa no cartão.
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <div>
@@ -359,6 +382,36 @@ export function OrganizadorAsaasPainel() {
               className="mt-1 w-32 rounded-lg border border-zinc-200 px-3 py-2 text-sm"
             />
           </div>
+          <div>
+            <label className="text-xs text-zinc-600">Método</label>
+            <select
+              value={simMetodo}
+              onChange={(e) =>
+                setSimMetodo(e.target.value as "pix" | "cartao_avista" | "cartao_parcelado")
+              }
+              className="mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            >
+              <option value="pix">PIX</option>
+              <option value="cartao_avista">Cartão à vista</option>
+              <option value="cartao_parcelado">Cartão parcelado</option>
+            </select>
+          </div>
+          {simMetodo === "cartao_parcelado" ? (
+            <div>
+              <label className="text-xs text-zinc-600">Parcelas</label>
+              <select
+                value={simParcelas}
+                onChange={(e) => setSimParcelas(Number(e.target.value))}
+                className="mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+              >
+                {[2, 3, 6, 12].map((n) => (
+                  <option key={n} value={n}>
+                    {n}x
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <button
             type="submit"
             disabled={busy}
@@ -367,21 +420,40 @@ export function OrganizadorAsaasPainel() {
             Simular
           </button>
         </div>
+        {breakdown ? (
+          <div className="mt-4 rounded-lg bg-emerald-50/60 p-4 text-sm ring-1 ring-emerald-100">
+            <p>
+              Bruto: <strong>{fmtBRL(breakdown.preco_bruto)}</strong> · Taxa EventosBR:{" "}
+              <strong>{fmtBRL(breakdown.taxa_eventosbr)}</strong> · Taxa Asaas (est.):{" "}
+              <strong>{fmtBRL(breakdown.taxa_asaas_estimada)}</strong>
+            </p>
+            <p className="mt-1 font-medium text-emerald-900">
+              Líquido estimado: <strong>{fmtBRL(breakdown.liquido_organizador)}</strong>
+            </p>
+            {breakdown.parcelamento ? (
+              <p className="mt-1 text-xs text-zinc-600">
+                {breakdown.parcelamento.parcelas}x de {fmtBRL(breakdown.parcelamento.valor_parcela)} (total{" "}
+                {fmtBRL(breakdown.parcelamento.valor_total)})
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {simulacao ? (
           <div className="mt-4 rounded-lg bg-zinc-50 p-4 text-sm">
             <p>
-              Bruto: <strong>{fmtBRL(simulacao.valor_bruto)}</strong> · Taxa plataforma:{" "}
+              Antecipação (cartão): taxa plataforma{" "}
               <strong>{fmtBRL(simulacao.taxa_plataforma)}</strong>
             </p>
             {simulacao.modo === "estimativa" && simulacao.liquido_antecipado_estimado != null ? (
               <p className="mt-1 text-emerald-800">
-                Líquido estimado (com antecipação ~{simulacao.taxa_antecipacao_mes_pct?.toFixed(2)}% a.m.):{" "}
+                Líquido com antecipação (~{simulacao.taxa_antecipacao_mes_pct?.toFixed(2)}% a.m.):{" "}
                 <strong>{fmtBRL(simulacao.liquido_antecipado_estimado)}</strong>
               </p>
             ) : null}
             {simulacao.nota ? <p className="mt-2 text-xs text-zinc-500">{simulacao.nota}</p> : null}
           </div>
         ) : null}
+        <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">{AVISO_LEGAL_TAXAS}</p>
       </form>
     </section>
   );

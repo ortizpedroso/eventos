@@ -44,6 +44,40 @@ export function ProdutorPublicClient({ slug }: { slug: string }) {
         <div>
           <h1 className="text-3xl font-bold text-zinc-900">{perfil.nome}</h1>
           {perfil.bio ? <p className="mt-2 max-w-xl text-zinc-600">{perfil.bio}</p> : null}
+          {(perfil.social_instagram || perfil.social_whatsapp || perfil.social_site) ? (
+            <div className="mt-3 flex flex-wrap gap-3 text-sm">
+              {perfil.social_instagram ? (
+                <a
+                  href={perfil.social_instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-emerald-800 underline-offset-2 hover:underline"
+                >
+                  Instagram
+                </a>
+              ) : null}
+              {perfil.social_whatsapp ? (
+                <a
+                  href={perfil.social_whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-emerald-800 underline-offset-2 hover:underline"
+                >
+                  WhatsApp
+                </a>
+              ) : null}
+              {perfil.social_site ? (
+                <a
+                  href={perfil.social_site}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-emerald-800 underline-offset-2 hover:underline"
+                >
+                  Site
+                </a>
+              ) : null}
+            </div>
+          ) : null}
           <p className="mt-3 text-sm text-zinc-500">
             {perfil.metricas.eventos_publicados} evento(s) publicado(s) · {perfil.metricas.ingressos_pagos} ingresso(s) confirmado(s)
           </p>

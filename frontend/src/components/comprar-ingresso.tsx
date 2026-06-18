@@ -915,7 +915,6 @@ export function ComprarIngresso({
           ) : null}
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-500">
-            <span>🔒 Pagamento seguro via Asaas</span>
             <span>Reembolso em até 10 dias</span>
             <span>Ingresso por e-mail + QR Code</span>
           </div>
