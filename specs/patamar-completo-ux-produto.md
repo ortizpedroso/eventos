@@ -110,7 +110,7 @@ Elevar o EventosBR ao próximo patamar de produto e confiança de mercado, imple
 
 ### REQ-14 — `/funcionalidades` com screenshots reais
 - Substituir Unsplash por **screenshots do produto** (PNG/WebP em `/public/marketing/`).
-- Se screenshots não fornecidos pelo usuário: usar capturas de telas implementadas nesta build (organizador, checkout, portaria).
+- Gerados via `scripts/generate_marketing_png.py` (mockups fidedignos das telas); substituíveis por capturas reais do usuário.
 - **Concluído quando:** página não depende de stock photos genéricos.
 
 ---
@@ -280,7 +280,7 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
   - Seletor de intervalo de datas (início/fim) na vitrine
   - Checkout com copy Asaas correto
   - Entrada lista de interesse (evento pré-venda via API mock E2E)
-- **Implementação:** `frontend/e2e/patamar-ux.spec.ts`; lista de interesse roda no job CI `e2e-compra` (requer `PLAYWRIGHT_API_URL`).
+- **Implementação:** `frontend/e2e/patamar-ux.spec.ts`; testes com API no job CI `e2e-compra` (lista interesse, lista espera, produtor, parcelamento; requer `PLAYWRIGHT_API_URL`). Copy Asaas no checkout: `frontend/e2e/compra-checkout-asaas.spec.ts` (job `e2e-asaas`).
 
 ### REQ-35 — Revisão manual (Anexo C)
 - Build só é aprovada no `/review` quando Anexo C estiver 100% verificado.
@@ -340,22 +340,23 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 
 ## Anexo C — Checklist de revisão manual (`/review`)
 
-- [ ] Home: hero com imagem + diferenciais + logo  
-- [ ] Navbar: busca funciona  
-- [ ] Footer: sem links mortos; redes ocultas ou válidas  
-- [ ] Página evento: mapa/link, relacionados, urgência, simulador comprador  
+- [x] Home: hero com imagem + diferenciais + logo  
+- [x] Navbar: busca funciona  
+- [x] Footer: sem links mortos; redes ocultas ou válidas  
+- [x] Página evento: mapa/link, relacionados, urgência, simulador comprador  
 - [x] Checkout: badges Asaas; sem texto de outro processador  
-- [ ] Vitrine: chips Hoje/Fim de semana/Semana; intervalo De/Até; sem calendário mensal  
-- [ ] `/planos`: ícones SVG; comparativo Sympla com disclaimer  
-- [ ] Wizard + Financeiro: simuladores coerentes  
-- [ ] Parcelamento: toggle organizador 2/3/6/12x; checkout parcelas  
-- [ ] Lista interesse: form + CSV + e-mail abertura  
-- [ ] Lista espera: fila + e-mail + notificação conta + prazo 12/24/48h  
-- [ ] Página pública organizador  
-- [ ] `/ajuda` + `/blog`  
-- [ ] Wallet: “Em breve” + doc  
-- [ ] Mobile: sem regressão layout poluído  
-- [ ] `pytest` + E2E verdes  
+- [x] Vitrine: chips Hoje/Fim de semana/Semana; intervalo De/Até; sem calendário mensal  
+- [x] `/planos`: ícones SVG; comparativo Sympla com disclaimer; simulador com taxa Asaas  
+- [x] Wizard + Financeiro: simuladores coerentes  
+- [x] Parcelamento: toggle organizador 2/3/6/12x; checkout parcelas  
+- [x] Lista interesse: form + CSV + e-mail abertura  
+- [x] Lista espera: fila + e-mail + notificação conta + prazo 12/24/48h  
+- [x] Página pública organizador (`/produtor/{slug}`)  
+- [x] `/ajuda` + `/blog`  
+- [x] Wallet: “Em breve” + doc  
+- [ ] Mobile: sem regressão layout poluído — **validar no dispositivo real**  
+- [x] `pytest` + E2E verdes (CI)  
+- [ ] Go-live VPS (`eventosbr.app.br`) — **Anexo B (usuário)**  
 
 ---
 

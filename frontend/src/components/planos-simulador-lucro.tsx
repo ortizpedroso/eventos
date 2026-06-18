@@ -11,7 +11,12 @@ import {
   parseValorMonetarioInput,
   simularLucroPlanos,
 } from "@/lib/tarifas-plataforma";
-import { AVISO_LEGAL_TAXAS, SYMPLA_FONTE_URL, comparativoSympla } from "@/lib/taxas-asaas-publicas";
+import {
+  AVISO_LEGAL_TAXAS,
+  SYMPLA_FONTE_URL,
+  comparativoSympla,
+  type MetodoAsaas,
+} from "@/lib/taxas-asaas-publicas";
 
 const cell =
   "min-w-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900";
@@ -49,7 +54,10 @@ function CenarioCard({
         Você lucra: {formatBrl(c.liquido)}
       </p>
       <p className="mt-2 text-xs text-zinc-500">
-        Taxa {pctLabel} + {formatBrl(fixoUnit)}/ingresso — total taxas {formatBrl(c.taxaTotal)}
+        Taxa EventosBR {pctLabel} + {formatBrl(fixoUnit)}/ingresso — total {formatBrl(c.taxaTotal)}
+      </p>
+      <p className="mt-1 text-xs text-zinc-500">
+        Est. taxa Asaas — {formatBrl(c.taxaAsaasEstimada)} · antes do gateway {formatBrl(c.liquidoAntesAsaas)}
       </p>
     </div>
   );
@@ -58,16 +66,30 @@ function CenarioCard({
 export function PlanosSimuladorLucro() {
   const [precoInput, setPrecoInput] = useState("49.90");
   const [qtdInput, setQtdInput] = useState("500");
+  const [metodoAsaas, setMetodoAsaas] = useState<MetodoAsaas>("pix");
+  const [parcelas, setParcelas] = useState(2);
 
   const preco = useMemo(() => parseValorMonetarioInput(precoInput), [precoInput]);
   const qtd = useMemo(() => parseQuantidadeInput(qtdInput), [qtdInput]);
-  const sim = useMemo(() => (preco && qtd ? simularLucroPlanos(preco, qtd) : null), [preco, qtd]);
+  const sim = useMemo(
+    () =>
+      preco && qtd
+        ? simularLucroPlanos(preco, qtd, {
+            metodoAsaas,
+            parcelas: metodoAsaas === "cartao_parcelado" ? parcelas : 1,
+          })
+        : null,
+    [preco, qtd, metodoAsaas, parcelas],
+  );
   const sympla = preco ? comparativoSympla(preco * (qtd ?? 1)) : null;
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
       <h2 className="text-xl font-semibold text-zinc-900">Simulador de lucro</h2>
-      <p className="mt-2 text-sm text-zinc-600">Estime quanto sobra após as taxas EventosBR.</p>
+      <p className="mt-2 text-sm text-zinc-600">
+        Estime quanto sobra após taxas EventosBR e tarifas ilustrativas do Asaas (mesma base do simulador do
+        organizador).
+      </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label className="block text-sm">
@@ -78,6 +100,31 @@ export function PlanosSimuladorLucro() {
           <span className="font-medium text-zinc-700">Quantidade vendida</span>
           <input className={`${cell} mt-1`} value={qtdInput} onChange={(e) => setQtdInput(e.target.value.replace(/\D/g, ""))} />
         </label>
+        <label className="block text-sm">
+          <span className="font-medium text-zinc-700">Método de pagamento (estimativa Asaas)</span>
+          <select
+            className={`${cell} mt-1 w-full`}
+            value={metodoAsaas}
+            onChange={(e) => setMetodoAsaas(e.target.value as MetodoAsaas)}
+          >
+            <option value="pix">PIX</option>
+            <option value="boleto">Boleto</option>
+            <option value="cartao_avista">Cartão à vista</option>
+            <option value="cartao_parcelado">Cartão parcelado</option>
+          </select>
+        </label>
+        {metodoAsaas === "cartao_parcelado" ? (
+          <label className="block text-sm">
+            <span className="font-medium text-zinc-700">Parcelas</span>
+            <select className={`${cell} mt-1 w-full`} value={parcelas} onChange={(e) => setParcelas(Number(e.target.value))}>
+              {[2, 3, 6, 12].map((n) => (
+                <option key={n} value={n}>
+                  {n}x
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </div>
 
       {sim ? (

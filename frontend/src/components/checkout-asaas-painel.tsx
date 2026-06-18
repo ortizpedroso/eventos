@@ -271,6 +271,7 @@ export function CheckoutAsaasPainel({
             className="mt-1 w-full rounded border px-2 py-2 text-sm"
             value={parcelas}
             onChange={(e) => setParcelas(Number(e.target.value))}
+            data-testid="checkout-parcelas"
           >
             <option value={1}>À vista</option>
             {[2, 3, 6, 12]

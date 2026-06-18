@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -1165,6 +1166,62 @@ def test_parcelamento_cobranca_installment_count():
         )
     assert cob.status_code == 200, cob.text
     assert captured.get("installment_count") == 3
+
+    pay_id = mock_payment["id"]
+    with (
+        patch("app.routes.webhooks.settings") as wh_settings,
+        patch(
+            "app.services.pagamento_asaas.obter_cobranca",
+            return_value={"id": pay_id, "status": "CONFIRMED", "installmentCount": 3},
+        ),
+    ):
+        wh_settings.ASAAS_WEBHOOK_TOKEN = "tok_test"
+        wh_settings.ENVIRONMENT = "test"
+        payload = {
+            "id": f"evt_parc_{suf}",
+            "event": "PAYMENT_CONFIRMED",
+            "payment": {"id": pay_id, "status": "CONFIRMED", "installmentCount": 3},
+        }
+        wh = test_api.client.post(
+            "/api/webhooks/asaas",
+            headers={"asaas-access-token": "tok_test", "content-type": "application/json"},
+            content=json.dumps(payload),
+        )
+    assert wh.status_code == 200, wh.text
+
+    db = _db()
+    try:
+        ing = db.query(Ingresso).filter(Ingresso.id == iid).first()
+        assert ing is not None
+        assert ing.status == "pago"
+        assert ing.asaas_payment_id == pay_id
+    finally:
+        db.close()
+
+
+def test_simulador_planos_coerencia_asaas():
+    """REQ-16: API /simuladores alinhada às taxas públicas (base do simulador /planos)."""
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, taxa_ingresso
+    from app.services.taxas_asaas_publicas import calcular_taxa_asaas
+
+    preco = 49.90
+    metodo = "cartao_parcelado"
+    parcelas = 3
+
+    r = test_api.client.get(
+        "/api/simuladores/simular",
+        params={"preco": preco, "metodo": metodo, "parcelas": parcelas},
+    )
+    assert r.status_code == 200
+    api = r.json()
+
+    taxa_plat = taxa_ingresso(preco, TARIFA_PADRAO)
+    taxa_asaas = calcular_taxa_asaas(preco, metodo, parcelas=parcelas)
+    liquido_esperado = round(max(0.0, preco - taxa_plat - taxa_asaas), 2)
+
+    assert api["taxa_eventosbr"] == round(taxa_plat, 2)
+    assert api["taxa_asaas_estimada"] == taxa_asaas
+    assert api["liquido_organizador"] == liquido_esperado
 
 
 def test_deve_notificar_abertura_quando_lote_abre():
