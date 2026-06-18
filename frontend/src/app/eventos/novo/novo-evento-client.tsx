@@ -19,9 +19,12 @@ import {
 import { EventoConfigAvancadaFields } from "@/components/evento-config-avancada-fields";
 import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
 import { EventoWizardSimuladorLiquido } from "@/components/evento-wizard-simulador-liquido";
+import { InputValorBrl } from "@/components/input-valor-brl";
 import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
 import { EVENTO_CATEGORIAS, slugFromNome } from "@/lib/eventos";
 import { apiFetch } from "@/lib/api";
+import { moedaBrlFromNumber } from "@/lib/moeda-brl";
+import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
 
 const CATEGORIAS = EVENTO_CATEGORIAS;
 
@@ -107,7 +110,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>(() => defaultLoteRows());
   const [wizardStep, setWizardStep] = useState(1);
   const [modoSimples, setModoSimples] = useState(true);
-  const [precoSimples, setPrecoSimples] = useState("49.90");
+  const [precoSimples, setPrecoSimples] = useState(() => moedaBrlFromNumber(49.9));
   const [eventoGratuito, setEventoGratuito] = useState(false);
   const [formNome, setFormNome] = useState("");
   const [formDescricao, setFormDescricao] = useState("");
@@ -150,7 +153,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
           {
             nome: "Cortesia",
             tipo: "cortesia",
-            preco: "0",
+            preco: moedaBrlFromNumber(0),
             ordem: 1,
             quantidade_maxima: "",
             ativo: true,
@@ -163,7 +166,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
           {
             nome: "Geral",
             tipo: "inteira",
-            preco: precoSimples.replace(",", "."),
+            preco: precoSimples.trim() || moedaBrlFromNumber(49.9),
             ordem: 1,
             quantidade_maxima: "",
             ativo: true,
@@ -412,18 +415,15 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     Evento gratuito (cortesia)
                   </label>
                   {!eventoGratuito ? (
-                    <div className="grid gap-2 max-w-xs">
+                    <div className="grid max-w-xs gap-2">
                       <label className="text-sm font-medium text-zinc-800" htmlFor="preco_simples">
-                        Preço do ingresso (R$)
+                        Preço do ingresso
                       </label>
-                      <input
+                      <InputValorBrl
                         id="preco_simples"
-                        type="text"
-                        inputMode="decimal"
                         value={precoSimples}
-                        onChange={(e) => setPrecoSimples(e.target.value)}
-                        className={inputClass}
-                        placeholder="Ex.: 49,90"
+                        onChange={setPrecoSimples}
+                        placeholder="49,90"
                       />
                     </div>
                   ) : null}
@@ -490,7 +490,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   ocultar={
                     eventoGratuito ||
                     (modoSimples
-                      ? parseFloat(precoSimples.replace(",", ".")) < 0.5
+                      ? (parseValorMonetarioInput(precoSimples) ?? 0) < 0.5
                       : precoMinimoDosLotes(loteRows) < 0.5)
                   }
                   parcelamentoHabilitado={parcelamentoHabilitado}

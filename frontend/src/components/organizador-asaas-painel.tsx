@@ -2,8 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { InputValorBrl } from "@/components/input-valor-brl";
 import { apiFetch } from "@/lib/api";
 import { formatCpfMask, onlyDigits } from "@/lib/cpf";
+import { moedaBrlFromNumber } from "@/lib/moeda-brl";
+import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
 import { AVISO_LEGAL_TAXAS } from "@/lib/taxas-asaas-publicas";
 
 type AsaasStatus = {
@@ -57,12 +60,12 @@ export function OrganizadorAsaasPainel() {
   const [mostrarSubconta, setMostrarSubconta] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [telefone, setTelefone] = useState("");
-  const [renda, setRenda] = useState("5000");
+  const [renda, setRenda] = useState(() => moedaBrlFromNumber(5000));
   const [cep, setCep] = useState("");
   const [endereco, setEndereco] = useState("");
   const [numero, setNumero] = useState("");
   const [bairro, setBairro] = useState("");
-  const [simValor, setSimValor] = useState("100");
+  const [simValor, setSimValor] = useState(() => moedaBrlFromNumber(100));
   const [simMetodo, setSimMetodo] = useState<"pix" | "cartao_avista" | "cartao_parcelado">("pix");
   const [simParcelas, setSimParcelas] = useState(2);
   const [simulacao, setSimulacao] = useState<Simulacao | null>(null);
@@ -116,7 +119,7 @@ export function OrganizadorAsaasPainel() {
         body: JSON.stringify({
           cpf_cnpj: onlyDigits(cpfCnpj, 14),
           telefone: onlyDigits(telefone, 11),
-          renda_mensal: Number(renda.replace(",", ".")),
+          renda_mensal: parseValorMonetarioInput(renda) ?? 0,
           cep: onlyDigits(cep, 8),
           endereco: endereco.trim(),
           numero: numero.trim(),
@@ -158,7 +161,12 @@ export function OrganizadorAsaasPainel() {
     setBusy(true);
     setError(null);
     try {
-      const valor = Number(simValor.replace(",", "."));
+      const valor = parseValorMonetarioInput(simValor);
+      if (valor == null || valor <= 0) {
+        setError("Informe um valor válido para simular.");
+        setBusy(false);
+        return;
+      }
       const params = new URLSearchParams({
         preco: String(valor),
         metodo: simMetodo,
@@ -292,12 +300,10 @@ export function OrganizadorAsaasPainel() {
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-600">Renda mensal (R$)</label>
-                <input
-                  value={renda}
-                  onChange={(e) => setRenda(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-                />
+                <label className="text-xs text-zinc-600">Renda mensal</label>
+                <div className="mt-1.5">
+                  <InputValorBrl value={renda} onChange={setRenda} className="rounded-lg" />
+                </div>
               </div>
               <div>
                 <label className="text-xs text-zinc-600">CEP</label>
@@ -373,23 +379,19 @@ export function OrganizadorAsaasPainel() {
         <p className="mt-1 text-xs text-zinc-500">
           Estimativa após taxa EventosBR, taxa Asaas e antecipação ilustrativa no cartão.
         </p>
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <div>
-            <label className="text-xs text-zinc-600">Valor do ingresso (R$)</label>
-            <input
-              value={simValor}
-              onChange={(e) => setSimValor(e.target.value)}
-              className="mt-1 w-32 rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-            />
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <div className="flex min-w-[9rem] flex-col gap-1.5">
+            <label className="text-xs text-zinc-600">Valor do ingresso</label>
+            <InputValorBrl value={simValor} onChange={setSimValor} className="rounded-lg" />
           </div>
-          <div>
+          <div className="flex flex-col gap-1.5">
             <label className="text-xs text-zinc-600">Método</label>
             <select
               value={simMetodo}
               onChange={(e) =>
                 setSimMetodo(e.target.value as "pix" | "cartao_avista" | "cartao_parcelado")
               }
-              className="mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+              className="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
             >
               <option value="pix">PIX</option>
               <option value="cartao_avista">Cartão à vista</option>
@@ -397,12 +399,12 @@ export function OrganizadorAsaasPainel() {
             </select>
           </div>
           {simMetodo === "cartao_parcelado" ? (
-            <div>
+            <div className="flex flex-col gap-1.5">
               <label className="text-xs text-zinc-600">Parcelas</label>
               <select
                 value={simParcelas}
                 onChange={(e) => setSimParcelas(Number(e.target.value))}
-                className="mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                className="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
               >
                 {[2, 3, 6, 12].map((n) => (
                   <option key={n} value={n}>

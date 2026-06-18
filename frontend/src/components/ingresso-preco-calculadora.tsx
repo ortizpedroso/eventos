@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { InputValorBrl } from "@/components/input-valor-brl";
 import {
   TARIFA_ASSINATURA,
   TARIFA_PADRAO,
@@ -70,21 +71,14 @@ export function IngressoPrecoCalculadora({
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="grid gap-1 text-xs font-medium text-zinc-800 sm:col-span-2">
+        <label className="grid gap-2 text-xs font-medium text-zinc-800 sm:col-span-2">
           Quanto você quer ganhar (por ingresso)
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
-              R$
-            </span>
-            <input
-              className={`${cell} pl-9`}
-              inputMode="decimal"
-              value={liquidoInput}
-              onChange={(e) => setLiquidoInput(e.target.value)}
-              placeholder="45,00"
-              aria-describedby="calc-taxa-plataforma"
-            />
-          </div>
+          <InputValorBrl
+            value={liquidoInput}
+            onChange={setLiquidoInput}
+            placeholder="45,00"
+            aria-describedby="calc-taxa-plataforma"
+          />
         </label>
 
         <fieldset className="grid gap-2 sm:col-span-2" id="calc-taxa-plataforma">

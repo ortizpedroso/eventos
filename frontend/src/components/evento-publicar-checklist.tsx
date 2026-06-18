@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 
+import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
+
 type ChecklistInput = {
   nome: string;
   descricao: string;
@@ -22,7 +24,7 @@ export function EventoPublicarChecklist(props: ChecklistInput) {
     const precoOk =
       props.eventoGratuito ||
       (props.modoSimples
-        ? Number.parseFloat(props.precoSimples.replace(",", ".")) >= 0.5
+        ? (parseValorMonetarioInput(props.precoSimples) ?? 0) >= 0.5
         : props.loteRowsCount > 0);
 
     return [
@@ -103,7 +105,7 @@ export function checklistPublicacaoPronta(props: ChecklistInput): boolean {
   const precoOk =
     props.eventoGratuito ||
     (props.modoSimples
-      ? Number.parseFloat(props.precoSimples.replace(",", ".")) >= 0.5
+      ? (parseValorMonetarioInput(props.precoSimples) ?? 0) >= 0.5
       : props.loteRowsCount > 0);
 
   return (

@@ -3,7 +3,10 @@
 import { useRef } from "react";
 
 import { IngressoPrecoCalculadora } from "@/components/ingresso-preco-calculadora";
+import { InputValorBrl } from "@/components/input-valor-brl";
 import { isoToDatetimeLocalValue } from "@/lib/eventos";
+import { moedaBrlFromNumber } from "@/lib/moeda-brl";
+import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
 import type { Evento, IngressoTipo } from "@/lib/types";
 
 export const TIPOS_LOTE: { value: IngressoTipo; label: string }[] = [
@@ -25,12 +28,13 @@ export type LoteFormRow = {
   vendas_fim: string;
 };
 
-export function defaultLoteRows(precoInicial = "49.9"): LoteFormRow[] {
+export function defaultLoteRows(precoInicial?: string): LoteFormRow[] {
+  const preco = precoInicial ?? moedaBrlFromNumber(49.9);
   return [
     {
       nome: "1º lote",
       tipo: "inteira",
-      preco: precoInicial,
+      preco,
       ordem: 1,
       quantidade_maxima: "",
       ativo: true,
@@ -49,7 +53,7 @@ export function eventoLotesToRows(ev: Evento): LoteFormRow[] {
         id: l.id,
         nome: l.nome,
         tipo: (l.tipo as IngressoTipo) || "inteira",
-        preco: String(l.preco),
+        preco: moedaBrlFromNumber(l.preco),
         ordem: l.ordem,
         quantidade_maxima: l.quantidade_maxima != null ? String(l.quantidade_maxima) : "",
         ativo: l.ativo,
@@ -57,7 +61,7 @@ export function eventoLotesToRows(ev: Evento): LoteFormRow[] {
         vendas_fim: l.vendas_fim ? isoToDatetimeLocalValue(l.vendas_fim) : "",
       }));
   }
-  return defaultLoteRows(String(ev.preco_ingresso ?? "49.9"));
+  return defaultLoteRows(moedaBrlFromNumber(ev.preco_ingresso ?? 49.9));
 }
 
 export type IngressoLotePayload = {
@@ -75,7 +79,7 @@ export type IngressoLotePayload = {
 /** Converte linhas do formulário para o JSON da API (datas ISO ou null). */
 export function lotesRowsToApiPayload(rows: LoteFormRow[]): IngressoLotePayload[] {
   return rows.map((r, idx) => {
-    const preco = Number.parseFloat(String(r.preco).replace(",", "."));
+    const preco = parseValorMonetarioInput(r.preco) ?? NaN;
     const q = r.quantidade_maxima.trim();
     const ordem = Number.isFinite(r.ordem) ? r.ordem : idx + 1;
     const vi = r.vendas_inicio.trim();
@@ -101,8 +105,8 @@ export function precoMinimoDosLotes(rows: LoteFormRow[]): number {
   let m = Infinity;
   for (const r of rows) {
     if (r.tipo === "cortesia") continue;
-    const p = Number.parseFloat(String(r.preco).replace(",", "."));
-    if (Number.isFinite(p) && p < m) m = p;
+    const p = parseValorMonetarioInput(r.preco);
+    if (p != null && p < m) m = p;
   }
   return m === Infinity ? 0 : m;
 }
@@ -123,7 +127,7 @@ function loteGratuitoPadrao(nome = "Ingresso gratuito"): LoteFormRow {
   return {
     nome,
     tipo: "cortesia",
-    preco: "0",
+    preco: moedaBrlFromNumber(0),
     ordem: 1,
     quantidade_maxima: "",
     ativo: true,
@@ -179,11 +183,7 @@ export function EventoLotesEditor({ rows, onChange, className = "", showCalculad
 
   function aplicarPrecoCalculadora(preco: number, loteIndex: number) {
     const idx = Math.min(Math.max(0, loteIndex), rows.length - 1);
-    const formatted = preco.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    setRow(idx, { preco: formatted });
+    setRow(idx, { preco: moedaBrlFromNumber(preco) });
   }
 
   const primeiroLoteNome = rows[0]?.nome?.trim() || "1º lote";
@@ -263,7 +263,7 @@ export function EventoLotesEditor({ rows, onChange, className = "", showCalculad
                   onChange={(e) => {
                     const tipo = e.target.value as IngressoTipo;
                     const patch: Partial<LoteFormRow> = { tipo };
-                    if (tipo === "cortesia") patch.preco = "0";
+                    if (tipo === "cortesia") patch.preco = moedaBrlFromNumber(0);
                     setRow(i, patch);
                   }}
                 >
@@ -274,15 +274,13 @@ export function EventoLotesEditor({ rows, onChange, className = "", showCalculad
                   ))}
                 </select>
               </label>
-              <label className="grid gap-0.5 text-xs font-medium text-zinc-700">
-                Preço (R$)
-                <input
-                  className={cell}
-                  inputMode="decimal"
+              <label className="grid gap-2 text-xs font-medium text-zinc-700">
+                Preço
+                <InputValorBrl
                   value={row.preco}
                   disabled={row.tipo === "cortesia"}
-                  onChange={(e) => setRow(i, { preco: e.target.value })}
-                  placeholder={row.tipo === "cortesia" ? "0" : "49,90"}
+                  placeholder={row.tipo === "cortesia" ? "0,00" : "49,90"}
+                  onChange={(masked) => setRow(i, { preco: masked })}
                 />
               </label>
               <label className="grid gap-0.5 text-xs font-medium text-zinc-700">

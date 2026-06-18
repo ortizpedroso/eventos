@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { InputValorBrl } from "@/components/input-valor-brl";
 import {
   TARIFA_ASSINATURA,
   TARIFA_PADRAO,
@@ -11,6 +12,7 @@ import {
   parseValorMonetarioInput,
   simularLucroPlanos,
 } from "@/lib/tarifas-plataforma";
+import { moedaBrlFromNumber } from "@/lib/moeda-brl";
 import {
   AVISO_LEGAL_TAXAS,
   SYMPLA_FONTE_URL,
@@ -64,7 +66,7 @@ function CenarioCard({
 }
 
 export function PlanosSimuladorLucro() {
-  const [precoInput, setPrecoInput] = useState("49.90");
+  const [precoInput, setPrecoInput] = useState(() => moedaBrlFromNumber(49.9));
   const [qtdInput, setQtdInput] = useState("500");
   const [metodoAsaas, setMetodoAsaas] = useState<MetodoAsaas>("pix");
   const [parcelas, setParcelas] = useState(2);
@@ -91,19 +93,19 @@ export function PlanosSimuladorLucro() {
         organizador).
       </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="font-medium text-zinc-700">Preço do ingresso (R$)</span>
-          <input className={`${cell} mt-1`} value={precoInput} onChange={(e) => setPrecoInput(e.target.value)} />
+      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+        <label className="flex flex-col gap-2 text-sm">
+          <span className="font-medium text-zinc-700">Preço do ingresso</span>
+          <InputValorBrl value={precoInput} onChange={setPrecoInput} />
         </label>
-        <label className="block text-sm">
+        <label className="flex flex-col gap-2 text-sm">
           <span className="font-medium text-zinc-700">Quantidade vendida</span>
-          <input className={`${cell} mt-1`} value={qtdInput} onChange={(e) => setQtdInput(e.target.value.replace(/\D/g, ""))} />
+          <input className={cell} value={qtdInput} onChange={(e) => setQtdInput(e.target.value.replace(/\D/g, ""))} />
         </label>
-        <label className="block text-sm">
+        <label className="flex flex-col gap-2 text-sm">
           <span className="font-medium text-zinc-700">Método de pagamento (estimativa Asaas)</span>
           <select
-            className={`${cell} mt-1 w-full`}
+            className={`${cell} w-full`}
             value={metodoAsaas}
             onChange={(e) => setMetodoAsaas(e.target.value as MetodoAsaas)}
           >
@@ -114,9 +116,9 @@ export function PlanosSimuladorLucro() {
           </select>
         </label>
         {metodoAsaas === "cartao_parcelado" ? (
-          <label className="block text-sm">
+          <label className="flex flex-col gap-2 text-sm">
             <span className="font-medium text-zinc-700">Parcelas</span>
-            <select className={`${cell} mt-1 w-full`} value={parcelas} onChange={(e) => setParcelas(Number(e.target.value))}>
+            <select className={`${cell} w-full`} value={parcelas} onChange={(e) => setParcelas(Number(e.target.value))}>
               {[2, 3, 6, 12].map((n) => (
                 <option key={n} value={n}>
                   {n}x
