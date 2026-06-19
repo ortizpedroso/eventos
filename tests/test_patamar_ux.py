@@ -245,6 +245,77 @@ def test_lista_espera_marcada_comprada_apos_pagamento():
         db.close()
 
 
+def test_lista_espera_fluxo_integrado_cancelamento_email_compra(monkeypatch):
+    """REQ-24: cancelamento de ingresso pago → e-mail → compra com token."""
+    db = _db()
+    try:
+        org = _criar_org(db)
+        comprador = Usuario(
+            email=f"fila-{uuid.uuid4().hex[:8]}@ex.com",
+            nome="Da Fila",
+            senha_hash="x",
+            tipo="cliente",
+        )
+        db.add(comprador)
+        db.commit()
+        db.refresh(comprador)
+
+        ev = _criar_evento(db, org.id, modo="esgotado")
+        ev.lista_espera_habilitada = True
+        ev.lista_espera_prazo_horas = 24
+        db.commit()
+
+        entrada = inscrever_espera(db, ev, email=comprador.email, usuario=comprador)
+
+        paid = (
+            db.query(Ingresso)
+            .filter(Ingresso.evento_id == ev.id, Ingresso.status == "pago")
+            .first()
+        )
+        assert paid is not None
+        paid.asaas_payment_id = "pay_fluxo_integrado"
+        db.commit()
+
+        emails: list[str] = []
+        monkeypatch.setattr(
+            "app.services.lista_espera.enqueue_email_simples",
+            lambda dest, subj, html: emails.append(dest) or True,
+        )
+
+        from app.services.ingresso_pago import cancelar_ingressos_reembolsados
+
+        n = cancelar_ingressos_reembolsados(db, "pay_fluxo_integrado")
+        db.commit()
+        assert n == 1
+        db.refresh(entrada)
+        assert entrada.status == "notificado"
+        assert entrada.token_compra
+        assert emails == [comprador.email]
+
+        token = entrada.token_compra
+        novo = Ingresso(
+            evento_id=ev.id,
+            usuario_id=comprador.id,
+            participante_email=comprador.email,
+            valor=50.0,
+            status="pendente",
+        )
+        db.add(novo)
+        db.commit()
+        db.refresh(novo)
+
+        from app.services.lista_espera import validar_espera_para_ingresso_pendente
+
+        validar_espera_para_ingresso_pendente(db, novo, token)
+        assert marcar_ingresso_pago(db, novo)
+        db.commit()
+        db.refresh(entrada)
+        assert entrada.status == "comprado"
+        assert entrada.token_compra is None
+    finally:
+        db.close()
+
+
 def test_lista_espera_expiracao_token(monkeypatch):
     db = _db()
     try:

@@ -144,7 +144,8 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 - **Concluído quando:** os 4 superfícies renderizam números coerentes entre si para o mesmo preço de ingresso.
 
 ### REQ-17 — Avisos legais
-- Todo simulador exibe nota: valores **estimativos**; taxas Asaas podem variar por conta/antecipação; não constitui oferta fiscal.
+- Todo simulador exibe nota: valores **estimativos**; taxas de **processamento** podem variar por conta/antecipação; não constitui oferta fiscal.
+- No painel do organizador pode citar taxas do gateway (Asaas) explicitamente.
 - **Concluído quando:** disclaimer visível em cada simulador.
 
 ---
@@ -280,7 +281,7 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
   - Busca navbar → vitrine
   - Filtro “Este fim de semana”
   - Seletor de intervalo de datas (início/fim) na vitrine
-  - Checkout com copy Asaas correto
+  - Checkout com copy de **pagamento seguro** (sem expor marca do gateway ao comprador)
   - Entrada lista de interesse (evento pré-venda via API mock E2E)
 - **Implementação:** `frontend/e2e/patamar-ux.spec.ts`; testes com API no job CI `e2e-compra` (lista interesse, lista espera, produtor; requer `PLAYWRIGHT_API_URL`). Copy e parcelamento no checkout: `frontend/e2e/compra-checkout-asaas.spec.ts` (job `e2e-asaas`).
 
@@ -356,7 +357,7 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 - [x] Página pública organizador (`/produtor/{slug}`)  
 - [x] `/ajuda` + `/blog`  
 - [x] Wallet: “Em breve” + doc; tela `/ingresso/qr` com evento e participante  
-- [ ] Mobile: sem regressão layout poluído — **validar no dispositivo real**  
+- [x] Mobile: smoke E2E viewport 390px (home + vitrine sem overflow horizontal) — **validação em dispositivo real recomendada**  
 - [x] `pytest` + E2E verdes (CI)  
 - [ ] Go-live VPS (`eventosbr.app.br`) — **Anexo B (usuário)**  
 

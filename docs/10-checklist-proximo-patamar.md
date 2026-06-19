@@ -37,7 +37,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 | Segurança / UX (auditoria) | 36/36 repo | ops VPS |
 | Admin plataforma | 8/8 | — |
 | Diferenciação (migração) | 8/15 | migração Sympla, Wallet, selo |
-| Qualidade / testes | 11/11 | — (141 pytest + E2E CI) |
+| Qualidade / testes | 11/11 | — (144 pytest + E2E CI) |
 | **Total estimado** | **~142 itens OK** | **~8 itens abertos (ops + futuro)** |
 
 ---

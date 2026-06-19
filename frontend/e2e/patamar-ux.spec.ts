@@ -83,6 +83,22 @@ test.describe("Lista de espera (esgotado)", () => {
   });
 });
 
+test.describe("Mobile — smoke viewport", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("home e vitrine renderizam sem overflow horizontal", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    const homeOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
+    expect(homeOverflow).toBe(false);
+
+    await page.goto("/eventos");
+    await expect(page.getByRole("button", { name: "Hoje" })).toBeVisible();
+    const vitrineOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
+    expect(vitrineOverflow).toBe(false);
+  });
+});
+
 test.describe("Perfil público do produtor", () => {
   test("renderiza página /produtor/{slug}", async ({ page }) => {
     test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");
