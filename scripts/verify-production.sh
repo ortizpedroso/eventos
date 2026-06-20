@@ -48,7 +48,7 @@ check "GET /health" "curl -fsS --max-time 15 '${BASE}/health' | grep -q '\"statu
 check "GET /ready (DB)" "curl -fsS --max-time 15 '${BASE}/ready' | grep -q '\"database\"'"
 check "Front página inicial" "curl -fsS --max-time 15 -o /dev/null -w '%{http_code}' '${BASE}/' | grep -qE '200|307'"
 check "www → apex (redirect)" "curl -fsSI --max-time 15 '${WWW_BASE}/' | tr -d '\r' | grep -qiE '^location: https://${DOMAIN}'"
-check "Webhook Asaas (405 sem POST)" "curl -fsS --max-time 15 -o /dev/null -w '%{http_code}' '${BASE}/api/webhooks/asaas' | grep -qE '405|422'"
+check "Webhook Asaas (405 sem POST)" "curl -sS --max-time 15 -o /dev/null -w '%{http_code}' '${BASE}/api/webhooks/asaas' | grep -qE '405|422'"
 
 if [[ -f .env ]]; then
   echo ""
