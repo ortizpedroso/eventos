@@ -64,14 +64,21 @@ if [ -z "$WEBHOOK_TOKEN" ]; then
   fi
 fi
 
+# Docker Compose interpreta $ no .env — escape com $$ (API keys Asaas começam com $aact_).
+docker_env_escape() {
+  printf '%s' "$1" | sed 's/\$/$$/g'
+}
+
 set_env_var() {
   local key="$1"
   local val="$2"
+  local escaped
+  escaped="$(docker_env_escape "$val")"
   if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
     # shellcheck disable=SC2016
-    sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
+    sed -i "s|^${key}=.*|${key}=${escaped}|" "$ENV_FILE"
   else
-    echo "${key}=${val}" >>"$ENV_FILE"
+    echo "${key}=${escaped}" >>"$ENV_FILE"
   fi
 }
 
