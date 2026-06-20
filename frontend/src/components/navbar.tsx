@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { NavbarCategoriasMenu } from "@/components/navbar-categorias-menu";
 import { EventosBRLogo } from "@/components/eventosbr-logo";
-import { fetchSession, logoutSession } from "@/lib/api";
+import { fetchSession, logoutSession, peekSessionCache } from "@/lib/api";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 import { contarPagamentosPendentes } from "@/lib/pagamentos-pendentes";
@@ -49,9 +49,10 @@ function IconMenu({ open }: { open: boolean }) {
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [userNome, setUserNome] = useState<string | null>(null);
-  const [userTipo, setUserTipo] = useState<string | null>(null);
+  const [loggedIn, setLoggedIn] = useState(() => peekSessionCache() != null);
+  const [userNome, setUserNome] = useState<string | null>(() => peekSessionCache()?.nome ?? null);
+  const [userTipo, setUserTipo] = useState<string | null>(() => peekSessionCache()?.tipo ?? null);
+  const [sessionReady, setSessionReady] = useState(() => peekSessionCache() !== undefined);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [pendentesCount, setPendentesCount] = useState(0);
@@ -61,6 +62,7 @@ export function Navbar() {
   useEffect(() => {
     async function syncSession() {
       const u = await fetchSession();
+      setSessionReady(true);
       setLoggedIn(Boolean(u));
       setUserNome(u?.nome ?? null);
       setUserTipo(u?.tipo ?? null);
@@ -118,7 +120,9 @@ export function Navbar() {
 
   const isOrganizador = loggedIn && userTipo === "organizador";
   const hrefCriarEvento =
-    loggedIn && userTipo === "organizador" ? "/organizador/novo" : authHrefParaCriarEvento();
+    sessionReady && !isOrganizador
+      ? authHrefParaCriarEvento()
+      : "/organizador/novo";
   /** Enquanto /me carrega ou usuário é cliente: só Eventos, Pagamentos, Ingressos na barra */
   const navClienteOuCarregando = loggedIn && (userTipo === null || userTipo === "cliente");
 

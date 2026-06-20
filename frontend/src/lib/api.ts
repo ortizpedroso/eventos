@@ -2,6 +2,17 @@ import { dispatchAuthSync } from "@/lib/auth-sync";
 import { mensagemErroHttp } from "@/lib/api-errors";
 import type { Usuario } from "@/lib/types";
 
+/** Cache em memória — evita skeleton ao navegar no painel após /me já ter carregado. */
+let sessionCache: Usuario | null | undefined;
+
+export function peekSessionCache(): Usuario | null | undefined {
+  return sessionCache;
+}
+
+export function clearSessionCache(): void {
+  sessionCache = undefined;
+}
+
 export type ApiError = {
   detail?: unknown;
 };
@@ -49,8 +60,11 @@ export function getApiBaseUrl(): string {
 
 export async function fetchSession(): Promise<Usuario | null> {
   try {
-    return await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
+    const user = await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
+    sessionCache = user;
+    return user;
   } catch {
+    sessionCache = null;
     return null;
   }
 }
@@ -61,6 +75,7 @@ export async function logoutSession(): Promise<void> {
   } catch {
     /* ignore */
   }
+  sessionCache = null;
   if (typeof window !== "undefined") {
     dispatchAuthSync();
   }

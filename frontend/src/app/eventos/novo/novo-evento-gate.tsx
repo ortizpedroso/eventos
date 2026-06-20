@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { NovoEventoForm } from "./novo-evento-client";
-import { fetchSession, logoutSession } from "@/lib/api";
+import { fetchSession, logoutSession, peekSessionCache } from "@/lib/api";
 import {
   authHrefParaCriarEvento,
   authHrefPrecisaContaOrganizador,
@@ -12,9 +12,11 @@ import {
 
 export function NovoEventoGate() {
   const router = useRouter();
-  const [ok, setOk] = useState(false);
+  const cached = peekSessionCache();
+  const [ok, setOk] = useState(cached?.tipo === "organizador");
 
   useEffect(() => {
+    if (ok) return;
     let cancelled = false;
     void (async () => {
       const u = await fetchSession();
@@ -33,12 +35,12 @@ export function NovoEventoGate() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, ok]);
 
   if (!ok) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center text-sm text-zinc-600">
-        Verificando permissão para criar evento…
+      <div className="mx-auto max-w-lg px-4 py-16 text-center text-sm text-zinc-600" aria-busy="true">
+        <span className="sr-only">Carregando formulário de novo evento…</span>
       </div>
     );
   }

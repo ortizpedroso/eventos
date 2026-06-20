@@ -6,9 +6,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { apiFetch } from "@/lib/api";
+import { fetchSession, peekSessionCache } from "@/lib/api";
 import { OrganizadorTour } from "@/components/organizador-tour";
-import type { Usuario } from "@/lib/types";
 
 const navDesktop = [
   { href: "/organizador/eventos", label: "Meus eventos", tour: "org-eventos" },
@@ -84,11 +83,17 @@ function mobileIcon(href: string, className: string) {
   return <IconEventos className={className} />;
 }
 
+function initialAuthState(): "loading" | "denied" | "ok" {
+  const cached = peekSessionCache();
+  if (cached?.tipo === "organizador") return "ok";
+  if (cached != null) return "denied";
+  return "loading";
+}
+
 export function OrganizadorShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [ready, setReady] = useState(false);
-  const [allowed, setAllowed] = useState(false);
+  const [auth, setAuth] = useState<"loading" | "denied" | "ok">(initialAuthState);
   const [menuMaisAberto, setMenuMaisAberto] = useState(false);
 
   useEffect(() => {
@@ -98,29 +103,30 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      try {
-        const u = await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
-        if (cancelled) return;
-        if (u.tipo !== "organizador") {
-          router.replace("/eventos");
-          return;
-        }
-        setAllowed(true);
-      } catch {
-        if (!cancelled) {
-          const login = `/auth?next=${encodeURIComponent(pathname)}`;
-          router.replace(login);
-        }
-      } finally {
-        if (!cancelled) setReady(true);
+      const u = await fetchSession();
+      if (cancelled) return;
+      if (!u) {
+        setAuth("denied");
+        const here =
+          typeof window !== "undefined"
+            ? window.location.pathname + window.location.search
+            : pathname;
+        router.replace(`/auth?next=${encodeURIComponent(here)}`);
+        return;
       }
+      if (u.tipo !== "organizador") {
+        setAuth("denied");
+        router.replace("/eventos");
+        return;
+      }
+      setAuth("ok");
     })();
     return () => {
       cancelled = true;
     };
-  }, [router, pathname]);
+  }, [router]);
 
-  if (!ready) {
+  if (auth === "loading") {
     return (
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         <div className="hidden lg:block lg:w-56">
@@ -136,7 +142,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!allowed) {
+  if (auth === "denied") {
     return null;
   }
 
