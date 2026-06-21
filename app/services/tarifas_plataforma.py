@@ -61,6 +61,40 @@ def liquido_organizador(valor_bruto: float, tarifa: PlanoTarifa | None = None) -
     return round(max(0.0, valor_bruto - taxa_ingresso(valor_bruto, tarifa)), 2)
 
 
+def ledger_ingresso_venda(
+    valor_unit: float,
+    *,
+    tarifa: PlanoTarifa,
+    desconto_parcelamento_total: float = 0.0,
+    quantidade_lote: int = 1,
+    parcelas: int | None = None,
+) -> dict:
+    """Valores por ingresso gravados no ledger (espelham o split Asaas)."""
+    q = max(1, int(quantidade_lote or 1))
+    desconto_unit = round(max(0.0, float(desconto_parcelamento_total or 0)) / q, 2)
+    det = detalhar_taxa_ingresso(valor_unit, tarifa)
+    liquido = round(max(0.0, float(det["liquido_organizador"]) - desconto_unit), 2)
+    return {
+        "liquido_repassado": liquido,
+        "taxa_plataforma_aplicada": float(det["taxa_total"]),
+        "desconto_parcelamento_organizador": desconto_unit,
+        "parcelas_cobranca": parcelas,
+        "plano_tarifa_venda": tarifa.id,
+    }
+
+
+def liquido_ingresso_para_saldo(ingresso, tarifa_fallback: PlanoTarifa | None = None) -> float:
+    """Usa ledger persistido; fallback para ingressos antigos."""
+    stored = getattr(ingresso, "liquido_repassado", None)
+    if stored is not None:
+        return round(float(stored), 2)
+    valor = float(getattr(ingresso, "valor", 0) or 0)
+    plano = (getattr(ingresso, "plano_tarifa_venda", None) or "").strip().lower()
+    tarifa = TARIFAS.get(plano) if plano in TARIFAS else (tarifa_fallback or TARIFA_PADRAO)  # type: ignore[arg-type]
+    desconto = float(getattr(ingresso, "desconto_parcelamento_organizador", 0) or 0)
+    return round(max(0.0, liquido_organizador(valor, tarifa) - desconto), 2)
+
+
 def detalhar_taxa_ingresso(valor_bruto: float, tarifa: PlanoTarifa | None = None) -> dict:
     t = tarifa or TARIFA_PADRAO
     taxa_percentual = round(valor_bruto * t.percentual, 2) if valor_bruto > 0 else 0.0

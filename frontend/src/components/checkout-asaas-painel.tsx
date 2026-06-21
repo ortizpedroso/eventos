@@ -57,6 +57,7 @@ export function CheckoutAsaasPainel({
   const [msg, setMsg] = useState<string | null>(null);
   const [pix, setPix] = useState<AsaasPixPayload | null>(null);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
   const [countdown, setCountdown] = useState<string | null>(null);
 
   const [cardNome, setCardNome] = useState(participanteNome);
@@ -109,7 +110,7 @@ export function CheckoutAsaasPainel({
   }, [reservadoAte]);
 
   useEffect(() => {
-    if (!pix && !invoiceUrl) return;
+    if (!pix && !invoiceUrl && !aguardandoConfirmacao) return;
     const id = window.setInterval(async () => {
       try {
         const st = await apiFetch<{ pago?: boolean }>(`/api/pagamentos/asaas/status/${ingressoId}`);
@@ -119,7 +120,7 @@ export function CheckoutAsaasPainel({
       }
     }, 4000);
     return () => window.clearInterval(id);
-  }, [pix, invoiceUrl, ingressoId, onSuccess]);
+  }, [pix, invoiceUrl, aguardandoConfirmacao, ingressoId, onSuccess]);
 
   async function iniciar(e: FormEvent) {
     e.preventDefault();
@@ -162,7 +163,13 @@ export function CheckoutAsaasPainel({
         return;
       }
       if (res.pix) setPix(res.pix);
-      if (res.invoice_url) setInvoiceUrl(res.invoice_url);
+      if (res.invoice_url) {
+        setInvoiceUrl(res.invoice_url);
+        window.open(res.invoice_url, "_blank", "noopener,noreferrer");
+      }
+      if (res.pix || res.invoice_url || metodo === "card") {
+        setAguardandoConfirmacao(true);
+      }
     } catch (err) {
       setMsg(mapCheckoutError(err instanceof Error ? err.message : String(err)));
     } finally {
@@ -170,19 +177,63 @@ export function CheckoutAsaasPainel({
     }
   }
 
-  if (pix?.copia_cola) {
+  if (pix?.copia_cola || pix?.encoded_image) {
+    const qrSrc = pix.encoded_image
+      ? pix.encoded_image.startsWith("data:")
+        ? pix.encoded_image
+        : `data:image/png;base64,${pix.encoded_image}`
+      : null;
     return (
       <div className="space-y-4">
         <p className="text-sm font-medium text-zinc-900">Pague com PIX — {formatBrl(valorBase)}</p>
         {countdown ? <p className="text-xs text-amber-800">Reserva expira em {countdown}</p> : null}
-        <textarea readOnly className="w-full rounded border p-2 text-xs" rows={4} value={pix.copia_cola} />
-        <button
-          type="button"
-          className="w-full rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white"
-          onClick={() => void navigator.clipboard.writeText(pix.copia_cola ?? "")}
-        >
-          Copiar código PIX
-        </button>
+        {qrSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={qrSrc} alt="QR Code PIX" className="mx-auto h-48 w-48 rounded-lg border bg-white p-2" />
+        ) : null}
+        {pix.copia_cola ? (
+          <>
+            <textarea readOnly className="w-full rounded border p-2 text-xs" rows={4} value={pix.copia_cola} />
+            <button
+              type="button"
+              className="w-full rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white"
+              onClick={() => void navigator.clipboard.writeText(pix.copia_cola ?? "")}
+            >
+              Copiar código PIX
+            </button>
+          </>
+        ) : (
+          <p className="text-xs text-zinc-600">Escaneie o QR Code no app do seu banco para pagar.</p>
+        )}
+        <p className="text-xs text-zinc-500">Aguardando confirmação do pagamento…</p>
+      </div>
+    );
+  }
+
+  if (aguardandoConfirmacao) {
+    return (
+      <div className="space-y-4 rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
+        <p className="text-sm font-medium text-indigo-950">
+          {metodo === "card"
+            ? "Processando pagamento no cartão…"
+            : metodo === "invoice"
+              ? "Aguardando pagamento da fatura…"
+              : "Aguardando confirmação do pagamento…"}
+        </p>
+        {countdown ? <p className="text-xs text-amber-800">Reserva expira em {countdown}</p> : null}
+        {invoiceUrl ? (
+          <a
+            href={invoiceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex text-sm font-medium text-indigo-800 underline"
+          >
+            Abrir fatura de pagamento
+          </a>
+        ) : null}
+        <p className="text-xs text-indigo-900">
+          Não feche esta página. A confirmação pode levar alguns instantes.
+        </p>
       </div>
     );
   }

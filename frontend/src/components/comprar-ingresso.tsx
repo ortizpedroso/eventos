@@ -18,6 +18,7 @@ import { CheckoutTermoResponsabilidade } from "@/components/checkout-termo-respo
 import { TERMO_COMPRA_VERSAO } from "@/lib/termo-compra";
 import { formatCpfMask, isValidCpf, onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask, isTelefoneBrasilOk } from "@/lib/telefone-br";
+import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import type { CriarPagamentoResponse, IngressoLote, RetomarPagamentoResponse, Usuario } from "@/lib/types";
 import { urlRetomarPagamento } from "@/lib/reserva-pagamento";
 
@@ -385,13 +386,13 @@ export function ComprarIngresso({
   async function criarIntent() {
     setError(null);
     const v = precoUnitario;
-    if (!Number.isFinite(v) || (!ehCortesia && v < 0.5)) {
-      setError("Preço do ingresso inválido para pagamento (mínimo R$ 0,50).");
+    if (!Number.isFinite(v) || (!ehCortesia && v < INGRESSO_MINIMO_PAGO_REAIS)) {
+      setError(`Preço do ingresso inválido para pagamento (mínimo R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}).`);
       return;
     }
     const valor_centavos = ehCortesia ? 0 : precoCentavosCheckout;
-    if (!ehCortesia && valor_centavos < 50) {
-      setError("Valor muito baixo");
+    if (!ehCortesia && valor_centavos < INGRESSO_MINIMO_PAGO_REAIS * 100) {
+      setError(`Valor mínimo para ingressos pagos: R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}.`);
       return;
     }
 

@@ -32,7 +32,8 @@ from app.services.taxas_asaas_publicas import (
     PARCELAMENTO_MINIMO_REAIS,
     calcular_acrescimo_parcelamento_comprador,
 )
-from app.services.tarifas_plataforma import detalhar_taxa_ingresso, tarifa_para_organizador
+from app.services.tarifas_plataforma import detalhar_taxa_ingresso, ledger_ingresso_venda, tarifa_para_organizador
+from app.services.financeiro_organizador import registrar_ledger_ingressos_lote
 from app.utils.public_errors import PAGAMENTO_CLIENTE, REEMBOLSO_CLIENTE
 from config.settings import settings
 
@@ -268,6 +269,12 @@ def iniciar_cobranca_asaas(
 
     for ing in lote:
         ing.asaas_payment_id = pid
+    registrar_ledger_ingressos_lote(
+        lote,
+        tarifa=tarifa,
+        desconto_parcelamento_total=desconto_organizador,
+        parcelas=installment_count,
+    )
     db.commit()
 
     if status_eh_pago(payment.get("status")):

@@ -9,7 +9,14 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import Evento, FinanceiroSaque, Ingresso, Usuario
-from app.services.tarifas_plataforma import detalhar_taxa_ingresso, liquido_organizador, tarifa_para_organizador
+from app.services.tarifas_plataforma import (
+    detalhar_taxa_ingresso,
+    liquido_ingresso_para_saldo,
+    tarifa_para_organizador,
+)
+
+_SAQUES_RESERVAM_SALDO = ("pendente", "processando", "pago")
+_SAQUES_NAO_RESERVAM = ("cancelado", "rejeitado")
 
 
 def _ingressos_pagos_query(db: Session, organizador_id: str):
@@ -27,14 +34,14 @@ def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
     tarifa = tarifa_para_organizador(usuario)
     ingressos = _ingressos_pagos_query(db, usuario.id).all()
     bruto = round(sum(float(i.valor or 0) for i in ingressos), 2)
-    liquido = round(sum(liquido_organizador(float(i.valor or 0), tarifa) for i in ingressos), 2)
+    liquido = round(sum(liquido_ingresso_para_saldo(i, tarifa) for i in ingressos), 2)
     taxa_total = round(bruto - liquido, 2)
 
     saques_pagos = (
         db.query(func.coalesce(func.sum(FinanceiroSaque.valor), 0))
         .filter(
             FinanceiroSaque.organizador_id == usuario.id,
-            FinanceiroSaque.status.in_(("pago", "processando", "pendente")),
+            FinanceiroSaque.status.in_(_SAQUES_RESERVAM_SALDO),
         )
         .scalar()
     )
@@ -53,6 +60,37 @@ def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
     }
 
 
+def _movimento_venda(ingresso: Ingresso, evento: Evento | None, tarifa) -> dict[str, Any]:
+    val = float(ingresso.valor or 0)
+    liquido = liquido_ingresso_para_saldo(ingresso, tarifa)
+    taxa = round(val - liquido, 2)
+    if getattr(ingresso, "taxa_plataforma_aplicada", None) is not None:
+        taxa = float(ingresso.taxa_plataforma_aplicada)
+    return {
+        "tipo": "venda",
+        "id": ingresso.id,
+        "data": ingresso.data_compra.isoformat() if ingresso.data_compra else None,
+        "evento_id": ingresso.evento_id,
+        "evento_nome": evento.nome if evento else "",
+        "valor_ingresso": val,
+        "taxa_plataforma": taxa,
+        "liquido": liquido,
+        "descricao": f"Ingresso — {evento.nome if evento else 'evento'}",
+    }
+
+
+def _movimento_saque(saque: FinanceiroSaque) -> dict[str, Any]:
+    return {
+        "tipo": "saque",
+        "id": saque.id,
+        "data": saque.criado_em.isoformat() if saque.criado_em else None,
+        "valor": float(saque.valor),
+        "status": saque.status,
+        "pix_chave": saque.pix_chave,
+        "descricao": "Solicitação de saque via Pix",
+    }
+
+
 def listar_extrato(
     db: Session,
     usuario: Usuario,
@@ -61,59 +99,32 @@ def listar_extrato(
     offset: int = 0,
 ) -> dict[str, Any]:
     tarifa = tarifa_para_organizador(usuario)
+    fetch_n = min(500, max(limite + offset, limite))
+
     ingressos = (
         _ingressos_pagos_query(db, usuario.id)
         .order_by(Ingresso.data_compra.desc())
-        .offset(offset)
-        .limit(limite)
+        .limit(fetch_n)
         .all()
     )
     evento_ids = {i.evento_id for i in ingressos}
     eventos = {e.id: e for e in db.query(Evento).filter(Evento.id.in_(evento_ids)).all()} if evento_ids else {}
 
-    movimentos: list[dict[str, Any]] = []
-    for ing in ingressos:
-        val = float(ing.valor or 0)
-        det = detalhar_taxa_ingresso(val, tarifa)
-        ev = eventos.get(ing.evento_id)
-        movimentos.append(
-            {
-                "tipo": "venda",
-                "id": ing.id,
-                "data": ing.data_compra.isoformat() if ing.data_compra else None,
-                "evento_id": ing.evento_id,
-                "evento_nome": ev.nome if ev else "",
-                "valor_ingresso": val,
-                "taxa_plataforma": det["taxa_total"],
-                "liquido": det["liquido_organizador"],
-                "descricao": f"Ingresso — {ev.nome if ev else 'evento'}",
-            }
-        )
-
     saques = (
         db.query(FinanceiroSaque)
         .filter(FinanceiroSaque.organizador_id == usuario.id)
         .order_by(FinanceiroSaque.criado_em.desc())
-        .offset(offset)
-        .limit(limite)
+        .limit(fetch_n)
         .all()
     )
-    for s in saques:
-        movimentos.append(
-            {
-                "tipo": "saque",
-                "id": s.id,
-                "data": s.criado_em.isoformat() if s.criado_em else None,
-                "valor": float(s.valor),
-                "status": s.status,
-                "pix_chave": s.pix_chave,
-                "descricao": f"Solicitação de saque via Pix",
-            }
-        )
 
+    movimentos: list[dict[str, Any]] = []
+    movimentos.extend(_movimento_venda(ing, eventos.get(ing.evento_id), tarifa) for ing in ingressos)
+    movimentos.extend(_movimento_saque(s) for s in saques)
     movimentos.sort(key=lambda m: m.get("data") or "", reverse=True)
+
     return {
-        "movimentos": movimentos[:limite],
+        "movimentos": movimentos[offset : offset + limite],
         "saldo": calcular_saldo_organizador(db, usuario),
     }
 
@@ -128,26 +139,29 @@ def solicitar_saque(
 ) -> FinanceiroSaque:
     if usuario.tipo != "organizador":
         raise ValueError("Apenas organizadores podem solicitar saque.")
-    if not (usuario.asaas_wallet_id or "").strip():
+    org = db.query(Usuario).filter(Usuario.id == usuario.id).with_for_update().first()
+    if not org:
+        raise ValueError("Organizador não encontrado.")
+    if not (org.asaas_wallet_id or "").strip():
         raise ValueError("Configure sua conta de repasses antes de solicitar saque.")
 
     valor_r = round(valor, 2)
     if valor_r < 1.0:
         raise ValueError("Valor mínimo para saque: R$ 1,00.")
 
-    saldo = calcular_saldo_organizador(db, usuario)
+    chave = (pix_chave or "").strip()
+    if len(chave) < 5:
+        raise ValueError("Informe uma chave Pix válida.")
+
+    saldo = calcular_saldo_organizador(db, org)
     if valor_r > saldo["saldo_disponivel"]:
         raise ValueError(
             f"Saldo insuficiente. Disponível: R$ {saldo['saldo_disponivel']:.2f}."
         )
 
-    chave = (pix_chave or "").strip()
-    if len(chave) < 5:
-        raise ValueError("Informe uma chave Pix válida.")
-
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
     saque = FinanceiroSaque(
-        organizador_id=usuario.id,
+        organizador_id=org.id,
         valor=valor_r,
         pix_chave=chave,
         pix_tipo=(pix_tipo or "EVP").strip().upper()[:20],
@@ -159,3 +173,52 @@ def solicitar_saque(
     db.commit()
     db.refresh(saque)
     return saque
+
+
+def cancelar_saque(db: Session, usuario: Usuario, saque_id: str) -> FinanceiroSaque:
+    if usuario.tipo != "organizador":
+        raise ValueError("Apenas organizadores podem cancelar saques.")
+    saque = (
+        db.query(FinanceiroSaque)
+        .filter(
+            FinanceiroSaque.id == saque_id,
+            FinanceiroSaque.organizador_id == usuario.id,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not saque:
+        raise ValueError("Saque não encontrado.")
+    if saque.status != "pendente":
+        raise ValueError("Só é possível cancelar saques pendentes.")
+    saque.status = "cancelado"
+    saque.atualizado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.commit()
+    db.refresh(saque)
+    return saque
+
+
+def registrar_ledger_ingressos_lote(
+    ingressos: list[Ingresso],
+    *,
+    tarifa,
+    desconto_parcelamento_total: float = 0.0,
+    parcelas: int | None = None,
+) -> None:
+    """Persiste valores de repasse por ingresso (split Asaas)."""
+    from app.services.tarifas_plataforma import ledger_ingresso_venda
+
+    q = max(1, len(ingressos))
+    for ing in ingressos:
+        ledger = ledger_ingresso_venda(
+            float(ing.valor or 0),
+            tarifa=tarifa,
+            desconto_parcelamento_total=desconto_parcelamento_total,
+            quantidade_lote=q,
+            parcelas=parcelas,
+        )
+        ing.liquido_repassado = ledger["liquido_repassado"]
+        ing.taxa_plataforma_aplicada = ledger["taxa_plataforma_aplicada"]
+        ing.desconto_parcelamento_organizador = ledger["desconto_parcelamento_organizador"]
+        ing.parcelas_cobranca = ledger["parcelas_cobranca"]
+        ing.plano_tarifa_venda = ledger["plano_tarifa_venda"]

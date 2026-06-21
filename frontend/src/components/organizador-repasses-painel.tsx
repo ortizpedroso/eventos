@@ -289,6 +289,30 @@ export function OrganizadorRepassesPainel() {
                   <div className="text-right text-xs">
                     <p className="font-semibold text-zinc-900">− {fmt(m.valor)}</p>
                     <p className="text-zinc-500 capitalize">{m.status}</p>
+                    {m.status === "pendente" ? (
+                      <button
+                        type="button"
+                        className="mt-1 text-xs text-red-700 underline"
+                        disabled={busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          setError(null);
+                          try {
+                            await apiFetch(`/api/organizador/financeiro/saque/${m.id}/cancelar`, {
+                              method: "POST",
+                            });
+                            setMsg("Saque cancelado. Saldo liberado.");
+                            await carregar();
+                          } catch (err) {
+                            setError(err instanceof Error ? err.message : "Não foi possível cancelar.");
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    ) : null}
                   </div>
                 )}
               </li>

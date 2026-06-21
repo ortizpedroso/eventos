@@ -14,6 +14,25 @@ from app.services.ticket_email import enqueue_ticket_email
 logger = logging.getLogger(__name__)
 
 
+def _garantir_ledger_ingresso(db: Session, ingresso: Ingresso) -> None:
+    """Preenche ledger em ingressos antigos ou cortesia sem valores gravados."""
+    if getattr(ingresso, "liquido_repassado", None) is not None:
+        return
+    from app.models import Evento, Usuario
+    from app.services.tarifas_plataforma import ledger_ingresso_venda, tarifa_para_organizador
+
+    evento = db.get(Evento, ingresso.evento_id)
+    if not evento:
+        return
+    organizador = db.get(Usuario, evento.organizador_id)
+    tarifa = tarifa_para_organizador(organizador)
+    ledger = ledger_ingresso_venda(float(ingresso.valor or 0), tarifa=tarifa)
+    ingresso.liquido_repassado = ledger["liquido_repassado"]
+    ingresso.taxa_plataforma_aplicada = ledger["taxa_plataforma_aplicada"]
+    ingresso.desconto_parcelamento_organizador = ledger["desconto_parcelamento_organizador"]
+    ingresso.plano_tarifa_venda = ledger["plano_tarifa_venda"]
+
+
 def _pay_id_reembolsavel(pay_id: str) -> bool:
     return bool(pay_id) and not pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:"))
 
@@ -44,6 +63,7 @@ def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
 
     ingresso.status = "pago"
     ingresso.reservado_ate = None
+    _garantir_ledger_ingresso(db, ingresso)
     registrar_uso_cupom(db, getattr(ingresso, "cupom_id", None))
     email = (ingresso.participante_email or "").strip()
     if email:

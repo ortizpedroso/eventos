@@ -173,7 +173,61 @@ def test_split_desconto_organizador_parcelamento():
         settings.ASAAS_PLATFORM_WALLET_ID = old
 
 
-def test_urgencia_exato():
+def test_ledger_organizador_absorve_parcelamento():
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso, ledger_ingresso_venda
+    from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
+
+    valor = 120.0
+    acrescimo = calcular_acrescimo_parcelamento_comprador(valor, 3)
+    ledger = ledger_ingresso_venda(
+        valor,
+        tarifa=TARIFA_PADRAO,
+        desconto_parcelamento_total=acrescimo,
+        parcelas=3,
+    )
+    det = detalhar_taxa_ingresso(valor, TARIFA_PADRAO)
+    assert ledger["liquido_repassado"] == round(det["liquido_organizador"] - acrescimo, 2)
+    assert ledger["plano_tarifa_venda"] == "padrao"
+
+
+def test_cancelar_saque_libera_saldo():
+    from app.models import FinanceiroSaque, Ingresso
+    from app.services.financeiro_organizador import calcular_saldo_organizador, cancelar_saque, solicitar_saque
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        org.asaas_wallet_id = f"wallet_{uuid.uuid4().hex[:8]}"
+        ev = _criar_evento(db, org.id, nome="Saque Teste")
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            valor=50.0,
+            status="pago",
+            liquido_repassado=50.0,
+            taxa_plataforma_aplicada=7.0,
+            plano_tarifa_venda="padrao",
+            asaas_payment_id=f"pay_{uuid.uuid4().hex[:8]}",
+        )
+        db.add(ing)
+        db.commit()
+        db.refresh(org)
+
+        saldo0 = calcular_saldo_organizador(db, org)["saldo_disponivel"]
+        saque = solicitar_saque(db, org, valor=10.0, pix_chave="teste@exemplo.com")
+        saldo1 = calcular_saldo_organizador(db, org)["saldo_disponivel"]
+        assert saldo1 == round(saldo0 - 10.0, 2)
+
+        cancelar_saque(db, org, saque.id)
+        saldo2 = calcular_saldo_organizador(db, org)["saldo_disponivel"]
+        assert saldo2 == saldo0
+
+        pendente = db.query(FinanceiroSaque).filter(FinanceiroSaque.id == saque.id).first()
+        assert pendente is not None
+        assert pendente.status == "cancelado"
+    finally:
+        db.close()
+
     b = calcular_urgencia("exato", restantes=7)
     assert b.ativo and "7" in (b.texto or "")
 

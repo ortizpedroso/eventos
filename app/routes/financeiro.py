@@ -10,6 +10,7 @@ from app.models import Usuario, get_db
 from app.routes.auth import get_usuario_atual
 from app.services.financeiro_organizador import (
     calcular_saldo_organizador,
+    cancelar_saque,
     listar_extrato,
     solicitar_saque,
 )
@@ -71,4 +72,23 @@ async def financeiro_solicitar_saque(
         "valor": float(saque.valor),
         "status": saque.status,
         "mensagem": "Solicitação de saque registrada. O valor será transferido via Pix após análise.",
+    }
+
+
+@router.post("/saque/{saque_id}/cancelar")
+async def financeiro_cancelar_saque(
+    saque_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    _require_organizador(usuario_atual)
+    try:
+        saque = cancelar_saque(db, usuario_atual, saque_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {
+        "ok": True,
+        "id": saque.id,
+        "status": saque.status,
+        "mensagem": "Solicitação de saque cancelada. O saldo voltou a ficar disponível.",
     }
