@@ -199,6 +199,32 @@ def test_ledger_organizador_absorve_parcelamento():
     assert ledger["plano_tarifa_venda"] == "padrao"
 
 
+def test_backfill_ledger_valor_cobrado_comprador_parcelamento():
+    from app.services.ingresso_pago import _garantir_ledger_ingresso
+    from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, nome="Parcelado")
+        ev.repasse_parcelamento = "comprador"
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            valor=100.0,
+            status="pago",
+            parcelas_cobranca=12,
+        )
+        db.add(ing)
+        db.commit()
+        _garantir_ledger_ingresso(db, ing)
+        acrescimo = calcular_acrescimo_parcelamento_comprador(100.0, 12)
+        assert ing.valor_cobrado == round(100.0 + acrescimo, 2)
+        assert ing.taxa_plataforma_aplicada == 12.0
+    finally:
+        db.close()
+
+
 def test_cancelar_saque_libera_saldo():
     from datetime import datetime, timezone
 

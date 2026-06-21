@@ -267,9 +267,14 @@ def iniciar_cobranca_asaas(
     if not pid:
         raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE)
 
-    for ing in lote:
+    n_lote = max(1, len(lote))
+    share = round(valor_cobranca / n_lote, 2)
+    for idx, ing in enumerate(lote):
         ing.asaas_payment_id = pid
-        ing.valor_cobrado = round(valor_cobranca / max(1, len(lote)), 2)
+        if idx == n_lote - 1:
+            ing.valor_cobrado = round(valor_cobranca - share * (n_lote - 1), 2)
+        else:
+            ing.valor_cobrado = share
     registrar_ledger_ingressos_lote(
         lote,
         tarifa=tarifa,

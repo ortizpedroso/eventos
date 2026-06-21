@@ -19,20 +19,26 @@ def _garantir_ledger_ingresso(db: Session, ingresso: Ingresso) -> None:
     if getattr(ingresso, "liquido_repassado", None) is not None:
         return
     from app.models import Evento, Usuario
-    from app.services.tarifas_plataforma import ledger_ingresso_venda, tarifa_para_organizador
+    from app.services.tarifas_plataforma import ledger_ingresso_venda, TARIFA_PADRAO, TARIFAS
     from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
 
     evento = db.get(Evento, ingresso.evento_id)
     if not evento:
         return
-    organizador = db.get(Usuario, evento.organizador_id)
-    tarifa = tarifa_para_organizador(organizador)
     valor = float(ingresso.valor or 0)
     parcelas = int(getattr(ingresso, "parcelas_cobranca", None) or 1)
     repasse = (getattr(evento, "repasse_parcelamento", None) or "comprador").strip()
-    desconto_total = 0.0
-    if repasse == "organizador" and parcelas > 1 and valor > 0:
-        desconto_total = calcular_acrescimo_parcelamento_comprador(valor, parcelas)
+    acrescimo_bruto = (
+        calcular_acrescimo_parcelamento_comprador(valor, parcelas) if parcelas > 1 and valor > 0 else 0.0
+    )
+    desconto_total = acrescimo_bruto if repasse == "organizador" else 0.0
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, TARIFAS
+
+    plano_venda = (getattr(ingresso, "plano_tarifa_venda", None) or "").strip().lower()
+    if plano_venda in TARIFAS:
+        tarifa = TARIFAS[plano_venda]  # type: ignore[index]
+    else:
+        tarifa = TARIFA_PADRAO
     ledger = ledger_ingresso_venda(
         valor,
         tarifa=tarifa,
@@ -45,8 +51,8 @@ def _garantir_ledger_ingresso(db: Session, ingresso: Ingresso) -> None:
     ingresso.parcelas_cobranca = ledger["parcelas_cobranca"]
     ingresso.plano_tarifa_venda = ledger["plano_tarifa_venda"]
     if getattr(ingresso, "valor_cobrado", None) is None and valor > 0:
-        acrescimo = 0.0 if repasse == "organizador" else desconto_total
-        ingresso.valor_cobrado = round(valor + acrescimo, 2)
+        acrescimo_comprador = 0.0 if repasse == "organizador" else acrescimo_bruto
+        ingresso.valor_cobrado = round(valor + acrescimo_comprador, 2)
 
 
 def _pay_id_reembolsavel(pay_id: str) -> bool:

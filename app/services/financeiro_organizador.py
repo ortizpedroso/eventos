@@ -13,6 +13,7 @@ from app.services.tarifas_plataforma import (
     detalhar_taxa_ingresso,
     liquido_ingresso_para_saldo,
     tarifa_para_organizador,
+    taxa_ingresso,
 )
 
 _SAQUES_RESERVAM_SALDO = ("pendente", "processando", "pago")
@@ -53,7 +54,15 @@ def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
     ingressos = _ingressos_pagos_query(db, usuario.id).all()
     bruto = round(sum(float(i.valor or 0) for i in ingressos), 2)
     liquido = round(sum(liquido_ingresso_para_saldo(i, tarifa) for i in ingressos), 2)
-    taxa_total = round(bruto - liquido, 2)
+    taxa_total = round(
+        sum(
+            float(i.taxa_plataforma_aplicada)
+            if getattr(i, "taxa_plataforma_aplicada", None) is not None
+            else taxa_ingresso(float(i.valor or 0), tarifa)
+            for i in ingressos
+        ),
+        2,
+    )
 
     saques_pagos = (
         db.query(func.coalesce(func.sum(FinanceiroSaque.valor), 0))
