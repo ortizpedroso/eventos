@@ -79,6 +79,7 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://${DOMAIN}}
         NEXT_PUBLIC_PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-asaas}
         NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+        NEXT_PUBLIC_BUILD_SHA: ${GIT_COMMIT:-dev}
     restart: unless-stopped
     environment:
       INTERNAL_API_URL: http://api:8000
