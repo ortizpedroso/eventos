@@ -39,6 +39,7 @@ def split_para_evento(
     *,
     quantidade: int = 1,
     tarifa: PlanoTarifa | None = None,
+    desconto_organizador: float = 0.0,
 ) -> list[dict[str, Any]]:
     """Split sobre preço base do ingresso (taxa plataforma fixa por plano)."""
     t = tarifa or TARIFA_PADRAO
@@ -47,7 +48,8 @@ def split_para_evento(
     valor_unit = valor_base_reais / q if q > 1 else valor_base_reais
     taxa = round(q * taxa_ingresso(valor_unit, t), 2)
     taxa = min(taxa, valor_base_reais)
-    liquido = round(max(0.0, valor_base_reais - taxa), 2)
+    desconto = round(max(0.0, float(desconto_organizador or 0)), 2)
+    liquido = round(max(0.0, valor_base_reais - taxa - desconto), 2)
     org_wallet = (evento.asaas_wallet_id or "").strip()
     platform_wallet = (settings.ASAAS_PLATFORM_WALLET_ID or "").strip()
 
@@ -74,6 +76,7 @@ def criar_cobranca_asaas(
     idempotency_key: str | None = None,
     valor_base_reais: float | None = None,
     tarifa: PlanoTarifa | None = None,
+    desconto_organizador: float = 0.0,
 ) -> dict[str, Any]:
     client = get_asaas_client()
     due = (date.today() + timedelta(days=1)).isoformat()
@@ -86,7 +89,13 @@ def criar_cobranca_asaas(
         "description": descricao[:500],
         "externalReference": external_reference[:100],
     }
-    splits = split_para_evento(evento, base, quantidade=quantidade, tarifa=tarifa)
+    splits = split_para_evento(
+        evento,
+        base,
+        quantidade=quantidade,
+        tarifa=tarifa,
+        desconto_organizador=desconto_organizador,
+    )
     if splits:
         payload["split"] = splits
 

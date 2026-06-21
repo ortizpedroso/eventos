@@ -17,7 +17,8 @@ AVISO_LEGAL = (
 SYMPLA_TAXA_PERCENTUAL = 0.12
 SYMPLA_FONTE_URL = "https://www.sympla.com.br/organizador"
 
-PARCELAMENTO_MINIMO_REAIS = 5.0
+INGRESSO_MINIMO_PAGO_REAIS = 10.0
+PARCELAMENTO_MINIMO_REAIS = INGRESSO_MINIMO_PAGO_REAIS
 PARCELAMENTO_MAX_OPCOES = (2, 3, 6, 12)
 
 TAXA_ANTECIPACAO_AVISTA_MES = 0.0125
@@ -80,20 +81,28 @@ def calcular_acrescimo_parcelamento_comprador(valor_base: float, parcelas: int) 
     return round(valor_base * delta, 2)
 
 
+RepasseParcelamento = Literal["comprador", "organizador"]
+
+
 def cotacao_checkout(
     valor_base: float,
     *,
     parcelas: int = 1,
+    repasse_parcelamento: RepasseParcelamento = "comprador",
 ) -> dict:
     """Breakdown público para checkout (sem expor Asaas)."""
-    acrescimo = calcular_acrescimo_parcelamento_comprador(valor_base, parcelas)
-    total = round(valor_base + acrescimo, 2)
+    acrescimo_bruto = calcular_acrescimo_parcelamento_comprador(valor_base, parcelas)
+    repasse = repasse_parcelamento if repasse_parcelamento in ("comprador", "organizador") else "comprador"
+    acrescimo_comprador = 0.0 if repasse == "organizador" else acrescimo_bruto
+    total = round(valor_base + acrescimo_comprador, 2)
     valor_parcela = round(total / parcelas, 2) if parcelas > 1 else total
     total_parcelas = round(valor_parcela * parcelas, 2)
     return {
         "preco_ingresso": round(valor_base, 2),
         "parcelas": parcelas,
-        "acrescimo_parcelamento": acrescimo,
+        "acrescimo_parcelamento": acrescimo_comprador,
+        "acrescimo_bruto": acrescimo_bruto,
+        "repasse_parcelamento": repasse,
         "total_pagar": total_parcelas if parcelas > 1 else total,
         "valor_parcela": valor_parcela if parcelas > 1 else None,
         "faixa_parcelamento": taxa_cartao_para_parcelas(parcelas).descricao if parcelas > 1 else None,

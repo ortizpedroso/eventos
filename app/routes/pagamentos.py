@@ -28,7 +28,7 @@ from app.services.pagamentos_asaas_handlers import (
     status_cobranca_asaas,
 )
 from app.services.ticket_email import enqueue_ticket_email
-from app.services.taxas_asaas_publicas import PARCELAMENTO_MINIMO_REAIS
+from app.services.taxas_asaas_publicas import INGRESSO_MINIMO_PAGO_REAIS
 from app.utils.cpf import cpf_valido, normalizar_cpf
 from app.utils.ingresso_tipos import lote_e_cortesia
 from app.utils.privacy import mask_cpf, mask_telefone_br
@@ -264,10 +264,10 @@ async def criar_pagamento(
             status_code=400,
             detail=f"Valor incorreto para o lote atual ({lote.nome}). Recarregue a página e tente novamente.",
         )
-    if not eh_cortesia and unit_centavos < int(PARCELAMENTO_MINIMO_REAIS * 100):
+    if not eh_cortesia and unit_centavos < int(INGRESSO_MINIMO_PAGO_REAIS * 100):
         raise HTTPException(
             status_code=400,
-            detail=f"Valor mínimo de R$ {PARCELAMENTO_MINIMO_REAIS:.2f} para ingressos pagos (Asaas).",
+            detail=f"Valor mínimo de R$ {INGRESSO_MINIMO_PAGO_REAIS:.2f} para ingressos pagos.",
         )
 
     limite_cpf = getattr(evento, "limite_ingressos_por_cpf", None)
@@ -630,14 +630,21 @@ async def cotacao_pagamento(
     tarifa = tarifa_para_organizador(organizador)
     valor_base = float(ingresso.valor or 0)
     det = detalhar_taxa_ingresso(valor_base, tarifa)
-    comprador = cotacao_checkout(valor_base, parcelas=parcelas)
+    comprador = cotacao_checkout(
+        valor_base,
+        parcelas=parcelas,
+        repasse_parcelamento=getattr(evento, "repasse_parcelamento", "comprador") or "comprador",
+    )
+    liquido = float(det["liquido_organizador"])
+    if comprador.get("repasse_parcelamento") == "organizador" and comprador.get("acrescimo_bruto"):
+        liquido = round(max(0.0, liquido - float(comprador["acrescimo_bruto"])), 2)
     return {
         "ingresso_id": ingresso.id,
         "evento_nome": evento.nome,
         "plano_organizador": tarifa.id,
         "taxa_eventosbr": det,
         "comprador": comprador,
-        "organizador_recebe": det["liquido_organizador"],
+        "organizador_recebe": liquido,
     }
 
 

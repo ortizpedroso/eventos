@@ -8,6 +8,7 @@ import { formatCpfMask, onlyDigits } from "@/lib/cpf";
 import {
   PARCELAMENTO_MINIMO_REAIS,
   cotacaoCheckout,
+  type RepasseParcelamento,
 } from "@/lib/taxas-asaas-publicas";
 import { TARIFA_PADRAO, detalharTaxaIngresso, formatBrl, rotuloTaxa } from "@/lib/tarifas-plataforma";
 import type { AsaasPixPayload, CriarPagamentoResponse } from "@/lib/types";
@@ -22,6 +23,7 @@ type Props = {
   reservadoAte?: string | null;
   parcelamentoHabilitado?: boolean;
   parcelamentoMax?: number;
+  repasseParcelamento?: RepasseParcelamento;
   tokenEspera?: string | null;
   onSuccess: () => void;
 };
@@ -45,6 +47,7 @@ export function CheckoutAsaasPainel({
   reservadoAte,
   parcelamentoHabilitado = false,
   parcelamentoMax = 2,
+  repasseParcelamento = "comprador",
   tokenEspera = null,
   onSuccess,
 }: Props) {
@@ -72,11 +75,22 @@ export function CheckoutAsaasPainel({
   const parcelasEfetivas = metodo === "card" && parcelamentoAtivo ? parcelas : 1;
 
   const cotacao = useMemo(
-    () => cotacaoCheckout(valorBase, parcelasEfetivas),
-    [valorBase, parcelasEfetivas],
+    () => cotacaoCheckout(valorBase, parcelasEfetivas, repasseParcelamento),
+    [valorBase, parcelasEfetivas, repasseParcelamento],
   );
   const taxaDetalhe = useMemo(() => detalharTaxaIngresso(valorBase, TARIFA_PADRAO), [valorBase]);
-  const totalPagar = metodo === "card" && parcelas > 1 ? cotacao.totalPagar : valorBase;
+  const totalPagar =
+    metodo === "card" && parcelas > 1 ? cotacao.totalPagar : valorBase;
+
+  const opcoesParcelas = useMemo(() => {
+    if (!parcelamentoAtivo) return [];
+    const max = Math.min(parcelamentoMax, 12);
+    const nums = [1, 2, 3, 6, 12].filter((n) => n === 1 || n <= max);
+    return nums.map((n) => {
+      const c = cotacaoCheckout(valorBase, n, repasseParcelamento);
+      return { parcelas: n, cotacao: c };
+    });
+  }, [parcelamentoAtivo, parcelamentoMax, valorBase, repasseParcelamento]);
 
   useEffect(() => {
     if (!reservadoAte) return;
@@ -193,6 +207,10 @@ export function CheckoutAsaasPainel({
               <span>Acréscimo parcelamento ({parcelas}x)</span>
               <span>+ {formatBrl(cotacao.acrescimoParcelamento)}</span>
             </li>
+          ) : repasseParcelamento === "organizador" && metodo === "card" && parcelas > 1 ? (
+            <li className="text-xs text-zinc-600">
+              Sem acréscimo ao comprador — custo absorvido pelo organizador.
+            </li>
           ) : null}
           <li className="flex justify-between gap-2 border-t border-emerald-200/80 pt-1 font-semibold text-emerald-900">
             <span>Total a pagar</span>
@@ -233,27 +251,43 @@ export function CheckoutAsaasPainel({
       </div>
 
       {metodo === "card" && parcelamentoAtivo ? (
-        <div>
-          <label className="text-xs font-medium text-gray-600">Parcelas</label>
-          <select
-            className="mt-1 w-full rounded border px-2 py-2 text-sm"
-            value={parcelas}
-            onChange={(e) => setParcelas(Number(e.target.value))}
-            data-testid="checkout-parcelas"
-          >
-            <option value={1}>À vista — {formatBrl(valorBase)}</option>
-            {[2, 3, 6, 12]
-              .filter((n) => n <= parcelamentoMax)
-              .map((n) => {
-                const c = cotacaoCheckout(valorBase, n);
-                return (
-                  <option key={n} value={n}>
-                    {n}x de {formatBrl(c.valorParcela ?? 0)} (total {formatBrl(c.totalPagar)})
-                  </option>
-                );
-              })}
-          </select>
-        </div>
+        <fieldset className="space-y-2" data-testid="checkout-parcelas">
+          <legend className="text-xs font-medium text-gray-600">Forma de pagamento</legend>
+          <ul className="space-y-2">
+            {opcoesParcelas.map(({ parcelas: n, cotacao: c }) => {
+              const id = `parcelas-${n}`;
+              const label =
+                n === 1
+                  ? `À vista — ${formatBrl(valorBase)}`
+                  : `${n}x de ${formatBrl(c.valorParcela ?? 0)} (total ${formatBrl(c.totalPagar)})`;
+              return (
+                <li key={n}>
+                  <label
+                    htmlFor={id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                      parcelas === n
+                        ? "border-indigo-600 bg-indigo-50"
+                        : "border-zinc-200 bg-white hover:border-zinc-300"
+                    }`}
+                  >
+                    <input
+                      id={id}
+                      type="radio"
+                      name="parcelas"
+                      className="shrink-0"
+                      checked={parcelas === n}
+                      onChange={() => setParcelas(n)}
+                    />
+                    <span className="flex-1">{label}</span>
+                    {n > 1 && c.acrescimoParcelamento > 0 ? (
+                      <span className="text-xs text-amber-800">+{formatBrl(c.acrescimoParcelamento)}</span>
+                    ) : null}
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </fieldset>
       ) : metodo === "card" && parcelamentoHabilitado && !parcelamentoAtivo ? (
         <p className="text-xs text-amber-800">
           Parcelamento disponível a partir de {formatBrl(PARCELAMENTO_MINIMO_REAIS)}.

@@ -47,6 +47,7 @@ export type Evento = {
   urgencia_ativo?: boolean;
   parcelamento_habilitado?: boolean;
   parcelamento_max?: number;
+  repasse_parcelamento?: "comprador" | "organizador";
   aceita_interesse?: boolean;
   lista_espera_habilitada?: boolean;
   lista_espera_prazo_horas?: number;

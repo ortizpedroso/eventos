@@ -5,11 +5,13 @@ export const AVISO_LEGAL_TAXAS =
 
 export const TAXA_PIX = 1.99;
 export const TAXA_BOLETO = 1.99;
-export const PARCELAMENTO_MINIMO_REAIS = 5;
+export const INGRESSO_MINIMO_PAGO_REAIS = 10;
+export const PARCELAMENTO_MINIMO_REAIS = INGRESSO_MINIMO_PAGO_REAIS;
 
 export const SYMPLA_TAXA_PERCENTUAL = 0.12;
 export const SYMPLA_FONTE_URL = "https://www.sympla.com.br/organizador";
 
+export type RepasseParcelamento = "comprador" | "organizador";
 export type MetodoAsaas = "pix" | "boleto" | "cartao_avista" | "cartao_parcelado";
 
 export function taxaCartaoPercentual(parcelas: number): { fixo: number; percentual: number } {
@@ -26,15 +28,23 @@ export function calcularAcrescimoParcelamento(valorBase: number, parcelas: numbe
   return Math.round(valorBase * Math.max(0, parcelado - avista) * 100) / 100;
 }
 
-export function cotacaoCheckout(valorBase: number, parcelas: number) {
-  const acrescimo = calcularAcrescimoParcelamento(valorBase, parcelas);
-  const total = Math.round((valorBase + acrescimo) * 100) / 100;
+export function cotacaoCheckout(
+  valorBase: number,
+  parcelas: number,
+  repasseParcelamento: RepasseParcelamento = "comprador",
+) {
+  const acrescimoBruto = calcularAcrescimoParcelamento(valorBase, parcelas);
+  const repasse = repasseParcelamento === "organizador" ? "organizador" : "comprador";
+  const acrescimoParcelamento = repasse === "organizador" ? 0 : acrescimoBruto;
+  const total = Math.round((valorBase + acrescimoParcelamento) * 100) / 100;
   const valorParcela = parcelas > 1 ? Math.round((total / parcelas) * 100) / 100 : total;
   const totalParcelas = parcelas > 1 ? Math.round(valorParcela * parcelas * 100) / 100 : total;
   return {
     precoIngresso: valorBase,
     parcelas,
-    acrescimoParcelamento: acrescimo,
+    acrescimoParcelamento,
+    acrescimoBruto,
+    repasseParcelamento: repasse,
     totalPagar: totalParcelas,
     valorParcela: parcelas > 1 ? valorParcela : null,
   };

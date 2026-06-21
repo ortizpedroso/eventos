@@ -28,10 +28,11 @@ from app.services.pagamento_asaas import (
 )
 from app.services.usuario_asaas import garantir_customer_asaas
 from app.services.taxas_asaas_publicas import (
+    INGRESSO_MINIMO_PAGO_REAIS,
     PARCELAMENTO_MINIMO_REAIS,
     calcular_acrescimo_parcelamento_comprador,
 )
-from app.services.tarifas_plataforma import tarifa_para_organizador
+from app.services.tarifas_plataforma import detalhar_taxa_ingresso, tarifa_para_organizador
 from app.utils.public_errors import PAGAMENTO_CLIENTE, REEMBOLSO_CLIENTE
 from config.settings import settings
 
@@ -192,12 +193,21 @@ def iniciar_cobranca_asaas(
     valor_base = _valor_lote_reais(lote)
     if valor_base <= 0:
         raise HTTPException(status_code=400, detail="Valor inválido para cobrança.")
+    if valor_base < INGRESSO_MINIMO_PAGO_REAIS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Valor mínimo para ingressos pagos: R$ {INGRESSO_MINIMO_PAGO_REAIS:.2f}.",
+        )
 
     organizador = db.query(Usuario).filter(Usuario.id == evento.organizador_id).first()
     tarifa = tarifa_para_organizador(organizador)
+    repasse = (getattr(evento, "repasse_parcelamento", None) or "comprador").strip()
+    if repasse not in ("comprador", "organizador"):
+        repasse = "comprador"
 
     installment_count: int | None = None
     acrescimo_parcelamento = 0.0
+    desconto_organizador = 0.0
     if body.metodo == "card" and body.parcelas and body.parcelas > 1:
         if not evento.parcelamento_habilitado:
             raise HTTPException(status_code=400, detail="Parcelamento não disponível para este evento.")
@@ -211,8 +221,20 @@ def iniciar_cobranca_asaas(
             )
         installment_count = body.parcelas
         acrescimo_parcelamento = calcular_acrescimo_parcelamento_comprador(valor_base, installment_count)
-
-    valor_cobranca = round(valor_base + acrescimo_parcelamento, 2)
+        if repasse == "organizador" and acrescimo_parcelamento > 0:
+            det = detalhar_taxa_ingresso(valor_base, tarifa)
+            liquido = float(det.get("liquido_organizador") or 0)
+            if liquido < acrescimo_parcelamento:
+                raise HTTPException(
+                    status_code=400,
+                    detail="O organizador não pode absorver o acréscimo de parcelamento neste valor.",
+                )
+            desconto_organizador = acrescimo_parcelamento
+            valor_cobranca = valor_base
+        else:
+            valor_cobranca = round(valor_base + acrescimo_parcelamento, 2)
+    else:
+        valor_cobranca = valor_base
 
     billing = "PIX" if body.metodo == "pix" else "CREDIT_CARD"
     if body.metodo == "invoice":
@@ -234,6 +256,7 @@ def iniciar_cobranca_asaas(
             installment_count=installment_count,
             quantidade=len(lote),
             idempotency_key=f"cobranca_{ingresso.id}",
+            desconto_organizador=desconto_organizador,
         )
     except AsaasAPIError as e:
         logger.exception("Erro Asaas ao criar cobrança")
@@ -266,7 +289,7 @@ def iniciar_cobranca_asaas(
     out = resposta_checkout_asaas(payment)
     out["ingresso_id"] = ingresso.id
     out["reservado_ate"] = ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None
-    out["valor_centavos"] = int(round(valor * 100))
+    out["valor_centavos"] = int(round(valor_cobranca * 100))
     return out
 
 
