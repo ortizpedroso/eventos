@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
 from app.services.asaas_client import AsaasAPIError, AsaasClient, get_asaas_client
-from app.services.tarifas_plataforma import taxa_ingresso
+from app.services.tarifas_plataforma import tarifa_para_organizador, taxa_ingresso
 from app.utils.cpf import normalizar_cpf
 from app.utils.secret_storage import decrypt_at_rest, encrypt_at_rest
 from config.settings import settings
@@ -18,8 +18,9 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 _WALLET_RE = re.compile(r"^[a-f0-9\-]{8,64}$", re.I)
-# Taxa ilustrativa cartão (antecipação automática Asaas — consulte contrato)
+# Taxa ilustrativa antecipação automática (Asaas — uso interno)
 _TAXA_ANTECIPACAO_CARTAO_MES = 0.0125
+_TAXA_ANTECIPACAO_PARCELADO_MES = 0.0170
 
 
 def _digits(s: str | None, max_len: int) -> str:
@@ -70,8 +71,7 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "eventos_sem_wallet": eventos_sem_wallet,
         "anticipacao": anticipacao,
         "nota_wallet": (
-            "Informe o walletId da sua conta Asaas para receber repasses via split. "
-            "Encontre em Asaas → Minha conta → Integrações."
+            "Crie sua conta de repasses pela plataforma para receber vendas automaticamente."
             if not wallet
             else None
         ),
@@ -180,12 +180,17 @@ def criar_subconta_organizador(
     db.commit()
     db.refresh(usuario)
 
+    try:
+        atualizar_antecipacao_cartao(db, usuario, habilitar=True)
+    except ValueError:
+        logger.info("Antecipação automática não ativada na subconta %s", usuario.email)
+
     return {
         "ok": True,
         "account_id": account_id,
         "wallet_id": wallet_id,
         "tem_api_key": bool(api_key),
-        "mensagem": "Subconta criada. Repasses e antecipação já podem ser configurados.",
+        "mensagem": "Conta de repasses criada. Você já pode receber vendas e solicitar saques pela plataforma.",
     }
 
 
@@ -234,7 +239,8 @@ def simular_antecipacao(
 ) -> dict[str, Any]:
     """Simula antecipação real (se houver cobrança) ou estimativa ilustrativa."""
     valor = round(max(0.01, valor_reais), 2)
-    taxa_plataforma = round(taxa_ingresso(valor), 2)
+    tarifa = tarifa_para_organizador(usuario)
+    taxa_plataforma = round(taxa_ingresso(valor, tarifa), 2)
     liquido_apos_taxa = round(max(0.0, valor - taxa_plataforma), 2)
 
     pay_id = (payment_id or "").strip()

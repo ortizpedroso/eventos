@@ -1,6 +1,4 @@
-/** Tarifas divulgadas em /planos (taxa absorvida no preço do ingresso). */
-
-import { calcularTaxaAsaas, type MetodoAsaas } from "./taxas-asaas-publicas";
+/** Tarifas EventosBR — taxa de serviço fixa por ingresso (all-in). */
 
 export type PlanoTarifaId = "padrao" | "assinatura";
 
@@ -21,11 +19,10 @@ export const TARIFA_PADRAO: PlanoTarifa = {
 export const TARIFA_ASSINATURA: PlanoTarifa = {
   id: "assinatura",
   label: "Com assinatura mensal",
-  percentual: 0.06,
-  fixoPorIngresso: 0.3,
+  percentual: 0.08,
+  fixoPorIngresso: 1.0,
 };
 
-/** Mensalidade do plano com taxa reduzida (divulgada em /planos). */
 export const MENSALIDADE_ASSINATURA_MENSAL = 500;
 
 export const TARIFAS_PLATAFORMA: PlanoTarifa[] = [TARIFA_PADRAO, TARIFA_ASSINATURA];
@@ -35,10 +32,6 @@ export type SimulacaoCenarioPlanos = {
   taxaFixaTotal: number;
   mensalidade: number;
   taxaTotal: number;
-  /** Após taxas EventosBR (antes do gateway). */
-  liquidoAntesAsaas: number;
-  taxaAsaasEstimada: number;
-  /** Líquido final estimado (EventosBR + Asaas). */
   liquido: number;
 };
 
@@ -48,7 +41,6 @@ export type SimulacaoPlanosResult = {
   arrecadacao: number;
   padrao: SimulacaoCenarioPlanos;
   assinatura: SimulacaoCenarioPlanos;
-  /** Líquido com assinatura menos líquido sem assinatura. */
   diferencaLiquido: number;
   assinaturaValeMais: boolean;
 };
@@ -60,79 +52,39 @@ export function parseQuantidadeInput(raw: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-export type SimuladorPlanosOpcoes = {
-  metodoAsaas?: MetodoAsaas;
-  parcelas?: number;
-};
-
 function _cenarioPlanos(
   taxaPerc: number,
   taxaFixa: number,
   mensalidade: number,
   arrecadacao: number,
-  quantidade: number,
-  precoIngresso: number,
-  metodoAsaas: MetodoAsaas,
-  parcelas: number,
 ): SimulacaoCenarioPlanos {
-  const taxaPercentualValor = taxaPerc;
-  const taxaFixaTotal = taxaFixa;
-  const taxaTotal = mensalidade + taxaPercentualValor + taxaFixaTotal;
-  const liquidoAntesAsaas = arrecadacao - taxaTotal;
-  const taxaAsaasUnit = calcularTaxaAsaas(precoIngresso, metodoAsaas, parcelas);
-  const taxaAsaasEstimada = Math.round(taxaAsaasUnit * quantidade * 100) / 100;
-  const liquido = Math.round(Math.max(0, liquidoAntesAsaas - taxaAsaasEstimada) * 100) / 100;
+  const taxaTotal = mensalidade + taxaPerc + taxaFixa;
+  const liquido = Math.round(Math.max(0, arrecadacao - taxaTotal) * 100) / 100;
   return {
-    taxaPercentualValor,
-    taxaFixaTotal,
+    taxaPercentualValor: taxaPerc,
+    taxaFixaTotal: taxaFixa,
     mensalidade,
     taxaTotal,
-    liquidoAntesAsaas,
-    taxaAsaasEstimada,
     liquido,
   };
 }
 
-/** Simula arrecadação e lucro líquido (EventosBR + Asaas estimado) nos dois planos. */
-export function simularLucroPlanos(
-  precoIngresso: number,
-  quantidade: number,
-  opcoes: SimuladorPlanosOpcoes = {},
-): SimulacaoPlanosResult | null {
+export function simularLucroPlanos(precoIngresso: number, quantidade: number): SimulacaoPlanosResult | null {
   if (!Number.isFinite(precoIngresso) || precoIngresso <= 0) return null;
   if (!Number.isFinite(quantidade) || quantidade <= 0 || !Number.isInteger(quantidade)) return null;
 
-  const metodoAsaas = opcoes.metodoAsaas ?? "pix";
-  const parcelas = Math.max(1, Math.min(12, opcoes.parcelas ?? 1));
-
   const arrecadacao = precoIngresso * quantidade;
-
-  const taxaPercPadrao = arrecadacao * TARIFA_PADRAO.percentual;
-  const taxaFixaPadrao = TARIFA_PADRAO.fixoPorIngresso * quantidade;
-
-  const mensalidade = MENSALIDADE_ASSINATURA_MENSAL;
-  const taxaPercAss = arrecadacao * TARIFA_ASSINATURA.percentual;
-  const taxaFixaAss = TARIFA_ASSINATURA.fixoPorIngresso * quantidade;
-
   const padrao = _cenarioPlanos(
-    taxaPercPadrao,
-    taxaFixaPadrao,
+    arrecadacao * TARIFA_PADRAO.percentual,
+    TARIFA_PADRAO.fixoPorIngresso * quantidade,
     0,
     arrecadacao,
-    quantidade,
-    precoIngresso,
-    metodoAsaas,
-    parcelas,
   );
   const assinatura = _cenarioPlanos(
-    taxaPercAss,
-    taxaFixaAss,
-    mensalidade,
+    arrecadacao * TARIFA_ASSINATURA.percentual,
+    TARIFA_ASSINATURA.fixoPorIngresso * quantidade,
+    MENSALIDADE_ASSINATURA_MENSAL,
     arrecadacao,
-    quantidade,
-    precoIngresso,
-    metodoAsaas,
-    parcelas,
   );
 
   return {
@@ -155,7 +107,10 @@ export function formatPercentual(fracao: number): string {
   return Number.isInteger(pct) ? `${pct}%` : `${pct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 }
 
-/** Preço de venda para o organizador receber `liquidoDesejado` após as taxas. */
+export function rotuloTaxa(tarifa: PlanoTarifa): string {
+  return `${formatPercentual(tarifa.percentual)} + ${formatBrl(tarifa.fixoPorIngresso)}`;
+}
+
 export function precoVendaSugerido(liquidoDesejado: number, tarifa: PlanoTarifa): number | null {
   if (!Number.isFinite(liquidoDesejado) || liquidoDesejado < 0) return null;
   if (tarifa.percentual >= 1) return null;

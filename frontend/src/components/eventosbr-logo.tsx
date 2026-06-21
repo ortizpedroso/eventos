@@ -7,12 +7,14 @@ import { usePathname } from "next/navigation";
 type Props = {
   className?: string;
   showWordmark?: boolean;
+  /** "light" para fundos escuros (footer). */
+  variant?: "default" | "light";
 };
 
-export function EventosBRLogo({ className = "", showWordmark = true }: Props) {
+export function EventosBRLogo({ className = "", showWordmark = true, variant = "default" }: Props) {
   const pathname = usePathname();
   const customUrl = process.env.NEXT_PUBLIC_LOGO_URL?.trim();
-  const src = customUrl || "/logo.svg";
+  const src = customUrl || (variant === "light" ? "/logo-light.svg" : "/logo.svg");
 
   function onClick(e: React.MouseEvent<HTMLAnchorElement>) {
     if (pathname === "/") {

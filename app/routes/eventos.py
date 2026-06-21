@@ -77,6 +77,7 @@ async def criar_evento(
         urgencia_modo=evento_data.urgencia_modo,
         parcelamento_habilitado=evento_data.parcelamento_habilitado,
         parcelamento_max=evento_data.parcelamento_max,
+        repasse_parcelamento=evento_data.repasse_parcelamento,
         aceita_interesse=evento_data.aceita_interesse,
         lista_espera_habilitada=evento_data.lista_espera_habilitada,
         lista_espera_prazo_horas=evento_data.lista_espera_prazo_horas,
@@ -154,6 +155,8 @@ async def atualizar_evento(
         evento.parcelamento_habilitado = body.parcelamento_habilitado
     if "parcelamento_max" in body.model_fields_set:
         evento.parcelamento_max = body.parcelamento_max
+    if "repasse_parcelamento" in body.model_fields_set:
+        evento.repasse_parcelamento = body.repasse_parcelamento
     if "aceita_interesse" in body.model_fields_set:
         evento.aceita_interesse = body.aceita_interesse
     if "lista_espera_habilitada" in body.model_fields_set:
@@ -573,6 +576,7 @@ async def duplicar_evento(
         urgencia_modo=getattr(evento, "urgencia_modo", "desligado"),
         parcelamento_habilitado=getattr(evento, "parcelamento_habilitado", False),
         parcelamento_max=getattr(evento, "parcelamento_max", 2),
+        repasse_parcelamento=getattr(evento, "repasse_parcelamento", "comprador") or "comprador",
         aceita_interesse=getattr(evento, "aceita_interesse", True),
         lista_espera_habilitada=getattr(evento, "lista_espera_habilitada", False),
         lista_espera_prazo_horas=getattr(evento, "lista_espera_prazo_horas", 24),

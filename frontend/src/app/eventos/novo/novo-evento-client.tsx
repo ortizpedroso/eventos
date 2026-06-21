@@ -119,6 +119,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [formPublicado, setFormPublicado] = useState(true);
   const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
   const [parcelamentoMax, setParcelamentoMax] = useState(2);
+  const [repasseParcelamento, setRepasseParcelamento] = useState<"comprador" | "organizador">("comprador");
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -432,6 +433,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     ocultar={eventoGratuito}
                     parcelamentoHabilitado={parcelamentoHabilitado}
                     parcelamentoMax={parcelamentoMax}
+                    repasseParcelamento={repasseParcelamento}
                   />
                 </div>
               ) : (
@@ -480,9 +482,10 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   </span>
                 </label>
                 <EventoConfigAvancadaFields
-                  onParcelamentoChange={(hab, max) => {
+                  onParcelamentoChange={(hab, max, repasse) => {
                     setParcelamentoHabilitado(hab);
                     setParcelamentoMax(max);
+                    if (repasse) setRepasseParcelamento(repasse);
                   }}
                 />
                 <EventoWizardSimuladorLiquido
@@ -490,11 +493,12 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   ocultar={
                     eventoGratuito ||
                     (modoSimples
-                      ? (parseValorMonetarioInput(precoSimples) ?? 0) < 0.5
-                      : precoMinimoDosLotes(loteRows) < 0.5)
+                      ? (parseValorMonetarioInput(precoSimples) ?? 0) < 10
+                      : precoMinimoDosLotes(loteRows) < 10)
                   }
                   parcelamentoHabilitado={parcelamentoHabilitado}
                   parcelamentoMax={parcelamentoMax}
+                  repasseParcelamento={repasseParcelamento}
                 />
                 <EventoVisibilidadeAvisosLegais />
               </div>

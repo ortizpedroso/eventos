@@ -45,6 +45,7 @@ type Props = {
   eventoLocal?: string;
   parcelamentoHabilitado?: boolean;
   parcelamentoMax?: number;
+  repasseParcelamento?: "comprador" | "organizador";
   urgenciaAtivo?: boolean;
   urgenciaBadge?: string | null;
   tokenEspera?: string | null;
@@ -79,6 +80,7 @@ export function ComprarIngresso({
   eventoLocal,
   parcelamentoHabilitado = false,
   parcelamentoMax = 2,
+  repasseParcelamento = "comprador",
   urgenciaAtivo = false,
   urgenciaBadge = null,
   tokenEspera = null,
@@ -942,6 +944,7 @@ export function ComprarIngresso({
                 reservadoAte={reservadoAte?.toISOString()}
                 parcelamentoHabilitado={parcelamentoHabilitado}
                 parcelamentoMax={parcelamentoMax}
+                repasseParcelamento={repasseParcelamento}
                 tokenEspera={tokenEspera}
                 onSuccess={() => setStep(3)}
               />

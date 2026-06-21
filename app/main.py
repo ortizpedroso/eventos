@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 load_dotenv()
 
-from app.routes import admin, auth, checkin, eventos, ingressos, listas, notificacoes, organizador, pagamentos, portaria, produtor, relatorios, simuladores, webhooks
+from app.routes import admin, auth, checkin, eventos, financeiro, ingressos, listas, notificacoes, organizador, pagamentos, portaria, produtor, relatorios, simuladores, webhooks
 from app.models import create_tables, get_db
 from app.middleware.request_id import RequestIdMiddleware
 from config.settings import settings
@@ -101,6 +101,7 @@ app.include_router(relatorios.router, prefix="/api/relatorios", tags=["Relatóri
 app.include_router(checkin.router, prefix="/api/checkin", tags=["Check-in"])
 app.include_router(portaria.router, prefix="/api/portaria", tags=["Portaria"])
 app.include_router(organizador.router, prefix="/api/organizador", tags=["Organizador"])
+app.include_router(financeiro.router, prefix="/api/organizador/financeiro", tags=["Financeiro"])
 app.include_router(listas.router, prefix="/api/listas", tags=["Listas"])
 app.include_router(notificacoes.router, prefix="/api/notificacoes", tags=["Notificações"])
 app.include_router(produtor.router, prefix="/api/produtor", tags=["Produtor"])

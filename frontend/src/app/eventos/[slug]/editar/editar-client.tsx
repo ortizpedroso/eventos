@@ -57,6 +57,9 @@ export function EditarEventoClient({ slug }: Props) {
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>([]);
+  const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
+  const [parcelamentoMax, setParcelamentoMax] = useState(2);
+  const [repasseParcelamento, setRepasseParcelamento] = useState<"comprador" | "organizador">("comprador");
   const [csvBusy, setCsvBusy] = useState(false);
   const [interesseRows, setInteresseRows] = useState<{ email: string; nome: string | null; data_criacao: string | null }[]>([]);
   const [interesseLoadErr, setInteresseLoadErr] = useState<string | null>(null);
@@ -133,6 +136,9 @@ export function EditarEventoClient({ slug }: Props) {
           setNomeParaSlug(ev.nome);
           setImagemUrl(ev.imagem_url ?? "");
           setLoteRows(eventoLotesToRows(ev));
+          setParcelamentoHabilitado(ev.parcelamento_habilitado ?? false);
+          setParcelamentoMax(ev.parcelamento_max ?? 2);
+          setRepasseParcelamento(ev.repasse_parcelamento ?? "comprador");
           if (ev.aceita_interesse !== false) {
             void carregarListaInteresse(ev.id);
           }
@@ -415,9 +421,10 @@ export function EditarEventoClient({ slug }: Props) {
             <EventoLotesEditor rows={loteRows} onChange={setLoteRows} />
             <EventoWizardSimuladorLiquido
               preco={precoMinimoDosLotes(loteRows)}
-              ocultar={precoMinimoDosLotes(loteRows) < 0.5}
-              parcelamentoHabilitado={evento.parcelamento_habilitado ?? false}
-              parcelamentoMax={evento.parcelamento_max ?? 2}
+              ocultar={precoMinimoDosLotes(loteRows) < 10}
+              parcelamentoHabilitado={parcelamentoHabilitado}
+              parcelamentoMax={parcelamentoMax}
+              repasseParcelamento={repasseParcelamento}
             />
           </div>
 
@@ -481,7 +488,14 @@ export function EditarEventoClient({ slug }: Props) {
 
           <EventoImagemField value={imagemUrl} onChange={setImagemUrl} />
 
-          <EventoConfigAvancadaFields evento={evento} />
+          <EventoConfigAvancadaFields
+            evento={evento}
+            onParcelamentoChange={(hab, max, repasse) => {
+              setParcelamentoHabilitado(hab);
+              setParcelamentoMax(max);
+              if (repasse) setRepasseParcelamento(repasse);
+            }}
+          />
 
           <div className="mt-6 flex justify-end border-t border-zinc-100 pt-4">
             <button disabled={saving} className="btn-success px-8" type="submit">

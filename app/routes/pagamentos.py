@@ -28,7 +28,7 @@ from app.services.pagamentos_asaas_handlers import (
     status_cobranca_asaas,
 )
 from app.services.ticket_email import enqueue_ticket_email
-from app.services.taxas_asaas_publicas import PARCELAMENTO_MINIMO_REAIS
+from app.services.taxas_asaas_publicas import INGRESSO_MINIMO_PAGO_REAIS
 from app.utils.cpf import cpf_valido, normalizar_cpf
 from app.utils.ingresso_tipos import lote_e_cortesia
 from app.utils.privacy import mask_cpf, mask_telefone_br
@@ -264,10 +264,10 @@ async def criar_pagamento(
             status_code=400,
             detail=f"Valor incorreto para o lote atual ({lote.nome}). Recarregue a página e tente novamente.",
         )
-    if not eh_cortesia and unit_centavos < int(PARCELAMENTO_MINIMO_REAIS * 100):
+    if not eh_cortesia and unit_centavos < int(INGRESSO_MINIMO_PAGO_REAIS * 100):
         raise HTTPException(
             status_code=400,
-            detail=f"Valor mínimo de R$ {PARCELAMENTO_MINIMO_REAIS:.2f} para ingressos pagos (Asaas).",
+            detail=f"Valor mínimo de R$ {INGRESSO_MINIMO_PAGO_REAIS:.2f} para ingressos pagos.",
         )
 
     limite_cpf = getattr(evento, "limite_ingressos_por_cpf", None)
@@ -606,6 +606,46 @@ async def cancelar_ingresso(
     except Exception as e:
         logger.exception("Erro ao processar reembolso")
         raise HTTPException(status_code=400, detail=REEMBOLSO_CLIENTE) from e
+
+
+@router.get("/cotacao")
+async def cotacao_pagamento(
+    ingresso_id: str = Query(..., min_length=8),
+    parcelas: int = Query(1, ge=1, le=21),
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Breakdown público: taxa EventosBR fixa + acréscimo parcelamento (se houver)."""
+    from app.services.taxas_asaas_publicas import cotacao_checkout
+    from app.services.tarifas_plataforma import detalhar_taxa_ingresso, tarifa_para_organizador
+
+    ingresso = db.get(Ingresso, ingresso_id)
+    if not ingresso or ingresso.usuario_id != usuario_atual.id:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+    evento = db.get(Evento, ingresso.evento_id)
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+
+    organizador = db.get(Usuario, evento.organizador_id)
+    tarifa = tarifa_para_organizador(organizador)
+    valor_base = float(ingresso.valor or 0)
+    det = detalhar_taxa_ingresso(valor_base, tarifa)
+    comprador = cotacao_checkout(
+        valor_base,
+        parcelas=parcelas,
+        repasse_parcelamento=getattr(evento, "repasse_parcelamento", "comprador") or "comprador",
+    )
+    liquido = float(det["liquido_organizador"])
+    if comprador.get("repasse_parcelamento") == "organizador" and comprador.get("acrescimo_bruto"):
+        liquido = round(max(0.0, liquido - float(comprador["acrescimo_bruto"])), 2)
+    return {
+        "ingresso_id": ingresso.id,
+        "evento_nome": evento.nome,
+        "plano_organizador": tarifa.id,
+        "taxa_eventosbr": det,
+        "comprador": comprador,
+        "organizador_recebe": liquido,
+    }
 
 
 @router.post("/asaas/cobranca")

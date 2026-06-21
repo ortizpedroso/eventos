@@ -20,7 +20,7 @@ from app.services.lista_espera import (
     validar_token_espera,
 )
 from app.services.lista_interesse import inscrever_interesse
-from app.services.taxas_asaas_publicas import calcular_taxa_asaas, simular_parcelas
+from app.services.taxas_asaas_publicas import calcular_taxa_asaas, calcular_acrescimo_parcelamento_comprador, simular_parcelas
 from app.services.urgencia import calcular_urgencia
 from tests import test_api
 
@@ -134,7 +134,43 @@ def test_taxas_asaas_pix():
 def test_simular_parcelas():
     r = simular_parcelas(120.0, 3)
     assert r["parcelas"] == 3
-    assert r["valor_parcela"] == 40.0
+    assert r["acrescimo_parcelamento"] == calcular_acrescimo_parcelamento_comprador(120.0, 3)
+    assert r["valor_total"] == round(120.0 + r["acrescimo_parcelamento"], 2)
+
+
+def test_acrescimo_parcelamento_comprador():
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 1) == 0.0
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 12) == 1.0
+
+
+def test_cotacao_repasse_organizador_absorve():
+    from app.services.taxas_asaas_publicas import cotacao_checkout
+
+    c = cotacao_checkout(120.0, parcelas=6, repasse_parcelamento="organizador")
+    assert c["acrescimo_parcelamento"] == 0.0
+    assert c["acrescimo_bruto"] > 0
+    assert c["total_pagar"] == 120.0
+
+
+def test_split_desconto_organizador_parcelamento():
+    from unittest.mock import MagicMock
+
+    from app.services.pagamento_asaas import split_para_evento
+    from app.services.tarifas_plataforma import TARIFA_PADRAO
+    from config.settings import settings
+
+    evento = MagicMock()
+    evento.asaas_wallet_id = "wallet_org"
+    old = settings.ASAAS_PLATFORM_WALLET_ID
+    settings.ASAAS_PLATFORM_WALLET_ID = "wallet_plat"
+    try:
+        sem = split_para_evento(evento, 120.0, tarifa=TARIFA_PADRAO)
+        com = split_para_evento(evento, 120.0, tarifa=TARIFA_PADRAO, desconto_organizador=4.2)
+        org_sem = next(s["fixedValue"] for s in sem if s["walletId"] == "wallet_org")
+        org_com = next(s["fixedValue"] for s in com if s["walletId"] == "wallet_org")
+        assert org_com == round(org_sem - 4.2, 2)
+    finally:
+        settings.ASAAS_PLATFORM_WALLET_ID = old
 
 
 def test_urgencia_exato():
@@ -1096,31 +1132,28 @@ def test_api_lista_interesse():
 
 
 def test_api_simuladores():
-    r = test_api.client.get("/api/simuladores/simular", params={"preco": 50, "metodo": "pix"})
+    r = test_api.client.get("/api/simuladores/simular", params={"preco": 50, "parcelas": 1})
     assert r.status_code == 200
     data = r.json()
-    assert data["preco_bruto"] == 50
+    assert data["preco_ingresso"] == 50
     assert "aviso_legal" in data
+    assert data["liquido_organizador"] == 50 - data["taxa_eventosbr"]
 
 
 def test_simuladores_coerencia_api():
-    from app.services.tarifas_plataforma import TARIFA_PADRAO, taxa_ingresso
-    from app.services.taxas_asaas_publicas import AVISO_LEGAL, calcular_taxa_asaas
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso
 
     preco = 100.0
     r = test_api.client.get(
         "/api/simuladores/simular",
-        params={"preco": preco, "metodo": "cartao_parcelado", "parcelas": 3},
+        params={"preco": preco, "parcelas": 3},
     )
     assert r.status_code == 200
     data = r.json()
-    taxa_plat = taxa_ingresso(preco, TARIFA_PADRAO)
-    taxa_asaas = calcular_taxa_asaas(preco, "cartao_parcelado", parcelas=3)
-    liquido = round(max(0.0, preco - taxa_plat - taxa_asaas), 2)
-    assert data["taxa_eventosbr"] == round(taxa_plat, 2)
-    assert data["taxa_asaas_estimada"] == taxa_asaas
-    assert data["liquido_organizador"] == liquido
-    assert data["aviso_legal"] == AVISO_LEGAL
+    det = detalhar_taxa_ingresso(preco, TARIFA_PADRAO)
+    assert data["taxa_eventosbr"] == det["taxa_total"]
+    assert data["liquido_organizador"] == det["liquido_organizador"]
+    assert data["comprador"]["acrescimo_parcelamento"] > 0
     assert data["parcelamento"]["parcelas"] == 3
 
 
@@ -1345,28 +1378,26 @@ def test_parcelamento_cobranca_installment_count():
 
 
 def test_simulador_planos_coerencia_asaas():
-    """REQ-16: API /simuladores alinhada às taxas públicas (base do simulador /planos)."""
-    from app.services.tarifas_plataforma import TARIFA_PADRAO, taxa_ingresso
-    from app.services.taxas_asaas_publicas import calcular_taxa_asaas
+    """API /simuladores: taxa EventosBR fixa; acréscimo parcelamento ao comprador."""
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso
+    from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
 
     preco = 49.90
-    metodo = "cartao_parcelado"
     parcelas = 3
 
     r = test_api.client.get(
         "/api/simuladores/simular",
-        params={"preco": preco, "metodo": metodo, "parcelas": parcelas},
+        params={"preco": preco, "parcelas": parcelas},
     )
     assert r.status_code == 200
     api = r.json()
 
-    taxa_plat = taxa_ingresso(preco, TARIFA_PADRAO)
-    taxa_asaas = calcular_taxa_asaas(preco, metodo, parcelas=parcelas)
-    liquido_esperado = round(max(0.0, preco - taxa_plat - taxa_asaas), 2)
-
-    assert api["taxa_eventosbr"] == round(taxa_plat, 2)
-    assert api["taxa_asaas_estimada"] == taxa_asaas
-    assert api["liquido_organizador"] == liquido_esperado
+    det = detalhar_taxa_ingresso(preco, TARIFA_PADRAO)
+    assert api["taxa_eventosbr"] == det["taxa_total"]
+    assert api["liquido_organizador"] == det["liquido_organizador"]
+    assert api["comprador"]["acrescimo_parcelamento"] == calcular_acrescimo_parcelamento_comprador(
+        preco, parcelas
+    )
 
 
 def test_deve_notificar_abertura_quando_lote_abre():
@@ -1519,8 +1550,6 @@ def test_produtor_rejeita_url_javascript():
 
 
 def test_pagamento_rejeita_valor_abaixo_minimo_asaas():
-    from unittest.mock import patch
-
     suf = uuid.uuid4().hex[:8]
     org_reg = test_api.client.post(
         "/api/auth/registrar",
@@ -1541,42 +1570,31 @@ def test_pagamento_rejeita_valor_abaixo_minimo_asaas():
             "data_inicio": "2026-12-01T10:00:00",
             "data_fim": "2026-12-01T22:00:00",
             "local": "SP",
-            "preco_ingresso": 3,
+            "preco_ingresso": 8,
             "categoria": "Outros",
             "publicado": True,
-            "ingresso_lotes": [{"nome": "Geral", "preco": 3, "ordem": 1, "ativo": True}],
+            "ingresso_lotes": [{"nome": "Geral", "preco": 8, "ordem": 1, "ativo": True}],
         },
     )
-    assert ev_resp.status_code == 200
-    ev = ev_resp.json()
-    cli_reg = test_api.client.post(
-        "/api/auth/registrar",
+    assert ev_resp.status_code == 422
+    assert "10" in str(ev_resp.json())
+
+    ev_ok = test_api.client.post(
+        "/api/eventos/criar",
+        headers={"Authorization": f"Bearer {org_token}"},
         json={
-            "email": f"cli_min_{suf}@test.com",
-            "nome": "Cli",
-            "senha": "senha12345",
-            "tipo": "cliente",
+            "nome": f"Minimo {suf}",
+            "descricao": "d",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 10,
+            "categoria": "Outros",
+            "publicado": True,
+            "ingresso_lotes": [{"nome": "Geral", "preco": 10, "ordem": 1, "ativo": True}],
         },
     )
-    cli_token = cli_reg.json()["access_token"]
-    with patch("app.routes.pagamentos.settings") as route_settings:
-        route_settings.payments_disabled = False
-        route_settings.use_asaas = True
-        criar = test_api.client.post(
-            "/api/pagamentos/criar",
-            headers={"Authorization": f"Bearer {cli_token}"},
-            json={
-                "evento_id": ev["id"],
-                "valor_centavos": 300,
-                "participante_nome": "Comprador",
-                "participante_email": f"cli_min_{suf}@test.com",
-                "participante_cpf": "52998224725",
-                "participante_telefone": "11987654321",
-                "termo_compra_aceito": True,
-            },
-        )
-    assert criar.status_code == 400
-    assert "5" in criar.json()["detail"]
+    assert ev_ok.status_code == 200
 
 
 def test_deve_notificar_abertura_exige_venda_aberta_na_criacao():

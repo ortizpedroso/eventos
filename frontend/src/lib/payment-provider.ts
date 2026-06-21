@@ -4,14 +4,14 @@ export function paymentProviderAtivo(): "asaas" {
 
 /** Copy voltada ao comprador — sem expor marca do gateway. */
 export function nomeProcessadorPagamento(): string {
-  return "gateway de pagamento certificado";
+  return "pagamento seguro pela plataforma";
 }
 
 export function labelPagamentoSeguro(): string {
-  return "Pagamento seguro";
+  return nomeProcessadorPagamento();
 }
 
-/** Painel do organizador e documentação interna. */
+/** Painel do organizador — white-label. */
 export function nomeGatewayOrganizador(): string {
-  return "Asaas";
+  return "EventosBR";
 }

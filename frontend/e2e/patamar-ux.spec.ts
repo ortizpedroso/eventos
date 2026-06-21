@@ -38,9 +38,9 @@ test.describe("Patamar UX — vitrine e navbar", () => {
 });
 
 test.describe("Checkout — copy de pagamento", () => {
-  test("página de planos menciona taxas de processamento", async ({ page }) => {
+  test("página de planos menciona taxa EventosBR", async ({ page }) => {
     await page.goto("/planos");
-    await expect(page.getByText(/processamento|taxas/i).first()).toBeVisible();
+    await expect(page.getByText(/EventosBR|taxa/i).first()).toBeVisible();
   });
 
   test("home menciona transparência de taxas", async ({ page }) => {

@@ -359,6 +359,7 @@ export function EventoPublicClient({
                   mensagemConfirmacao={evento.mensagem_confirmacao}
                   parcelamentoHabilitado={evento.parcelamento_habilitado}
                   parcelamentoMax={evento.parcelamento_max}
+                  repasseParcelamento={evento.repasse_parcelamento ?? "comprador"}
                   urgenciaAtivo={evento.urgencia_ativo}
                   urgenciaBadge={evento.urgencia_badge}
                   tokenEspera={tokenEsperaValido ? tokenEsperaQuery : null}

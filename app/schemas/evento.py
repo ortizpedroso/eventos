@@ -3,6 +3,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.utils.imagem_url import validar_imagem_url
 from app.utils.evento_categorias import normalizar_categoria_evento
 from app.utils.ingresso_tipos import TIPO_PADRAO, normalizar_tipo_ingresso, lote_e_cortesia
+from app.services.taxas_asaas_publicas import INGRESSO_MINIMO_PAGO_REAIS
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -35,8 +36,8 @@ class IngressoLoteWrite(BaseModel):
         if lote_e_cortesia(self.tipo):
             if self.preco < 0:
                 raise ValueError("preço da cortesia não pode ser negativo")
-        elif self.preco < 0.5:
-            raise ValueError("preço mínimo de R$ 0,50 para lotes pagos")
+        elif self.preco < INGRESSO_MINIMO_PAGO_REAIS:
+            raise ValueError(f"preço mínimo de R$ {INGRESSO_MINIMO_PAGO_REAIS:.2f} para lotes pagos")
         return self
 
 
@@ -65,7 +66,7 @@ class CriarEventoRequest(BaseModel):
     local: str
     cidade: str | None = None
     imagem_url: Optional[str] = Field(default=None, max_length=2048)
-    # Reais (ex.: 49.9). Mínimo de R$ 5 para ingressos pagos (regra Asaas).
+    # Reais (ex.: 49.9). Mínimo de R$ 10 para ingressos pagos.
     preco_ingresso: float = Field(ge=0, le=500_000)
     categoria: str = Field(default="Outros", min_length=1, max_length=80)
     mensagem_confirmacao: Optional[str] = Field(default=None, max_length=2000)
@@ -76,6 +77,7 @@ class CriarEventoRequest(BaseModel):
     urgencia_modo: str = Field(default="desligado", pattern="^(desligado|exato|faixa)$")
     parcelamento_habilitado: bool = False
     parcelamento_max: int = Field(default=2, ge=2, le=12)
+    repasse_parcelamento: str = Field(default="comprador", pattern="^(comprador|organizador)$")
     aceita_interesse: bool = True
     lista_espera_habilitada: bool = False
     lista_espera_prazo_horas: int = Field(default=24, ge=12, le=48)
@@ -150,6 +152,7 @@ class EventoResponse(BaseModel):
     urgencia_ativo: bool = False
     parcelamento_habilitado: bool = False
     parcelamento_max: int = 2
+    repasse_parcelamento: str = "comprador"
     aceita_interesse: bool = True
     lista_espera_habilitada: bool = False
     lista_espera_prazo_horas: int = 24
@@ -244,6 +247,7 @@ def montar_evento_response(
         "urgencia_ativo": urgencia.ativo,
         "parcelamento_habilitado": bool(getattr(evento, "parcelamento_habilitado", False)),
         "parcelamento_max": int(getattr(evento, "parcelamento_max", 2) or 2),
+        "repasse_parcelamento": getattr(evento, "repasse_parcelamento", "comprador") or "comprador",
         "aceita_interesse": bool(getattr(evento, "aceita_interesse", True)),
         "lista_espera_habilitada": bool(getattr(evento, "lista_espera_habilitada", False)),
         "lista_espera_prazo_horas": int(getattr(evento, "lista_espera_prazo_horas", 24) or 24),
