@@ -131,7 +131,11 @@ async def relatorio_organizador(
             receita_paga += val
             pe["receita_paga"] += val
             liquido = liquido_ingresso_para_saldo(ing, tarifa)
-            taxa_plataforma += round(val - liquido, 2)
+            taxa_aplicada = getattr(ing, "taxa_plataforma_aplicada", None)
+            if taxa_aplicada is not None:
+                taxa_plataforma += round(float(taxa_aplicada), 2)
+            else:
+                taxa_plataforma += taxa_ingresso(val, tarifa)
             liquido_estimado += liquido
         elif st == "pendente":
             receita_pendente += val

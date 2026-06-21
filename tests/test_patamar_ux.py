@@ -143,6 +143,15 @@ def test_acrescimo_parcelamento_comprador():
     assert calcular_acrescimo_parcelamento_comprador(100.0, 12) == 1.0
 
 
+def test_cotacao_total_pagar_alinha_com_valor_cobrado():
+    from app.services.taxas_asaas_publicas import cotacao_checkout
+
+    c = cotacao_checkout(100.0, parcelas=12, repasse_parcelamento="comprador")
+    esperado = round(100.0 + calcular_acrescimo_parcelamento_comprador(100.0, 12), 2)
+    assert c["total_pagar"] == esperado == 101.0
+    assert round(c["valor_parcela"] * 12, 2) == 101.04
+
+
 def test_cotacao_repasse_organizador_absorve():
     from app.services.taxas_asaas_publicas import cotacao_checkout
 

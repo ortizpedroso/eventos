@@ -38,14 +38,13 @@ export function cotacaoCheckout(
   const acrescimoParcelamento = repasse === "organizador" ? 0 : acrescimoBruto;
   const total = Math.round((valorBase + acrescimoParcelamento) * 100) / 100;
   const valorParcela = parcelas > 1 ? Math.round((total / parcelas) * 100) / 100 : total;
-  const totalParcelas = parcelas > 1 ? Math.round(valorParcela * parcelas * 100) / 100 : total;
   return {
     precoIngresso: valorBase,
     parcelas,
     acrescimoParcelamento,
     acrescimoBruto,
     repasseParcelamento: repasse,
-    totalPagar: totalParcelas,
+    totalPagar: total,
     valorParcela: parcelas > 1 ? valorParcela : null,
   };
 }

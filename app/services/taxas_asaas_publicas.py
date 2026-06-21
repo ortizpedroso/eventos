@@ -96,14 +96,13 @@ def cotacao_checkout(
     acrescimo_comprador = 0.0 if repasse == "organizador" else acrescimo_bruto
     total = round(valor_base + acrescimo_comprador, 2)
     valor_parcela = round(total / parcelas, 2) if parcelas > 1 else total
-    total_parcelas = round(valor_parcela * parcelas, 2)
     return {
         "preco_ingresso": round(valor_base, 2),
         "parcelas": parcelas,
         "acrescimo_parcelamento": acrescimo_comprador,
         "acrescimo_bruto": acrescimo_bruto,
         "repasse_parcelamento": repasse,
-        "total_pagar": total_parcelas if parcelas > 1 else total,
+        "total_pagar": total,
         "valor_parcela": valor_parcela if parcelas > 1 else None,
         "faixa_parcelamento": taxa_cartao_para_parcelas(parcelas).descricao if parcelas > 1 else None,
     }
