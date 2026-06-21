@@ -239,8 +239,51 @@ def test_cancelar_saque_libera_saldo():
     finally:
         db.close()
 
+
+def test_urgencia_exato():
     b = calcular_urgencia("exato", restantes=7)
     assert b.ativo and "7" in (b.texto or "")
+
+
+def test_extrato_inclui_saques_e_vendas():
+    from datetime import datetime, timezone
+
+    from app.models import FinanceiroSaque, Ingresso
+    from app.services.financeiro_organizador import listar_extrato
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, nome="Extrato Mix")
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            valor=30.0,
+            status="pago",
+            liquido_repassado=24.0,
+            taxa_plataforma_aplicada=6.0,
+            plano_tarifa_venda="padrao",
+            asaas_payment_id=f"pay_{uuid.uuid4().hex[:8]}",
+        )
+        db.add(ing)
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        saque = FinanceiroSaque(
+            organizador_id=org.id,
+            valor=5.0,
+            pix_chave="a@b.com",
+            status="cancelado",
+            criado_em=agora,
+            atualizado_em=agora,
+        )
+        db.add(saque)
+        db.commit()
+
+        ex = listar_extrato(db, org, limite=50, offset=0)
+        tipos = {m["tipo"] for m in ex["movimentos"]}
+        assert "venda" in tipos
+        assert "saque" in tipos
+    finally:
+        db.close()
 
 
 def test_urgencia_sem_estoque_conhecido():

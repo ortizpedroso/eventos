@@ -15,22 +15,38 @@ logger = logging.getLogger(__name__)
 
 
 def _garantir_ledger_ingresso(db: Session, ingresso: Ingresso) -> None:
-    """Preenche ledger em ingressos antigos ou cortesia sem valores gravados."""
+    """Preenche ledger em ingressos antigos sem valores gravados."""
     if getattr(ingresso, "liquido_repassado", None) is not None:
         return
     from app.models import Evento, Usuario
     from app.services.tarifas_plataforma import ledger_ingresso_venda, tarifa_para_organizador
+    from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
 
     evento = db.get(Evento, ingresso.evento_id)
     if not evento:
         return
     organizador = db.get(Usuario, evento.organizador_id)
     tarifa = tarifa_para_organizador(organizador)
-    ledger = ledger_ingresso_venda(float(ingresso.valor or 0), tarifa=tarifa)
+    valor = float(ingresso.valor or 0)
+    parcelas = int(getattr(ingresso, "parcelas_cobranca", None) or 1)
+    repasse = (getattr(evento, "repasse_parcelamento", None) or "comprador").strip()
+    desconto_total = 0.0
+    if repasse == "organizador" and parcelas > 1 and valor > 0:
+        desconto_total = calcular_acrescimo_parcelamento_comprador(valor, parcelas)
+    ledger = ledger_ingresso_venda(
+        valor,
+        tarifa=tarifa,
+        desconto_parcelamento_total=desconto_total,
+        parcelas=parcelas if parcelas > 1 else None,
+    )
     ingresso.liquido_repassado = ledger["liquido_repassado"]
     ingresso.taxa_plataforma_aplicada = ledger["taxa_plataforma_aplicada"]
     ingresso.desconto_parcelamento_organizador = ledger["desconto_parcelamento_organizador"]
+    ingresso.parcelas_cobranca = ledger["parcelas_cobranca"]
     ingresso.plano_tarifa_venda = ledger["plano_tarifa_venda"]
+    if getattr(ingresso, "valor_cobrado", None) is None and valor > 0:
+        acrescimo = 0.0 if repasse == "organizador" else desconto_total
+        ingresso.valor_cobrado = round(valor + acrescimo, 2)
 
 
 def _pay_id_reembolsavel(pay_id: str) -> bool:

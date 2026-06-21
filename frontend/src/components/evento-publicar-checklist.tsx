@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
+import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 
 type ChecklistInput = {
   nome: string;
@@ -24,7 +25,7 @@ export function EventoPublicarChecklist(props: ChecklistInput) {
     const precoOk =
       props.eventoGratuito ||
       (props.modoSimples
-        ? (parseValorMonetarioInput(props.precoSimples) ?? 0) >= 0.5
+        ? (parseValorMonetarioInput(props.precoSimples) ?? 0) >= INGRESSO_MINIMO_PAGO_REAIS
         : props.loteRowsCount > 0);
 
     return [
@@ -105,7 +106,7 @@ export function checklistPublicacaoPronta(props: ChecklistInput): boolean {
   const precoOk =
     props.eventoGratuito ||
     (props.modoSimples
-      ? (parseValorMonetarioInput(props.precoSimples) ?? 0) >= 0.5
+      ? (parseValorMonetarioInput(props.precoSimples) ?? 0) >= INGRESSO_MINIMO_PAGO_REAIS
       : props.loteRowsCount > 0);
 
   return (

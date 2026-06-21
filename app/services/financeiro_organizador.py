@@ -30,7 +30,25 @@ def _ingressos_pagos_query(db: Session, organizador_id: str):
     )
 
 
+def _backfill_ledger_pendentes(db: Session, organizador_id: str, *, limit: int = 100) -> None:
+    """Preenche ledger em ingressos pagos antigos (uma vez por consulta)."""
+    from app.services.ingresso_pago import _garantir_ledger_ingresso
+
+    pendentes = (
+        _ingressos_pagos_query(db, organizador_id)
+        .filter(Ingresso.liquido_repassado.is_(None))
+        .limit(limit)
+        .all()
+    )
+    if not pendentes:
+        return
+    for ing in pendentes:
+        _garantir_ledger_ingresso(db, ing)
+    db.commit()
+
+
 def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
+    _backfill_ledger_pendentes(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
     ingressos = _ingressos_pagos_query(db, usuario.id).all()
     bruto = round(sum(float(i.valor or 0) for i in ingressos), 2)
@@ -104,25 +122,24 @@ def listar_extrato(
     limite: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
+    _backfill_ledger_pendentes(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
-    fetch_n = min(500, max(limite + offset, limite))
-
-    ingressos = (
-        _ingressos_pagos_query(db, usuario.id)
-        .order_by(Ingresso.data_compra.desc())
-        .limit(fetch_n)
-        .all()
-    )
-    evento_ids = {i.evento_id for i in ingressos}
-    eventos = {e.id: e for e in db.query(Evento).filter(Evento.id.in_(evento_ids)).all()} if evento_ids else {}
 
     saques = (
         db.query(FinanceiroSaque)
         .filter(FinanceiroSaque.organizador_id == usuario.id)
         .order_by(FinanceiroSaque.criado_em.desc())
-        .limit(fetch_n)
         .all()
     )
+    window = min(1000, offset + limite + len(saques) + 20)
+    ingressos = (
+        _ingressos_pagos_query(db, usuario.id)
+        .order_by(Ingresso.data_compra.desc())
+        .limit(window)
+        .all()
+    )
+    evento_ids = {i.evento_id for i in ingressos}
+    eventos = {e.id: e for e in db.query(Evento).filter(Evento.id.in_(evento_ids)).all()} if evento_ids else {}
 
     movimentos: list[dict[str, Any]] = []
     movimentos.extend(_movimento_venda(ing, eventos.get(ing.evento_id), tarifa) for ing in ingressos)
@@ -131,6 +148,7 @@ def listar_extrato(
 
     return {
         "movimentos": movimentos[offset : offset + limite],
+        "total_movimentos": len(movimentos),
         "saldo": calcular_saldo_organizador(db, usuario),
     }
 
