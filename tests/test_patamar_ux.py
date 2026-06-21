@@ -20,7 +20,7 @@ from app.services.lista_espera import (
     validar_token_espera,
 )
 from app.services.lista_interesse import inscrever_interesse
-from app.services.taxas_asaas_publicas import calcular_taxa_asaas, simular_parcelas
+from app.services.taxas_asaas_publicas import calcular_taxa_asaas, calcular_acrescimo_parcelamento_comprador, simular_parcelas
 from app.services.urgencia import calcular_urgencia
 from tests import test_api
 
@@ -1096,31 +1096,28 @@ def test_api_lista_interesse():
 
 
 def test_api_simuladores():
-    r = test_api.client.get("/api/simuladores/simular", params={"preco": 50, "metodo": "pix"})
+    r = test_api.client.get("/api/simuladores/simular", params={"preco": 50, "parcelas": 1})
     assert r.status_code == 200
     data = r.json()
-    assert data["preco_bruto"] == 50
+    assert data["preco_ingresso"] == 50
     assert "aviso_legal" in data
+    assert data["liquido_organizador"] == 50 - data["taxa_eventosbr"]
 
 
 def test_simuladores_coerencia_api():
-    from app.services.tarifas_plataforma import TARIFA_PADRAO, taxa_ingresso
-    from app.services.taxas_asaas_publicas import AVISO_LEGAL, calcular_taxa_asaas
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso
 
     preco = 100.0
     r = test_api.client.get(
         "/api/simuladores/simular",
-        params={"preco": preco, "metodo": "cartao_parcelado", "parcelas": 3},
+        params={"preco": preco, "parcelas": 3},
     )
     assert r.status_code == 200
     data = r.json()
-    taxa_plat = taxa_ingresso(preco, TARIFA_PADRAO)
-    taxa_asaas = calcular_taxa_asaas(preco, "cartao_parcelado", parcelas=3)
-    liquido = round(max(0.0, preco - taxa_plat - taxa_asaas), 2)
-    assert data["taxa_eventosbr"] == round(taxa_plat, 2)
-    assert data["taxa_asaas_estimada"] == taxa_asaas
-    assert data["liquido_organizador"] == liquido
-    assert data["aviso_legal"] == AVISO_LEGAL
+    det = detalhar_taxa_ingresso(preco, TARIFA_PADRAO)
+    assert data["taxa_eventosbr"] == det["taxa_total"]
+    assert data["liquido_organizador"] == det["liquido_organizador"]
+    assert data["comprador"]["acrescimo_parcelamento"] > 0
     assert data["parcelamento"]["parcelas"] == 3
 
 
@@ -1345,28 +1342,26 @@ def test_parcelamento_cobranca_installment_count():
 
 
 def test_simulador_planos_coerencia_asaas():
-    """REQ-16: API /simuladores alinhada às taxas públicas (base do simulador /planos)."""
-    from app.services.tarifas_plataforma import TARIFA_PADRAO, taxa_ingresso
-    from app.services.taxas_asaas_publicas import calcular_taxa_asaas
+    """API /simuladores: taxa EventosBR fixa; acréscimo parcelamento ao comprador."""
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso
+    from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
 
     preco = 49.90
-    metodo = "cartao_parcelado"
     parcelas = 3
 
     r = test_api.client.get(
         "/api/simuladores/simular",
-        params={"preco": preco, "metodo": metodo, "parcelas": parcelas},
+        params={"preco": preco, "parcelas": parcelas},
     )
     assert r.status_code == 200
     api = r.json()
 
-    taxa_plat = taxa_ingresso(preco, TARIFA_PADRAO)
-    taxa_asaas = calcular_taxa_asaas(preco, metodo, parcelas=parcelas)
-    liquido_esperado = round(max(0.0, preco - taxa_plat - taxa_asaas), 2)
-
-    assert api["taxa_eventosbr"] == round(taxa_plat, 2)
-    assert api["taxa_asaas_estimada"] == taxa_asaas
-    assert api["liquido_organizador"] == liquido_esperado
+    det = detalhar_taxa_ingresso(preco, TARIFA_PADRAO)
+    assert api["taxa_eventosbr"] == det["taxa_total"]
+    assert api["liquido_organizador"] == det["liquido_organizador"]
+    assert api["comprador"]["acrescimo_parcelamento"] == calcular_acrescimo_parcelamento_comprador(
+        preco, parcelas
+    )
 
 
 def test_deve_notificar_abertura_quando_lote_abre():

@@ -6,11 +6,11 @@ from fastapi import APIRouter, Query
 
 from app.services.taxas_asaas_publicas import (
     AVISO_LEGAL,
-    calcular_taxa_asaas,
     comparativo_sympla_ilustrativo,
+    cotacao_checkout,
     simular_parcelas,
 )
-from app.services.tarifas_plataforma import TARIFA_PADRAO, liquido_organizador, taxa_ingresso
+from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso
 
 router = APIRouter()
 
@@ -18,20 +18,24 @@ router = APIRouter()
 @router.get("/simular")
 async def simular_liquido(
     preco: float = Query(..., gt=0, le=500_000),
-    metodo: str = Query("pix", pattern="^(pix|boleto|cartao_avista|cartao_parcelado)$"),
-    parcelas: int = Query(1, ge=1, le=12),
+    parcelas: int = Query(1, ge=1, le=21),
+    plano: str = Query("padrao", pattern="^(padrao|assinatura)$"),
 ):
-    taxa_plat = taxa_ingresso(preco, TARIFA_PADRAO)
-    taxa_asaas = calcular_taxa_asaas(preco, metodo, parcelas=parcelas)  # type: ignore[arg-type]
-    liquido = round(max(0.0, preco - taxa_plat - taxa_asaas), 2)
-    sympla = comparativo_sympla_ilustrativo(preco)
+    """Simulador organizador: taxa EventosBR fixa; parcelamento com acréscimo ao comprador."""
+    from app.services.tarifas_plataforma import TARIFAS
+
+    tarifa = TARIFAS.get(plano, TARIFA_PADRAO)  # type: ignore[arg-type]
+    det = detalhar_taxa_ingresso(preco, tarifa)
     parc = simular_parcelas(preco, parcelas) if parcelas > 1 else None
+    sympla = comparativo_sympla_ilustrativo(preco)
     return {
-        "preco_bruto": preco,
-        "taxa_eventosbr": round(taxa_plat, 2),
-        "taxa_asaas_estimada": taxa_asaas,
-        "liquido_organizador": liquido,
-        "comparativo_sympla": sympla,
+        "preco_ingresso": det["preco_ingresso"],
+        "plano": det["plano"],
+        "rotulo_taxa": det["rotulo_taxa"],
+        "taxa_eventosbr": det["taxa_total"],
+        "liquido_organizador": det["liquido_organizador"],
         "parcelamento": parc,
+        "comprador": cotacao_checkout(preco, parcelas=parcelas) if parcelas > 1 else None,
+        "comparativo_sympla": sympla,
         "aviso_legal": AVISO_LEGAL,
     }

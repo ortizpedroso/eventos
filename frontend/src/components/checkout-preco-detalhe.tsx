@@ -6,9 +6,8 @@ import {
   TARIFA_PADRAO,
   detalharTaxaIngresso,
   formatBrl,
-  formatPercentual,
+  rotuloTaxa,
 } from "@/lib/tarifas-plataforma";
-import { AVISO_LEGAL_TAXAS } from "@/lib/taxas-asaas-publicas";
 
 type Props = {
   precoIngresso: number;
@@ -30,31 +29,25 @@ export function CheckoutPrecoDetalhe({ precoIngresso, destaque = false, classNam
     >
       {destaque ? (
         <>
-          <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">Preço final</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">Preço do ingresso</p>
           <p className="mt-1 text-2xl font-bold text-emerald-900">{formatBrl(d.precoVenda)}</p>
         </>
       ) : (
-        <p className="text-sm font-semibold text-emerald-900">Total: {formatBrl(d.precoVenda)}</p>
+        <p className="text-sm font-semibold text-emerald-900">Ingresso: {formatBrl(d.precoVenda)}</p>
       )}
       <ul className="mt-2 space-y-1 text-xs text-emerald-950/90">
         <li>
-          Você paga <strong>{formatBrl(d.precoVenda)}</strong> — sem taxa extra no checkout.
-        </li>
-        <li>
-          Inclui taxa EventosBR ({formatPercentual(TARIFA_PADRAO.percentual)} +{" "}
-          {formatBrl(TARIFA_PADRAO.fixoPorIngresso)} por ingresso):{" "}
+          Taxa de serviço EventosBR ({rotuloTaxa(TARIFA_PADRAO)}):{" "}
           <strong>{formatBrl(d.taxaTotal)}</strong>
         </li>
-        <li className="text-emerald-800/80">
-          Taxas de processamento do pagamento (PIX, cartão ou parcelas, conforme o método escolhido) estão
-          incluídas na operação do gateway — o preço exibido é o total que você paga.
+        <li>
+          Organizador recebe: <strong>{formatBrl(d.liquidoOrganizador)}</strong>
         </li>
         <li className="text-emerald-800/80">
-          Repasse estimado ao organizador: {formatBrl(d.liquidoOrganizador)} (antes das tarifas de
-          processamento do gateway).
+          A taxa EventosBR é fixa — não muda com PIX ou cartão. Parcelamento pode incluir acréscimo explícito no
+          checkout.
         </li>
       </ul>
-      <p className="mt-2 text-[10px] leading-relaxed text-emerald-800/70">{AVISO_LEGAL_TAXAS}</p>
       <p className="mt-2 text-[11px] text-emerald-800/70">
         <Link href="/planos" className="underline underline-offset-2 hover:text-emerald-900">
           Ver planos e taxas

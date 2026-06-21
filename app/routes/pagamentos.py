@@ -608,6 +608,39 @@ async def cancelar_ingresso(
         raise HTTPException(status_code=400, detail=REEMBOLSO_CLIENTE) from e
 
 
+@router.get("/cotacao")
+async def cotacao_pagamento(
+    ingresso_id: str = Query(..., min_length=8),
+    parcelas: int = Query(1, ge=1, le=21),
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Breakdown público: taxa EventosBR fixa + acréscimo parcelamento (se houver)."""
+    from app.services.taxas_asaas_publicas import cotacao_checkout
+    from app.services.tarifas_plataforma import detalhar_taxa_ingresso, tarifa_para_organizador
+
+    ingresso = db.get(Ingresso, ingresso_id)
+    if not ingresso or ingresso.usuario_id != usuario_atual.id:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+    evento = db.get(Evento, ingresso.evento_id)
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+
+    organizador = db.get(Usuario, evento.organizador_id)
+    tarifa = tarifa_para_organizador(organizador)
+    valor_base = float(ingresso.valor or 0)
+    det = detalhar_taxa_ingresso(valor_base, tarifa)
+    comprador = cotacao_checkout(valor_base, parcelas=parcelas)
+    return {
+        "ingresso_id": ingresso.id,
+        "evento_nome": evento.nome,
+        "plano_organizador": tarifa.id,
+        "taxa_eventosbr": det,
+        "comprador": comprador,
+        "organizador_recebe": det["liquido_organizador"],
+    }
+
+
 @router.post("/asaas/cobranca")
 async def asaas_iniciar_cobranca(
     request: Request,

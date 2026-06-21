@@ -1,20 +1,16 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import { mapCheckoutError } from "@/lib/checkout-errors";
 import { formatCpfMask, onlyDigits } from "@/lib/cpf";
 import {
-  AVISO_LEGAL_TAXAS,
   PARCELAMENTO_MINIMO_REAIS,
-  calcularTaxaAsaas,
+  cotacaoCheckout,
 } from "@/lib/taxas-asaas-publicas";
+import { TARIFA_PADRAO, detalharTaxaIngresso, formatBrl, rotuloTaxa } from "@/lib/tarifas-plataforma";
 import type { AsaasPixPayload, CriarPagamentoResponse } from "@/lib/types";
-
-function formatBrl(valor: number): string {
-  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 type Props = {
   ingressoId: string;
@@ -70,13 +66,17 @@ export function CheckoutAsaasPainel({
   const [cardNumeroEnd, setCardNumeroEnd] = useState("");
   const [cardTel, setCardTel] = useState("");
 
-  const valorReais = valorCentavos / 100;
+  const valorBase = valorCentavos / 100;
   const parcelamentoAtivo =
     parcelamentoHabilitado && valorCentavos >= PARCELAMENTO_MINIMO_REAIS * 100;
-  const taxaParcelamentoEst =
-    metodo === "card" && parcelas > 1
-      ? calcularTaxaAsaas(valorReais, "cartao_parcelado", parcelas)
-      : 0;
+  const parcelasEfetivas = metodo === "card" && parcelamentoAtivo ? parcelas : 1;
+
+  const cotacao = useMemo(
+    () => cotacaoCheckout(valorBase, parcelasEfetivas),
+    [valorBase, parcelasEfetivas],
+  );
+  const taxaDetalhe = useMemo(() => detalharTaxaIngresso(valorBase, TARIFA_PADRAO), [valorBase]);
+  const totalPagar = metodo === "card" && parcelas > 1 ? cotacao.totalPagar : valorBase;
 
   useEffect(() => {
     if (!reservadoAte) return;
@@ -101,7 +101,7 @@ export function CheckoutAsaasPainel({
         const st = await apiFetch<{ pago?: boolean }>(`/api/pagamentos/asaas/status/${ingressoId}`);
         if (st.pago) onSuccess();
       } catch {
-        /* polling silencioso */
+        /* polling */
       }
     }, 4000);
     return () => window.clearInterval(id);
@@ -116,32 +116,13 @@ export function CheckoutAsaasPainel({
         ingresso_id: ingressoId,
         metodo: metodo === "pix" ? "pix" : metodo === "card" ? "card" : "invoice",
       };
-      if (tokenEspera?.trim()) {
-        body.token_espera = tokenEspera.trim();
-      }
+      if (tokenEspera?.trim()) body.token_espera = tokenEspera.trim();
+      if (metodo === "card" && parcelas > 1) body.parcelas = parcelas;
 
       if (metodo === "card") {
-        const cpf = onlyDigits(cardCpf, 11);
-        const cep = onlyDigits(cardCep, 8);
-        const tel = onlyDigits(cardTel, 11);
-        if (!cardNome.trim() || cardNumero.replace(/\D/g, "").length < 13) {
-          setMsg("Preencha nome e número do cartão.");
-          setBusy(false);
-          return;
-        }
-        if (!cardMes || !cardAno || cardCvv.length < 3) {
-          setMsg("Validade e CVV são obrigatórios.");
-          setBusy(false);
-          return;
-        }
-        if (cpf.length !== 11 || cep.length !== 8) {
-          setMsg("CPF e CEP do titular são obrigatórios.");
-          setBusy(false);
-          return;
-        }
         body.credit_card = {
           holderName: cardNome.trim(),
-          number: cardNumero.replace(/\D/g, ""),
+          number: onlyDigits(cardNumero, 19),
           expiryMonth: cardMes.padStart(2, "0"),
           expiryYear: cardAno.length === 2 ? `20${cardAno}` : cardAno,
           ccv: cardCvv,
@@ -149,97 +130,84 @@ export function CheckoutAsaasPainel({
         body.credit_card_holder_info = {
           name: cardNome.trim(),
           email: participanteEmail.trim(),
-          cpfCnpj: cpf,
-          postalCode: cep,
+          cpfCnpj: onlyDigits(cardCpf, 14),
+          postalCode: onlyDigits(cardCep, 8),
           addressNumber: cardNumeroEnd.trim() || "S/N",
-          phone: tel || undefined,
+          phone: onlyDigits(cardTel, 11),
         };
-        if (parcelamentoHabilitado && parcelas > 1) {
-          body.parcelas = parcelas;
-        }
       }
 
-      const data = await apiFetch<
-        CriarPagamentoResponse & { pix?: AsaasPixPayload; invoice_url?: string; ja_pago?: boolean }
-      >("/api/pagamentos/asaas/cobranca", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
-      if (data.ja_pago) {
+      const res = await apiFetch<
+        CriarPagamentoResponse & { ja_pago?: boolean; pix?: AsaasPixPayload; invoice_url?: string }
+      >(
+        "/api/pagamentos/asaas/cobranca",
+        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+      );
+      if (res.ja_pago) {
         onSuccess();
         return;
       }
-      if (data.pix) {
-        setPix(data.pix);
-        setInvoiceUrl(null);
-        return;
-      }
-      if (data.invoice_url) {
-        setInvoiceUrl(data.invoice_url);
-        window.open(data.invoice_url, "_blank", "noopener,noreferrer");
-        return;
-      }
-      if (metodo === "card") {
-        const st = await apiFetch<{ pago?: boolean }>(`/api/pagamentos/asaas/status/${ingressoId}`);
-        if (st.pago) {
-          onSuccess();
-          return;
-        }
-        setMsg("Pagamento em processamento. Aguarde a confirmação…");
-        return;
-      }
-      setMsg("Cobrança criada. Aguarde a confirmação ou tente novamente.");
+      if (res.pix) setPix(res.pix);
+      if (res.invoice_url) setInvoiceUrl(res.invoice_url);
     } catch (err) {
-      setMsg(mapCheckoutError(err instanceof Error ? err.message : "Falha ao iniciar pagamento."));
+      setMsg(mapCheckoutError(err instanceof Error ? err.message : String(err)));
     } finally {
       setBusy(false);
     }
   }
 
-  if (pix?.encoded_image || pix?.copia_cola) {
+  if (pix?.copia_cola) {
     return (
       <div className="space-y-4">
-        {countdown && (
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            Reserva válida por <strong>{countdown}</strong>
-          </p>
-        )}
-        <p className="text-sm text-gray-600">Pague {valorFmt} via PIX. A confirmação é automática.</p>
-        {pix.encoded_image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`data:image/png;base64,${pix.encoded_image}`}
-            alt="QR Code PIX"
-            className="mx-auto h-48 w-48 rounded-lg border"
-          />
-        )}
-        {pix.copia_cola && (
-          <div>
-            <p className="mb-1 text-xs font-medium text-gray-500">PIX copia e cola</p>
-            <textarea
-              readOnly
-              className="w-full rounded border p-2 text-xs"
-              rows={3}
-              value={pix.copia_cola}
-              onFocus={(ev) => ev.target.select()}
-            />
-          </div>
-        )}
-        <p className="text-xs text-gray-500">Aguardando confirmação do pagamento…</p>
+        <p className="text-sm font-medium text-zinc-900">Pague com PIX — {formatBrl(valorBase)}</p>
+        {countdown ? <p className="text-xs text-amber-800">Reserva expira em {countdown}</p> : null}
+        <textarea readOnly className="w-full rounded border p-2 text-xs" rows={4} value={pix.copia_cola} />
+        <button
+          type="button"
+          className="w-full rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white"
+          onClick={() => void navigator.clipboard.writeText(pix.copia_cola ?? "")}
+        >
+          Copiar código PIX
+        </button>
       </div>
     );
   }
 
   return (
     <form onSubmit={iniciar} className="space-y-4">
-      {countdown && (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Seu ingresso está reservado por <strong>{countdown}</strong>
-        </p>
-      )}
-      <p className="text-sm text-gray-700">
-        Total: <strong>{valorFmt}</strong> — pagamento seguro
-      </p>
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 text-sm" data-testid="checkout-taxas">
+        <p className="font-medium text-emerald-900">Resumo</p>
+        <ul className="mt-2 space-y-1 text-xs text-emerald-950">
+          <li className="flex justify-between gap-2">
+            <span>Ingresso</span>
+            <span>{formatBrl(valorBase)}</span>
+          </li>
+          {taxaDetalhe ? (
+            <li className="flex justify-between gap-2">
+              <span>Taxa EventosBR ({rotuloTaxa(TARIFA_PADRAO)})</span>
+              <span>{formatBrl(taxaDetalhe.taxaTotal)}</span>
+            </li>
+          ) : null}
+          {metodo === "card" && parcelas > 1 && cotacao.acrescimoParcelamento > 0 ? (
+            <li className="flex justify-between gap-2 font-medium text-amber-900">
+              <span>Acréscimo parcelamento ({parcelas}x)</span>
+              <span>+ {formatBrl(cotacao.acrescimoParcelamento)}</span>
+            </li>
+          ) : null}
+          <li className="flex justify-between gap-2 border-t border-emerald-200/80 pt-1 font-semibold text-emerald-900">
+            <span>Total a pagar</span>
+            <span>{formatBrl(totalPagar)}</span>
+          </li>
+          {metodo === "card" && parcelas > 1 && cotacao.valorParcela ? (
+            <li className="text-emerald-800">
+              {parcelas}x de <strong>{formatBrl(cotacao.valorParcela)}</strong>
+            </li>
+          ) : null}
+        </ul>
+      </div>
+
+      {countdown ? <p className="text-xs text-amber-800">Reserva expira em {countdown}</p> : null}
+
       <div className="flex gap-2">
         <button
           type="button"
@@ -273,22 +241,18 @@ export function CheckoutAsaasPainel({
             onChange={(e) => setParcelas(Number(e.target.value))}
             data-testid="checkout-parcelas"
           >
-            <option value={1}>À vista</option>
+            <option value={1}>À vista — {formatBrl(valorBase)}</option>
             {[2, 3, 6, 12]
               .filter((n) => n <= parcelamentoMax)
-              .map((n) => (
-                <option key={n} value={n}>
-                  {n}x de {formatBrl(valorReais / n)}
-                </option>
-              ))}
+              .map((n) => {
+                const c = cotacaoCheckout(valorBase, n);
+                return (
+                  <option key={n} value={n}>
+                    {n}x de {formatBrl(c.valorParcela ?? 0)} (total {formatBrl(c.totalPagar)})
+                  </option>
+                );
+              })}
           </select>
-          {parcelas > 1 ? (
-            <p className="mt-2 text-xs text-zinc-600">
-              Total: <strong>{formatBrl(valorReais)}</strong> — taxa estimada de processamento ({parcelas}x):{" "}
-              <strong>{formatBrl(taxaParcelamentoEst)}</strong>
-            </p>
-          ) : null}
-          <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">{AVISO_LEGAL_TAXAS}</p>
         </div>
       ) : metodo === "card" && parcelamentoHabilitado && !parcelamentoAtivo ? (
         <p className="text-xs text-amber-800">
@@ -298,9 +262,7 @@ export function CheckoutAsaasPainel({
 
       {metodo === "card" ? (
         <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
-          <p className="text-xs text-zinc-600">
-            Dados do cartão (processados pelo gateway de pagamento; não armazenamos o número).
-          </p>
+          <p className="text-xs text-zinc-600">Dados do cartão (processamento seguro pela plataforma).</p>
           <input
             className="w-full rounded border px-3 py-2 text-sm"
             placeholder="Nome no cartão"
@@ -323,7 +285,6 @@ export function CheckoutAsaasPainel({
               maxLength={2}
               value={cardMes}
               onChange={(e) => setCardMes(onlyDigits(e.target.value, 2))}
-              autoComplete="cc-exp-month"
             />
             <input
               className="rounded border px-3 py-2 text-sm"
@@ -331,7 +292,6 @@ export function CheckoutAsaasPainel({
               maxLength={4}
               value={cardAno}
               onChange={(e) => setCardAno(onlyDigits(e.target.value, 4))}
-              autoComplete="cc-exp-year"
             />
             <input
               className="rounded border px-3 py-2 text-sm"
@@ -339,7 +299,6 @@ export function CheckoutAsaasPainel({
               maxLength={4}
               value={cardCvv}
               onChange={(e) => setCardCvv(onlyDigits(e.target.value, 4))}
-              autoComplete="cc-csc"
             />
           </div>
           <input
@@ -366,9 +325,7 @@ export function CheckoutAsaasPainel({
       ) : null}
 
       {metodo === "invoice" && (
-        <p className="text-xs text-gray-500">
-          Abriremos a fatura de pagamento em nova aba (cartão, boleto ou PIX).
-        </p>
+        <p className="text-xs text-gray-500">Abriremos a fatura de pagamento em nova aba.</p>
       )}
       {msg && <p className="text-sm text-red-600">{msg}</p>}
       <button
@@ -376,17 +333,10 @@ export function CheckoutAsaasPainel({
         disabled={busy}
         className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-white disabled:opacity-60"
       >
-        {busy
-          ? "Processando…"
-          : metodo === "pix"
-            ? "Gerar PIX"
-            : metodo === "card"
-              ? "Pagar com cartão"
-              : "Abrir pagamento"}
+        {busy ? "Processando…" : metodo === "pix" ? `Pagar ${formatBrl(valorBase)} com PIX` : `Pagar ${formatBrl(totalPagar)}`}
       </button>
       <p className="text-xs text-gray-400">
-        Participante: {participanteNome} ({participanteEmail})
-        {participanteCpf ? ` · CPF ${participanteCpf}` : ""}
+        {valorFmt} · {participanteNome} ({participanteEmail})
       </p>
     </form>
   );

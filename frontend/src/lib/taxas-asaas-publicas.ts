@@ -1,7 +1,7 @@
-/** Espelho de app/services/taxas_asaas_publicas.py */
+/** Espelho de app/services/taxas_asaas_publicas.py — uso interno e acréscimo parcelamento. */
 
 export const AVISO_LEGAL_TAXAS =
-  "Valores estimativos. Taxas de processamento podem variar por conta, antecipação ou promoções. Não constitui oferta fiscal.";
+  "Valores conforme tabelas públicas. A taxa EventosBR é fixa por plano; parcelamento pode incluir acréscimo explícito.";
 
 export const TAXA_PIX = 1.99;
 export const TAXA_BOLETO = 1.99;
@@ -15,15 +15,29 @@ export type MetodoAsaas = "pix" | "boleto" | "cartao_avista" | "cartao_parcelado
 export function taxaCartaoPercentual(parcelas: number): { fixo: number; percentual: number } {
   if (parcelas <= 1) return { fixo: 0.49, percentual: 0.0299 };
   if (parcelas <= 6) return { fixo: 0.49, percentual: 0.0349 };
-  return { fixo: 0.49, percentual: 0.0399 };
+  if (parcelas <= 12) return { fixo: 0.49, percentual: 0.0399 };
+  return { fixo: 0.49, percentual: 0.0429 };
 }
 
-export function calcularTaxaAsaas(valorBruto: number, metodo: MetodoAsaas, parcelas = 1): number {
-  if (valorBruto <= 0) return 0;
-  if (metodo === "pix") return TAXA_PIX;
-  if (metodo === "boleto") return TAXA_BOLETO;
-  const t = taxaCartaoPercentual(parcelas);
-  return Math.round((t.fixo + valorBruto * t.percentual) * 100) / 100;
+export function calcularAcrescimoParcelamento(valorBase: number, parcelas: number): number {
+  if (parcelas <= 1 || valorBase <= 0) return 0;
+  const avista = 0.0299;
+  const parcelado = taxaCartaoPercentual(parcelas).percentual;
+  return Math.round(valorBase * Math.max(0, parcelado - avista) * 100) / 100;
+}
+
+export function cotacaoCheckout(valorBase: number, parcelas: number) {
+  const acrescimo = calcularAcrescimoParcelamento(valorBase, parcelas);
+  const total = Math.round((valorBase + acrescimo) * 100) / 100;
+  const valorParcela = parcelas > 1 ? Math.round((total / parcelas) * 100) / 100 : total;
+  const totalParcelas = parcelas > 1 ? Math.round(valorParcela * parcelas * 100) / 100 : total;
+  return {
+    precoIngresso: valorBase,
+    parcelas,
+    acrescimoParcelamento: acrescimo,
+    totalPagar: totalParcelas,
+    valorParcela: parcelas > 1 ? valorParcela : null,
+  };
 }
 
 export function comparativoSympla(valorBruto: number) {

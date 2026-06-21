@@ -70,8 +70,7 @@ export function PlanosSimuladorLucro() {
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
       <h2 className="text-xl font-semibold text-zinc-900">Simulador de lucro</h2>
       <p className="mt-2 text-sm text-zinc-600">
-        Estime quanto sobra após as taxas EventosBR de cada plano. As tarifas de processamento PIX/cartão são cobradas
-        pelo gateway e variam conforme o método — use o simulador em Organizador → Financeiro para esse detalhe.
+        Estime quanto sobra após a taxa EventosBR de cada plano. A taxa é fixa por ingresso — não muda com PIX ou cartão.
       </p>
 
       <div className="mt-6 grid gap-5 sm:grid-cols-2">

@@ -16,7 +16,7 @@ class Usuario(Base):
     auth_provider_id = Column(String(255), nullable=True, index=True)
     tipo = Column(String)  # "cliente" ou "organizador"
 
-    # Asaas
+    # Asaas (motor invisível de repasses)
     asaas_customer_id = Column(String, nullable=True)
     asaas_wallet_id = Column(String, nullable=True)
     asaas_account_id = Column(String, nullable=True)
@@ -24,7 +24,8 @@ class Usuario(Base):
     # Opt-in antecipação automática no cartão (espelho da config Asaas)
     asaas_anticipacao_cartao = Column(Boolean, nullable=True)
 
-    # Status
+    # plano_tarifa: padrao | assinatura (taxa por ingresso no split)
+    plano_tarifa = Column(String(16), default="padrao", nullable=False)
     ativo = Column(Boolean, default=True)
     # Incrementado ao desativar conta ou alterar senha — invalida JWTs antigos.
     token_version = Column(Integer, default=0, nullable=False)

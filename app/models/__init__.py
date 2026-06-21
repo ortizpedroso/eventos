@@ -12,6 +12,7 @@ from app.models.campanha_marketing import CampanhaMarketing, CampanhaEnvio
 from app.models.evento_lista_interesse import EventoListaInteresse
 from app.models.evento_lista_espera import EventoListaEspera
 from app.models.usuario_notificacao import UsuarioNotificacao
+from app.models.financeiro_saque import FinanceiroSaque
 
 __all__ = [
     "Base",
@@ -29,4 +30,5 @@ __all__ = [
     "EventoListaInteresse",
     "EventoListaEspera",
     "UsuarioNotificacao",
+    "FinanceiroSaque",
 ]
