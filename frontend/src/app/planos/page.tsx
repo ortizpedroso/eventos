@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
 import { PlanosSimuladorLucro } from "@/components/planos-simulador-lucro";
 import { ScrollReveal } from "@/components/scroll-reveal";
-import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
+import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 
 export const metadata: Metadata = {
   title: "Planos | EventosBR",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default function PlanosPage() {
-  const criarHref = authHrefParaCriarEvento();
+  const criarHref = hrefCriarEvento;
 
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 [&_li]:text-justify [&_p]:text-justify">

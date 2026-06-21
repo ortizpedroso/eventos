@@ -1,5 +1,8 @@
-/** Após login/cadastro como organizador, formulário de novo evento (painel). */
+/** Destino do fluxo “criar evento” (middleware valida sessão de organizador). */
 export const CRIAR_EVENTO_DESTINO = "/organizador/novo";
+
+/** Link direto — use em botões “Criar evento” (evita flash via /auth no cliente). */
+export const hrefCriarEvento = CRIAR_EVENTO_DESTINO;
 
 const ALLOWED_NEXT_PREFIXES = ["/", "/eventos", "/conta", "/organizador", "/auth"] as const;
 

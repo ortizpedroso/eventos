@@ -3,10 +3,9 @@
 import type { ReactNode } from "react";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { fetchSession, peekSessionCache } from "@/lib/api";
 import { OrganizadorTour } from "@/components/organizador-tour";
 
 const navDesktop = [
@@ -83,68 +82,13 @@ function mobileIcon(href: string, className: string) {
   return <IconEventos className={className} />;
 }
 
-function initialAuthState(): "loading" | "denied" | "ok" {
-  const cached = peekSessionCache();
-  if (cached?.tipo === "organizador") return "ok";
-  if (cached != null) return "denied";
-  return "loading";
-}
-
 export function OrganizadorShell({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const [auth, setAuth] = useState<"loading" | "denied" | "ok">(initialAuthState);
   const [menuMaisAberto, setMenuMaisAberto] = useState(false);
 
   useEffect(() => {
     setMenuMaisAberto(false);
   }, [pathname]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const u = await fetchSession();
-      if (cancelled) return;
-      if (!u) {
-        setAuth("denied");
-        const here =
-          typeof window !== "undefined"
-            ? window.location.pathname + window.location.search
-            : pathname;
-        router.replace(`/auth?next=${encodeURIComponent(here)}`);
-        return;
-      }
-      if (u.tipo !== "organizador") {
-        setAuth("denied");
-        router.replace("/eventos");
-        return;
-      }
-      setAuth("ok");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
-
-  if (auth === "loading") {
-    return (
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <div className="hidden lg:block lg:w-56">
-          <div className="h-64 animate-pulse rounded-2xl border border-zinc-200 bg-zinc-100" />
-        </div>
-        <div className="min-w-0 flex-1 space-y-4" role="status" aria-live="polite">
-          <div className="h-8 w-48 animate-pulse rounded-lg bg-zinc-200" />
-          <div className="h-4 w-full max-w-md animate-pulse rounded bg-zinc-100" />
-          <div className="h-4 w-2/3 max-w-sm animate-pulse rounded bg-zinc-100" />
-          <p className="sr-only">Carregando painel do organizador…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (auth === "denied") {
-    return null;
-  }
 
   const maisAtivo = navMobileMais.some((item) => isActive(pathname, item.href));
 

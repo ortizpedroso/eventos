@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
 # Atualiza a aplicacao no VPS (git pull + rebuild + migrate via entrypoint da API).
-# Uso no servidor: ./scripts/deploy-vps.sh
+# Uso no servidor: bash ./scripts/deploy-vps.sh
+#
+# IMPORTANTE: alteracoes no GitHub NAO entram sozinhas no VPS — rode este script apos cada push.
 #
 # Pre-requisitos: .env configurado, docker compose v2, dominio apontando para o VPS.
 

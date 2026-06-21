@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
+import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 import { categoriaFromQuery } from "@/lib/evento-categorias";
 import { fetchEventosPublicos } from "@/lib/eventos-publicos";
 
@@ -95,7 +95,7 @@ export default async function EventosListPage({ searchParams }: PageProps) {
       <div className="mx-auto mt-16 max-w-3xl text-center sm:mt-20">
         <p className="text-sm text-zinc-600">Organiza eventos?</p>
         <div className="mt-4 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
-          <Link href={authHrefParaCriarEvento()} className="btn-success px-6 py-3 text-base shadow-sm">
+          <Link href={hrefCriarEvento} className="btn-success px-6 py-3 text-base shadow-sm">
             Publicar evento
           </Link>
           <Link href="/planos" className="btn-outline px-6 py-3 text-base shadow-sm">

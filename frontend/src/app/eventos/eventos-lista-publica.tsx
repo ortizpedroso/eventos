@@ -8,7 +8,7 @@ import { EventoCardVitrine } from "@/components/evento-card-vitrine";
 import { EventoCategoriasChips } from "@/components/evento-categorias-chips";
 import { EventosGridSkeleton } from "@/components/eventos-grid-skeleton";
 import { apiFetch } from "@/lib/api";
-import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
+import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 import { EVENTO_CATEGORIAS, categoriaFromQuery } from "@/lib/evento-categorias";
 import {
   dateInputToIntervalo,
@@ -489,7 +489,7 @@ export function EventosListaPublica({
                 Ver todos os eventos
               </button>
             ) : null}
-            <Link href={authHrefParaCriarEvento()} className="btn-success px-6 py-3 text-base shadow-sm">
+            <Link href={hrefCriarEvento} className="btn-success px-6 py-3 text-base shadow-sm">
               Criar evento
             </Link>
           </div>

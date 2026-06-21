@@ -99,6 +99,26 @@ test.describe("Mobile — smoke viewport", () => {
   });
 });
 
+test.describe("Navegação — scroll e logo", () => {
+  test("nova página inicia no topo após scroll", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 1200));
+    await page.getByRole("link", { name: /Explorar eventos/i }).first().click();
+    await page.waitForURL(/\/eventos/);
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeLessThan(8);
+  });
+
+  test("logo na home rola para o topo", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 800));
+    await page.getByRole("link", { name: /EventosBR — início/i }).first().click();
+    await page.waitForTimeout(400);
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeLessThan(8);
+  });
+});
+
 test.describe("Perfil público do produtor", () => {
   test("renderiza página /produtor/{slug}", async ({ page }) => {
     test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");

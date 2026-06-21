@@ -6,7 +6,7 @@ import { HomeHeroVisual } from "@/components/home-hero-visual";
 import { HomeProvaSocial } from "@/components/home-prova-social";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
 import { ScrollReveal } from "@/components/scroll-reveal";
-import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
+import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 import { eventosDestaqueHome, fetchEventosPublicos } from "@/lib/eventos-publicos";
 
 export default async function Home() {
@@ -21,7 +21,7 @@ export default async function Home() {
     eventosHero = null;
   }
 
-  const criarHref = authHrefParaCriarEvento();
+  const criarHref = hrefCriarEvento;
 
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">

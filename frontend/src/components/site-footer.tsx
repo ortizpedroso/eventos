@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { EventosBRLogo } from "@/components/eventosbr-logo";
-import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
+import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 
 function IconInstagram({ className }: { className?: string }) {
   return (
@@ -60,7 +60,7 @@ export function SiteFooter() {
                 <li><Link href="/funcionalidades" className="text-zinc-400 hover:text-emerald-300">Funcionalidades</Link></li>
                 <li><Link href="/ajuda" className="text-zinc-400 hover:text-emerald-300">Central de ajuda</Link></li>
                 <li><Link href="/blog" className="text-zinc-400 hover:text-emerald-300">Blog</Link></li>
-                <li><Link href={authHrefParaCriarEvento()} className="text-zinc-400 hover:text-emerald-300">Publicar evento</Link></li>
+                <li><Link href={hrefCriarEvento} className="text-zinc-400 hover:text-emerald-300">Publicar evento</Link></li>
               </ul>
             </div>
             <div>
@@ -96,7 +96,13 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-12 border-t border-zinc-800/90 pt-8">
-          <p className="text-xs text-zinc-500">© {year} EventosBR. Todos os direitos reservados.</p>
+          <p className="text-xs text-zinc-500">
+            © {year}{" "}
+            <Link href="/" className="text-zinc-400 hover:text-emerald-300">
+              EventosBR
+            </Link>
+            . Todos os direitos reservados.
+          </p>
         </div>
       </div>
     </footer>
