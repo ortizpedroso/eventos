@@ -25,7 +25,7 @@ import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
 import { EVENTO_CATEGORIAS, slugFromNome } from "@/lib/eventos";
 import { apiFetch } from "@/lib/api";
 import { moedaBrlFromNumber } from "@/lib/moeda-brl";
-import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
+import { parseValorMonetarioInput, type PlanoTarifaId } from "@/lib/tarifas-plataforma";
 
 const CATEGORIAS = EVENTO_CATEGORIAS;
 
@@ -121,10 +121,19 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
   const [parcelamentoMax, setParcelamentoMax] = useState(2);
   const [repasseParcelamento, setRepasseParcelamento] = useState<"comprador" | "organizador">("comprador");
+  const [planoTarifa, setPlanoTarifa] = useState<PlanoTarifaId>("padrao");
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     setOrigin(typeof window !== "undefined" ? window.location.origin : "");
+  }, []);
+
+  useEffect(() => {
+    void apiFetch<{ plano_tarifa?: string }>("/api/organizador/financeiro/saldo")
+      .then((s) => {
+        if (s.plano_tarifa === "assinatura") setPlanoTarifa("assinatura");
+      })
+      .catch(() => {});
   }, []);
 
   const slugPrev = slugFromNome(nomeParaSlug);
@@ -439,6 +448,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     parcelamentoHabilitado={parcelamentoHabilitado}
                     parcelamentoMax={parcelamentoMax}
                     repasseParcelamento={repasseParcelamento}
+                    planoTarifa={planoTarifa}
                   />
                 </div>
               ) : (
@@ -504,6 +514,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   parcelamentoHabilitado={parcelamentoHabilitado}
                   parcelamentoMax={parcelamentoMax}
                   repasseParcelamento={repasseParcelamento}
+                  planoTarifa={planoTarifa}
                 />
                 <EventoVisibilidadeAvisosLegais />
               </div>

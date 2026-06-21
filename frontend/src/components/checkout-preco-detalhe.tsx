@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { labelPagamentoSeguro } from "@/lib/payment-provider";
 import { AVISO_LEGAL_TAXAS, INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import { formatBrl } from "@/lib/tarifas-plataforma";
 
@@ -30,8 +31,8 @@ export function CheckoutPrecoDetalhe({ precoIngresso, destaque = false, classNam
         <p className="text-sm font-semibold text-emerald-900">Ingresso: {formatBrl(precoIngresso)}</p>
       )}
       <p className="mt-2 text-xs text-emerald-950/90">
-        O valor final no checkout pode incluir acréscimo de parcelamento, quando disponível. Taxas de processamento
-        estão incluídas conforme o método de pagamento escolhido.
+        O valor final no checkout pode incluir acréscimo de parcelamento, quando disponível. Pagamento processado por
+        gateway certificado — {labelPagamentoSeguro().toLowerCase()}.
       </p>
       <p className="mt-2 text-[11px] text-emerald-800/70">{AVISO_LEGAL_TAXAS}</p>
       <p className="mt-2 text-[11px] text-emerald-800/70">

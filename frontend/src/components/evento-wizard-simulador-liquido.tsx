@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  TARIFA_ASSINATURA,
   TARIFA_PADRAO,
   detalharTaxaIngresso,
   formatBrl,
   rotuloTaxa,
+  type PlanoTarifaId,
 } from "@/lib/tarifas-plataforma";
 import {
   AVISO_LEGAL_TAXAS,
@@ -19,6 +21,7 @@ type Props = {
   parcelamentoHabilitado?: boolean;
   parcelamentoMax?: number;
   repasseParcelamento?: RepasseParcelamento;
+  planoTarifa?: PlanoTarifaId;
 };
 
 export function EventoWizardSimuladorLiquido({
@@ -28,6 +31,7 @@ export function EventoWizardSimuladorLiquido({
   parcelamentoHabilitado = false,
   parcelamentoMax = 2,
   repasseParcelamento = "comprador",
+  planoTarifa = "padrao",
 }: Props) {
   const precoNum =
     typeof preco === "number"
@@ -36,7 +40,8 @@ export function EventoWizardSimuladorLiquido({
 
   if (ocultar || precoNum == null || precoNum < 10) return null;
 
-  const detalhe = detalharTaxaIngresso(precoNum, TARIFA_PADRAO);
+  const tarifa = planoTarifa === "assinatura" ? TARIFA_ASSINATURA : TARIFA_PADRAO;
+  const detalhe = detalharTaxaIngresso(precoNum, tarifa);
   if (!detalhe) return null;
 
   const maxParcelas = Math.min(12, Math.max(2, parcelamentoMax || 2));
@@ -54,7 +59,7 @@ export function EventoWizardSimuladorLiquido({
     >
       <p className="text-sm font-semibold text-zinc-900">Quanto você recebe por ingresso</p>
       <p className="mt-1 text-xs text-zinc-600">
-        Taxa EventosBR fixa ({rotuloTaxa(TARIFA_PADRAO)}) — igual para PIX, cartão ou parcelamento.
+        Taxa EventosBR fixa ({rotuloTaxa(tarifa)}) — igual para PIX, cartão ou parcelamento.
       </p>
       <ul className="mt-4 space-y-1.5 text-xs text-zinc-600">
         <li className="flex justify-between gap-2">

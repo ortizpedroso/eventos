@@ -325,7 +325,7 @@ export function ComprarIngresso({
     })();
   }, []);
 
-  const ehCortesia = Number.isFinite(precoUnitario) && precoUnitario < 0.5;
+  const ehCortesia = Number.isFinite(precoUnitario) && precoUnitario <= 0;
   const precoCentavosUnit = ehCortesia ? 0 : Math.round(precoUnitario * 100);
   const precoCentavosCheckout = cupomPreview?.valor_centavos ?? precoCentavosUnit * quantidade;
   const precoReaisCheckout = precoCentavosCheckout / 100;

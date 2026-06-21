@@ -20,6 +20,7 @@ import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade
 import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
 import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import { apiFetch, getApiBaseUrl } from "@/lib/api";
+import type { PlanoTarifaId } from "@/lib/tarifas-plataforma";
 import type { Evento, Usuario } from "@/lib/types";
 
 type Props = { slug: string };
@@ -61,6 +62,7 @@ export function EditarEventoClient({ slug }: Props) {
   const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
   const [parcelamentoMax, setParcelamentoMax] = useState(2);
   const [repasseParcelamento, setRepasseParcelamento] = useState<"comprador" | "organizador">("comprador");
+  const [planoTarifa, setPlanoTarifa] = useState<PlanoTarifaId>("padrao");
   const [csvBusy, setCsvBusy] = useState(false);
   const [interesseRows, setInteresseRows] = useState<{ email: string; nome: string | null; data_criacao: string | null }[]>([]);
   const [interesseLoadErr, setInteresseLoadErr] = useState<string | null>(null);
@@ -117,6 +119,14 @@ export function EditarEventoClient({ slug }: Props) {
 
   useEffect(() => {
     setOrigin(typeof window !== "undefined" ? window.location.origin : "");
+  }, []);
+
+  useEffect(() => {
+    void apiFetch<{ plano_tarifa?: string }>("/api/organizador/financeiro/saldo")
+      .then((s) => {
+        if (s.plano_tarifa === "assinatura") setPlanoTarifa("assinatura");
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -430,6 +440,7 @@ export function EditarEventoClient({ slug }: Props) {
               parcelamentoHabilitado={parcelamentoHabilitado}
               parcelamentoMax={parcelamentoMax}
               repasseParcelamento={repasseParcelamento}
+              planoTarifa={planoTarifa}
             />
           </div>
 
