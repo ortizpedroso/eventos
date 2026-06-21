@@ -269,6 +269,7 @@ def iniciar_cobranca_asaas(
 
     for ing in lote:
         ing.asaas_payment_id = pid
+        ing.valor_cobrado = round(valor_cobranca / max(1, len(lote)), 2)
     registrar_ledger_ingressos_lote(
         lote,
         tarifa=tarifa,
@@ -302,7 +303,7 @@ def iniciar_cobranca_asaas(
 
 def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
     lote_pendente = ingressos_lote_pendente(db, ingresso) or [ingresso]
-    valor_total_centavos = int(round(_valor_lote_reais(lote_pendente) * 100))
+    valor_base_centavos = int(round(_valor_lote_reais(lote_pendente) * 100))
 
     pay_id = (ingresso.asaas_payment_id or "").strip()
     if not pay_id:
@@ -315,7 +316,7 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
             "reservado_ate": ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None,
             "participante_nome": ingresso.participante_nome,
             "participante_email": ingresso.participante_email,
-            "valor_centavos": valor_total_centavos,
+            "valor_centavos": valor_base_centavos,
             "evento_slug": ingresso.evento.slug,
         }
 
@@ -324,6 +325,8 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
     except AsaasAPIError as e:
         logger.exception("Erro ao consultar cobrança Asaas %s", pay_id)
         raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
+
+    valor_cobranca_centavos = int(round(float(payment.get("value") or 0) * 100)) or valor_base_centavos
 
     if status_eh_pago(payment.get("status")):
         pagos = processar_cobranca_confirmada_gateway(db, pay_id)
@@ -360,7 +363,7 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
             "reservado_ate": ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None,
             "participante_nome": ingresso.participante_nome,
             "participante_email": ingresso.participante_email,
-            "valor_centavos": valor_total_centavos,
+            "valor_centavos": valor_cobranca_centavos,
             "evento_slug": ingresso.evento.slug,
         }
     )
@@ -380,7 +383,7 @@ def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
         )
         .count()
     )
-    valor = float(ingresso.valor or 0)
+    valor = float(getattr(ingresso, "valor_cobrado", None) or ingresso.valor or 0)
     try:
         idem_key = f"refund_{pay_id}_{ingresso.id}"
         if outros_pagos > 0:

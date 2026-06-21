@@ -54,8 +54,14 @@ def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "receita_bruta": bruto,
         "taxa_plataforma_total": taxa_total,
         "liquido_acumulado": liquido,
+        "total_repassado_split": liquido,
         "saques_reservados": saques_pagos_f,
         "saldo_disponivel": disponivel,
+        "saque_habilitado": False,
+        "nota_saque": (
+            "Os valores das vendas são repassados automaticamente para sua conta de repasses "
+            "no momento de cada pagamento (split). Não é necessário solicitar saque pela plataforma."
+        ),
         "ingressos_pagos": len(ingressos),
     }
 
@@ -139,40 +145,10 @@ def solicitar_saque(
 ) -> FinanceiroSaque:
     if usuario.tipo != "organizador":
         raise ValueError("Apenas organizadores podem solicitar saque.")
-    org = db.query(Usuario).filter(Usuario.id == usuario.id).with_for_update().first()
-    if not org:
-        raise ValueError("Organizador não encontrado.")
-    if not (org.asaas_wallet_id or "").strip():
-        raise ValueError("Configure sua conta de repasses antes de solicitar saque.")
-
-    valor_r = round(valor, 2)
-    if valor_r < 1.0:
-        raise ValueError("Valor mínimo para saque: R$ 1,00.")
-
-    chave = (pix_chave or "").strip()
-    if len(chave) < 5:
-        raise ValueError("Informe uma chave Pix válida.")
-
-    saldo = calcular_saldo_organizador(db, org)
-    if valor_r > saldo["saldo_disponivel"]:
-        raise ValueError(
-            f"Saldo insuficiente. Disponível: R$ {saldo['saldo_disponivel']:.2f}."
-        )
-
-    agora = datetime.now(timezone.utc).replace(tzinfo=None)
-    saque = FinanceiroSaque(
-        organizador_id=org.id,
-        valor=valor_r,
-        pix_chave=chave,
-        pix_tipo=(pix_tipo or "EVP").strip().upper()[:20],
-        status="pendente",
-        criado_em=agora,
-        atualizado_em=agora,
+    raise ValueError(
+        "Os repasses são automáticos no momento da venda (split). "
+        "O valor líquido já vai para sua conta de repasses — não é necessário solicitar saque pela plataforma."
     )
-    db.add(saque)
-    db.commit()
-    db.refresh(saque)
-    return saque
 
 
 def cancelar_saque(db: Session, usuario: Usuario, saque_id: str) -> FinanceiroSaque:

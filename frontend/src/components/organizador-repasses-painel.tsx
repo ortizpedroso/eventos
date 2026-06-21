@@ -24,8 +24,11 @@ type Saldo = {
   receita_bruta: number;
   taxa_plataforma_total: number;
   liquido_acumulado: number;
+  total_repassado_split?: number;
   saques_reservados: number;
   saldo_disponivel: number;
+  saque_habilitado?: boolean;
+  nota_saque?: string | null;
   ingressos_pagos: number;
 };
 
@@ -167,18 +170,26 @@ export function OrganizadorRepassesPainel() {
       {saldo ? (
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
-            <p className="text-xs text-zinc-500">Saldo disponível</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-800">{fmt(saldo.saldo_disponivel)}</p>
+            <p className="text-xs text-zinc-500">Total repassado (split automático)</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-800">
+              {fmt(saldo.total_repassado_split ?? saldo.liquido_acumulado)}
+            </p>
           </div>
           <div className="rounded-xl border border-zinc-200 p-4">
             <p className="text-xs text-zinc-500">Taxa EventosBR ({saldo.rotulo_taxa})</p>
             <p className="mt-1 text-lg font-semibold text-zinc-900">{fmt(saldo.taxa_plataforma_total)}</p>
           </div>
           <div className="rounded-xl border border-zinc-200 p-4">
-            <p className="text-xs text-zinc-500">Líquido acumulado</p>
-            <p className="mt-1 text-lg font-semibold text-zinc-900">{fmt(saldo.liquido_acumulado)}</p>
+            <p className="text-xs text-zinc-500">Ingressos pagos</p>
+            <p className="mt-1 text-lg font-semibold text-zinc-900">{saldo.ingressos_pagos}</p>
           </div>
         </div>
+      ) : null}
+
+      {saldo?.nota_saque ? (
+        <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-950">
+          {saldo.nota_saque}
+        </p>
       ) : null}
 
       {status && !status.repasses_prontos ? (
@@ -246,7 +257,7 @@ export function OrganizadorRepassesPainel() {
         </form>
       ) : null}
 
-      {status?.repasses_prontos ? (
+      {status?.repasses_prontos && saldo?.saque_habilitado ? (
         <form onSubmit={solicitarSaque} className="mt-6 border-t border-zinc-100 pt-5">
           <h3 className="text-sm font-semibold text-zinc-900">Solicitar saque via Pix</h3>
           <div className="mt-3 flex flex-wrap items-end gap-3">

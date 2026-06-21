@@ -20,6 +20,7 @@ import { EventoConfigAvancadaFields } from "@/components/evento-config-avancada-
 import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
 import { EventoWizardSimuladorLiquido } from "@/components/evento-wizard-simulador-liquido";
 import { InputValorBrl } from "@/components/input-valor-brl";
+import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
 import { EVENTO_CATEGORIAS, slugFromNome } from "@/lib/eventos";
 import { apiFetch } from "@/lib/api";
@@ -182,15 +183,19 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
     const lotesPayload = lotesRowsToApiPayload(rows);
     for (const l of lotesPayload) {
       if (l.tipo === "cortesia") continue;
-      if (!Number.isFinite(l.preco) || l.preco < 0.5) {
-        setError("Informe um preço válido (mínimo R$ 0,50) ou marque evento gratuito.");
+      if (!Number.isFinite(l.preco) || l.preco < INGRESSO_MINIMO_PAGO_REAIS) {
+        setError(
+          `Informe um preço válido (mínimo R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}) ou marque evento gratuito.`,
+        );
         setLoading(false);
         return;
       }
     }
     const temPago = lotesPayload.some((l) => l.tipo !== "cortesia");
-    if (temPago && (!Number.isFinite(preco_ingresso) || preco_ingresso < 0.5)) {
-      setError("Informe pelo menos um lote pago com preço mínimo de R$ 0,50.");
+    if (temPago && (!Number.isFinite(preco_ingresso) || preco_ingresso < INGRESSO_MINIMO_PAGO_REAIS)) {
+      setError(
+        `Informe pelo menos um lote pago com preço mínimo de R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}.`,
+      );
       setLoading(false);
       return;
     }

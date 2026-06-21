@@ -29,6 +29,7 @@ class Ingresso(Base):
     desconto_parcelamento_organizador = Column(Float, nullable=True)
     parcelas_cobranca = Column(Integer, nullable=True)
     plano_tarifa_venda = Column(String(16), nullable=True)
+    valor_cobrado = Column(Float, nullable=True)
 
     lote_id = Column(String, ForeignKey("evento_ingresso_lotes.id"), nullable=True, index=True)
     cupom_id = Column(String, ForeignKey("evento_cupons.id", ondelete="SET NULL"), nullable=True)

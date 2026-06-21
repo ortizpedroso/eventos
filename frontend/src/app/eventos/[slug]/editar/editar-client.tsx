@@ -18,6 +18,7 @@ import { EventoConfigAvancadaFields } from "@/components/evento-config-avancada-
 import { EventoWizardSimuladorLiquido } from "@/components/evento-wizard-simulador-liquido";
 import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
 import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
+import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import { apiFetch, getApiBaseUrl } from "@/lib/api";
 import type { Evento, Usuario } from "@/lib/types";
 
@@ -173,8 +174,10 @@ export function EditarEventoClient({ slug }: Props) {
       }
     }
     const temPago = lotesPayload.some((l) => l.tipo !== "cortesia");
-    if (temPago && (!Number.isFinite(preco_ingresso) || preco_ingresso < 0.5)) {
-      setError("Informe pelo menos um lote pago com preço mínimo de R$ 0,50.");
+    if (temPago && (!Number.isFinite(preco_ingresso) || preco_ingresso < INGRESSO_MINIMO_PAGO_REAIS)) {
+      setError(
+        `Informe pelo menos um lote pago com preço mínimo de R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}.`,
+      );
       setSaving(false);
       return;
     }
