@@ -6,7 +6,7 @@ excerpt: Conheça a plataforma brasileira para vender e comprar ingressos com tr
 
 # Bem-vindo ao EventosBR
 
-O **EventosBR** é a plataforma para organizadores publicarem eventos e para o público comprar ingressos com segurança — PIX, cartão via **Asaas**, reembolso automático e repasse oficial de ingresso.
+O **EventosBR** é a plataforma para organizadores publicarem eventos e para o público comprar ingressos com segurança — PIX, cartão, reembolso automático e repasse oficial de ingresso.
 
 ## Para organizadores
 

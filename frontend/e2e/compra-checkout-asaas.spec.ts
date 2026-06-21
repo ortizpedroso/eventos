@@ -54,10 +54,10 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     await expect(page.getByText(/Pagamento seguro/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Stripe/i)).not.toBeVisible();
 
-    await expect(page.getByRole("button", { name: "Gerar PIX" })).toBeVisible({ timeout: 30_000 });
-    await page.getByRole("button", { name: "Gerar PIX" }).click();
+    await expect(page.getByRole("button", { name: /Pagar .* com PIX/i })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: /Pagar .* com PIX/i }).click();
 
-    await expect(page.getByText(/PIX copia e cola/i)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Copiar código PIX|QR Code PIX/i)).toBeVisible({ timeout: 20_000 });
 
     const token = await apiLogin(email, senha);
     const ingressoId = await fetchIngressoPendente(token);
@@ -98,8 +98,8 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     await expect(page.getByText(/Pagamento seguro/i)).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /cartão/i }).click();
     await expect(page.getByTestId("checkout-parcelas")).toBeVisible({ timeout: 15_000 });
-    await page.getByTestId("checkout-parcelas").selectOption("3");
-    await expect(page.getByText(/3x/i).first()).toBeVisible();
+    await page.getByLabel(/3x de/i).check();
+    await expect(page.getByText(/3x de/i).first()).toBeVisible();
   });
 });
 

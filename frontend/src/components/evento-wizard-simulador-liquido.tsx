@@ -7,6 +7,7 @@ import {
   rotuloTaxa,
 } from "@/lib/tarifas-plataforma";
 import {
+  AVISO_LEGAL_TAXAS,
   calcularAcrescimoParcelamento,
   type RepasseParcelamento,
 } from "@/lib/taxas-asaas-publicas";
@@ -81,6 +82,7 @@ export function EventoWizardSimuladorLiquido({
           </li>
         ) : null}
       </ul>
+      <p className="mt-3 text-[11px] text-zinc-500">{AVISO_LEGAL_TAXAS}</p>
     </div>
   );
 }

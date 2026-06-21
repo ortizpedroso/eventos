@@ -3,14 +3,16 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { validarDadosCartao } from "@/lib/cartao-validacao";
 import { mapCheckoutError } from "@/lib/checkout-errors";
 import { formatCpfMask, onlyDigits } from "@/lib/cpf";
 import {
+  AVISO_LEGAL_TAXAS,
   PARCELAMENTO_MINIMO_REAIS,
   cotacaoCheckout,
   type RepasseParcelamento,
 } from "@/lib/taxas-asaas-publicas";
-import { TARIFA_PADRAO, detalharTaxaIngresso, formatBrl, rotuloTaxa } from "@/lib/tarifas-plataforma";
+import { formatBrl } from "@/lib/tarifas-plataforma";
 import type { AsaasPixPayload, CriarPagamentoResponse } from "@/lib/types";
 
 type Props = {
@@ -79,7 +81,6 @@ export function CheckoutAsaasPainel({
     () => cotacaoCheckout(valorBase, parcelasEfetivas, repasseParcelamento),
     [valorBase, parcelasEfetivas, repasseParcelamento],
   );
-  const taxaDetalhe = useMemo(() => detalharTaxaIngresso(valorBase, TARIFA_PADRAO), [valorBase]);
   const totalPagar =
     metodo === "card" && parcelas > 1 ? cotacao.totalPagar : valorBase;
 
@@ -135,6 +136,20 @@ export function CheckoutAsaasPainel({
       if (metodo === "card" && parcelas > 1) body.parcelas = parcelas;
 
       if (metodo === "card") {
+        const erroCartao = validarDadosCartao({
+          nome: cardNome,
+          numero: cardNumero,
+          mes: cardMes,
+          ano: cardAno,
+          cvv: cardCvv,
+          cpf: cardCpf,
+          cep: cardCep,
+        });
+        if (erroCartao) {
+          setMsg(erroCartao);
+          setBusy(false);
+          return;
+        }
         body.credit_card = {
           holderName: cardNome.trim(),
           number: onlyDigits(cardNumero, 19),
@@ -247,12 +262,6 @@ export function CheckoutAsaasPainel({
             <span>Ingresso</span>
             <span>{formatBrl(valorBase)}</span>
           </li>
-          {taxaDetalhe ? (
-            <li className="flex justify-between gap-2">
-              <span>Taxa EventosBR ({rotuloTaxa(TARIFA_PADRAO)})</span>
-              <span>{formatBrl(taxaDetalhe.taxaTotal)}</span>
-            </li>
-          ) : null}
           {metodo === "card" && parcelas > 1 && cotacao.acrescimoParcelamento > 0 ? (
             <li className="flex justify-between gap-2 font-medium text-amber-900">
               <span>Acréscimo parcelamento ({parcelas}x)</span>
@@ -273,6 +282,7 @@ export function CheckoutAsaasPainel({
             </li>
           ) : null}
         </ul>
+        <p className="mt-2 text-[11px] text-emerald-800/80">{AVISO_LEGAL_TAXAS}</p>
       </div>
 
       {countdown ? <p className="text-xs text-amber-800">Reserva expira em {countdown}</p> : null}

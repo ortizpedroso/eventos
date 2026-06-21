@@ -241,6 +241,14 @@ def iniciar_cobranca_asaas(
     if body.metodo == "invoice":
         billing = "UNDEFINED"
 
+    if body.metodo == "card":
+        from app.utils.cartao_validacao import validar_dados_cartao
+
+        try:
+            validar_dados_cartao(body.credit_card, body.credit_card_holder_info)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+
     try:
         payment = criar_cobranca_asaas(
             customer_id=customer_id,

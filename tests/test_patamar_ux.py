@@ -24,6 +24,24 @@ from app.services.taxas_asaas_publicas import calcular_taxa_asaas, calcular_acre
 from app.services.urgencia import calcular_urgencia
 from tests import test_api
 
+CARD_TESTE_ASAAS = {
+    "credit_card": {
+        "holderName": "Teste Silva",
+        "number": "4111111111111111",
+        "expiryMonth": "12",
+        "expiryYear": "2030",
+        "ccv": "123",
+    },
+    "credit_card_holder_info": {
+        "name": "Teste Silva",
+        "email": "buyer@ex.com",
+        "cpfCnpj": "52998224725",
+        "postalCode": "01310100",
+        "addressNumber": "100",
+        "phone": "11987654321",
+    },
+}
+
 
 def _db():
     return test_api.TestingSessionLocal()
@@ -317,8 +335,64 @@ def test_extrato_inclui_saques_e_vendas():
         tipos = {m["tipo"] for m in ex["movimentos"]}
         assert "venda" in tipos
         assert "saque" in tipos
+        assert ex["total_movimentos"] >= 2
     finally:
         db.close()
+
+
+def test_extrato_paginacao_offset():
+    from app.models import Ingresso
+    from app.services.financeiro_organizador import listar_extrato
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, nome="Paginacao")
+        for i in range(5):
+            db.add(
+                Ingresso(
+                    evento_id=ev.id,
+                    usuario_id=org.id,
+                    valor=20.0 + i,
+                    status="pago",
+                    liquido_repassado=18.0,
+                    taxa_plataforma_aplicada=2.0 + i,
+                    plano_tarifa_venda="padrao",
+                    asaas_payment_id=f"pay_{uuid.uuid4().hex[:8]}",
+                )
+            )
+        db.commit()
+
+        p1 = listar_extrato(db, org, limite=2, offset=0)
+        p2 = listar_extrato(db, org, limite=2, offset=2)
+        assert p1["total_movimentos"] >= 5
+        assert len(p1["movimentos"]) == 2
+        assert len(p2["movimentos"]) == 2
+        ids1 = {m["id"] for m in p1["movimentos"]}
+        ids2 = {m["id"] for m in p2["movimentos"]}
+        assert ids1.isdisjoint(ids2)
+    finally:
+        db.close()
+
+
+def test_validar_dados_cartao_rejeita_numero_invalido():
+    from app.utils.cartao_validacao import validar_dados_cartao
+
+    with pytest.raises(ValueError, match="inválido"):
+        validar_dados_cartao(
+            {
+                "holderName": "Teste Silva",
+                "number": "4111111111111112",
+                "expiryMonth": "12",
+                "expiryYear": "2030",
+                "ccv": "123",
+            },
+            {
+                "name": "Teste Silva",
+                "cpfCnpj": "52998224725",
+                "postalCode": "01310100",
+            },
+        )
 
 
 def test_urgencia_sem_estoque_conhecido():
@@ -1153,7 +1227,7 @@ def test_iniciar_cobranca_nova_409_se_pago_mas_nao_liberado():
                 iniciar_cobranca_asaas(
                     db,
                     org,
-                    AsaasCobrancaRequest(ingresso_id=ing.id, metodo="card"),
+                    AsaasCobrancaRequest(ingresso_id=ing.id, metodo="card", **CARD_TESTE_ASAAS),
                 )
         assert exc.value.status_code == 409
         assert ing.asaas_payment_id == "pay_novo_card"
@@ -1483,7 +1557,7 @@ def test_parcelamento_cobranca_installment_count():
         cob = test_api.client.post(
             "/api/pagamentos/asaas/cobranca",
             headers={"Authorization": f"Bearer {cli_token}"},
-            json={"ingresso_id": iid, "metodo": "card", "parcelas": 3},
+            json={"ingresso_id": iid, "metodo": "card", "parcelas": 3, **CARD_TESTE_ASAAS},
         )
     assert cob.status_code == 200, cob.text
     assert captured.get("installment_count") == 3

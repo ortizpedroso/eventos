@@ -58,11 +58,12 @@ Elevar o EventosBR ao próximo patamar de produto e confiança de mercado, imple
 - **Remover** exibição de host/API bruto ao usuário final.
 - **Concluído quando:** footer sem links `#` mortos por padrão (placeholders vazios = ocultar ícone, não link quebrado).
 
-### REQ-06 — Consistência de pagamento no comprador
+### REQ-06 — Consistência de pagamento no comprador (modelo all-in)
 - `compra-info-confianca.tsx` e `checkout-preco-detalhe.tsx` citam **gateway de pagamento certificado** (sem expor marca do provedor ao comprador).
-- Transparência de taxas: preço final, taxa EventosBR e nota de processamento **conforme método** (PIX, cartão, parcelas).
-- Painel do organizador (`/organizador/financeiro`) pode citar Asaas para configuração de repasses.
-- **Concluído quando:** página de evento + checkout sem texto contraditório nem menção a processadores legados.
+- **Comprador:** vê preço do ingresso, total a pagar (com acréscimo de parcelamento quando aplicável) e nota genérica de processamento incluído — **sem** breakdown de taxa EventosBR nem “organizador recebe”.
+- **Organizador:** vê taxa EventosBR e líquido em wizard, planos e painel financeiro.
+- Repasses automáticos via split no momento da venda; saque manual pela plataforma **desabilitado** (`saque_habilitado: false`).
+- **Concluído quando:** página de evento + checkout sem texto contraditório nem menção a processadores legados (Stripe etc.).
 
 ### REQ-07 — Badges de pagamento no checkout
 - Exibir selos visuais: **PIX**, **Cartão**, **Pagamento seguro** (ícones SVG, não emojis).
@@ -130,18 +131,20 @@ Elevar o EventosBR ao próximo patamar de produto e confiança de mercado, imple
 - Taxas EventosBR: usar `tarifas_plataforma.py` / `tarifas-plataforma.ts` existentes.
 - **Concluído quando:** simuladores leem destas fontes, não valores hardcoded espalhados.
 
-### REQ-16 — Simuladores em todos os pontos (letra E)
-Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; comprador vê total) em:
+### REQ-16 — Simuladores em todos os pontos (modelo all-in EventosBR)
+
+Taxas EventosBR (por plano): **Padrão** 10% + R$ 2,00/ingresso; **Assinatura** 8% + R$ 1,00/ingresso (+ R$ 500/mês — billing futuro).
 
 | Local | O que mostrar |
 |-------|----------------|
 | `/planos` | Lucro por volume; comparativo plano padrão vs assinatura; **comparativo ilustrativo Sympla** com disclaimer |
-| Wizard / criação e edição de evento | Estimativa por ingresso (bruto → taxa EventosBR → taxa Asaas estimada → líquido) |
-| Painel Financeiro | Expandir simulador Asaas existente + breakdown completo |
-| Página do evento / checkout | Comprador vê **preço final** e nota de transparência (“taxas de processamento incluídas conforme método”) |
+| Wizard / criação e edição de evento | Estimativa por ingresso (bruto → taxa EventosBR → líquido; impacto parcelamento repassar/absorver) |
+| Painel Financeiro | Saldo repassado (split automático), extrato paginado, taxa EventosBR acumulada |
+| Página do evento / checkout (comprador) | **Preço do ingresso** + total no checkout; nota de processamento incluído |
 
-- Comparativo Sympla: usar taxas **públicas divulgadas** pela Sympla (constante documentada + link fonte); texto **“valores ilustrativos, conferir nos sites oficiais”**.
-- **Concluído quando:** os 4 superfícies renderizam números coerentes entre si para o mesmo preço de ingresso.
+- Asaas: referência interna em `taxas_asaas_publicas.py` para acréscimo de parcelamento; **não expor marca** ao comprador.
+- Comparativo Sympla: taxas públicas + disclaimer “valores ilustrativos”.
+- **Concluído quando:** os 4 superfícies renderizam números coerentes para o mesmo preço de ingresso.
 
 ### REQ-17 — Avisos legais
 - Todo simulador exibe nota: valores **estimativos**; taxas de **processamento** podem variar por conta/antecipação; não constitui oferta fiscal.
@@ -168,9 +171,10 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 
 ### REQ-20 — Casos extremos parcelamento
 - Evento gratuito / cortesia: sem parcelamento.
-- Valor abaixo do mínimo Asaas (definir mínimo R$ 5,00 ou documentar): desabilitar parcelas ou mostrar mensagem.
+- Valor abaixo do mínimo pago (**R$ 10,00** — `INGRESSO_MINIMO_PAGO_REAIS`): desabilitar parcelas ou mostrar mensagem.
 - Parcelamento desligado: checkout só à vista.
-- Falha API Asaas: mensagem em português; não perder reserva sem ação do usuário (comportamento atual de reserva mantido).
+- Falha API gateway: mensagem em português; não perder reserva sem ação do usuário (comportamento atual de reserva mantido).
+- Validação de cartão (client + server) antes de enviar cobrança.
 
 ---
 
@@ -370,7 +374,7 @@ Implementar ou expandir simuladores **fidedignos** (organizador vê líquido; co
 | Escopo | Todas as melhorias sugeridas; código local + Anexo B para VPS |
 | Marca/domínio | EventosBR + eventosbr.app.br |
 | Visual | Híbrido esmeralda/zinc + hero visual; âmbar só urgência |
-| Parcelamento | Organizador liga/desliga; máx 2/3/6/12x; taxas Asaas transparentes |
+| Parcelamento | Organizador liga/desliga; máx 2/3/6/12x; acréscimo explícito ao comprador ou absorvido; taxa EventosBR all-in |
 | Listas | Interesse + espera; e-mail+conta; CSV; prazo 12/24/48h |
 | Página organizador | Perfil público + métricas reais |
 | Ajuda/blog | Estático + Markdown |

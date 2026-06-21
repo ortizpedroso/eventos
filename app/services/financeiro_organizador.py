@@ -140,24 +140,45 @@ def listar_extrato(
         .order_by(FinanceiroSaque.criado_em.desc())
         .all()
     )
-    window = min(1000, offset + limite + len(saques) + 20)
-    ingressos = (
-        _ingressos_pagos_query(db, usuario.id)
-        .order_by(Ingresso.data_compra.desc())
-        .limit(window)
-        .all()
-    )
-    evento_ids = {i.evento_id for i in ingressos}
+    ingressos_q = _ingressos_pagos_query(db, usuario.id)
+    total_vendas = ingressos_q.count()
+    total_movimentos = total_vendas + len(saques)
+
+    refs: list[tuple[str, str, str | None]] = []
+    for ing in ingressos_q.with_entities(Ingresso.id, Ingresso.data_compra).all():
+        refs.append(("venda", ing.id, ing.data_compra.isoformat() if ing.data_compra else None))
+    for s in saques:
+        refs.append(("saque", s.id, s.criado_em.isoformat() if s.criado_em else None))
+    refs.sort(key=lambda r: r[2] or "", reverse=True)
+
+    page = refs[offset : offset + limite]
+    venda_ids = [rid for tipo, rid, _ in page if tipo == "venda"]
+    saque_ids = {rid for tipo, rid, _ in page if tipo == "saque"}
+
+    ingressos_map: dict[str, Ingresso] = {}
+    if venda_ids:
+        for ing in db.query(Ingresso).filter(Ingresso.id.in_(venda_ids)).all():
+            ingressos_map[ing.id] = ing
+    evento_ids = {i.evento_id for i in ingressos_map.values()}
     eventos = {e.id: e for e in db.query(Evento).filter(Evento.id.in_(evento_ids)).all()} if evento_ids else {}
+    saques_map = {s.id: s for s in saques if s.id in saque_ids}
 
     movimentos: list[dict[str, Any]] = []
-    movimentos.extend(_movimento_venda(ing, eventos.get(ing.evento_id), tarifa) for ing in ingressos)
-    movimentos.extend(_movimento_saque(s) for s in saques)
-    movimentos.sort(key=lambda m: m.get("data") or "", reverse=True)
+    for tipo, rid, _ in page:
+        if tipo == "venda":
+            ing = ingressos_map.get(rid)
+            if ing:
+                movimentos.append(_movimento_venda(ing, eventos.get(ing.evento_id), tarifa))
+        else:
+            saq = saques_map.get(rid)
+            if saq:
+                movimentos.append(_movimento_saque(saq))
 
     return {
-        "movimentos": movimentos[offset : offset + limite],
-        "total_movimentos": len(movimentos),
+        "movimentos": movimentos,
+        "total_movimentos": total_movimentos,
+        "offset": offset,
+        "limite": limite,
         "saldo": calcular_saldo_organizador(db, usuario),
     }
 

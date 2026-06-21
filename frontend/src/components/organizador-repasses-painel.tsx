@@ -61,6 +61,9 @@ export function OrganizadorRepassesPainel() {
   const [status, setStatus] = useState<RepasseStatus | null>(null);
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
+  const [extratoOffset, setExtratoOffset] = useState(0);
+  const [extratoTotal, setExtratoTotal] = useState(0);
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,18 +80,21 @@ export function OrganizadorRepassesPainel() {
   const [saqueValor, setSaqueValor] = useState(() => moedaBrlFromNumber(100));
   const [pixChave, setPixChave] = useState("");
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (offset = 0, append = false) => {
     setError(null);
     try {
       const [s, ex] = await Promise.all([
         apiFetch<RepasseStatus>("/api/organizador/asaas", { cache: "no-store" }),
-        apiFetch<{ saldo: Saldo; movimentos: Movimento[] }>("/api/organizador/financeiro/extrato?limite=30", {
-          cache: "no-store",
-        }),
+        apiFetch<{ saldo: Saldo; movimentos: Movimento[]; total_movimentos?: number; offset?: number }>(
+          `/api/organizador/financeiro/extrato?limite=30&offset=${offset}`,
+          { cache: "no-store" },
+        ),
       ]);
       setStatus(s);
       setSaldo(ex.saldo);
-      setMovimentos(ex.movimentos);
+      setExtratoOffset(offset + ex.movimentos.length);
+      setExtratoTotal(ex.total_movimentos ?? ex.movimentos.length);
+      setMovimentos((prev) => (append ? [...prev, ...ex.movimentos] : ex.movimentos));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível carregar repasses.");
     }
@@ -151,9 +157,10 @@ export function OrganizadorRepassesPainel() {
 
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-lg font-semibold text-zinc-900">Repasses e saques</h2>
+      <h2 className="text-lg font-semibold text-zinc-900">Repasses automáticos</h2>
       <p className="mt-1 text-sm text-zinc-600">
-        Receba vendas na sua conta EventosBR e solicite saques via Pix — tudo pela plataforma.
+        Configure sua conta de repasses e acompanhe vendas. O valor líquido é repassado automaticamente no momento de
+        cada pagamento (split).
       </p>
 
       {error ? (
@@ -329,6 +336,23 @@ export function OrganizadorRepassesPainel() {
               </li>
             ))}
           </ul>
+          {extratoOffset < extratoTotal ? (
+            <button
+              type="button"
+              disabled={carregandoMais}
+              className="mt-3 w-full rounded-lg border border-zinc-200 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+              onClick={async () => {
+                setCarregandoMais(true);
+                try {
+                  await carregar(extratoOffset, true);
+                } finally {
+                  setCarregandoMais(false);
+                }
+              }}
+            >
+              {carregandoMais ? "Carregando…" : "Carregar mais movimentos"}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </section>
