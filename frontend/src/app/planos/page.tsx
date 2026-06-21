@@ -21,7 +21,8 @@ export default function PlanosPage() {
           Planos para cada tipo de <span className="text-emerald-700">evento.</span>
         </h1>
         <p className="mt-6 text-lg text-zinc-600 sm:text-xl">
-          Sem mensalidade obrigatória para começar. Pagamentos via PIX e cartão com taxas transparentes nos simuladores.
+          Sem mensalidade obrigatória para começar. Taxas EventosBR fixas por plano; processamento PIX/cartão é cobrado
+          separadamente pelo gateway.
         </p>
       </div>
 
@@ -42,9 +43,10 @@ export default function PlanosPage() {
         <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
           <h2 className="text-lg font-semibold text-emerald-700">Como funcionam as taxas</h2>
           <p className="mt-3 text-justify text-sm leading-6 text-zinc-600">
-            No plano de eventos pagos sem assinatura, a taxa percentual e o valor fixo por
-            ingresso cobrem infraestrutura EventosBR. O processamento PIX/cartão usa um gateway de pagamento
-            certificado, com taxas públicas documentadas nos simuladores.
+            No plano de eventos pagos sem assinatura, a taxa percentual e o valor fixo por ingresso cobram
+            infraestrutura EventosBR — esses valores não mudam conforme PIX ou cartão. O processamento de pagamento usa
+            um gateway certificado, com tarifas próprias que variam por método; confira no simulador em Organizador →
+            Financeiro.
           </p>
         </div>
         </ScrollReveal>

@@ -1,7 +1,5 @@
 /** Tarifas divulgadas em /planos (taxa absorvida no preço do ingresso). */
 
-import { calcularTaxaAsaas, type MetodoAsaas } from "./taxas-asaas-publicas";
-
 export type PlanoTarifaId = "padrao" | "assinatura";
 
 export type PlanoTarifa = {
@@ -35,10 +33,7 @@ export type SimulacaoCenarioPlanos = {
   taxaFixaTotal: number;
   mensalidade: number;
   taxaTotal: number;
-  /** Após taxas EventosBR (antes do gateway). */
-  liquidoAntesAsaas: number;
-  taxaAsaasEstimada: number;
-  /** Líquido final estimado (EventosBR + Asaas). */
+  /** Líquido após taxas EventosBR (antes do gateway de pagamento). */
   liquido: number;
 };
 
@@ -60,50 +55,29 @@ export function parseQuantidadeInput(raw: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-export type SimuladorPlanosOpcoes = {
-  metodoAsaas?: MetodoAsaas;
-  parcelas?: number;
-};
-
 function _cenarioPlanos(
   taxaPerc: number,
   taxaFixa: number,
   mensalidade: number,
   arrecadacao: number,
-  quantidade: number,
-  precoIngresso: number,
-  metodoAsaas: MetodoAsaas,
-  parcelas: number,
 ): SimulacaoCenarioPlanos {
   const taxaPercentualValor = taxaPerc;
   const taxaFixaTotal = taxaFixa;
   const taxaTotal = mensalidade + taxaPercentualValor + taxaFixaTotal;
-  const liquidoAntesAsaas = arrecadacao - taxaTotal;
-  const taxaAsaasUnit = calcularTaxaAsaas(precoIngresso, metodoAsaas, parcelas);
-  const taxaAsaasEstimada = Math.round(taxaAsaasUnit * quantidade * 100) / 100;
-  const liquido = Math.round(Math.max(0, liquidoAntesAsaas - taxaAsaasEstimada) * 100) / 100;
+  const liquido = Math.round(Math.max(0, arrecadacao - taxaTotal) * 100) / 100;
   return {
     taxaPercentualValor,
     taxaFixaTotal,
     mensalidade,
     taxaTotal,
-    liquidoAntesAsaas,
-    taxaAsaasEstimada,
     liquido,
   };
 }
 
-/** Simula arrecadação e lucro líquido (EventosBR + Asaas estimado) nos dois planos. */
-export function simularLucroPlanos(
-  precoIngresso: number,
-  quantidade: number,
-  opcoes: SimuladorPlanosOpcoes = {},
-): SimulacaoPlanosResult | null {
+/** Simula arrecadação e lucro líquido após taxas EventosBR (sem gateway de pagamento). */
+export function simularLucroPlanos(precoIngresso: number, quantidade: number): SimulacaoPlanosResult | null {
   if (!Number.isFinite(precoIngresso) || precoIngresso <= 0) return null;
   if (!Number.isFinite(quantidade) || quantidade <= 0 || !Number.isInteger(quantidade)) return null;
-
-  const metodoAsaas = opcoes.metodoAsaas ?? "pix";
-  const parcelas = Math.max(1, Math.min(12, opcoes.parcelas ?? 1));
 
   const arrecadacao = precoIngresso * quantidade;
 
@@ -114,26 +88,8 @@ export function simularLucroPlanos(
   const taxaPercAss = arrecadacao * TARIFA_ASSINATURA.percentual;
   const taxaFixaAss = TARIFA_ASSINATURA.fixoPorIngresso * quantidade;
 
-  const padrao = _cenarioPlanos(
-    taxaPercPadrao,
-    taxaFixaPadrao,
-    0,
-    arrecadacao,
-    quantidade,
-    precoIngresso,
-    metodoAsaas,
-    parcelas,
-  );
-  const assinatura = _cenarioPlanos(
-    taxaPercAss,
-    taxaFixaAss,
-    mensalidade,
-    arrecadacao,
-    quantidade,
-    precoIngresso,
-    metodoAsaas,
-    parcelas,
-  );
+  const padrao = _cenarioPlanos(taxaPercPadrao, taxaFixaPadrao, 0, arrecadacao);
+  const assinatura = _cenarioPlanos(taxaPercAss, taxaFixaAss, mensalidade, arrecadacao);
 
   return {
     precoIngresso,
