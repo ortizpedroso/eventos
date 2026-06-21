@@ -167,8 +167,10 @@ export function EditarEventoClient({ slug }: Props) {
     const lotesPayload = lotesRowsToApiPayload(loteRows);
     for (const l of lotesPayload) {
       if (l.tipo === "cortesia") continue;
-      if (!Number.isFinite(l.preco) || l.preco < 0.5) {
-        setError("Cada lote pago precisa de preço válido (mínimo R$ 0,50).");
+      if (!Number.isFinite(l.preco) || l.preco < INGRESSO_MINIMO_PAGO_REAIS) {
+        setError(
+          `Cada lote pago precisa de preço válido (mínimo R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}).`,
+        );
         setSaving(false);
         return;
       }
