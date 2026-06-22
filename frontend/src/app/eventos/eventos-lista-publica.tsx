@@ -25,6 +25,8 @@ type Props = {
   initialCategoria?: string;
   initialBusca?: string;
   initialCidade?: string;
+  initialDe?: string;
+  initialAte?: string;
 };
 
 type Ordenacao = "data_asc" | "data_desc" | "nome";
@@ -38,6 +40,8 @@ export function EventosListaPublica({
   initialCategoria = "",
   initialBusca = "",
   initialCidade = "",
+  initialDe = "",
+  initialAte = "",
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -65,6 +69,8 @@ export function EventosListaPublica({
   cidadeRef.current = cidade;
   const buscaDebouncedRef = useRef(buscaDebounced);
   buscaDebouncedRef.current = buscaDebounced;
+  const pulouFetchInicialRef = useRef(false);
+  const primeiraSincronizacaoBuscaRef = useRef(true);
 
   const buildUrl = useCallback(
     (overrides: {
@@ -180,12 +186,31 @@ export function EventosListaPublica({
     const id = window.setTimeout(() => {
       const trimmed = busca.trim();
       setBuscaDebounced(trimmed);
+      if (primeiraSincronizacaoBuscaRef.current) {
+        primeiraSincronizacaoBuscaRef.current = false;
+        if (trimmed === initialBusca.trim()) return;
+      }
       router.replace(buildUrl({ busca: trimmed }), { scroll: false });
     }, 400);
     return () => window.clearTimeout(id);
-  }, [busca, buildUrl, router]);
+  }, [busca, buildUrl, router, initialBusca]);
 
   useEffect(() => {
+    const deUrl = searchParams.get("de")?.trim() ?? "";
+    const ateUrl = searchParams.get("ate")?.trim() ?? "";
+    const paramsCoincidemComServidor =
+      initialEventos !== null &&
+      buscaDebounced === initialBusca.trim() &&
+      categoria === initialCategoria &&
+      cidade.trim() === initialCidade.trim() &&
+      deUrl === initialDe.trim() &&
+      ateUrl === initialAte.trim();
+
+    if (!pulouFetchInicialRef.current && paramsCoincidemComServidor) {
+      pulouFetchInicialRef.current = true;
+      return;
+    }
+
     let cancelled = false;
     void (async () => {
       setFetchError(null);
@@ -194,8 +219,6 @@ export function EventosListaPublica({
         if (buscaDebounced) params.set("q", buscaDebounced);
         if (categoria) params.set("categoria", categoria);
         if (cidade.trim()) params.set("cidade", cidade.trim());
-        const deUrl = searchParams.get("de")?.trim();
-        const ateUrl = searchParams.get("ate")?.trim();
         if (deUrl && ateUrl) {
           params.set("de", deUrl);
           params.set("ate", ateUrl);
@@ -218,7 +241,20 @@ export function EventosListaPublica({
     return () => {
       cancelled = true;
     };
-  }, [retryCount, buscaDebounced, categoria, cidade, filtroData, searchParams]);
+  }, [
+    retryCount,
+    buscaDebounced,
+    categoria,
+    cidade,
+    filtroData,
+    searchParams,
+    initialEventos,
+    initialBusca,
+    initialCategoria,
+    initialCidade,
+    initialDe,
+    initialAte,
+  ]);
 
   const eventosFiltrados = useMemo(() => {
     if (!eventos) return [];
