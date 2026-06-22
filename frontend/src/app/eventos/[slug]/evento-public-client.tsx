@@ -15,7 +15,7 @@ import { EventoResumoRapido } from "@/components/evento-resumo-rapido";
 import { ListaEsperaForm } from "@/components/lista-espera-form";
 import { ListaInteresseForm } from "@/components/lista-interesse-form";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
-import { apiFetch, fetchSession } from "@/lib/api";
+import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { formatEventoDataHora } from "@/lib/eventos";
 import type { Evento, Usuario } from "@/lib/types";
@@ -36,18 +36,24 @@ const ComprarIngressoLazy = dynamic(
   },
 );
 
-type Props = { slug: string; alteracaoGuardada?: boolean; ingressoRetomarId?: string | null };
+type Props = {
+  slug: string;
+  initialEvento?: Evento | null;
+  alteracaoGuardada?: boolean;
+  ingressoRetomarId?: string | null;
+};
 
 export function EventoPublicClient({
   slug,
+  initialEvento = null,
   alteracaoGuardada = false,
   ingressoRetomarId = null,
 }: Props) {
   const searchParams = useSearchParams();
-  const [evento, setEvento] = useState<Evento | null>(null);
+  const [evento, setEvento] = useState<Evento | null>(initialEvento);
   const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [me, setMe] = useState<Usuario | null>(null);
+  const [loading, setLoading] = useState(!initialEvento);
+  const [me, setMe] = useState<Usuario | null>(() => peekSessionCache() ?? null);
   const [tokenEsperaValido, setTokenEsperaValido] = useState<boolean | null>(null);
   const tokenEsperaQuery = searchParams.get("espera");
 
@@ -83,37 +89,44 @@ export function EventoPublicClient({
 
   useEffect(() => {
     let cancelled = false;
+
+    void (async () => {
+      const u = await fetchSession();
+      if (!cancelled) setMe(u);
+    })();
+
+    if (initialEvento) {
+      setEvento(initialEvento);
+      setErr(null);
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setLoading(true);
     setErr(null);
 
     void (async () => {
-      const eventPromise = apiFetch<Evento>(`/api/eventos/${slug}`, { cache: "no-store" });
-      const mePromise = fetchSession();
-
-      const [evRes, meRes] = await Promise.allSettled([eventPromise, mePromise]);
-      if (cancelled) return;
-
-      if (evRes.status === "rejected") {
-        setErr(evRes.reason instanceof Error ? evRes.reason.message : "Evento não encontrado");
-        setEvento(null);
-        setMe(null);
-        setLoading(false);
-        return;
+      try {
+        const ev = await apiFetch<Evento>(`/api/eventos/${slug}`, { cache: "no-store" });
+        if (!cancelled) {
+          setEvento(ev);
+          setLoading(false);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setErr(e instanceof Error ? e.message : "Evento não encontrado");
+          setEvento(null);
+          setLoading(false);
+        }
       }
-
-      setEvento(evRes.value);
-      if (meRes.status === "fulfilled" && meRes.value) {
-        setMe(meRes.value);
-      } else {
-        setMe(null);
-      }
-      setLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, initialEvento]);
 
   useEffect(() => {
     if (!tokenEsperaQuery || !slug) {
@@ -182,9 +195,20 @@ export function EventoPublicClient({
     me && evento && me.tipo === "organizador" && me.id === evento.organizador_id,
   );
 
-  if (loading) {
+  if (loading && !evento) {
     return (
-      <div className="space-y-4 py-8 text-sm text-zinc-600">Carregando evento…</div>
+      <div className="space-y-6 py-2" aria-busy aria-label="Carregando evento">
+        <div className="text-sm text-zinc-600">
+          <Link className="hover:underline" href="/eventos">
+            ← Voltar aos eventos
+          </Link>
+        </div>
+        <div className="h-56 rounded-xl bg-zinc-100 sm:h-64" aria-hidden />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="min-h-[280px] rounded-xl border border-zinc-200 bg-zinc-50" aria-hidden />
+          <div className="min-h-[360px] rounded-xl border border-zinc-200 bg-zinc-50" aria-hidden />
+        </div>
+      </div>
     );
   }
 
