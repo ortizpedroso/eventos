@@ -615,9 +615,8 @@ async def cotacao_pagamento(
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
 ):
-    """Breakdown público: taxa EventosBR fixa + acréscimo parcelamento (se houver)."""
+    """Breakdown all-in para o comprador (preço + parcelamento)."""
     from app.services.taxas_asaas_publicas import cotacao_checkout
-    from app.services.tarifas_plataforma import detalhar_taxa_ingresso, tarifa_para_organizador
 
     ingresso = db.get(Ingresso, ingresso_id)
     if not ingresso or ingresso.usuario_id != usuario_atual.id:
@@ -626,25 +625,16 @@ async def cotacao_pagamento(
     if not evento:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
 
-    organizador = db.get(Usuario, evento.organizador_id)
-    tarifa = tarifa_para_organizador(organizador)
     valor_base = float(ingresso.valor or 0)
-    det = detalhar_taxa_ingresso(valor_base, tarifa)
     comprador = cotacao_checkout(
         valor_base,
         parcelas=parcelas,
         repasse_parcelamento=getattr(evento, "repasse_parcelamento", "comprador") or "comprador",
     )
-    liquido = float(det["liquido_organizador"])
-    if comprador.get("repasse_parcelamento") == "organizador" and comprador.get("acrescimo_bruto"):
-        liquido = round(max(0.0, liquido - float(comprador["acrescimo_bruto"])), 2)
     return {
         "ingresso_id": ingresso.id,
         "evento_nome": evento.nome,
-        "plano_organizador": tarifa.id,
-        "taxa_eventosbr": det,
         "comprador": comprador,
-        "organizador_recebe": liquido,
     }
 
 

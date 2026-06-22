@@ -3,7 +3,7 @@
   <rect x="120" y="60" width="560" height="380" rx="16" fill="#fff" stroke="#a7f3d0" stroke-width="2"/>
   <text x="160" y="110" fill="#18181b" font-family="system-ui,sans-serif" font-size="22" font-weight="700">Checkout seguro</text>
   <rect x="160" y="140" width="480" height="48" rx="8" fill="#f4f4f5"/>
-  <text x="180" y="170" fill="#52525b" font-family="system-ui,sans-serif" font-size="14">PIX · Cartão · Asaas</text>
+  <text x="180" y="170" fill="#52525b" font-family="system-ui,sans-serif" font-size="14">PIX · Cartão · Pagamento seguro</text>
   <rect x="160" y="210" width="220" height="120" rx="8" fill="#d1fae5"/>
   <text x="180" y="280" fill="#065f46" font-family="system-ui,sans-serif" font-size="16" font-weight="600">R$ 49,90</text>
   <rect x="420" y="210" width="220" height="120" rx="8" fill="#047857"/>

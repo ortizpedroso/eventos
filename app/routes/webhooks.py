@@ -69,11 +69,17 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
     ingressos_recém_pagos: list[str] = []
     try:
         if event_type in ("PAYMENT_RECEIVED", "PAYMENT_CONFIRMED") and pay_id:
-            ingressos_recém_pagos = processar_cobranca_confirmada_gateway(
-                db,
-                pay_id,
-                raise_on_gateway_error=True,
-            )
+            from app.services.assinatura_organizador import processar_pagamento_assinatura_gateway
+
+            if payment and processar_pagamento_assinatura_gateway(db, payment):
+                pass
+            else:
+                ingressos_recém_pagos = processar_cobranca_confirmada_gateway(
+                    db,
+                    pay_id,
+                    payment=payment,
+                    raise_on_gateway_error=True,
+                )
         elif event_type == "PAYMENT_REFUNDED" and pay_id:
             cancelar_ingressos_reembolsados(db, pay_id)
         elif event_type in ("PAYMENT_DELETED", "PAYMENT_OVERDUE") and pay_id:

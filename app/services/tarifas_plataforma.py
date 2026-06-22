@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
@@ -43,7 +44,14 @@ def plano_tarifa_id(usuario: Usuario | None) -> PlanoTarifaId:
     if usuario is None:
         return "padrao"
     raw = (getattr(usuario, "plano_tarifa", None) or "padrao").strip().lower()
-    return "assinatura" if raw == "assinatura" else "padrao"
+    if raw == "assinatura":
+        valida_ate = getattr(usuario, "assinatura_valida_ate", None)
+        if valida_ate is not None:
+            agora = datetime.now(timezone.utc).replace(tzinfo=None)
+            if valida_ate >= agora:
+                return "assinatura"
+        return "padrao"
+    return "padrao"
 
 
 def tarifa_para_organizador(usuario: Usuario | None) -> PlanoTarifa:

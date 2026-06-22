@@ -353,8 +353,8 @@ Taxas EventosBR (por plano): **Padrão** 10% + R$ 2,00/ingresso; **Assinatura** 
 - [x] Página evento: mapa/link, relacionados, urgência, simulador comprador  
 - [x] Checkout: badges PIX/cartão/seguro; sem texto de outro processador  
 - [x] Vitrine: chips Hoje/Fim de semana/Semana; intervalo De/Até; sem calendário mensal  
-- [x] `/planos`: ícones SVG; comparativo Sympla com disclaimer; simulador com taxa Asaas  
-- [x] Wizard + Financeiro: simuladores coerentes  
+- [x] `/planos`: ícones SVG; comparativo Sympla com disclaimer; simulador all-in EventosBR  
+- [x] Wizard + Financeiro: simuladores coerentes (split automático, sem saque manual)  
 - [x] Parcelamento: toggle organizador 2/3/6/12x; checkout parcelas  
 - [x] Lista interesse: form + CSV + e-mail abertura  
 - [x] Lista espera: fila + e-mail + notificação conta + prazo 12/24/48h  

@@ -293,6 +293,38 @@ def test_cancelar_saque_libera_saldo():
         db.close()
 
 
+def test_plano_tarifa_expira_sem_assinatura_valida():
+    from datetime import datetime, timedelta, timezone
+
+    from app.models import Usuario
+    from app.services.tarifas_plataforma import plano_tarifa_id
+
+    u = Usuario(email="a@b.com", nome="A", tipo="organizador", plano_tarifa="assinatura")
+    assert plano_tarifa_id(u) == "padrao"
+    u.assinatura_valida_ate = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
+    assert plano_tarifa_id(u) == "padrao"
+    u.assinatura_valida_ate = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=10)
+    assert plano_tarifa_id(u) == "assinatura"
+
+
+def test_processar_pagamento_assinatura_gateway():
+    from unittest.mock import MagicMock
+
+    from app.services.assinatura_organizador import processar_pagamento_assinatura_gateway
+
+    db = MagicMock()
+    org = MagicMock()
+    org.id = "org-1"
+    org.tipo = "organizador"
+    org.assinatura_valida_ate = None
+    db.get.return_value = org
+    ok = processar_pagamento_assinatura_gateway(
+        db,
+        {"externalReference": "assinatura:org-1", "status": "CONFIRMED"},
+    )
+    assert ok is True
+
+
 def test_urgencia_exato():
     b = calcular_urgencia("exato", restantes=7)
     assert b.ativo and "7" in (b.texto or "")

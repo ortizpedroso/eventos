@@ -141,7 +141,7 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/organizador.svg"
+        src="/marketing/organizador.png"
         alt="Painel do organizador EventosBR"
         width={800}
         height={500}
@@ -161,7 +161,7 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/checkout.svg"
+        src="/marketing/checkout.png"
         alt="Checkout seguro com pagamento online"
         width={800}
         height={500}
@@ -181,7 +181,7 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/portaria.svg"
+        src="/marketing/portaria.png"
         alt="Check-in na portaria com QR Code"
         width={800}
         height={500}

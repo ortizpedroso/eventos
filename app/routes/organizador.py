@@ -202,3 +202,29 @@ async def asaas_simular_antecipacao(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.get("/assinatura")
+async def obter_assinatura(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+):
+    """Status da assinatura mensal (taxa reduzida por ingresso)."""
+    _require_organizador(usuario_atual)
+    from app.services.assinatura_organizador import status_assinatura
+
+    return status_assinatura(usuario_atual)
+
+
+@router.post("/assinatura/pagar")
+async def pagar_assinatura(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Gera cobrança PIX da mensalidade EventosBR."""
+    _require_organizador(usuario_atual)
+    from app.services.assinatura_organizador import iniciar_cobranca_assinatura
+
+    try:
+        return iniciar_cobranca_assinatura(db, usuario_atual)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e

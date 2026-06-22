@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, literal, union_all
 from sqlalchemy.orm import Session
 
 from app.models import Evento, FinanceiroSaque, Ingresso, Usuario
@@ -134,24 +134,37 @@ def listar_extrato(
     _backfill_ledger_pendentes(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
 
-    saques = (
-        db.query(FinanceiroSaque)
-        .filter(FinanceiroSaque.organizador_id == usuario.id)
-        .order_by(FinanceiroSaque.criado_em.desc())
+    saques_q = db.query(FinanceiroSaque).filter(FinanceiroSaque.organizador_id == usuario.id)
+    total_saques = saques_q.count()
+    total_vendas = _ingressos_pagos_query(db, usuario.id).count()
+    total_movimentos = total_vendas + total_saques
+
+    vendas_rows = (
+        db.query(
+            literal("venda").label("tipo"),
+            Ingresso.id.label("rid"),
+            Ingresso.data_compra.label("dt"),
+        )
+        .join(Evento, Ingresso.evento_id == Evento.id)
+        .filter(
+            Evento.organizador_id == usuario.id,
+            Ingresso.status.in_(("pago", "usado")),
+        )
+    )
+    saques_rows = saques_q.with_entities(
+        literal("saque").label("tipo"),
+        FinanceiroSaque.id.label("rid"),
+        FinanceiroSaque.criado_em.label("dt"),
+    )
+    union_sub = union_all(vendas_rows.statement, saques_rows.statement).alias("mov")
+    page = (
+        db.query(union_sub.c.tipo, union_sub.c.rid, union_sub.c.dt)
+        .order_by(union_sub.c.dt.desc())
+        .offset(offset)
+        .limit(limite)
         .all()
     )
-    ingressos_q = _ingressos_pagos_query(db, usuario.id)
-    total_vendas = ingressos_q.count()
-    total_movimentos = total_vendas + len(saques)
 
-    refs: list[tuple[str, str, str | None]] = []
-    for ing in ingressos_q.with_entities(Ingresso.id, Ingresso.data_compra).all():
-        refs.append(("venda", ing.id, ing.data_compra.isoformat() if ing.data_compra else None))
-    for s in saques:
-        refs.append(("saque", s.id, s.criado_em.isoformat() if s.criado_em else None))
-    refs.sort(key=lambda r: r[2] or "", reverse=True)
-
-    page = refs[offset : offset + limite]
     venda_ids = [rid for tipo, rid, _ in page if tipo == "venda"]
     saque_ids = {rid for tipo, rid, _ in page if tipo == "saque"}
 
@@ -161,7 +174,7 @@ def listar_extrato(
             ingressos_map[ing.id] = ing
     evento_ids = {i.evento_id for i in ingressos_map.values()}
     eventos = {e.id: e for e in db.query(Evento).filter(Evento.id.in_(evento_ids)).all()} if evento_ids else {}
-    saques_map = {s.id: s for s in saques if s.id in saque_ids}
+    saques_map = {s.id: s for s in saques_q.filter(FinanceiroSaque.id.in_(saque_ids)).all()} if saque_ids else {}
 
     movimentos: list[dict[str, Any]] = []
     for tipo, rid, _ in page:
