@@ -57,7 +57,7 @@ export default function AuthClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const [checandoSessao, setChecandoSessao] = useState(false);
+  const [checandoSessao, setChecandoSessao] = useState(true);
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
@@ -229,20 +229,19 @@ export default function AuthClient({
 
   if (checandoSessao) {
     return (
-      <div
-        className="mx-auto mt-10 w-full max-w-md rounded-2xl border border-zinc-200 bg-zinc-50 p-8 animate-pulse"
-        aria-busy
-        aria-label="Verificando sessão"
-      >
-        <div className="mb-6 h-8 w-3/4 rounded bg-zinc-200" />
-        <div className="h-10 w-full rounded bg-zinc-200" />
-        <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
+      <div className="mx-auto w-full max-w-md min-h-[32rem]" aria-busy aria-label="Verificando sessão">
+        <div className="mt-10 rounded-2xl border border-zinc-200 bg-zinc-50 p-8 animate-pulse">
+          <div className="mb-6 h-8 w-3/4 rounded bg-zinc-200" />
+          <div className="h-10 w-full rounded bg-zinc-200" />
+          <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
+          <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto mt-10 w-full max-w-md">
+    <div className="mx-auto w-full max-w-md min-h-[32rem]">
       {sessaoExpirada ? (
         <div
           className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
