@@ -199,6 +199,20 @@ export function OrganizadorRepassesPainel() {
         </p>
       ) : null}
 
+      {status && status.repasses_prontos && status.eventos_sem_wallet > 0 ? (
+        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
+          <p className="font-medium">
+            {status.eventos_sem_wallet === 1
+              ? "1 evento ainda não está vinculado à sua conta de repasses"
+              : `${status.eventos_sem_wallet} eventos ainda não estão vinculados à sua conta de repasses`}
+          </p>
+          <p className="mt-1">
+            As vendas desses eventos ficam bloqueadas até o vínculo. Recarregue a página após configurar repasses —
+            eventos criados antes da configuração são atualizados automaticamente.
+          </p>
+        </div>
+      ) : null}
+
       {status && !status.repasses_prontos ? (
         <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
           <p className="font-medium">Configure sua conta de repasses</p>

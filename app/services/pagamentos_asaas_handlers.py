@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
+from app.services.evento_repasse import MOTIVO_CHECKOUT_SEM_REPASSE, garantir_wallet_repasse_evento
 from app.services.asaas_client import AsaasAPIError
 from app.services.ingresso_pago import (
     ingressos_lote_pendente,
@@ -130,10 +131,10 @@ def iniciar_cobranca_asaas(
     if not evento:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
 
-    if not (evento.asaas_wallet_id or "").strip():
+    if not garantir_wallet_repasse_evento(db, evento):
         raise HTTPException(
             status_code=400,
-            detail="Organizador ainda não configurou conta para repasses.",
+            detail=MOTIVO_CHECKOUT_SEM_REPASSE,
         )
     if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
         raise HTTPException(

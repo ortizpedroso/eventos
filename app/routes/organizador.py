@@ -15,6 +15,7 @@ from app.services.organizador_asaas import (
     criar_subconta_organizador,
     definir_wallet_organizador,
     simular_antecipacao,
+    sincronizar_wallet_eventos_organizador,
     status_asaas_organizador,
 )
 from app.services.ticket_email import enqueue_comunicado_evento
@@ -119,6 +120,9 @@ async def asaas_status_organizador(
     db: Session = Depends(get_db),
 ):
     _require_organizador(usuario_atual)
+    atualizados = sincronizar_wallet_eventos_organizador(db, usuario_atual)
+    if atualizados:
+        db.commit()
     return status_asaas_organizador(db, usuario_atual)
 
 

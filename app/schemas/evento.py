@@ -177,6 +177,8 @@ def montar_evento_response(
     )
     from app.services.urgencia import calcular_urgencia
     from app.services.lista_espera import janela_exclusiva_espera_ativa
+    from app.services.evento_repasse import MOTIVO_COMPRA_SEM_REPASSE, resolver_wallet_repasse_evento
+    from config.settings import settings
 
     lotes_orm = sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id))
     if ocupacao_por_lote is None:
@@ -206,6 +208,18 @@ def montar_evento_response(
     motivo_compra_indisponivel = (
         None if compra_disponivel else motivo_lote_indisponivel(db, evento, ocupacao_por_lote=ocupacao_por_lote)
     )
+
+    if compra_disponivel and settings.use_asaas and not settings.payments_disabled:
+        if not resolver_wallet_repasse_evento(db, evento):
+            compra_disponivel = False
+            preco_compra = None
+            lote_compra_id = None
+            motivo_compra_indisponivel = MOTIVO_COMPRA_SEM_REPASSE
+        elif not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
+            compra_disponivel = False
+            preco_compra = None
+            lote_compra_id = None
+            motivo_compra_indisponivel = "Pagamentos temporariamente indisponíveis. Tente novamente mais tarde."
 
     restantes: int | None = None
     if cur is not None and cur.quantidade_maxima is not None:

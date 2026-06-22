@@ -34,6 +34,21 @@ def _client_subconta(usuario: Usuario) -> AsaasClient | None:
     return AsaasClient(api_key=key)
 
 
+def sincronizar_wallet_eventos_organizador(db: Session, usuario: Usuario) -> int:
+    """Propaga wallet do organizador para eventos ainda sem repasse configurado."""
+    wid = (usuario.asaas_wallet_id or "").strip()
+    if not wid:
+        return 0
+    return (
+        db.query(Evento)
+        .filter(
+            Evento.organizador_id == usuario.id,
+            (Evento.asaas_wallet_id.is_(None)) | (Evento.asaas_wallet_id == ""),
+        )
+        .update({Evento.asaas_wallet_id: wid}, synchronize_session=False)
+    )
+
+
 def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
     wallet = (usuario.asaas_wallet_id or "").strip() or None
     eventos_sem_wallet = (
