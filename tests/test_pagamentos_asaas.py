@@ -108,7 +108,23 @@ def _registrar_cliente(suffix: str) -> str:
     return r.json()["access_token"]
 
 
-def _criar_evento(org_token: str) -> dict:
+def _forcar_publicado_evento(evento_id: str) -> None:
+    """Marca evento como publicado no banco usado pela API (setup de teste)."""
+    gen = app.dependency_overrides[get_db]()
+    db = next(gen)
+    try:
+        ev = db.query(Evento).filter(Evento.id == evento_id).first()
+        assert ev is not None, f"Evento {evento_id} não encontrado no banco de teste"
+        ev.publicado = True
+        db.commit()
+    finally:
+        try:
+            next(gen)
+        except StopIteration:
+            pass
+
+
+def _criar_evento(org_token: str, *, publicado: bool = True) -> dict:
     r = client.post(
         "/api/eventos/criar",
         headers={"Authorization": f"Bearer {org_token}"},
@@ -121,6 +137,7 @@ def _criar_evento(org_token: str) -> dict:
             "preco_ingresso": 50,
             "categoria": "Outros",
             "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
+            "publicado": publicado,
         },
     )
     assert r.status_code == 200, r.text
@@ -159,11 +176,18 @@ class TestPagamentosAsaas:
     def test_criar_sem_wallet_falha(self):
         org = _registrar_organizador("nowal", com_wallet=False)
         cli = _registrar_cliente("nowal")
-        ev = _criar_evento(org)
-        with patch("app.routes.pagamentos.settings") as route_settings:
+        ev = _criar_evento(org, publicado=False)
+        _forcar_publicado_evento(ev["id"])
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch("app.services.evento_repasse.settings") as repasse_settings,
+        ):
             route_settings.payments_disabled = False
             route_settings.use_asaas = True
             route_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            repasse_settings.use_asaas = True
+            repasse_settings.payments_disabled = False
+            repasse_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
             r = client.post(
                 "/api/pagamentos/criar",
                 headers={"Authorization": f"Bearer {cli}"},

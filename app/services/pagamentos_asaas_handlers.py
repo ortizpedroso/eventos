@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
-from app.services.evento_repasse import MOTIVO_CHECKOUT_SEM_REPASSE, garantir_wallet_repasse_evento
+from app.services.evento_repasse import MOTIVO_CHECKOUT_SEM_REPASSE, garantir_wallet_repasse_evento, organizador_pode_vender
 from app.services.asaas_client import AsaasAPIError
 from app.services.ingresso_pago import (
     ingressos_lote_pendente,
@@ -136,6 +136,9 @@ def iniciar_cobranca_asaas(
             status_code=400,
             detail=MOTIVO_CHECKOUT_SEM_REPASSE,
         )
+    pode_vender, motivo_venda = organizador_pode_vender(db, evento)
+    if not pode_vender:
+        raise HTTPException(status_code=400, detail=motivo_venda or MOTIVO_CHECKOUT_SEM_REPASSE)
     if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
         raise HTTPException(
             status_code=503,

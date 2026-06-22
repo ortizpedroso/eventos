@@ -21,6 +21,10 @@ class Usuario(Base):
     asaas_wallet_id = Column(String, nullable=True)
     asaas_account_id = Column(String, nullable=True)
     asaas_subaccount_api_key = Column(String, nullable=True)
+    # pending | awaiting_approval | approved | rejected | manual
+    asaas_repasse_status = Column(String(32), nullable=True)
+    asaas_repasse_status_em = Column(DateTime, nullable=True)
+    asaas_repasse_detalhes = Column(Text, nullable=True)
     # Opt-in antecipação automática no cartão (espelho da config Asaas)
     asaas_anticipacao_cartao = Column(Boolean, nullable=True)
 

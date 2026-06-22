@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
 from app.services.asaas_client import AsaasAPIError, AsaasClient, get_asaas_client
+from app.services.evento_repasse import (
+    agora_utc_naive,
+    repasse_status_aprovado,
+    serializar_detalhes_repasse,
+)
 from app.services.tarifas_plataforma import tarifa_para_organizador, taxa_ingresso
 from app.utils.cpf import normalizar_cpf
 from app.utils.secret_storage import decrypt_at_rest, encrypt_at_rest
@@ -25,6 +32,85 @@ _TAXA_ANTECIPACAO_PARCELADO_MES = 0.0170
 
 def _digits(s: str | None, max_len: int) -> str:
     return re.sub(r"\D", "", s or "")[:max_len]
+
+
+def _normalizar_status_asaas(general: str | None) -> str:
+    g = (general or "PENDING").strip().upper()
+    if g == "APPROVED":
+        return "approved"
+    if g == "REJECTED":
+        return "rejected"
+    if g == "AWAITING_APPROVAL":
+        return "awaiting_approval"
+    return "pending"
+
+
+def _rotulo_status_repasse(status: str | None) -> str:
+    s = (status or "").lower()
+    return {
+        "approved": "Conta aprovada",
+        "manual": "Conta configurada",
+        "awaiting_approval": "Em análise",
+        "rejected": "Conta reprovada",
+        "pending": "Aguardando validação",
+    }.get(s, "Não configurada")
+
+
+def _passos_acompanhamento(status: str | None, detalhes: dict | None) -> list[dict[str, Any]]:
+    det = detalhes or {}
+    geral = (det.get("general") or status or "pending").upper()
+    passos = [
+        {"id": "envio", "titulo": "Dados enviados", "concluido": bool(status)},
+        {
+            "id": "validacao",
+            "titulo": "Validação cadastral",
+            "concluido": geral in ("APPROVED", "AWAITING_APPROVAL"),
+            "ativo": geral in ("PENDING", "AWAITING_APPROVAL"),
+        },
+        {
+            "id": "aprovacao",
+            "titulo": "Conta liberada para vendas",
+            "concluido": geral == "APPROVED" or status in ("approved", "manual"),
+            "ativo": geral == "AWAITING_APPROVAL",
+        },
+    ]
+    if (status or "").lower() == "rejected":
+        passos.append(
+            {
+                "id": "rejeitada",
+                "titulo": "Conta reprovada — revise os dados ou contate o suporte",
+                "concluido": False,
+                "erro": True,
+            }
+        )
+    return passos
+
+
+def consultar_status_repasse_asaas(usuario: Usuario) -> dict[str, Any] | None:
+    """Consulta GET /v3/myAccount/status com a chave da subconta."""
+    sub_client = _client_subconta(usuario)
+    if not sub_client or not sub_client.enabled:
+        return None
+    try:
+        return sub_client.get("/v3/myAccount/status")
+    except AsaasAPIError as e:
+        logger.warning("Status repasse Asaas indisponível (%s): %s", usuario.email, e)
+        return None
+
+
+def atualizar_status_repasse_organizador(db: Session, usuario: Usuario) -> Usuario:
+    agora = agora_utc_naive()
+    if (usuario.asaas_account_id or "").strip() and usuario.asaas_subaccount_api_key:
+        remoto = consultar_status_repasse_asaas(usuario)
+        if isinstance(remoto, dict):
+            usuario.asaas_repasse_status = _normalizar_status_asaas(remoto.get("general"))
+            usuario.asaas_repasse_status_em = agora
+            usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(remoto)
+    elif (usuario.asaas_wallet_id or "").strip() and not (usuario.asaas_account_id or "").strip():
+        usuario.asaas_repasse_status = "manual"
+        usuario.asaas_repasse_status_em = agora
+    db.add(usuario)
+    return usuario
 
 
 def _client_subconta(usuario: Usuario) -> AsaasClient | None:
@@ -75,6 +161,15 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         except AsaasAPIError as e:
             logger.warning("Não foi possível ler antecipação Asaas (%s): %s", usuario.email, e)
 
+    status_repasse = (usuario.asaas_repasse_status or "").strip().lower() or None
+    detalhes: dict | None = None
+    if usuario.asaas_repasse_detalhes:
+        try:
+            detalhes = json.loads(usuario.asaas_repasse_detalhes)
+        except json.JSONDecodeError:
+            detalhes = None
+    aprovado = repasse_status_aprovado(status_repasse)
+
     return {
         "asaas_ativo": settings.use_asaas,
         "payments_disabled": settings.payments_disabled,
@@ -82,14 +177,48 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "wallet_configurado": bool(wallet),
         "account_id": (usuario.asaas_account_id or "").strip() or None,
         "tem_subconta": bool((usuario.asaas_account_id or "").strip()),
-        "repasses_prontos": bool(wallet) and settings.use_asaas,
+        "repasse_status": status_repasse,
+        "repasse_status_rotulo": _rotulo_status_repasse(status_repasse),
+        "repasse_aprovado": aprovado,
+        "repasses_prontos": bool(wallet) and aprovado and settings.use_asaas,
+        "pode_publicar_eventos_pagos": aprovado and settings.use_asaas and not settings.payments_disabled,
         "eventos_sem_wallet": eventos_sem_wallet,
         "anticipacao": anticipacao,
         "nota_wallet": (
-            "Crie sua conta de repasses pela plataforma para receber vendas automaticamente."
+            "Crie sua conta de repasses pela plataforma para publicar eventos pagos e receber vendas."
             if not wallet
-            else None
+            else (
+                "Sua conta de repasses está em análise. Acompanhe o andamento em Financeiro."
+                if status_repasse in ("pending", "awaiting_approval")
+                else None
+            )
         ),
+    }
+
+
+def acompanhamento_repasse_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
+    usuario = atualizar_status_repasse_organizador(db, usuario)
+    db.commit()
+    db.refresh(usuario)
+    status_repasse = (usuario.asaas_repasse_status or "").strip().lower() or None
+    detalhes: dict | None = None
+    if usuario.asaas_repasse_detalhes:
+        try:
+            detalhes = json.loads(usuario.asaas_repasse_detalhes)
+        except json.JSONDecodeError:
+            detalhes = None
+    return {
+        "repasse_status": status_repasse,
+        "repasse_status_rotulo": _rotulo_status_repasse(status_repasse),
+        "repasse_aprovado": repasse_status_aprovado(status_repasse),
+        "atualizado_em": usuario.asaas_repasse_status_em.isoformat() + "Z"
+        if usuario.asaas_repasse_status_em
+        else None,
+        "detalhes": detalhes,
+        "passos": _passos_acompanhamento(status_repasse, detalhes),
+        "pode_publicar_eventos_pagos": repasse_status_aprovado(status_repasse)
+        and settings.use_asaas
+        and not settings.payments_disabled,
     }
 
 
@@ -107,6 +236,8 @@ def definir_wallet_organizador(
         raise ValueError("Asaas não está ativo neste ambiente.")
 
     usuario.asaas_wallet_id = wid
+    usuario.asaas_repasse_status = "manual"
+    usuario.asaas_repasse_status_em = agora_utc_naive()
     db.add(usuario)
     atualizados = 0
     if sincronizar_eventos:
@@ -187,11 +318,17 @@ def criar_subconta_organizador(
     usuario.asaas_wallet_id = wallet_id
     if api_key:
         usuario.asaas_subaccount_api_key = encrypt_at_rest(str(api_key))
+    usuario.asaas_repasse_status = "pending"
+    usuario.asaas_repasse_status_em = agora_utc_naive()
+    usuario.asaas_repasse_detalhes = None
     db.add(usuario)
     db.query(Evento).filter(Evento.organizador_id == usuario.id).update(
         {Evento.asaas_wallet_id: wallet_id},
         synchronize_session=False,
     )
+    db.commit()
+    db.refresh(usuario)
+    usuario = atualizar_status_repasse_organizador(db, usuario)
     db.commit()
     db.refresh(usuario)
 
@@ -200,12 +337,20 @@ def criar_subconta_organizador(
     except ValueError:
         logger.info("Antecipação automática não ativada na subconta %s", usuario.email)
 
+    aprovado = repasse_status_aprovado(usuario.asaas_repasse_status)
     return {
         "ok": True,
         "account_id": account_id,
         "wallet_id": wallet_id,
         "tem_api_key": bool(api_key),
-        "mensagem": "Conta de repasses criada. Você já pode receber vendas e solicitar saques pela plataforma.",
+        "repasse_status": usuario.asaas_repasse_status,
+        "repasse_aprovado": aprovado,
+        "redirecionar_acompanhamento": True,
+        "mensagem": (
+            "Conta de repasses criada e aprovada. Você já pode publicar eventos pagos."
+            if aprovado
+            else "Dados enviados ao Asaas. Acompanhe a aprovação da sua conta de repasses."
+        ),
     }
 
 

@@ -12,7 +12,11 @@ from app.deps.rate_limit import rate_limit_checkout
 from app.routes.auth import get_usuario_atual
 from app.services.cpf_limite import validar_limite_cpf_evento
 from app.services.cupom_desconto import centavos_com_cupom, resolver_cupom_evento
-from app.services.evento_repasse import MOTIVO_CHECKOUT_SEM_REPASSE, garantir_wallet_repasse_evento
+from app.services.evento_repasse import (
+    MOTIVO_CHECKOUT_SEM_REPASSE,
+    garantir_wallet_repasse_evento,
+    organizador_pode_vender,
+)
 from app.services.ingresso_lotes import (
     motivo_lote_indisponivel,
     reservar_vaga_lote,
@@ -366,6 +370,9 @@ async def criar_pagamento(
             status_code=400,
             detail=MOTIVO_CHECKOUT_SEM_REPASSE,
         )
+    pode_vender, motivo_venda = organizador_pode_vender(db, evento)
+    if not pode_vender:
+        raise HTTPException(status_code=400, detail=motivo_venda or MOTIVO_CHECKOUT_SEM_REPASSE)
     if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
         raise HTTPException(
             status_code=503,

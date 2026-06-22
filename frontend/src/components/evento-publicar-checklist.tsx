@@ -16,6 +16,8 @@ type ChecklistInput = {
   precoSimples: string;
   loteRowsCount: number;
   publicado: boolean;
+  repasseAprovado?: boolean;
+  exigeRepasse?: boolean;
 };
 
 type Item = { id: string; label: string; ok: boolean; obrigatorio: boolean };
@@ -27,6 +29,13 @@ export function EventoPublicarChecklist(props: ChecklistInput) {
       (props.modoSimples
         ? (parseValorMonetarioInput(props.precoSimples) ?? 0) >= INGRESSO_MINIMO_PAGO_REAIS
         : props.loteRowsCount > 0);
+
+    const exigeRepasse =
+      props.exigeRepasse ??
+      (!props.eventoGratuito &&
+        (props.modoSimples
+          ? (parseValorMonetarioInput(props.precoSimples) ?? 0) > 0
+          : props.loteRowsCount > 0));
 
     return [
       { id: "nome", label: "Nome do evento", ok: props.nome.trim().length >= 3, obrigatorio: true },
@@ -58,6 +67,12 @@ export function EventoPublicarChecklist(props: ChecklistInput) {
         label: "Imagem de capa (recomendado)",
         ok: Boolean(props.imagemUrl.trim()),
         obrigatorio: false,
+      },
+      {
+        id: "repasse",
+        label: "Conta de repasses aprovada (eventos pagos)",
+        ok: !exigeRepasse || Boolean(props.repasseAprovado),
+        obrigatorio: exigeRepasse && props.publicado,
       },
       {
         id: "pub",
@@ -109,6 +124,15 @@ export function checklistPublicacaoPronta(props: ChecklistInput): boolean {
       ? (parseValorMonetarioInput(props.precoSimples) ?? 0) >= INGRESSO_MINIMO_PAGO_REAIS
       : props.loteRowsCount > 0);
 
+  const exigeRepasse =
+    props.exigeRepasse ??
+    (!props.eventoGratuito &&
+      (props.modoSimples
+        ? (parseValorMonetarioInput(props.precoSimples) ?? 0) > 0
+        : props.loteRowsCount > 0));
+
+  const repasseOk = !exigeRepasse || !props.publicado || Boolean(props.repasseAprovado);
+
   return (
     props.nome.trim().length >= 3 &&
     props.descricao.trim().length >= 10 &&
@@ -116,6 +140,7 @@ export function checklistPublicacaoPronta(props: ChecklistInput): boolean {
     Boolean(props.dataInicio) &&
     Number.isFinite(new Date(props.dataInicio).getTime()) &&
     new Date(props.dataInicio).getTime() > Date.now() - 60_000 &&
-    precoOk
+    precoOk &&
+    repasseOk
   );
 }

@@ -117,7 +117,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [formDescricao, setFormDescricao] = useState("");
   const [formDataInicio, setFormDataInicio] = useState("");
   const [formLocal, setFormLocal] = useState("");
-  const [formPublicado, setFormPublicado] = useState(true);
+  const [formPublicado, setFormPublicado] = useState(false);
+  const [repasseAprovado, setRepasseAprovado] = useState(false);
   const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
   const [parcelamentoMax, setParcelamentoMax] = useState(2);
   const [repasseParcelamento, setRepasseParcelamento] = useState<"comprador" | "organizador">("comprador");
@@ -134,6 +135,9 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
         if (s.plano_tarifa === "assinatura") setPlanoTarifa("assinatura");
       })
       .catch(() => {});
+    void apiFetch<{ repasse_aprovado?: boolean }>("/api/organizador/asaas", { cache: "no-store" })
+      .then((s) => setRepasseAprovado(Boolean(s.repasse_aprovado)))
+      .catch(() => setRepasseAprovado(false));
   }, []);
 
   const slugPrev = slugFromNome(nomeParaSlug);
@@ -150,6 +154,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
     precoSimples,
     loteRowsCount: loteRows.length,
     publicado: formPublicado,
+    repasseAprovado,
   };
   const prontoPublicar = checklistPublicacaoPronta(checklistProps);
 
@@ -474,12 +479,21 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                     name="publicado"
                     value="true"
                     checked={formPublicado}
+                    disabled={!eventoGratuito && !repasseAprovado}
                     onChange={() => setFormPublicado(true)}
-                    className="mt-1 text-emerald-700 focus:ring-emerald-600"
+                    className="mt-1 text-emerald-700 focus:ring-emerald-600 disabled:opacity-40"
                   />
                   <span className="text-sm text-zinc-800">
                     <span className="font-semibold text-zinc-900">Publicar</span> — aparece na
                     listagem pública e qualquer pessoa pode abrir a página e comprar ingresso.
+                    {!eventoGratuito && !repasseAprovado ? (
+                      <span className="mt-1 block text-xs text-amber-800">
+                        Requer conta de repasses aprovada.{" "}
+                        <Link href="/organizador/financeiro/conta-repasse" className="font-medium underline">
+                          Configurar em Financeiro
+                        </Link>
+                      </span>
+                    ) : null}
                   </span>
                 </label>
                 <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-emerald-300 hover:bg-white">

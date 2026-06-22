@@ -49,6 +49,7 @@ class TestEventoRepasse:
                 senha_hash="x",
                 tipo="organizador",
                 asaas_wallet_id="wallet-org-test",
+                asaas_repasse_status="approved",
             )
             db.add(u)
             ev = Evento(
@@ -80,6 +81,7 @@ class TestEventoRepasse:
                 senha_hash="x",
                 tipo="organizador",
                 asaas_wallet_id="wallet-org-test",
+                asaas_repasse_status="approved",
             )
             db.add(u)
             ev = Evento(
@@ -138,10 +140,16 @@ class TestEventoRepasse:
             db.commit()
             db.refresh(ev)
 
-            with patch("config.settings.settings") as mock_settings:
+            with (
+                patch("config.settings.settings") as mock_settings,
+                patch("app.services.evento_repasse.settings") as mock_repasse,
+            ):
                 mock_settings.use_asaas = True
                 mock_settings.payments_disabled = False
                 mock_settings.ASAAS_PLATFORM_WALLET_ID = "wallet-platform"
+                mock_repasse.use_asaas = True
+                mock_repasse.payments_disabled = False
+                mock_repasse.ASAAS_PLATFORM_WALLET_ID = "wallet-platform"
                 body = montar_evento_response(db, ev)
             assert body.compra_disponivel is False
             assert body.motivo_compra_indisponivel
@@ -159,6 +167,7 @@ class TestEventoRepasse:
                 senha_hash="x",
                 tipo="organizador",
                 asaas_wallet_id="wallet-org-test",
+                asaas_repasse_status="approved",
             )
             db.add(u)
             ev = Evento(
@@ -186,6 +195,8 @@ class TestEventoRepasse:
             db.close()
 
     def test_status_asaas_sincroniza_eventos_sem_wallet(self):
+        prev_override = app.dependency_overrides.get(get_db)
+
         def override_get_db():
             db = _db()
             try:
@@ -244,4 +255,7 @@ class TestEventoRepasse:
             assert r.status_code == 200
             assert r.json()["eventos_sem_wallet"] == 0
         finally:
-            app.dependency_overrides.pop(get_db, None)
+            if prev_override is not None:
+                app.dependency_overrides[get_db] = prev_override
+            else:
+                app.dependency_overrides.pop(get_db, None)

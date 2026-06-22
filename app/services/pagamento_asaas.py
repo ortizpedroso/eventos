@@ -41,7 +41,16 @@ def split_para_evento(
     tarifa: PlanoTarifa | None = None,
     desconto_organizador: float = 0.0,
 ) -> list[dict[str, Any]]:
-    """Split sobre preço base do ingresso (taxa plataforma fixa por plano)."""
+    """Split sobre preço base do ingresso.
+
+    Distribuição do valor base (preço do ingresso):
+    - Organizador: líquido após taxa EventosBR (percentual + fixo por plano)
+    - Plataforma: taxa EventosBR → wallet `ASAAS_PLATFORM_WALLET_ID`
+    - Asaas: taxas de processamento/parcelamento ficam no gateway (fora do split)
+
+    Acréscimo de parcelamento pago pelo comprador entra no `value` total da cobrança
+    mas não entra no split — permanece na conta mestre (plataforma cobre taxas Asaas).
+    """
     t = tarifa or TARIFA_PADRAO
     splits: list[dict[str, Any]] = []
     q = max(1, int(quantidade or 1))

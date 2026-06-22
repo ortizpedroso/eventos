@@ -71,7 +71,7 @@ class CriarEventoRequest(BaseModel):
     categoria: str = Field(default="Outros", min_length=1, max_length=80)
     mensagem_confirmacao: Optional[str] = Field(default=None, max_length=2000)
     # False = pausado (não aparece na listagem pública; só o organizador vê com login).
-    publicado: bool = True
+    publicado: bool = False
     limite_ingressos_por_cpf: int | None = Field(default=None, ge=1, le=50)
     ingresso_lotes: list[IngressoLoteWrite] | None = None
     urgencia_modo: str = Field(default="desligado", pattern="^(desligado|exato|faixa)$")
@@ -177,7 +177,7 @@ def montar_evento_response(
     )
     from app.services.urgencia import calcular_urgencia
     from app.services.lista_espera import janela_exclusiva_espera_ativa
-    from app.services.evento_repasse import MOTIVO_COMPRA_SEM_REPASSE, resolver_wallet_repasse_evento
+    from app.services.evento_repasse import organizador_pode_vender
     from config.settings import settings
 
     lotes_orm = sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id))
@@ -210,16 +210,12 @@ def montar_evento_response(
     )
 
     if compra_disponivel and settings.use_asaas and not settings.payments_disabled:
-        if not resolver_wallet_repasse_evento(db, evento):
+        pode_vender, motivo_repasse = organizador_pode_vender(db, evento)
+        if not pode_vender:
             compra_disponivel = False
             preco_compra = None
             lote_compra_id = None
-            motivo_compra_indisponivel = MOTIVO_COMPRA_SEM_REPASSE
-        elif not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
-            compra_disponivel = False
-            preco_compra = None
-            lote_compra_id = None
-            motivo_compra_indisponivel = "Pagamentos temporariamente indisponíveis. Tente novamente mais tarde."
+            motivo_compra_indisponivel = motivo_repasse
 
     restantes: int | None = None
     if cur is not None and cur.quantidade_maxima is not None:

@@ -60,4 +60,19 @@ def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
         pid = path.rsplit("/", 1)[-1]
         _MOCK_PAYMENTS.pop(pid, None)
         return {}
+    if method == "POST" and path == "/v3/accounts":
+        aid = f"acc_e2e_{uuid.uuid4().hex[:12]}"
+        wid = f"wallet_e2e_{uuid.uuid4().hex[:12]}"
+        return {
+            "id": aid,
+            "walletId": wid,
+            "apiKey": f"key_e2e_{uuid.uuid4().hex[:16]}",
+        }
+    if method == "GET" and path == "/v3/myAccount/status":
+        return {
+            "commercialInfo": "APPROVED",
+            "bankAccountInfo": "APPROVED",
+            "documentation": "APPROVED",
+            "general": "APPROVED",
+        }
     return {}

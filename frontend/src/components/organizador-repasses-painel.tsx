@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { InputValorBrl } from "@/components/input-valor-brl";
@@ -14,6 +16,10 @@ type RepasseStatus = {
   wallet_configurado: boolean;
   tem_subconta: boolean;
   repasses_prontos: boolean;
+  repasse_status?: string | null;
+  repasse_status_rotulo?: string;
+  repasse_aprovado?: boolean;
+  pode_publicar_eventos_pagos?: boolean;
   eventos_sem_wallet: number;
   nota_wallet: string | null;
 };
@@ -58,6 +64,7 @@ function fmt(n: number) {
 }
 
 export function OrganizadorRepassesPainel() {
+  const router = useRouter();
   const [status, setStatus] = useState<RepasseStatus | null>(null);
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
@@ -110,7 +117,11 @@ export function OrganizadorRepassesPainel() {
     setMsg(null);
     setError(null);
     try {
-      const r = await apiFetch<{ mensagem: string }>("/api/organizador/asaas/subconta", {
+      const r = await apiFetch<{
+        mensagem: string;
+        redirecionar_acompanhamento?: boolean;
+        repasse_aprovado?: boolean;
+      }>("/api/organizador/asaas/subconta", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -125,6 +136,10 @@ export function OrganizadorRepassesPainel() {
       });
       setMsg(r.mensagem);
       setMostrarSubconta(false);
+      if (r.redirecionar_acompanhamento) {
+        router.push("/organizador/financeiro/conta-repasse");
+        return;
+      }
       await carregar();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível criar conta de repasses.");
@@ -216,15 +231,37 @@ export function OrganizadorRepassesPainel() {
       {status && !status.repasses_prontos ? (
         <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
           <p className="font-medium">Configure sua conta de repasses</p>
-          <p className="mt-1">{status.nota_wallet}</p>
-          <button
-            type="button"
-            className="mt-3 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
-            onClick={() => setMostrarSubconta(true)}
-          >
-            Criar conta de repasses
-          </button>
+          <p className="mt-1">
+            {status.nota_wallet ??
+              "É obrigatório para publicar eventos com ingressos pagos. Eventos gratuitos podem ser publicados sem repasse."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
+              onClick={() => setMostrarSubconta(true)}
+            >
+              Criar conta de repasses
+            </button>
+            {status.tem_subconta && !status.repasse_aprovado ? (
+              <Link
+                href="/organizador/financeiro/conta-repasse"
+                className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-950"
+              >
+                Acompanhar aprovação
+              </Link>
+            ) : null}
+          </div>
         </div>
+      ) : null}
+
+      {status?.repasse_aprovado ? (
+        <p className="mt-4 text-sm text-emerald-800">
+          Conta aprovada — repasses automáticos ativos.{" "}
+          <Link href="/organizador/financeiro/conta-repasse" className="font-medium underline">
+            Ver detalhes
+          </Link>
+        </p>
       ) : null}
 
       {mostrarSubconta ? (

@@ -93,6 +93,12 @@ async def criar_evento(
     else:
         criar_lotes_iniciais(db, novo_evento, float(evento_data.preco_ingresso))
 
+    from app.services.evento_repasse import validar_publicacao_evento_pago
+    from app.services.organizador_asaas import atualizar_status_repasse_organizador
+
+    usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
+    validar_publicacao_evento_pago(db, usuario_atual, novo_evento, evento_data.publicado)
+
     db.commit()
     db.refresh(novo_evento)
 
@@ -183,6 +189,12 @@ async def atualizar_evento(
             raise HTTPException(status_code=400, detail=str(e)) from e
 
     sincronizar_preco_ingresso_evento(db, evento)
+
+    from app.services.evento_repasse import validar_publicacao_evento_pago
+    from app.services.organizador_asaas import atualizar_status_repasse_organizador
+
+    usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
+    validar_publicacao_evento_pago(db, usuario_atual, evento, body.publicado)
 
     db.commit()
     db.refresh(evento)

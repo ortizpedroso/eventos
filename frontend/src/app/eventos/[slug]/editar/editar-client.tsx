@@ -7,6 +7,10 @@ import { useEffect, useState } from "react";
 import { EVENTO_CATEGORIAS, isoToDatetimeLocalValue, slugFromNome } from "@/lib/eventos";
 import { EventoCuponsEditor } from "@/components/evento-cupons-editor";
 import {
+  checklistPublicacaoPronta,
+  EventoPublicarChecklist,
+} from "@/components/evento-publicar-checklist";
+import {
   EventoLotesEditor,
   eventoLotesToRows,
   lotesRowsToApiPayload,
@@ -62,6 +66,8 @@ export function EditarEventoClient({ slug }: Props) {
   const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
   const [parcelamentoMax, setParcelamentoMax] = useState(2);
   const [repasseParcelamento, setRepasseParcelamento] = useState<"comprador" | "organizador">("comprador");
+  const [repasseAprovado, setRepasseAprovado] = useState(false);
+  const [formPublicado, setFormPublicado] = useState(false);
   const [planoTarifa, setPlanoTarifa] = useState<PlanoTarifaId>("padrao");
   const [csvBusy, setCsvBusy] = useState(false);
   const [interesseRows, setInteresseRows] = useState<{ email: string; nome: string | null; data_criacao: string | null }[]>([]);
@@ -127,6 +133,9 @@ export function EditarEventoClient({ slug }: Props) {
         if (s.plano_tarifa === "assinatura") setPlanoTarifa("assinatura");
       })
       .catch(() => {});
+    void apiFetch<{ repasse_aprovado?: boolean }>("/api/organizador/asaas", { cache: "no-store" })
+      .then((s) => setRepasseAprovado(Boolean(s.repasse_aprovado)))
+      .catch(() => setRepasseAprovado(false));
   }, []);
 
   useEffect(() => {
@@ -150,6 +159,7 @@ export function EditarEventoClient({ slug }: Props) {
           setParcelamentoHabilitado(ev.parcelamento_habilitado ?? false);
           setParcelamentoMax(ev.parcelamento_max ?? 2);
           setRepasseParcelamento(ev.repasse_parcelamento ?? "comprador");
+          setFormPublicado(ev.publicado);
           if (ev.aceita_interesse !== false) {
             void carregarListaInteresse(ev.id);
           }
@@ -204,6 +214,14 @@ export function EditarEventoClient({ slug }: Props) {
 
     const msg = String(formData.get("mensagem_confirmacao") ?? "").trim();
     const publicado = String(formData.get("publicado") ?? "true") !== "false";
+    const eventoGratuito = !lotesPayload.some((l) => l.tipo !== "cortesia");
+    if (publicado && !eventoGratuito && !repasseAprovado) {
+      setError(
+        "Para publicar um evento com ingressos pagos, crie e aguarde a aprovação da conta de repasses em Organizador → Financeiro.",
+      );
+      setSaving(false);
+      return;
+    }
     const limiteRaw = String(formData.get("limite_ingressos_por_cpf") ?? "").trim();
     const limite_ingressos_por_cpf = limiteRaw ? Number.parseInt(limiteRaw, 10) : null;
 
@@ -290,6 +308,21 @@ export function EditarEventoClient({ slug }: Props) {
   }
 
   const slugPrev = slugFromNome(nomeParaSlug);
+  const eventoGratuito = !loteRows.some((l) => l.tipo !== "cortesia");
+  const checklistProps = {
+    nome: nomeParaSlug,
+    descricao: evento.descricao,
+    dataInicio: isoToDatetimeLocalValue(evento.data_inicio),
+    local: evento.local,
+    imagemUrl,
+    modoSimples: false,
+    eventoGratuito,
+    precoSimples: "",
+    loteRowsCount: loteRows.length,
+    publicado: formPublicado,
+    repasseAprovado,
+  };
+  const prontoPublicar = checklistPublicacaoPronta(checklistProps);
 
   return (
     <div className="mx-auto mt-10 w-full max-w-2xl">
@@ -475,16 +508,27 @@ export function EditarEventoClient({ slug }: Props) {
 
           <div className="rounded-lg border border-zinc-200 p-4">
             <p className="text-sm font-medium text-zinc-900">Visibilidade</p>
-            <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
+            <EventoPublicarChecklist {...checklistProps} />
+            <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
               <input
                 type="radio"
                 name="publicado"
                 value="true"
-                defaultChecked={evento.publicado}
+                checked={formPublicado}
+                disabled={!eventoGratuito && !repasseAprovado}
+                onChange={() => setFormPublicado(true)}
                 className="mt-1"
               />
               <span>
                 <strong className="font-semibold">Publicar</strong> — na vitrine e com venda.
+                {!eventoGratuito && !repasseAprovado ? (
+                  <span className="mt-1 block text-xs text-amber-800">
+                    Requer conta de repasses aprovada.{" "}
+                    <Link href="/organizador/financeiro/conta-repasse" className="font-medium underline">
+                      Acompanhar abertura da conta
+                    </Link>
+                  </span>
+                ) : null}
               </span>
             </label>
             <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
@@ -492,7 +536,8 @@ export function EditarEventoClient({ slug }: Props) {
                 type="radio"
                 name="publicado"
                 value="false"
-                defaultChecked={!evento.publicado}
+                checked={!formPublicado}
+                onChange={() => setFormPublicado(false)}
                 className="mt-1"
               />
               <span>
@@ -514,7 +559,11 @@ export function EditarEventoClient({ slug }: Props) {
           />
 
           <div className="mt-6 flex justify-end border-t border-zinc-100 pt-4">
-            <button disabled={saving} className="btn-success px-8" type="submit">
+            <button
+              disabled={saving || (formPublicado && !prontoPublicar)}
+              className="btn-success px-8"
+              type="submit"
+            >
               {saving ? "Salvando…" : "Salvar alterações"}
             </button>
           </div>

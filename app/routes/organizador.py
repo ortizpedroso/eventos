@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session, joinedload
 from app.models import Evento, Ingresso, Usuario, get_db
 from app.routes.auth import get_usuario_atual
 from app.services.organizador_asaas import (
+    acompanhamento_repasse_organizador,
     atualizar_antecipacao_cartao,
+    atualizar_status_repasse_organizador,
     criar_subconta_organizador,
     definir_wallet_organizador,
     simular_antecipacao,
@@ -123,7 +125,19 @@ async def asaas_status_organizador(
     atualizados = sincronizar_wallet_eventos_organizador(db, usuario_atual)
     if atualizados:
         db.commit()
+    usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
+    db.commit()
+    db.refresh(usuario_atual)
     return status_asaas_organizador(db, usuario_atual)
+
+
+@router.get("/asaas/acompanhamento")
+async def asaas_acompanhamento_repasse(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    _require_organizador(usuario_atual)
+    return acompanhamento_repasse_organizador(db, usuario_atual)
 
 
 @router.put("/asaas/wallet")
