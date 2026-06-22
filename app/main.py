@@ -54,15 +54,18 @@ async def lifespan(app: FastAPI):
         stop_lista_espera_cleanup_worker,
     )
     from app.services.reserva_cleanup import start_reserva_cleanup_worker, stop_reserva_cleanup_worker
+    from app.services.assinatura_ciclo import start_assinatura_ciclo_worker, stop_assinatura_ciclo_worker
 
     log_production_warnings()
     start_ticket_email_worker()
     start_reserva_cleanup_worker()
     start_lista_espera_cleanup_worker()
     start_lembrete_worker()
+    start_assinatura_ciclo_worker()
     try:
         yield
     finally:
+        stop_assinatura_ciclo_worker()
         stop_lembrete_worker()
         stop_lista_espera_cleanup_worker()
         stop_reserva_cleanup_worker()

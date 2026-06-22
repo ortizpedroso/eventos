@@ -121,6 +121,8 @@ def processar_pagamento_assinatura_gateway(db: Session, payment: dict) -> bool:
     if (getattr(usuario, "assinatura_ultimo_payment_id", None) or "").strip() == pay_id:
         return True
     usuario.assinatura_ultimo_payment_id = pay_id
+    usuario.assinatura_renovacao_payment_id = None
+    usuario.assinatura_aviso_expiracao_enviado_em = None
     renovar_assinatura_meses(db, usuario)
     return True
 

@@ -2077,3 +2077,73 @@ def test_lista_espera_dedup_email():
 def test_taxas_asaas_parcelamento_7_12x():
     taxa = calcular_taxa_asaas(100.0, "cartao_parcelado", parcelas=10)
     assert taxa > calcular_taxa_asaas(100.0, "cartao_parcelado", parcelas=3)
+
+
+def test_ciclo_assinatura_envia_aviso_e_gera_renovacao():
+    from unittest.mock import patch
+
+    from app.models import Usuario
+    from app.services.assinatura_ciclo import processar_ciclo_assinaturas
+
+    db = _db()
+    try:
+        org = Usuario(
+            email=f"sub_{uuid.uuid4().hex[:8]}@ex.com",
+            nome="Org Sub",
+            tipo="organizador",
+            plano_tarifa="assinatura",
+            assinatura_valida_ate=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=2),
+        )
+        db.add(org)
+        db.commit()
+        db.refresh(org)
+
+        with (
+            patch(
+                "app.services.assinatura_email.enviar_email_aviso_expiracao_assinatura",
+                return_value=True,
+            ) as aviso,
+            patch(
+                "app.services.assinatura_email.enviar_email_renovacao_assinatura_gerada",
+                return_value=True,
+            ),
+            patch(
+                "app.services.assinatura_organizador.iniciar_cobranca_assinatura",
+                return_value={"payment_id": "pay_renov_auto", "ja_pago": False},
+            ) as cobranca,
+        ):
+            stats = processar_ciclo_assinaturas(db)
+
+        assert stats["avisos"] >= 1
+        assert stats["renovacoes"] >= 1
+        aviso.assert_called()
+        cobranca.assert_called()
+        db.refresh(org)
+        assert org.assinatura_renovacao_payment_id == "pay_renov_auto"
+    finally:
+        db.close()
+
+
+def test_ciclo_assinatura_expirada_rebaixa_plano():
+    from app.models import Usuario
+    from app.services.assinatura_ciclo import processar_ciclo_assinaturas
+
+    db = _db()
+    try:
+        org = Usuario(
+            email=f"exp_{uuid.uuid4().hex[:8]}@ex.com",
+            nome="Org Exp",
+            tipo="organizador",
+            plano_tarifa="assinatura",
+            assinatura_valida_ate=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1),
+        )
+        db.add(org)
+        db.commit()
+
+        stats = processar_ciclo_assinaturas(db)
+        assert stats["expiradas"] >= 1
+        db.refresh(org)
+        assert org.plano_tarifa == "padrao"
+        assert org.assinatura_valida_ate is None
+    finally:
+        db.close()

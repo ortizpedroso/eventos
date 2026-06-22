@@ -228,7 +228,7 @@ def processar_cobranca_confirmada_gateway(
     if not pay_id or pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:")):
         return []
 
-    if payment is None:
+    if payment is None or not (payment.get("status") or "").strip():
         payment = _obter_cobranca_gateway(pay_id, raise_on_error=raise_on_gateway_error)
     elif not isinstance(payment, dict):
         payment = {}
