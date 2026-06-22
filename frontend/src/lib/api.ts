@@ -60,7 +60,13 @@ export function getApiBaseUrl(): string {
 
 export async function fetchSession(): Promise<Usuario | null> {
   try {
-    const user = await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8_000);
+    const user = await apiFetch<Usuario>("/api/auth/me", {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
     sessionCache = user;
     return user;
   } catch {
