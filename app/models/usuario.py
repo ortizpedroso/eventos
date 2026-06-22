@@ -27,6 +27,7 @@ class Usuario(Base):
     # plano_tarifa: padrao | assinatura (taxa por ingresso no split)
     plano_tarifa = Column(String(16), default="padrao", nullable=False)
     assinatura_valida_ate = Column(DateTime, nullable=True)
+    assinatura_ultimo_payment_id = Column(String(64), nullable=True)
     ativo = Column(Boolean, default=True)
     # Incrementado ao desativar conta ou alterar senha — invalida JWTs antigos.
     token_version = Column(Integer, default=0, nullable=False)

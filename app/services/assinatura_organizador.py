@@ -82,6 +82,9 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
         raise ValueError("Não foi possível gerar cobrança da assinatura.") from e
 
     if status_eh_pago(payment.get("status")):
+        if (getattr(usuario, "assinatura_ultimo_payment_id", None) or "").strip() == (payment.get("id") or ""):
+            return {"ja_pago": True, "payment_id": payment.get("id")}
+        usuario.assinatura_ultimo_payment_id = payment.get("id")
         renovar_assinatura_meses(db, usuario)
         return {"ja_pago": True, "payment_id": payment.get("id")}
 
@@ -100,11 +103,41 @@ def processar_pagamento_assinatura_gateway(db: Session, payment: dict) -> bool:
         return False
     if not status_eh_pago(payment.get("status")):
         return False
+    pay_id = (payment.get("id") or "").strip()
+    if not pay_id:
+        return False
+    valor = round(float(payment.get("value") or 0), 2)
+    if valor < round(MENSALIDADE_ASSINATURA_MENSAL - 0.01, 2):
+        return False
     org_id = ref.split(":", 1)[1].strip()
     if not org_id:
         return False
     usuario = db.get(Usuario, org_id)
     if not usuario:
         return False
+    customer = (payment.get("customer") or "").strip()
+    if customer and usuario.asaas_customer_id and customer != usuario.asaas_customer_id:
+        return False
+    if (getattr(usuario, "assinatura_ultimo_payment_id", None) or "").strip() == pay_id:
+        return True
+    usuario.assinatura_ultimo_payment_id = pay_id
     renovar_assinatura_meses(db, usuario)
     return True
+
+
+def processar_reembolso_assinatura_gateway(db: Session, payment: dict) -> bool:
+    """Cancela assinatura se o pagamento reembolsado era mensalidade."""
+    ref = (payment.get("externalReference") or "").strip()
+    if not ref.startswith("assinatura:"):
+        return False
+    org_id = ref.split(":", 1)[1].strip()
+    if not org_id:
+        return False
+    usuario = db.get(Usuario, org_id)
+    if not usuario:
+        return False
+    pay_id = (payment.get("id") or "").strip()
+    if pay_id and (getattr(usuario, "assinatura_ultimo_payment_id", None) or "").strip() == pay_id:
+        cancelar_assinatura(db, usuario)
+        return True
+    return False

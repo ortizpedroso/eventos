@@ -320,9 +320,15 @@ def test_processar_pagamento_assinatura_gateway():
     db.get.return_value = org
     ok = processar_pagamento_assinatura_gateway(
         db,
-        {"externalReference": "assinatura:org-1", "status": "CONFIRMED"},
+        {"id": "pay_sub_1", "externalReference": "assinatura:org-1", "status": "CONFIRMED", "value": 500.0},
     )
     assert ok is True
+    ok2 = processar_pagamento_assinatura_gateway(
+        db,
+        {"id": "pay_sub_1", "externalReference": "assinatura:org-1", "status": "CONFIRMED", "value": 500.0},
+    )
+    assert ok2 is True
+    assert org.assinatura_ultimo_payment_id == "pay_sub_1"
 
 
 def test_urgencia_exato():

@@ -81,7 +81,10 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
                     raise_on_gateway_error=True,
                 )
         elif event_type == "PAYMENT_REFUNDED" and pay_id:
-            cancelar_ingressos_reembolsados(db, pay_id)
+            from app.services.assinatura_organizador import processar_reembolso_assinatura_gateway
+
+            if not (payment and processar_reembolso_assinatura_gateway(db, payment)):
+                cancelar_ingressos_reembolsados(db, pay_id)
         elif event_type in ("PAYMENT_DELETED", "PAYMENT_OVERDUE") and pay_id:
             cancelar_ingressos_pi_pendentes(db, pay_id)
 
