@@ -316,17 +316,21 @@ def test_processar_pagamento_assinatura_gateway():
     org = MagicMock()
     org.id = "org-1"
     org.tipo = "organizador"
+    org.asaas_customer_id = "cus_1"
     org.assinatura_valida_ate = None
+    org.assinatura_renovacao_payment_id = "pay_sub_1"
+    org.assinatura_ultimo_payment_id = None
     db.get.return_value = org
-    ok = processar_pagamento_assinatura_gateway(
-        db,
-        {"id": "pay_sub_1", "externalReference": "assinatura:org-1", "status": "CONFIRMED", "value": 500.0},
-    )
+    payload = {
+        "id": "pay_sub_1",
+        "externalReference": "assinatura:org-1",
+        "status": "CONFIRMED",
+        "value": 500.0,
+        "customer": "cus_1",
+    }
+    ok = processar_pagamento_assinatura_gateway(db, payload)
     assert ok is True
-    ok2 = processar_pagamento_assinatura_gateway(
-        db,
-        {"id": "pay_sub_1", "externalReference": "assinatura:org-1", "status": "CONFIRMED", "value": 500.0},
-    )
+    ok2 = processar_pagamento_assinatura_gateway(db, payload)
     assert ok2 is True
     assert org.assinatura_ultimo_payment_id == "pay_sub_1"
 

@@ -46,8 +46,12 @@ def _renovacao_ainda_pendente(db: Session, usuario: Usuario) -> bool:
         from app.services.pagamento_asaas import obter_cobranca, status_eh_cancelado, status_eh_pago
 
         pay = obter_cobranca(pay_id)
-        status = pay.get("status")
-        if status_eh_pago(status) or status_eh_cancelado(status):
+        status = (pay.get("status") or "").upper()
+        if status_eh_pago(status):
+            usuario.assinatura_renovacao_payment_id = None
+            db.commit()
+            return False
+        if status_eh_cancelado(status) or status == "OVERDUE":
             usuario.assinatura_renovacao_payment_id = None
             db.commit()
             return False

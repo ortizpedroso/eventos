@@ -88,42 +88,92 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
         renovar_assinatura_meses(db, usuario)
         return {"ja_pago": True, "payment_id": payment.get("id")}
 
+    pay_id = (payment.get("id") or "").strip()
+    if pay_id:
+        usuario.assinatura_renovacao_payment_id = pay_id
+        db.commit()
+
     return {
         "payment_id": payment.get("id"),
         **resposta_checkout_asaas(payment),
     }
 
 
-def processar_pagamento_assinatura_gateway(db: Session, payment: dict) -> bool:
+def processar_pagamento_assinatura_gateway(
+    db: Session,
+    payment: dict,
+    *,
+    raise_on_gateway_error: bool = False,
+) -> bool:
     """Retorna True se o pagamento era assinatura e foi processado."""
-    from app.services.pagamento_asaas import status_eh_pago
+    from app.services.asaas_client import AsaasAPIError
+    from app.services.pagamento_asaas import obter_cobranca, status_eh_pago
+
+    pay_id = (payment.get("id") or "").strip()
+    if not pay_id:
+        return False
+
+    if not (payment.get("status") or "").strip() or not (payment.get("externalReference") or "").strip():
+        try:
+            payment = obter_cobranca(pay_id)
+        except AsaasAPIError:
+            if raise_on_gateway_error:
+                raise
+            return False
 
     ref = (payment.get("externalReference") or "").strip()
     if not ref.startswith("assinatura:"):
         return False
     if not status_eh_pago(payment.get("status")):
         return False
-    pay_id = (payment.get("id") or "").strip()
-    if not pay_id:
-        return False
+
     valor = round(float(payment.get("value") or 0), 2)
-    if valor < round(MENSALIDADE_ASSINATURA_MENSAL - 0.01, 2):
+    if abs(valor - round(MENSALIDADE_ASSINATURA_MENSAL, 2)) > 0.01:
         return False
+
     org_id = ref.split(":", 1)[1].strip()
     if not org_id:
         return False
     usuario = db.get(Usuario, org_id)
-    if not usuario:
+    if not usuario or usuario.tipo != "organizador":
         return False
+
     customer = (payment.get("customer") or "").strip()
-    if customer and usuario.asaas_customer_id and customer != usuario.asaas_customer_id:
+    if not usuario.asaas_customer_id or not customer or customer != usuario.asaas_customer_id:
         return False
-    if (getattr(usuario, "assinatura_ultimo_payment_id", None) or "").strip() == pay_id:
+
+    renovacao = (getattr(usuario, "assinatura_renovacao_payment_id", None) or "").strip()
+    ultimo = (getattr(usuario, "assinatura_ultimo_payment_id", None) or "").strip()
+    if pay_id != renovacao and pay_id != ultimo:
+        return False
+
+    if ultimo == pay_id:
         return True
+
     usuario.assinatura_ultimo_payment_id = pay_id
     usuario.assinatura_renovacao_payment_id = None
     usuario.assinatura_aviso_expiracao_enviado_em = None
     renovar_assinatura_meses(db, usuario)
+    return True
+
+
+def limpar_renovacao_assinatura_pendente(db: Session, payment_id: str) -> bool:
+    """Remove cobrança de renovação pendente/expirada para permitir nova geração."""
+    pay_id = (payment_id or "").strip()
+    if not pay_id:
+        return False
+    from app.models import Usuario
+
+    rows = (
+        db.query(Usuario)
+        .filter(Usuario.assinatura_renovacao_payment_id == pay_id)
+        .all()
+    )
+    if not rows:
+        return False
+    for u in rows:
+        u.assinatura_renovacao_payment_id = None
+    db.commit()
     return True
 
 
