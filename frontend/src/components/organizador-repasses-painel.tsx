@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { InputValorBrl } from "@/components/input-valor-brl";
@@ -19,6 +19,7 @@ type RepasseStatus = {
   repasse_status?: string | null;
   repasse_status_rotulo?: string;
   repasse_aprovado?: boolean;
+  pode_reenviar_subconta?: boolean;
   pode_publicar_eventos_pagos?: boolean;
   eventos_sem_wallet: number;
   nota_wallet: string | null;
@@ -65,6 +66,7 @@ function fmt(n: number) {
 
 export function OrganizadorRepassesPainel() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [status, setStatus] = useState<RepasseStatus | null>(null);
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
@@ -76,6 +78,7 @@ export function OrganizadorRepassesPainel() {
   const [busy, setBusy] = useState(false);
 
   const [mostrarSubconta, setMostrarSubconta] = useState(false);
+  const [modoReenvio, setModoReenvio] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [telefone, setTelefone] = useState("");
   const [renda, setRenda] = useState(() => moedaBrlFromNumber(5000));
@@ -111,17 +114,27 @@ export function OrganizadorRepassesPainel() {
     void carregar();
   }, [carregar]);
 
+  useEffect(() => {
+    if (searchParams.get("reenviar") === "1" || status?.pode_reenviar_subconta) {
+      setModoReenvio(Boolean(status?.pode_reenviar_subconta));
+      setMostrarSubconta(true);
+    }
+  }, [searchParams, status?.pode_reenviar_subconta]);
+
   async function criarSubconta(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setMsg(null);
     setError(null);
+    const endpoint = modoReenvio
+      ? "/api/organizador/asaas/subconta/reenviar"
+      : "/api/organizador/asaas/subconta";
     try {
       const r = await apiFetch<{
         mensagem: string;
         redirecionar_acompanhamento?: boolean;
         repasse_aprovado?: boolean;
-      }>("/api/organizador/asaas/subconta", {
+      }>(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -136,6 +149,7 @@ export function OrganizadorRepassesPainel() {
       });
       setMsg(r.mensagem);
       setMostrarSubconta(false);
+      setModoReenvio(false);
       if (r.redirecionar_acompanhamento) {
         router.push("/organizador/financeiro/conta-repasse");
         return;
@@ -251,6 +265,18 @@ export function OrganizadorRepassesPainel() {
                 Acompanhar aprovação
               </Link>
             ) : null}
+            {status.pode_reenviar_subconta ? (
+              <button
+                type="button"
+                className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-900"
+                onClick={() => {
+                  setModoReenvio(true);
+                  setMostrarSubconta(true);
+                }}
+              >
+                Reenviar dados
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -266,7 +292,14 @@ export function OrganizadorRepassesPainel() {
 
       {mostrarSubconta ? (
         <form onSubmit={criarSubconta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5 sm:grid-cols-2">
-          <h3 className="sm:col-span-2 text-sm font-semibold text-zinc-900">Dados para conta de repasses</h3>
+          <h3 className="sm:col-span-2 text-sm font-semibold text-zinc-900">
+            {modoReenvio ? "Reenviar dados da conta de repasses" : "Dados para conta de repasses"}
+          </h3>
+          {modoReenvio ? (
+            <p className="sm:col-span-2 text-xs text-red-800">
+              Sua conta anterior foi reprovada. Revise os dados e envie novamente para análise do Asaas.
+            </p>
+          ) : null}
           <input
             className="rounded-lg border px-3 py-2 text-sm"
             placeholder="CPF ou CNPJ"

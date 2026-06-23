@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     ASAAS_CREATE_SUBACCOUNT_ON_REGISTER: bool = False
     # true = respostas mock da API Asaas (só development/test; E2E Playwright)
     ASAAS_E2E_MOCK: bool = False
+    # Colar walletId manualmente (bypass subconta/KYC). Desligado em produção por padrão.
+    ASAAS_ALLOW_MANUAL_WALLET: bool = False
 
     # OAuth (Google Sign In)
     GOOGLE_OAUTH_CLIENT_ID: str = ""
@@ -102,6 +104,13 @@ class Settings(BaseSettings):
     @property
     def permite_ingresso_sem_gateway(self) -> bool:
         """Atalhos sem cobrança real — apenas development/test."""
+        return self.ENVIRONMENT in ("development", "test")
+
+    @property
+    def asaas_allow_manual_wallet(self) -> bool:
+        """Wallet colada manualmente — só dev/test ou flag explícita."""
+        if self.ASAAS_ALLOW_MANUAL_WALLET:
+            return True
         return self.ENVIRONMENT in ("development", "test")
 
 
