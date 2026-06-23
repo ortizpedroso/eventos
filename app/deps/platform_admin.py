@@ -21,3 +21,14 @@ async def require_platform_admin(
     received = (x_platform_admin_key or "").strip()
     if not received or not secrets.compare_digest(received, expected):
         raise HTTPException(status_code=401, detail="Chave de administrador inválida.")
+
+
+async def optional_platform_admin(
+    x_platform_admin_key: str | None = Header(default=None, alias="X-Platform-Admin-Key"),
+) -> bool:
+    """True quando o header de admin da plataforma é válido."""
+    expected = (settings.PLATFORM_ADMIN_API_KEY or "").strip()
+    received = (x_platform_admin_key or "").strip()
+    if not expected or not received:
+        return False
+    return secrets.compare_digest(received, expected)

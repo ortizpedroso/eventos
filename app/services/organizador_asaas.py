@@ -100,10 +100,14 @@ def consultar_status_repasse_asaas(usuario: Usuario) -> dict[str, Any] | None:
 
 def atualizar_status_repasse_organizador(db: Session, usuario: Usuario) -> Usuario:
     agora = agora_utc_naive()
+    status_local = (usuario.asaas_repasse_status or "").strip().lower()
     if (usuario.asaas_account_id or "").strip() and usuario.asaas_subaccount_api_key:
         remoto = consultar_status_repasse_asaas(usuario)
         if isinstance(remoto, dict):
-            usuario.asaas_repasse_status = _normalizar_status_asaas(remoto.get("general"))
+            novo = _normalizar_status_asaas(remoto.get("general"))
+            # Não sobrescreve reprovação local com poll remoto (reenvio explícito limpa antes)
+            if status_local != "rejected" or novo == "approved":
+                usuario.asaas_repasse_status = novo
             usuario.asaas_repasse_status_em = agora
             usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(remoto)
     elif (usuario.asaas_wallet_id or "").strip() and not (usuario.asaas_account_id or "").strip():
@@ -180,6 +184,7 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "repasse_status": status_repasse,
         "repasse_status_rotulo": _rotulo_status_repasse(status_repasse),
         "repasse_aprovado": aprovado,
+        "pode_reenviar_subconta": pode_reenviar_subconta(usuario),
         "repasses_prontos": bool(wallet) and aprovado and settings.use_asaas,
         "pode_publicar_eventos_pagos": aprovado and settings.use_asaas and not settings.payments_disabled,
         "eventos_sem_wallet": eventos_sem_wallet,
@@ -211,6 +216,7 @@ def acompanhamento_repasse_organizador(db: Session, usuario: Usuario) -> dict[st
         "repasse_status": status_repasse,
         "repasse_status_rotulo": _rotulo_status_repasse(status_repasse),
         "repasse_aprovado": repasse_status_aprovado(status_repasse),
+        "pode_reenviar_subconta": pode_reenviar_subconta(usuario),
         "atualizado_em": usuario.asaas_repasse_status_em.isoformat() + "Z"
         if usuario.asaas_repasse_status_em
         else None,
@@ -228,12 +234,18 @@ def definir_wallet_organizador(
     wallet_id: str,
     *,
     sincronizar_eventos: bool = True,
+    admin_override: bool = False,
 ) -> dict[str, Any]:
     wid = (wallet_id or "").strip()
     if not _WALLET_RE.match(wid):
         raise ValueError("walletId inválido. Cole o identificador completo da conta Asaas.")
     if not settings.use_asaas:
         raise ValueError("Asaas não está ativo neste ambiente.")
+    if not settings.asaas_allow_manual_wallet and not admin_override:
+        raise ValueError(
+            "A configuração manual de wallet está desativada. "
+            "Crie sua conta de repasses em Financeiro para o Asaas validar seus dados."
+        )
 
     usuario.asaas_wallet_id = wid
     usuario.asaas_repasse_status = "manual"
@@ -352,6 +364,134 @@ def criar_subconta_organizador(
             else "Dados enviados ao Asaas. Acompanhe a aprovação da sua conta de repasses."
         ),
     }
+
+
+def pode_reenviar_subconta(usuario: Usuario) -> bool:
+    return (usuario.asaas_repasse_status or "").strip().lower() == "rejected"
+
+
+def limpar_subconta_rejeitada(db: Session, usuario: Usuario) -> None:
+    """Remove vínculo local de subconta reprovada para permitir novo envio ao Asaas."""
+    if not pode_reenviar_subconta(usuario):
+        raise ValueError(
+            "Reenvio disponível apenas quando a conta de repasses foi reprovada pelo Asaas."
+        )
+    usuario.asaas_account_id = None
+    usuario.asaas_wallet_id = None
+    usuario.asaas_subaccount_api_key = None
+    usuario.asaas_repasse_status = None
+    usuario.asaas_repasse_status_em = None
+    usuario.asaas_repasse_detalhes = None
+    db.add(usuario)
+    db.query(Evento).filter(Evento.organizador_id == usuario.id).update(
+        {Evento.asaas_wallet_id: None},
+        synchronize_session=False,
+    )
+
+
+def aplicar_webhook_status_conta_asaas(
+    db: Session,
+    *,
+    account_id: str,
+    account_status: dict[str, Any],
+    event_type: str | None = None,
+) -> Usuario | None:
+    """Atualiza status de repasse a partir de webhook ACCOUNT_STATUS_* do Asaas."""
+    aid = (account_id or "").strip()
+    if not aid:
+        return None
+    usuario = db.query(Usuario).filter(Usuario.asaas_account_id == aid).first()
+    if not usuario:
+        logger.warning("Webhook conta Asaas: account_id %s sem organizador vinculado", aid)
+        return None
+
+    general = account_status.get("general")
+    status_atual = (usuario.asaas_repasse_status or "").lower()
+    evento_rejeicao = bool(event_type and str(event_type).endswith("_REJECTED"))
+
+    if evento_rejeicao:
+        usuario.asaas_repasse_status = "rejected"
+    elif general is not None:
+        usuario.asaas_repasse_status = _normalizar_status_asaas(general)
+    elif event_type:
+        if event_type.endswith("_AWAITING_APPROVAL"):
+            usuario.asaas_repasse_status = "awaiting_approval"
+        elif event_type.endswith("_PENDING"):
+            usuario.asaas_repasse_status = "pending"
+        elif event_type.endswith("_APPROVED"):
+            usuario.asaas_repasse_status = "approved"
+    elif status_atual == "rejected":
+        # Mantém reprovação local até reenvio explícito
+        pass
+
+    usuario.asaas_repasse_status_em = agora_utc_naive()
+    usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(account_status)
+    db.add(usuario)
+    logger.info(
+        "Repasse %s atualizado via webhook (%s) → %s",
+        usuario.email,
+        event_type or "accountStatus",
+        usuario.asaas_repasse_status,
+    )
+    return usuario
+
+
+def sincronizar_repasses_pendentes(db: Session) -> int:
+    """Poll GET /v3/myAccount/status para organizadores com subconta ainda não aprovada."""
+    if not settings.use_asaas or settings.payments_disabled:
+        return 0
+    pendentes = (
+        db.query(Usuario)
+        .filter(
+            Usuario.tipo == "organizador",
+            Usuario.asaas_account_id.isnot(None),
+            Usuario.asaas_account_id != "",
+            Usuario.asaas_repasse_status.in_(("pending", "awaiting_approval", None)),
+        )
+        .all()
+    )
+    alterados = 0
+    for org in pendentes:
+        antes = (org.asaas_repasse_status or "").lower()
+        atualizar_status_repasse_organizador(db, org)
+        depois = (org.asaas_repasse_status or "").lower()
+        if depois != antes:
+            alterados += 1
+    if alterados:
+        db.commit()
+    return alterados
+
+
+def reenviar_subconta_organizador(
+    db: Session,
+    usuario: Usuario,
+    *,
+    cpf_cnpj: str,
+    telefone: str,
+    renda_mensal: float,
+    cep: str,
+    endereco: str,
+    numero: str,
+    bairro: str,
+    complemento: str | None = None,
+    company_type: str = "INDIVIDUAL",
+) -> dict[str, Any]:
+    limpar_subconta_rejeitada(db, usuario)
+    db.commit()
+    db.refresh(usuario)
+    return criar_subconta_organizador(
+        db,
+        usuario,
+        cpf_cnpj=cpf_cnpj,
+        telefone=telefone,
+        renda_mensal=renda_mensal,
+        cep=cep,
+        endereco=endereco,
+        numero=numero,
+        bairro=bairro,
+        complemento=complemento,
+        company_type=company_type,
+    )
 
 
 def atualizar_antecipacao_cartao(

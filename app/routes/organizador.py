@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import Evento, Ingresso, Usuario, get_db
+from app.deps.platform_admin import optional_platform_admin
 from app.routes.auth import get_usuario_atual
 from app.services.organizador_asaas import (
     acompanhamento_repasse_organizador,
@@ -16,6 +17,7 @@ from app.services.organizador_asaas import (
     atualizar_status_repasse_organizador,
     criar_subconta_organizador,
     definir_wallet_organizador,
+    reenviar_subconta_organizador,
     simular_antecipacao,
     sincronizar_wallet_eventos_organizador,
     status_asaas_organizador,
@@ -145,16 +147,26 @@ async def asaas_definir_wallet(
     body: AsaasWalletRequest,
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
+    admin_override: bool = Depends(optional_platform_admin),
 ):
     _require_organizador(usuario_atual)
     if settings.payments_disabled:
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
+    if not settings.asaas_allow_manual_wallet and not admin_override:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Configuração manual de wallet desativada. "
+                "Crie sua conta de repasses em Financeiro para validação pelo Asaas."
+            ),
+        )
     try:
         return definir_wallet_organizador(
             db,
             usuario_atual,
             body.wallet_id,
             sincronizar_eventos=body.sincronizar_eventos,
+            admin_override=admin_override,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -171,6 +183,34 @@ async def asaas_criar_subconta(
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
     try:
         return criar_subconta_organizador(
+            db,
+            usuario_atual,
+            cpf_cnpj=body.cpf_cnpj,
+            telefone=body.telefone,
+            renda_mensal=body.renda_mensal,
+            cep=body.cep,
+            endereco=body.endereco,
+            numero=body.numero,
+            bairro=body.bairro,
+            complemento=body.complemento,
+            company_type=body.company_type,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/asaas/subconta/reenviar")
+async def asaas_reenviar_subconta(
+    body: AsaasSubcontaRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Reenvia dados ao Asaas após reprovação da subconta (KYC)."""
+    _require_organizador(usuario_atual)
+    if settings.payments_disabled:
+        raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
+    try:
+        return reenviar_subconta_organizador(
             db,
             usuario_atual,
             cpf_cnpj=body.cpf_cnpj,

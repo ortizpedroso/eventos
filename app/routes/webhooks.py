@@ -68,7 +68,20 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
 
     ingressos_recém_pagos: list[str] = []
     try:
-        if event_type in ("PAYMENT_RECEIVED", "PAYMENT_CONFIRMED") and pay_id:
+        if event_type.startswith("ACCOUNT_STATUS_"):
+            from app.services.organizador_asaas import aplicar_webhook_status_conta_asaas
+
+            account = event.get("account") or {}
+            account_id = str(account.get("id") or "")
+            account_status = event.get("accountStatus") or {}
+            if account_id and isinstance(account_status, dict):
+                aplicar_webhook_status_conta_asaas(
+                    db,
+                    account_id=account_id,
+                    account_status=account_status,
+                    event_type=event_type,
+                )
+        elif event_type in ("PAYMENT_RECEIVED", "PAYMENT_CONFIRMED") and pay_id:
             from app.services.assinatura_organizador import processar_pagamento_assinatura_gateway
 
             if payment and processar_pagamento_assinatura_gateway(
@@ -85,6 +98,16 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
         elif event_type == "PAYMENT_REFUNDED" and pay_id:
             from app.services.assinatura_organizador import processar_reembolso_assinatura_gateway
 
+            if not (payment and processar_reembolso_assinatura_gateway(db, payment)):
+                cancelar_ingressos_reembolsados(db, pay_id)
+        elif event_type in (
+            "PAYMENT_CHARGEBACK_REQUESTED",
+            "PAYMENT_CHARGEBACK_DISPUTE",
+            "PAYMENT_AWAITING_CHARGEBACK_REVERSAL",
+        ) and pay_id:
+            from app.services.assinatura_organizador import processar_reembolso_assinatura_gateway
+
+            logger.warning("Webhook chargeback Asaas: %s pagamento %s", event_type, pay_id)
             if not (payment and processar_reembolso_assinatura_gateway(db, payment)):
                 cancelar_ingressos_reembolsados(db, pay_id)
         elif event_type in ("PAYMENT_DELETED", "PAYMENT_OVERDUE") and pay_id:

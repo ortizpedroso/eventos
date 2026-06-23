@@ -30,11 +30,18 @@ MOTIVO_PUBLICAR_SEM_REPASSE = (
     "em Organizador → Financeiro. O evento pode ficar pausado enquanto isso."
 )
 
-STATUS_REPASSE_APROVADOS = frozenset({"approved", "manual"})
+STATUS_REPASSE_APROVADOS_BASE = frozenset({"approved"})
+
+
+def status_repasse_aprovados() -> frozenset[str]:
+    """Status que liberam publicação/venda. `manual` só quando wallet manual é permitido."""
+    if settings.asaas_allow_manual_wallet:
+        return STATUS_REPASSE_APROVADOS_BASE | frozenset({"manual"})
+    return STATUS_REPASSE_APROVADOS_BASE
 
 
 def repasse_status_aprovado(status: str | None) -> bool:
-    return (status or "").strip().lower() in STATUS_REPASSE_APROVADOS
+    return (status or "").strip().lower() in status_repasse_aprovados()
 
 
 def evento_exige_repasse_aprovado(db: Session, evento: Evento) -> bool:

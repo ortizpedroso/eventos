@@ -75,12 +75,13 @@ nano .env
 
 A API executa `alembic upgrade head` automaticamente no arranque.
 
-Migrações obrigatórias (head atual: `20260618_000024`):
+Migrações obrigatórias (head atual: `20260624_000031`):
 - `20260617_000020` — colunas `asaas_*` em usuários, eventos, ingressos
 - `20260617_000021` — subconta e antecipação do organizador
 - `20260618_000022` — `stripe_events` → `webhook_events`
 - `20260618_000023` — remove colunas Stripe; backfill wallet; refs legadas
 - `20260618_000024` — cifra `asaas_subaccount_api_key` (não rotacione `SECRET_KEY` após go-live sem re-cifrar)
+- `20260624_000031` — status de repasse (`asaas_repasse_status`, detalhes)
 
 ---
 
@@ -90,7 +91,8 @@ Migrações obrigatórias (head atual: `20260618_000024`):
 
 No painel Asaas → Integrações → Webhooks:
 - Token = valor de `ASAAS_WEBHOOK_TOKEN` no `.env`
-- Eventos: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_REFUNDED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED`
+- Eventos pagamento: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_REFUNDED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED`, `PAYMENT_CHARGEBACK_*`
+- Eventos conta: `ACCOUNT_STATUS_GENERAL_APPROVAL_*`, `ACCOUNT_STATUS_COMMERCIAL_INFO_*`, `ACCOUNT_STATUS_DOCUMENT_*`, `ACCOUNT_STATUS_BANK_ACCOUNT_INFO_*`
 
 Referência: `./scripts/asaas-webhook-setup.sh SEU_DOMINIO.com.br`
 
@@ -100,10 +102,13 @@ Referência: `./scripts/asaas-webhook-setup.sh SEU_DOMINIO.com.br`
 
 Antes de vender ingressos pagos, cada organizador deve:
 1. Aceder **Organizador → Financeiro**
-2. Informar o `walletId` da conta Asaas **ou** criar subconta pela plataforma
-3. Confirmar badge «Repasses configurados»
+2. **Criar conta de repasses** (subconta Asaas — dados validados pelo Asaas)
+3. Aguardar aprovação em `/organizador/financeiro/conta-repasse`
+4. Confirmar status **Conta aprovada**
 
-Sem `walletId`, o checkout retorna erro (proteção de split).
+Em produção, colar `walletId` manualmente está desativado (`ASAAS_ALLOW_MANUAL_WALLET=false`).
+
+Sem repasse aprovado, publicação de eventos pagos e checkout retornam erro.
 
 ---
 
