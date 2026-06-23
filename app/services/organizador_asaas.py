@@ -100,10 +100,14 @@ def consultar_status_repasse_asaas(usuario: Usuario) -> dict[str, Any] | None:
 
 def atualizar_status_repasse_organizador(db: Session, usuario: Usuario) -> Usuario:
     agora = agora_utc_naive()
+    status_local = (usuario.asaas_repasse_status or "").strip().lower()
     if (usuario.asaas_account_id or "").strip() and usuario.asaas_subaccount_api_key:
         remoto = consultar_status_repasse_asaas(usuario)
         if isinstance(remoto, dict):
-            usuario.asaas_repasse_status = _normalizar_status_asaas(remoto.get("general"))
+            novo = _normalizar_status_asaas(remoto.get("general"))
+            # Não sobrescreve reprovação local com poll remoto (reenvio explícito limpa antes)
+            if status_local != "rejected" or novo == "approved":
+                usuario.asaas_repasse_status = novo
             usuario.asaas_repasse_status_em = agora
             usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(remoto)
     elif (usuario.asaas_wallet_id or "").strip() and not (usuario.asaas_account_id or "").strip():
@@ -402,17 +406,23 @@ def aplicar_webhook_status_conta_asaas(
         return None
 
     general = account_status.get("general")
-    if general is not None:
+    status_atual = (usuario.asaas_repasse_status or "").lower()
+    evento_rejeicao = bool(event_type and str(event_type).endswith("_REJECTED"))
+
+    if evento_rejeicao:
+        usuario.asaas_repasse_status = "rejected"
+    elif general is not None:
         usuario.asaas_repasse_status = _normalizar_status_asaas(general)
     elif event_type:
-        if event_type.endswith("_REJECTED"):
-            usuario.asaas_repasse_status = "rejected"
-        elif event_type.endswith("_AWAITING_APPROVAL"):
+        if event_type.endswith("_AWAITING_APPROVAL"):
             usuario.asaas_repasse_status = "awaiting_approval"
         elif event_type.endswith("_PENDING"):
             usuario.asaas_repasse_status = "pending"
         elif event_type.endswith("_APPROVED"):
             usuario.asaas_repasse_status = "approved"
+    elif status_atual == "rejected":
+        # Mantém reprovação local até reenvio explícito
+        pass
 
     usuario.asaas_repasse_status_em = agora_utc_naive()
     usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(account_status)

@@ -163,6 +163,64 @@ def test_webhook_account_status_aprova_organizador():
             pass
 
 
+def test_webhook_rejeicao_por_event_type():
+    reg = client.post(
+        "/api/auth/registrar",
+        json={
+            "email": f"org_rej_{uuid.uuid4().hex[:8]}@test.com",
+            "nome": "Org Rej",
+            "senha": "senha12345",
+            "tipo": "organizador",
+        },
+    )
+    assert reg.status_code == 200
+    email = reg.json()["usuario"]["email"]
+
+    gen = app.dependency_overrides[get_db]()
+    db = next(gen)
+    try:
+        org = db.query(Usuario).filter(Usuario.email == email).first()
+        org.asaas_account_id = "acc_rej"
+        org.asaas_repasse_status = "awaiting_approval"
+        db.commit()
+    finally:
+        try:
+            next(gen)
+        except StopIteration:
+            pass
+
+    payload = {
+        "id": f"evt_{uuid.uuid4().hex[:12]}",
+        "event": "ACCOUNT_STATUS_DOCUMENT_REJECTED",
+        "account": {"id": "acc_rej"},
+        "accountStatus": {
+            "commercialInfo": "APPROVED",
+            "documentation": "REJECTED",
+            "general": "AWAITING_APPROVAL",
+        },
+    }
+    with patch("app.routes.webhooks.settings") as wh_settings:
+        wh_settings.ASAAS_WEBHOOK_TOKEN = "wh-token"
+        wh_settings.ENVIRONMENT = "test"
+        r = client.post(
+            "/api/webhooks/asaas",
+            headers={"asaas-access-token": "wh-token", "content-type": "application/json"},
+            content=json.dumps(payload),
+        )
+    assert r.status_code == 200
+
+    gen2 = app.dependency_overrides[get_db]()
+    db2 = next(gen2)
+    try:
+        org = db2.query(Usuario).filter(Usuario.email == email).first()
+        assert org.asaas_repasse_status == "rejected"
+    finally:
+        try:
+            next(gen2)
+        except StopIteration:
+            pass
+
+
 def test_manual_nao_aprovado_quando_flag_desligada():
     from app.services.evento_repasse import repasse_status_aprovado
 
