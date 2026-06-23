@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     ASAAS_E2E_MOCK: bool = False
     # Colar walletId manualmente (bypass subconta/KYC). Desligado em produção por padrão.
     ASAAS_ALLOW_MANUAL_WALLET: bool = False
+    # Horas de carência após confirmação do pagamento antes de liberar valor para saque.
+    FINANCEIRO_CARENCIA_SAQUE_HORAS: int = 48
+    # Prazo máximo informado ao organizador para conclusão da transferência após solicitação.
+    FINANCEIRO_PRAZO_TRANSFERENCIA_HORAS: int = 48
 
     # OAuth (Google Sign In)
     GOOGLE_OAUTH_CLIENT_ID: str = ""

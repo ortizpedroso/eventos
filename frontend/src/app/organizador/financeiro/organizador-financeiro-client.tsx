@@ -101,8 +101,7 @@ export function OrganizadorFinanceiroClient() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Financeiro</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
-          Taxa EventosBR fixa por ingresso ({data?.financeiro?.rotulo_taxa ?? "conforme seu plano"}). Os repasses são
-          automáticos no momento de cada venda (split) —{" "}
+          Acompanhe vendas por período, saldo com carência de 48h e solicite transferências Pix direto na plataforma —{" "}
           <Link href="/planos" className="font-medium text-emerald-800 underline underline-offset-2">
             ver planos
           </Link>

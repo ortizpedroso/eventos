@@ -48,6 +48,22 @@ def mock_obter_payment(payment_id: str) -> dict[str, Any]:
     return {"id": payment_id, "status": "PENDING", "billingType": "PIX"}
 
 
+_MOCK_TRANSFERS: dict[str, dict[str, Any]] = {}
+
+
+def mock_criar_transfer(payload: dict) -> dict[str, Any]:
+    tid = f"tra_e2e_{uuid.uuid4().hex[:12]}"
+    transfer = {
+        "id": tid,
+        "status": "PENDING",
+        "value": payload.get("value"),
+        "pixAddressKey": payload.get("pixAddressKey"),
+        "externalReference": payload.get("externalReference"),
+    }
+    _MOCK_TRANSFERS[tid] = transfer
+    return transfer
+
+
 def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
     if method == "POST" and path == "/v3/customers":
         return mock_criar_customer(json or {})
@@ -75,4 +91,9 @@ def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
             "documentation": "APPROVED",
             "general": "APPROVED",
         }
+    if method == "POST" and path == "/v3/transfers":
+        return mock_criar_transfer(json or {})
+    if method == "GET" and path.startswith("/v3/transfers/"):
+        tid = path.rsplit("/", 1)[-1]
+        return _MOCK_TRANSFERS.get(tid, {"id": tid, "status": "PENDING"})
     return {}

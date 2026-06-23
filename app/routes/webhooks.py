@@ -115,6 +115,11 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
 
             limpar_renovacao_assinatura_pendente(db, pay_id)
             cancelar_ingressos_pi_pendentes(db, pay_id)
+        elif event_type.startswith("TRANSFER_"):
+            from app.services.saque_asaas import aplicar_webhook_transferencia
+
+            transfer = event.get("transfer") or {}
+            aplicar_webhook_transferencia(db, transfer, event_type=event_type)
 
         if event_id:
             db.add(WebhookEvent(id=event_id, tipo=event_type))

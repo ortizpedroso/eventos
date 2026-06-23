@@ -1,6 +1,8 @@
-"""Financeiro white-label do organizador: saldo, extrato e saques."""
+"""Financeiro white-label do organizador: saldo, extrato, saques e relatórios."""
 
 from __future__ import annotations
+
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -12,6 +14,8 @@ from app.services.financeiro_organizador import (
     calcular_saldo_organizador,
     cancelar_saque,
     listar_extrato,
+    listar_saques,
+    listar_vendas_agrupadas,
     solicitar_saque,
 )
 
@@ -21,6 +25,15 @@ router = APIRouter()
 def _require_organizador(usuario: Usuario) -> None:
     if usuario.tipo != "organizador":
         raise HTTPException(status_code=403, detail="Apenas organizadores acessam o financeiro.")
+
+
+def _parse_data_opcional(valor: str | None) -> datetime | None:
+    if not valor:
+        return None
+    try:
+        return datetime.fromisoformat(valor.replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Data inválida. Use ISO 8601.") from e
 
 
 class SaqueRequest(BaseModel):
@@ -49,6 +62,34 @@ async def financeiro_extrato(
     return listar_extrato(db, usuario_atual, limite=limite, offset=offset)
 
 
+@router.get("/vendas")
+async def financeiro_vendas(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+    agrupamento: str = Query("mes", pattern="^(dia|semana|mes|ano|evento)$"),
+    de: str | None = Query(None),
+    ate: str | None = Query(None),
+):
+    _require_organizador(usuario_atual)
+    return listar_vendas_agrupadas(
+        db,
+        usuario_atual,
+        agrupamento=agrupamento,  # type: ignore[arg-type]
+        de=_parse_data_opcional(de),
+        ate=_parse_data_opcional(ate),
+    )
+
+
+@router.get("/saques")
+async def financeiro_listar_saques(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+    limite: int = Query(50, ge=1, le=200),
+):
+    _require_organizador(usuario_atual)
+    return {"saques": listar_saques(db, usuario_atual, limite=limite)}
+
+
 @router.post("/saque")
 async def financeiro_solicitar_saque(
     body: SaqueRequest,
@@ -66,12 +107,18 @@ async def financeiro_solicitar_saque(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    prazo = calcular_saldo_organizador(db, usuario_atual).get("prazo_transferencia_horas", 48)
     return {
         "ok": True,
         "id": saque.id,
         "valor": float(saque.valor),
         "status": saque.status,
-        "mensagem": "Solicitação de saque registrada. O valor será transferido via Pix após análise.",
+        "previsao_liquidacao_em": (
+            saque.previsao_liquidacao_em.isoformat() if saque.previsao_liquidacao_em else None
+        ),
+        "mensagem": (
+            f"Transferência solicitada. A efetivação ocorre em até {prazo}h na chave Pix informada."
+        ),
     }
 
 
