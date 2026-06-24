@@ -97,6 +97,18 @@ Header: `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN`
 
 Subcontas criadas via API recebem webhooks no payload de `POST /v3/accounts` quando `FRONTEND_PUBLIC_URL` e `ASAAS_WEBHOOK_TOKEN` estão configurados.
 
+### 7.1 Autorização de saques (BaaS — sem token SMS)
+
+| Mecanismo | URL / config |
+|-----------|----------------|
+| Webhook de autorização | `https://DOMINIO/api/webhooks/asaas/transfer-auth` |
+| IP whitelist | IP fixo do VPS; desabilitar evento crítico em saques para esse IP |
+| Header | `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN` |
+
+Resposta da API: `{"status": "APPROVED"}` ou `{"status": "REFUSED", "refuseReason": "..."}`.
+
+Validação: `FinanceiroSaque` por `asaas_transfer_id` ou `externalReference` (id do saque) + valor.
+
 ---
 
 ## 8. Variáveis de ambiente
@@ -124,8 +136,8 @@ Subcontas criadas via API recebem webhooks no payload de `POST /v3/accounts` qua
 - [x] Webhooks subconta na criação
 - [x] Assinatura: reutilizar PIX, poll, idempotency
 - [x] Comprovante de transferência
+- [x] Autorização de saques BaaS (webhook + IP whitelist) — ver §7.1
 - [ ] NFSe automática (ops/contabilidade — fora do escopo técnico)
-- [ ] Alinhamento Asaas white-label para transferências sem token SMS (ação comercial)
 
 ---
 
