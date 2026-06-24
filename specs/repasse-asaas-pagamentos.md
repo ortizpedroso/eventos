@@ -1,14 +1,14 @@
-# Spec: Repasse Asaas e split de pagamentos
+# Spec: Repasse Asaas, pagamentos e financeiro white-label
 
-**Versão:** 1.1  
-**Data:** 2026-06-22  
+**Versão:** 2.0  
+**Data:** 2026-06-26  
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 ---
 
 ## 1. Objetivo
 
-Garantir que vendas de ingressos pagos distribuam valores corretamente entre **organizador**, **plataforma EventosBR** e **taxas Asaas**, e que eventos pagos só sejam **publicados e vendidos** após **conta de repasse aprovada pelo Asaas**.
+Garantir que vendas de ingressos pagos distribuam valores corretamente entre **organizador**, **plataforma EventosBR** e **taxas Asaas**; que eventos pagos só sejam **publicados e vendidos** após **conta de repasse aprovada**; e que o organizador opere **100% na plataforma** (vendas, saldo, saques, extrato) sem acessar o painel Asaas.
 
 ---
 
@@ -16,107 +16,120 @@ Garantir que vendas de ingressos pagos distribuam valores corretamente entre **o
 
 | Destino | O que recebe | Como |
 |---------|----------------|------|
-| **Organizador** | Preço do ingresso − taxa EventosBR − descontos (ex.: parcelamento) | `split[].walletId` = wallet da subconta (`evento.asaas_wallet_id`) |
-| **Plataforma** | Taxa EventosBR (% + fixo por plano) | `split[].walletId` = `ASAAS_PLATFORM_WALLET_ID` |
-| **Asaas** | Taxas de gateway (PIX, cartão, boleto, parcelamento) | **Fora do split** — retidas pelo Asaas na conta mestre / descontadas no processamento |
+| **Organizador** | Preço − taxa EventosBR − descontos | `split[].walletId` = wallet subconta |
+| **Plataforma** | Taxa EventosBR (% + fixo) | `ASAAS_PLATFORM_WALLET_ID` |
+| **Asaas** | Taxas gateway | Fora do split |
 
-Regras adicionais:
-
-- Acréscimo de parcelamento pago pelo **comprador** entra no `value` total da cobrança, mas **não** entra no split.
-- Se `repasse_parcelamento = organizador`, o desconto de parcelamento reduz o líquido do organizador no ledger interno.
-- Implementação: `app/services/pagamento_asaas.py` → `split_para_evento()`.
+Implementação: `app/services/pagamento_asaas.py` → `split_para_evento()`.
 
 ---
 
 ## 3. Conta de repasse (organizador)
 
-### 3.1 Fluxo obrigatório em produção
+1. Criar conta em Financeiro → `POST /v3/accounts` com **webhooks** configurados (`asaas_webhooks_config.py`).
+2. Acompanhar em `/organizador/financeiro/conta-repasse`.
+3. Status: `pending` → `awaiting_approval` → `approved` | `rejected`.
+4. CPF/CNPJ gravado em `usuario.asaas_repasse_cpf_cnpj` para validação Pix no saque.
 
-1. Organizador acessa **Financeiro** → **Criar conta de repasses**.
-2. Dados enviados via `POST /v3/accounts` (subconta Asaas).
-3. Redirecionamento para `/organizador/financeiro/conta-repasse` (acompanhamento).
-4. Asaas valida cadastro (KYC) — status: `pending` → `awaiting_approval` → `approved` ou `rejected`.
-5. Com `approved`, organizador pode **publicar** eventos pagos e **vender** ingressos.
-
-### 3.2 Atualização de status (três camadas)
-
-| Camada | Mecanismo |
-|--------|-----------|
-| 1 | Webhook `ACCOUNT_STATUS_*` → `POST /api/webhooks/asaas` |
-| 2 | Worker a cada 10 min → poll `GET /v3/myAccount/status` (subcontas pendentes) |
-| 3 | UI a cada 20 s → `GET /api/organizador/asaas/acompanhamento` |
-
-### 3.3 Wallet manual (desativada em produção)
-
-- `PUT /api/organizador/asaas/wallet` **bloqueado** quando `ASAAS_ALLOW_MANUAL_WALLET=false` (padrão em produção).
-- Exceção: header `X-Platform-Admin-Key` válido (suporte/migração).
-- Em `development`/`test`, wallet manual permanece disponível para E2E.
-
-### 3.4 Conta reprovada
-
-- Status `rejected` → organizador vê motivo na timeline.
-- `POST /api/organizador/asaas/subconta/reenviar` limpa vínculo local reprovado e reenvia dados ao Asaas.
+Sync de status: webhook `ACCOUNT_STATUS_*` + worker 10 min + UI poll 20s.
 
 ---
 
-## 4. Publicação e venda
+## 4. Financeiro white-label do organizador
 
-| Ação | Evento gratuito | Evento pago |
-|------|-----------------|-------------|
-| Criar pausado | ✅ | ✅ |
-| Visualizar (organizador) | ✅ | ✅ |
-| Publicar na vitrine | ✅ | ❌ sem repasse `approved` |
-| Comprar ingresso | ✅ (sem gateway) | ❌ sem repasse `approved` |
+### 4.1 Saldo
 
-Validações:
+| Campo | Significado |
+|-------|-------------|
+| `liquido_acumulado` | Total líquido de ingressos pagos/usados |
+| `saldo_em_carencia` | Ainda dentro de `FINANCEIRO_CARENCIA_SAQUE_HORAS` (default 48h) após `pago_em` |
+| `saldo_disponivel_saque` | Liberado após carência − saques comprometidos |
+| `saldo_asaas.balance` | Saldo real na subconta (`GET /v3/finance/balance`) |
 
-- API: `validar_publicacao_evento_pago()`, `organizador_pode_vender()`
-- Frontend: checklist + radio “Publicar” desabilitado
-- Default: `publicado: false` ao criar evento
+### 4.2 Saque / transferência Pix
+
+- `POST /api/organizador/financeiro/saque` → `POST /v3/transfers` (API key subconta).
+- Carência: 48h após confirmação do pagamento (`pago_em` no ingresso).
+- Prazo informado ao organizador: até `FINANCEIRO_PRAZO_TRANSFERENCIA_HORAS` (default 48h).
+- Chave Pix CPF/CNPJ deve coincidir com cadastro da subconta.
+- Comprovante: `GET /api/organizador/financeiro/saque/{id}/comprovante`.
+
+### 4.3 Extrato e relatórios
+
+- Extrato: vendas, estornos (reembolsos), saques.
+- Vendas agrupadas: dia, semana, mês, ano, evento.
+- Conciliação: `GET /api/organizador/financeiro/conciliacao` (ledger vs saldo Asaas).
+
+### 4.4 Estornos
+
+- Reembolso/chargeback cancela ingresso e grava `estornado_em`.
+- Estorno aparece no extrato como movimento negativo.
 
 ---
 
-## 5. Webhooks Asaas (produção)
+## 5. Pagamento do comprador
 
-Configurar em Integrações → Webhooks → `https://DOMINIO/api/webhooks/asaas`
+- Checkout bloqueado sem repasse aprovado.
+- Webhooks `PAYMENT_*` marcam ingresso pago e definem `pago_em`.
+- Reembolso automático se fulfillment bloqueado.
 
-**Pagamentos:**
+---
 
-- `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`
-- `PAYMENT_REFUNDED`
-- `PAYMENT_DELETED`, `PAYMENT_OVERDUE`
-- `PAYMENT_CHARGEBACK_REQUESTED`, `PAYMENT_CHARGEBACK_DISPUTE`, `PAYMENT_AWAITING_CHARGEBACK_REVERSAL`
+## 6. Assinatura mensal (plataforma)
 
-**Conta (repasse):**
+- Cobrança 100% plataforma (sem split de ingresso).
+- Reutiliza PIX pendente em vez de duplicar cobrança.
+- Idempotency key única por tentativa.
+- Poll em `GET /assinatura` e `POST /assinatura/sincronizar` ativa plano se PIX pago.
 
-- `ACCOUNT_STATUS_GENERAL_APPROVAL_*`
-- `ACCOUNT_STATUS_COMMERCIAL_INFO_*`
-- `ACCOUNT_STATUS_DOCUMENT_*`
-- `ACCOUNT_STATUS_BANK_ACCOUNT_INFO_*`
+---
 
+## 7. Webhooks Asaas (produção)
+
+URL: `https://DOMINIO/api/webhooks/asaas`  
 Header: `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN`
 
+**Pagamentos:** `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_REFUNDED`, `PAYMENT_DELETED`, `PAYMENT_OVERDUE`, `PAYMENT_CHARGEBACK_*`
+
+**Conta:** `ACCOUNT_STATUS_*`
+
+**Transferências (saques):** `TRANSFER_CREATED`, `TRANSFER_PENDING`, `TRANSFER_IN_BANK_PROCESSING`, `TRANSFER_DONE`, `TRANSFER_FAILED`, `TRANSFER_CANCELLED`
+
+Subcontas criadas via API recebem webhooks no payload de `POST /v3/accounts` quando `FRONTEND_PUBLIC_URL` e `ASAAS_WEBHOOK_TOKEN` estão configurados.
+
 ---
 
-## 6. Variáveis de ambiente
+## 8. Variáveis de ambiente
 
 | Variável | Produção |
 |----------|----------|
 | `ASAAS_API_KEY` | Obrigatório |
-| `ASAAS_PLATFORM_WALLET_ID` | Obrigatório (split plataforma) |
+| `ASAAS_PLATFORM_WALLET_ID` | Obrigatório |
 | `ASAAS_WEBHOOK_TOKEN` | Obrigatório |
-| `ASAAS_DISABLED` | `false` |
-| `ASAAS_ALLOW_MANUAL_WALLET` | `false` (padrão) |
+| `FRONTEND_PUBLIC_URL` | URL pública (webhooks subconta) |
+| `FINANCEIRO_CARENCIA_SAQUE_HORAS` | Default `48` |
+| `FINANCEIRO_PRAZO_TRANSFERENCIA_HORAS` | Default `48` |
+| `ASAAS_ALLOW_MANUAL_WALLET` | `false` |
 
 ---
 
-## 7. Critérios de conclusão
+## 9. Critérios de conclusão
 
-- [x] Split organizador + plataforma no `POST /v3/payments`
-- [x] Taxa Asaas fora do split (gateway)
-- [x] Subconta + acompanhamento + poll/webhook de status
-- [x] Bloqueio publicação/venda sem repasse aprovado
-- [x] Wallet manual bloqueada em produção
-- [x] Reenvio após reprovação
-- [x] Webhook `ACCOUNT_STATUS_*` e chargeback
-- [x] Worker de sync de repasses pendentes
+- [x] Split organizador + plataforma
+- [x] Subconta + KYC + bloqueio publicação/venda
+- [x] Saque Pix white-label com carência 48h
+- [x] Saldo Asaas real + conciliação
+- [x] Extrato com estornos
+- [x] Vendas por período/evento
+- [x] Webhooks subconta na criação
+- [x] Assinatura: reutilizar PIX, poll, idempotency
+- [x] Comprovante de transferência
+- [ ] NFSe automática (ops/contabilidade — fora do escopo técnico)
+- [ ] Alinhamento Asaas white-label para transferências sem token SMS (ação comercial)
+
+---
+
+## 10. Migrations
+
+- `20260625_000032` — `pago_em`, campos saque Asaas
+- `20260626_000033` — `asaas_repasse_cpf_cnpj`, `estornado_em`

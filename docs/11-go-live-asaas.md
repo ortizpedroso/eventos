@@ -93,6 +93,9 @@ No painel Asaas → Integrações → Webhooks:
 - Token = valor de `ASAAS_WEBHOOK_TOKEN` no `.env`
 - Eventos pagamento: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_REFUNDED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED`, `PAYMENT_CHARGEBACK_*`
 - Eventos conta: `ACCOUNT_STATUS_GENERAL_APPROVAL_*`, `ACCOUNT_STATUS_COMMERCIAL_INFO_*`, `ACCOUNT_STATUS_DOCUMENT_*`, `ACCOUNT_STATUS_BANK_ACCOUNT_INFO_*`
+- Transferências (saques): `TRANSFER_CREATED`, `TRANSFER_PENDING`, `TRANSFER_IN_BANK_PROCESSING`, `TRANSFER_DONE`, `TRANSFER_FAILED`, `TRANSFER_CANCELLED`
+
+Subcontas criadas pela plataforma recebem webhooks automaticamente no `POST /v3/accounts` quando `FRONTEND_PUBLIC_URL` e `ASAAS_WEBHOOK_TOKEN` estão configurados.
 
 Referência: `./scripts/asaas-webhook-setup.sh SEU_DOMINIO.com.br`
 
@@ -109,6 +112,8 @@ Antes de vender ingressos pagos, cada organizador deve:
 Em produção, colar `walletId` manualmente está desativado (`ASAAS_ALLOW_MANUAL_WALLET=false`).
 
 Sem repasse aprovado, publicação de eventos pagos e checkout retornam erro.
+
+Organizadores sacam via **Financeiro → Solicitar transferência Pix** (carência 48h após confirmação de cada venda). Não é necessário acessar o painel Asaas.
 
 ---
 

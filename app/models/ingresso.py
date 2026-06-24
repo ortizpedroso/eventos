@@ -59,6 +59,7 @@ class Ingresso(Base):
 
     # Datas
     pago_em = Column(DateTime, nullable=True, index=True)
+    estornado_em = Column(DateTime, nullable=True, index=True)
     data_compra = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     data_limite_cancelamento = Column(DateTime)
 

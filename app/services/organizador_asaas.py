@@ -314,6 +314,12 @@ def criar_subconta_organizador(
     if complemento and complemento.strip():
         payload["complement"] = complemento.strip()[:80]
 
+    from app.services.asaas_webhooks_config import webhooks_payload_subconta
+
+    webhooks = webhooks_payload_subconta()
+    if webhooks:
+        payload["webhooks"] = webhooks
+
     client = get_asaas_client()
     try:
         sub = client.post("/v3/accounts", json=payload)
@@ -328,6 +334,7 @@ def criar_subconta_organizador(
 
     usuario.asaas_account_id = account_id
     usuario.asaas_wallet_id = wallet_id
+    usuario.asaas_repasse_cpf_cnpj = doc
     if api_key:
         usuario.asaas_subaccount_api_key = encrypt_at_rest(str(api_key))
     usuario.asaas_repasse_status = "pending"
@@ -378,6 +385,7 @@ def limpar_subconta_rejeitada(db: Session, usuario: Usuario) -> None:
         )
     usuario.asaas_account_id = None
     usuario.asaas_wallet_id = None
+    usuario.asaas_repasse_cpf_cnpj = None
     usuario.asaas_subaccount_api_key = None
     usuario.asaas_repasse_status = None
     usuario.asaas_repasse_status_em = None

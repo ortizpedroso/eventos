@@ -10,12 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.models import Usuario, get_db
 from app.routes.auth import get_usuario_atual
+from app.services.financeiro_conciliacao import conciliar_financeiro_organizador
 from app.services.financeiro_organizador import (
     calcular_saldo_organizador,
     cancelar_saque,
     listar_extrato,
     listar_saques,
     listar_vendas_agrupadas,
+    obter_comprovante_saque,
     solicitar_saque,
 )
 
@@ -88,6 +90,28 @@ async def financeiro_listar_saques(
 ):
     _require_organizador(usuario_atual)
     return {"saques": listar_saques(db, usuario_atual, limite=limite)}
+
+
+@router.get("/conciliacao")
+async def financeiro_conciliacao(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    _require_organizador(usuario_atual)
+    return conciliar_financeiro_organizador(db, usuario_atual)
+
+
+@router.get("/saque/{saque_id}/comprovante")
+async def financeiro_comprovante_saque(
+    saque_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    _require_organizador(usuario_atual)
+    try:
+        return obter_comprovante_saque(db, usuario_atual, saque_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.post("/saque")

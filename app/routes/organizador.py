@@ -265,12 +265,27 @@ async def asaas_simular_antecipacao(
 @router.get("/assinatura")
 async def obter_assinatura(
     usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
 ):
     """Status da assinatura mensal (taxa reduzida por ingresso)."""
     _require_organizador(usuario_atual)
-    from app.services.assinatura_organizador import status_assinatura
+    from app.services.assinatura_organizador import sincronizar_assinatura_pendente, status_assinatura
 
+    if (usuario_atual.assinatura_renovacao_payment_id or "").strip():
+        sincronizar_assinatura_pendente(db, usuario_atual)
+        db.refresh(usuario_atual)
     return status_assinatura(usuario_atual)
+
+
+@router.post("/assinatura/sincronizar")
+async def sincronizar_assinatura(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    _require_organizador(usuario_atual)
+    from app.services.assinatura_organizador import sincronizar_assinatura_pendente
+
+    return sincronizar_assinatura_pendente(db, usuario_atual)
 
 
 @router.post("/assinatura/pagar")
