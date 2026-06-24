@@ -510,6 +510,21 @@ def solicitar_saque(
             f"Valores em carência ({saldo['carencia_horas']}h após confirmação) ainda não podem ser sacados."
         )
 
+    # Reserva saldo com lock pessimista contra saques concorrentes.
+    reservado = (
+        db.query(func.coalesce(func.sum(FinanceiroSaque.valor), 0))
+        .filter(
+            FinanceiroSaque.organizador_id == usuario.id,
+            FinanceiroSaque.status.in_(_SAQUES_COMPROMETEM_SALDO),
+        )
+        .with_for_update()
+        .scalar()
+    )
+    liberado = float(saldo["saldo_liberado_bruto"])
+    disponivel_locked = round(max(0.0, liberado - float(reservado or 0)), 2)
+    if valor_f > disponivel_locked + 0.009:
+        raise ValueError(f"Saldo disponível para saque: R$ {disponivel_locked:.2f}.")
+
     from app.services.organizador_asaas import _client_subconta
 
     sub_client = _client_subconta(usuario)
@@ -591,8 +606,20 @@ def cancelar_saque(db: Session, usuario: Usuario, saque_id: str) -> FinanceiroSa
     )
     if not saque:
         raise ValueError("Saque não encontrado.")
-    if saque.status != "pendente":
-        raise ValueError("Só é possível cancelar solicitações ainda não enviadas ao banco.")
+    if saque.status not in ("pendente", "processando"):
+        raise ValueError("Só é possível cancelar solicitações ainda não concluídas.")
+    if saque.status == "processando" and saque.asaas_transfer_id:
+        from app.services.organizador_asaas import _client_subconta
+
+        sub = _client_subconta(usuario)
+        if sub:
+            try:
+                sub.delete(f"/v3/transfers/{saque.asaas_transfer_id}")
+            except Exception:
+                raise ValueError(
+                    "Não foi possível cancelar a transferência no banco. "
+                    "Aguarde a conclusão ou contate o suporte."
+                ) from None
     saque.status = "cancelado"
     saque.atualizado_em = _agora()
     db.commit()

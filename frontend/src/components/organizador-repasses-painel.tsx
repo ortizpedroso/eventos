@@ -668,7 +668,7 @@ export function OrganizadorRepassesPainel() {
                         Ver comprovante
                       </button>
                     ) : null}
-                    {m.status === "pendente" ? (
+                    {m.status === "pendente" || m.status === "processando" ? (
                       <button
                         type="button"
                         className="mt-1 text-xs text-red-700 underline"

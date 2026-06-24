@@ -292,11 +292,11 @@ def cancelar_ingressos_pi_pendentes(db: Session, payment_ref: str) -> int:
 
 
 def cancelar_ingressos_reembolsados(db: Session, payment_ref: str) -> int:
-    """Cancela ingressos pagos ou pendentes após reembolso/cancelamento no gateway."""
+    """Cancela ingressos pagos, usados ou pendentes após reembolso/cancelamento no gateway."""
     return _cancelar_ingressos_por_ref(
         db,
         payment_ref,
-        status_permitidos=("pendente", "pago"),
+        status_permitidos=("pendente", "pago", "usado"),
         liberar_espera=True,
     )
 

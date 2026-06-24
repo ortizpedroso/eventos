@@ -121,7 +121,9 @@ class CriarEventoRequest(BaseModel):
 
 
 class AtualizarEventoRequest(CriarEventoRequest):
-    """Mesmos campos da criação; o slug da URL não é alterado na atualização."""
+    """Mesmos campos da criação; omitir `publicado` mantém o valor atual."""
+
+    publicado: bool | None = None
 
 
 class EventoResponse(BaseModel):

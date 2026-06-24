@@ -151,7 +151,8 @@ async def atualizar_evento(
     evento.preco_ingresso = body.preco_ingresso
     evento.categoria = body.categoria.strip() or "Outros"
     evento.mensagem_confirmacao = body.mensagem_confirmacao
-    evento.publicado = body.publicado
+    if body.publicado is not None:
+        evento.publicado = body.publicado
     if "limite_ingressos_por_cpf" in body.model_fields_set:
         evento.limite_ingressos_por_cpf = body.limite_ingressos_por_cpf
 
@@ -194,7 +195,8 @@ async def atualizar_evento(
     from app.services.organizador_asaas import atualizar_status_repasse_organizador
 
     usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
-    validar_publicacao_evento_pago(db, usuario_atual, evento, body.publicado)
+    if body.publicado is not None:
+        validar_publicacao_evento_pago(db, usuario_atual, evento, body.publicado)
 
     db.commit()
     db.refresh(evento)
