@@ -93,6 +93,8 @@ def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
         }
     if method == "POST" and path == "/v3/transfers":
         return mock_criar_transfer(json or {})
+    if method == "GET" and path == "/v3/finance/balance":
+        return {"balance": 500.0}
     if method == "GET" and path.startswith("/v3/transfers/"):
         tid = path.rsplit("/", 1)[-1]
         return _MOCK_TRANSFERS.get(tid, {"id": tid, "status": "PENDING"})

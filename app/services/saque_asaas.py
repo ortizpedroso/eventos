@@ -145,3 +145,56 @@ def organizador_tem_cliente_saque(usuario: Usuario) -> bool:
     from app.services.organizador_asaas import _client_subconta
 
     return _client_subconta(usuario) is not None
+
+
+def consultar_saldo_subconta(usuario: Usuario) -> dict[str, Any]:
+    """Saldo real na subconta Asaas (GET /v3/finance/balance)."""
+    from app.services.organizador_asaas import _client_subconta
+
+    client = _client_subconta(usuario)
+    if not client:
+        return {"disponivel": False, "motivo": "Conta de repasses não configurada."}
+    try:
+        data = client.get("/v3/finance/balance")
+    except AsaasAPIError as e:
+        logger.warning("Falha ao consultar saldo Asaas do organizador %s: %s", usuario.id, e)
+        return {"disponivel": False, "motivo": "Não foi possível consultar saldo na conta de repasses."}
+    balance = round(float(data.get("balance") or 0), 2)
+    return {
+        "disponivel": True,
+        "balance": balance,
+        "consultado_em": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+    }
+
+
+def validar_pix_cadastro_repasse(usuario: Usuario, pix_chave: str, pix_tipo: str) -> None:
+    """Exige CPF/CNPJ Pix igual ao cadastro da subconta quando aplicável."""
+    doc = re.sub(r"\D", "", (getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
+    if not doc:
+        return
+    tipo = inferir_pix_tipo(pix_chave, pix_tipo)
+    chave = normalizar_pix_chave(pix_chave, tipo)
+    if tipo == "CPF" and len(doc) == 11 and chave != doc:
+        raise ValueError("A chave Pix CPF deve ser a mesma do cadastro da conta de repasses.")
+    if tipo == "CNPJ" and len(doc) == 14 and chave != doc:
+        raise ValueError("A chave Pix CNPJ deve ser a mesma do cadastro da conta de repasses.")
+
+
+def comprovante_saque(saque: FinanceiroSaque, usuario: Usuario) -> dict[str, Any]:
+    return {
+        "id": saque.id,
+        "organizador_nome": usuario.nome,
+        "organizador_email": usuario.email,
+        "valor": float(saque.valor),
+        "status": saque.status,
+        "pix_chave": saque.pix_chave,
+        "pix_tipo": saque.pix_tipo,
+        "asaas_transfer_id": saque.asaas_transfer_id,
+        "solicitado_em": saque.criado_em.isoformat() if saque.criado_em else None,
+        "previsao_liquidacao_em": (
+            saque.previsao_liquidacao_em.isoformat() if saque.previsao_liquidacao_em else None
+        ),
+        "processado_em": saque.processado_em.isoformat() if saque.processado_em else None,
+        "observacao": saque.observacao,
+        "titulo": "Comprovante de transferência EventosBR",
+    }

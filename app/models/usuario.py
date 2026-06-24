@@ -25,6 +25,8 @@ class Usuario(Base):
     asaas_repasse_status = Column(String(32), nullable=True)
     asaas_repasse_status_em = Column(DateTime, nullable=True)
     asaas_repasse_detalhes = Column(Text, nullable=True)
+    # CPF/CNPJ informado na abertura da conta de repasses (validação Pix)
+    asaas_repasse_cpf_cnpj = Column(String(14), nullable=True)
     # Opt-in antecipação automática no cartão (espelho da config Asaas)
     asaas_anticipacao_cartao = Column(Boolean, nullable=True)
 

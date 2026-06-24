@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -312,8 +313,11 @@ def _cancelar_ingressos_por_ref(
     for ingresso in _ingressos_por_ref(db, payment_ref):
         if ingresso.status not in status_permitidos:
             continue
+        era_pago = ingresso.status in ("pago", "usado") or getattr(ingresso, "liquido_repassado", None)
         ingresso.status = "cancelado"
         ingresso.reservado_ate = None
+        if era_pago:
+            ingresso.estornado_em = datetime.now(timezone.utc).replace(tzinfo=None)
         n += 1
         if liberar_espera:
             from app.services.lista_espera import expirar_espera_reserva_nao_concluida

@@ -11,12 +11,14 @@ from sqlalchemy.orm import Session
 from app.models import Evento, FinanceiroSaque, Ingresso, Usuario
 from app.services.evento_repasse import organizador_repasse_aprovado
 from app.services.saque_asaas import (
-    aplicar_webhook_transferencia,
+    comprovante_saque,
+    consultar_saldo_subconta,
     criar_transferencia_pix,
     inferir_pix_tipo,
     normalizar_pix_chave,
     organizador_tem_cliente_saque,
     previsao_liquidacao_saque,
+    validar_pix_cadastro_repasse,
 )
 from app.services.tarifas_plataforma import (
     detalhar_taxa_ingresso,
@@ -47,6 +49,34 @@ def _ingressos_pagos_query(db: Session, organizador_id: str):
         .filter(
             Evento.organizador_id == organizador_id,
             Ingresso.status.in_(("pago", "usado")),
+        )
+    )
+
+
+def _backfill_pago_em(db: Session, organizador_id: str, *, limit: int = 200) -> None:
+    """Ingressos pagos antigos sem pago_em usam data_compra como referência."""
+    rows = (
+        _ingressos_pagos_query(db, organizador_id)
+        .filter(Ingresso.pago_em.is_(None))
+        .limit(limit)
+        .all()
+    )
+    if not rows:
+        return
+    for ing in rows:
+        ing.pago_em = ing.data_compra or _agora()
+    db.commit()
+
+
+def _ingressos_estornados_query(db: Session, organizador_id: str):
+    return (
+        db.query(Ingresso)
+        .join(Evento, Ingresso.evento_id == Evento.id)
+        .filter(
+            Evento.organizador_id == organizador_id,
+            Ingresso.status == "cancelado",
+            Ingresso.liquido_repassado.isnot(None),
+            Ingresso.asaas_payment_id.isnot(None),
         )
     )
 
@@ -140,6 +170,7 @@ def saque_habilitado_para(usuario: Usuario) -> bool:
 
 
 def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
+    _backfill_pago_em(db, usuario.id)
     _backfill_ledger_pendentes(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
     ingressos = _ingressos_pagos_query(db, usuario.id).all()
@@ -193,6 +224,7 @@ def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "saque_habilitado": habilitado,
         "nota_saque": nota_saque,
         "ingressos_pagos": len(ingressos),
+        "saldo_asaas": consultar_saldo_subconta(usuario),
     }
 
 
@@ -221,6 +253,20 @@ def _movimento_venda(ingresso: Ingresso, evento: Evento | None, tarifa) -> dict[
     }
 
 
+def _movimento_estorno(ingresso: Ingresso, evento: Evento | None, tarifa) -> dict[str, Any]:
+    liquido = _liquido_ingresso(ingresso, tarifa)
+    ref = getattr(ingresso, "estornado_em", None) or ingresso.data_compra or _agora()
+    return {
+        "tipo": "estorno",
+        "id": ingresso.id,
+        "data": ref.isoformat() if ref else None,
+        "evento_id": ingresso.evento_id,
+        "evento_nome": evento.nome if evento else "",
+        "valor": liquido,
+        "descricao": f"Estorno — {evento.nome if evento else 'ingresso'}",
+    }
+
+
 def _movimento_saque(saque: FinanceiroSaque) -> dict[str, Any]:
     return {
         "tipo": "saque",
@@ -246,13 +292,15 @@ def listar_extrato(
     limite: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
+    _backfill_pago_em(db, usuario.id)
     _backfill_ledger_pendentes(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
 
     saques_q = db.query(FinanceiroSaque).filter(FinanceiroSaque.organizador_id == usuario.id)
     total_saques = saques_q.count()
     total_vendas = _ingressos_pagos_query(db, usuario.id).count()
-    total_movimentos = total_vendas + total_saques
+    total_estornos = _ingressos_estornados_query(db, usuario.id).count()
+    total_movimentos = total_vendas + total_saques + total_estornos
 
     vendas_rows = (
         db.query(
@@ -271,7 +319,21 @@ def listar_extrato(
         FinanceiroSaque.id.label("rid"),
         FinanceiroSaque.criado_em.label("dt"),
     )
-    union_sub = union_all(vendas_rows.statement, saques_rows.statement).alias("mov")
+    estornos_rows = (
+        db.query(
+            literal("estorno").label("tipo"),
+            Ingresso.id.label("rid"),
+            func.coalesce(Ingresso.estornado_em, Ingresso.data_compra).label("dt"),
+        )
+        .join(Evento, Ingresso.evento_id == Evento.id)
+        .filter(
+            Evento.organizador_id == usuario.id,
+            Ingresso.status == "cancelado",
+            Ingresso.liquido_repassado.isnot(None),
+            Ingresso.asaas_payment_id.isnot(None),
+        )
+    )
+    union_sub = union_all(vendas_rows.statement, saques_rows.statement, estornos_rows.statement).alias("mov")
     page = (
         db.query(union_sub.c.tipo, union_sub.c.rid, union_sub.c.dt)
         .order_by(union_sub.c.dt.desc())
@@ -281,11 +343,13 @@ def listar_extrato(
     )
 
     venda_ids = [rid for tipo, rid, _ in page if tipo == "venda"]
+    estorno_ids = [rid for tipo, rid, _ in page if tipo == "estorno"]
     saque_ids = {rid for tipo, rid, _ in page if tipo == "saque"}
 
+    all_ing_ids = list({*venda_ids, *estorno_ids})
     ingressos_map: dict[str, Ingresso] = {}
-    if venda_ids:
-        for ing in db.query(Ingresso).filter(Ingresso.id.in_(venda_ids)).all():
+    if all_ing_ids:
+        for ing in db.query(Ingresso).filter(Ingresso.id.in_(all_ing_ids)).all():
             ingressos_map[ing.id] = ing
     evento_ids = {i.evento_id for i in ingressos_map.values()}
     eventos = {e.id: e for e in db.query(Evento).filter(Evento.id.in_(evento_ids)).all()} if evento_ids else {}
@@ -297,6 +361,10 @@ def listar_extrato(
             ing = ingressos_map.get(rid)
             if ing:
                 movimentos.append(_movimento_venda(ing, eventos.get(ing.evento_id), tarifa))
+        elif tipo == "estorno":
+            ing = ingressos_map.get(rid)
+            if ing:
+                movimentos.append(_movimento_estorno(ing, eventos.get(ing.evento_id), tarifa))
         else:
             saq = saques_map.get(rid)
             if saq:
@@ -432,6 +500,7 @@ def solicitar_saque(
 
     tipo = inferir_pix_tipo(chave, pix_tipo)
     chave_norm = normalizar_pix_chave(chave, tipo)
+    validar_pix_cadastro_repasse(usuario, chave_norm, tipo)
 
     saldo = calcular_saldo_organizador(db, usuario)
     disponivel = float(saldo["saldo_disponivel_saque"])
@@ -494,6 +563,20 @@ def solicitar_saque(
     return saque
 
 
+def obter_comprovante_saque(db: Session, usuario: Usuario, saque_id: str) -> dict[str, Any]:
+    saque = (
+        db.query(FinanceiroSaque)
+        .filter(
+            FinanceiroSaque.id == saque_id,
+            FinanceiroSaque.organizador_id == usuario.id,
+        )
+        .first()
+    )
+    if not saque:
+        raise ValueError("Saque não encontrado.")
+    return comprovante_saque(saque, usuario)
+
+
 def cancelar_saque(db: Session, usuario: Usuario, saque_id: str) -> FinanceiroSaque:
     if usuario.tipo != "organizador":
         raise ValueError("Apenas organizadores podem cancelar saques.")
@@ -549,6 +632,7 @@ __all__ = [
     "listar_extrato",
     "listar_saques",
     "listar_vendas_agrupadas",
+    "obter_comprovante_saque",
     "registrar_ledger_ingressos_lote",
     "solicitar_saque",
 ]

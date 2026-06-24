@@ -23,6 +23,7 @@ type RepasseStatus = {
   pode_publicar_eventos_pagos?: boolean;
   eventos_sem_wallet: number;
   nota_wallet: string | null;
+  anticipacao?: { credit_card_automatic_enabled?: boolean | null };
 };
 
 type Saldo = {
@@ -45,6 +46,15 @@ type Saldo = {
   saque_habilitado?: boolean;
   nota_saque?: string | null;
   ingressos_pagos: number;
+  saldo_asaas?: { disponivel?: boolean; balance?: number; motivo?: string };
+};
+
+type Conciliacao = {
+  ledger: { saldo_disponivel_saque?: number };
+  asaas: { disponivel?: boolean; balance?: number };
+  diferenca_disponivel?: number | null;
+  alerta?: string | null;
+  nota?: string;
 };
 
 type Movimento =
@@ -58,6 +68,14 @@ type Movimento =
       liquido: number;
       disponivel_saque?: boolean;
       disponivel_saque_em?: string | null;
+      descricao: string;
+    }
+  | {
+      tipo: "estorno";
+      id: string;
+      data: string | null;
+      valor: number;
+      evento_nome: string;
       descricao: string;
     }
   | {
@@ -129,6 +147,8 @@ export function OrganizadorRepassesPainel() {
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
   const [gruposVendas, setGruposVendas] = useState<GrupoVendas[]>([]);
+  const [conciliacao, setConciliacao] = useState<Conciliacao | null>(null);
+  const [anticipacao, setAnticipacao] = useState<boolean | null>(null);
   const [agrupamento, setAgrupamento] = useState<Agrupamento>("mes");
   const [extratoOffset, setExtratoOffset] = useState(0);
   const [extratoTotal, setExtratoTotal] = useState(0);
@@ -153,11 +173,14 @@ export function OrganizadorRepassesPainel() {
 
   const carregarVendas = useCallback(async (agr: Agrupamento) => {
     try {
-      const v = await apiFetch<{ grupos: GrupoVendas[] }>(
-        `/api/organizador/financeiro/vendas?agrupamento=${agr}`,
-        { cache: "no-store" },
-      );
+      const [v, c] = await Promise.all([
+        apiFetch<{ grupos: GrupoVendas[] }>(`/api/organizador/financeiro/vendas?agrupamento=${agr}`, {
+          cache: "no-store",
+        }),
+        apiFetch<Conciliacao>("/api/organizador/financeiro/conciliacao", { cache: "no-store" }),
+      ]);
       setGruposVendas(v.grupos);
+      setConciliacao(c);
     } catch {
       setGruposVendas([]);
     }
@@ -174,8 +197,9 @@ export function OrganizadorRepassesPainel() {
             { cache: "no-store" },
           ),
         ]);
-        setStatus(s);
-        setSaldo(ex.saldo);
+      setStatus(s);
+      setSaldo(ex.saldo);
+      setAnticipacao(s.anticipacao?.credit_card_automatic_enabled ?? null);
         setExtratoOffset(offset + ex.movimentos.length);
         setExtratoTotal(ex.total_movimentos ?? ex.movimentos.length);
         setMovimentos((prev) => (append ? [...prev, ...ex.movimentos] : ex.movimentos));
@@ -356,6 +380,32 @@ export function OrganizadorRepassesPainel() {
         <p className="mt-4 rounded-lg border border-blue-200 bg-blue-50/70 px-4 py-3 text-sm text-blue-950">
           {saldo.nota_saque}
         </p>
+      ) : null}
+
+      {saldo?.saldo_asaas?.disponivel && saldo.saldo_asaas.balance != null ? (
+        <p className="mt-3 text-xs text-zinc-600">
+          Saldo na conta de repasses (Asaas): <strong>{fmt(saldo.saldo_asaas.balance)}</strong>
+        </p>
+      ) : null}
+
+      {conciliacao?.alerta ? (
+        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950">
+          {conciliacao.alerta}
+          {conciliacao.diferenca_disponivel != null ? (
+            <> Diferença: {fmt(conciliacao.diferenca_disponivel)}.</>
+          ) : null}
+        </p>
+      ) : null}
+
+      {status?.repasse_aprovado && anticipacao != null ? (
+        <div className="mt-4 rounded-lg border border-zinc-200 px-4 py-3 text-sm">
+          <p className="font-medium text-zinc-900">Antecipação automática de cartão</p>
+          <p className="mt-1 text-xs text-zinc-600">
+            {anticipacao
+              ? "Ativa — vendas no cartão podem ser antecipadas automaticamente pela conta de repasses."
+              : "Desativada — recebimentos de cartão seguem o prazo padrão do gateway."}
+          </p>
+        </div>
       ) : null}
 
       {status && !status.repasses_prontos ? (
@@ -589,10 +639,35 @@ export function OrganizadorRepassesPainel() {
                     <p className="font-semibold text-emerald-800">+ {fmt(m.liquido)}</p>
                     <p className="text-zinc-500">Taxa {fmt(m.taxa_plataforma)}</p>
                   </div>
+                ) : m.tipo === "estorno" ? (
+                  <div className="text-right text-xs">
+                    <p className="font-semibold text-red-800">− {fmt(m.valor)}</p>
+                    <p className="text-zinc-500">Reembolso / estorno</p>
+                  </div>
                 ) : (
                   <div className="text-right text-xs">
                     <p className="font-semibold text-zinc-900">− {fmt(m.valor)}</p>
                     <p className="text-zinc-500">{rotuloStatusSaque(m.status)}</p>
+                    {m.status === "pago" ? (
+                      <button
+                        type="button"
+                        className="mt-1 text-xs text-emerald-800 underline"
+                        onClick={async () => {
+                          try {
+                            const c = await apiFetch<Record<string, unknown>>(
+                              `/api/organizador/financeiro/saque/${m.id}/comprovante`,
+                            );
+                            setMsg(
+                              `Comprovante: ${String(c.titulo || "Transferência")} — ${fmt(Number(c.valor || 0))} — status ${String(c.status)}`,
+                            );
+                          } catch {
+                            setError("Não foi possível obter o comprovante.");
+                          }
+                        }}
+                      >
+                        Ver comprovante
+                      </button>
+                    ) : null}
                     {m.status === "pendente" ? (
                       <button
                         type="button"
