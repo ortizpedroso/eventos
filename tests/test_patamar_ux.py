@@ -2019,7 +2019,10 @@ def test_evento_pausado_nao_aparece_vitrine():
     ev_id = criar.json()["id"]
     assert criar.json().get("publicado") is False
     lista = test_api.client.get("/api/eventos")
-    assert all(e["slug"] != slug for e in lista.json())
+    assert lista.status_code == 200, lista.text
+    eventos = lista.json()
+    assert isinstance(eventos, list)
+    assert all(e["slug"] != slug for e in eventos)
     pub = anon.get(f"/api/eventos/{slug}")
     assert pub.status_code == 404
     org_view = test_api.client.get(

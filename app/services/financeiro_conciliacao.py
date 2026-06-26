@@ -15,29 +15,40 @@ def conciliar_financeiro_organizador(db: Session, usuario: Usuario) -> dict[str,
     ledger = calcular_saldo_organizador(db, usuario)
     asaas = consultar_saldo_subconta(usuario)
 
-    ledger_disp = float(ledger.get("saldo_disponivel_saque") or 0)
-    asaas_disp = float(asaas.get("balance") or 0) if asaas.get("disponivel") else None
-    diferenca = round(ledger_disp - asaas_disp, 2) if asaas_disp is not None else None
+    liquido = float(ledger.get("liquido_acumulado") or 0)
+    saques_pagos = float(ledger.get("saques_pagos_total") or 0)
+    ledger_esperado_asaas = round(liquido - saques_pagos, 2)
+
+    disponivel = float(ledger.get("saldo_disponivel_saque") or 0)
+    asaas_balance = float(asaas.get("balance") or 0) if asaas.get("disponivel") else None
+
+    diferenca = round(ledger_esperado_asaas - asaas_balance, 2) if asaas_balance is not None else None
+    diferenca_disponivel = round(disponivel - asaas_balance, 2) if asaas_balance is not None else None
 
     alerta = None
     if diferenca is not None and abs(diferenca) > 0.05:
         alerta = (
-            "Há diferença entre o saldo calculado pela plataforma e o saldo na conta de repasses. "
+            "Há diferença entre o ledger (líquido acumulado − saques pagos) e o saldo na conta de repasses. "
             "Isso pode ocorrer por antecipações, taxas do gateway, estornos recentes ou saques em processamento."
         )
 
     return {
         "ledger": {
-            "liquido_acumulado": ledger.get("liquido_acumulado"),
+            "liquido_acumulado": liquido,
+            "saques_pagos_total": saques_pagos,
+            "saldo_esperado_asaas": ledger_esperado_asaas,
             "saldo_em_carencia": ledger.get("saldo_em_carencia"),
-            "saldo_disponivel_saque": ledger_disp,
+            "saldo_disponivel_saque": disponivel,
             "saques_reservados": ledger.get("saques_reservados"),
         },
         "asaas": asaas,
-        "diferenca_disponivel": diferenca,
+        "diferenca": diferenca,
+        "diferenca_disponivel": diferenca_disponivel,
         "alerta": alerta,
         "nota": (
-            "O ledger reflete ingressos confirmados na plataforma (com carência de saque). "
-            "O saldo Asaas é o valor custodiado na subconta no momento da consulta."
+            "A conciliação principal compara o ledger esperado na subconta "
+            "(líquido acumulado − saques pagos) com o saldo Asaas. "
+            "Valores em carência de saque permanecem no saldo Asaas e não geram divergência. "
+            "A diferença disponível (saldo liberado para saque vs Asaas) é apenas informativa."
         ),
     }

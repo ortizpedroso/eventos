@@ -46,7 +46,7 @@ def _evento(db, org_id: str, nome: str = "Show") -> Evento:
         nome=nome,
         slug=f"ev-{uuid.uuid4().hex[:8]}",
         organizador_id=org_id,
-        publicado=True,
+        publicado=False,
         asaas_wallet_id="wallet_x",
         data_inicio=agora + timedelta(days=7),
         data_fim=agora + timedelta(days=7, hours=4),
@@ -193,6 +193,69 @@ def test_webhook_transfer_done_marca_pago():
         db.refresh(saque)
         assert saque.status == "pago"
         assert saque.processado_em is not None
+    finally:
+        db.close()
+
+
+def test_webhook_transfer_done_sem_status_marca_pago():
+    """§7: event_type TRANSFER_DONE sem transfer.status deve marcar saque pago."""
+    db = _db()
+    try:
+        org = _org_aprovado(db)
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        tid = f"tra_{uuid.uuid4().hex[:10]}"
+        saque = FinanceiroSaque(
+            organizador_id=org.id,
+            valor=30.0,
+            pix_chave="a@b.com",
+            pix_tipo="EMAIL",
+            status="processando",
+            asaas_transfer_id=tid,
+            criado_em=agora,
+            atualizado_em=agora,
+        )
+        db.add(saque)
+        db.commit()
+
+        aplicar_webhook_transferencia(
+            db,
+            {"id": tid, "externalReference": saque.id},
+            event_type="TRANSFER_DONE",
+        )
+        db.commit()
+        db.refresh(saque)
+        assert saque.status == "pago"
+    finally:
+        db.close()
+
+
+def test_webhook_transfer_failed_sem_status_marca_rejeitado():
+    db = _db()
+    try:
+        org = _org_aprovado(db)
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        tid = f"tra_{uuid.uuid4().hex[:10]}"
+        saque = FinanceiroSaque(
+            organizador_id=org.id,
+            valor=20.0,
+            pix_chave="a@b.com",
+            pix_tipo="EMAIL",
+            status="processando",
+            asaas_transfer_id=tid,
+            criado_em=agora,
+            atualizado_em=agora,
+        )
+        db.add(saque)
+        db.commit()
+
+        aplicar_webhook_transferencia(
+            db,
+            {"id": tid, "failReason": "Erro bancário"},
+            event_type="TRANSFER_FAILED",
+        )
+        db.commit()
+        db.refresh(saque)
+        assert saque.status == "rejeitado"
     finally:
         db.close()
 

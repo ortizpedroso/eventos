@@ -137,6 +137,55 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
     return {"status": "success"}
 
 
+@router.post("/asaas/transfer-auth")
+async def asaas_transfer_auth(request: Request, db: Session = Depends(get_db)):
+    """Autorização de saques/transferências Asaas (BaaS — sem token SMS).
+
+    O Asaas envia POST ~5s após criar a transferência. Resposta esperada:
+    ``{"status": "APPROVED"}`` ou ``{"status": "REFUSED", "refuseReason": "..."}``.
+  """
+    payload_raw = await request.body()
+    token_header = request.headers.get("asaas-access-token", "")
+    _validar_token_webhook_asaas(token_header)
+
+    try:
+        body = json.loads(payload_raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=400, detail="Invalid payload") from e
+
+    tipo = str(body.get("type") or "").strip().upper()
+    if tipo != "TRANSFER":
+        logger.warning("Autorização saque: tipo não suportado %s", tipo or "(vazio)")
+        return {
+            "status": "REFUSED",
+            "refuseReason": "Tipo de operação não suportado pelo EventosBR.",
+        }
+
+    transfer = body.get("transfer") or {}
+    if not isinstance(transfer, dict) or not transfer.get("id"):
+        raise HTTPException(status_code=400, detail="Invalid transfer payload")
+
+    from app.services.saque_asaas import autorizar_saque_transferencia
+
+    try:
+        resultado = autorizar_saque_transferencia(db, transfer)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Autorização saque: falha ao processar transfer %s", transfer.get("id"))
+        return {
+            "status": "REFUSED",
+            "refuseReason": "Erro interno ao validar a transferência.",
+        }
+
+    logger.info(
+        "Autorização saque transfer %s → %s",
+        transfer.get("id"),
+        resultado.get("status"),
+    )
+    return resultado
+
+
 @router.post("/mock-payment")
 async def mock_payment(ingresso_id: str, db: Session = Depends(get_db)):
     """(Apenas para Desenvolvimento) Simula a aprovação de um pagamento."""

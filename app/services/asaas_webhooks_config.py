@@ -5,14 +5,23 @@ from __future__ import annotations
 from config.settings import settings
 
 
-def url_webhook_asaas() -> str | None:
+def _url_webhook_base(suffix: str) -> str | None:
     base = (settings.FRONTEND_PUBLIC_URL or "").strip().rstrip("/")
     if not base or base.startswith("http://localhost"):
         api_base = base.replace(":3000", ":8000") if ":3000" in base else ""
         if api_base:
-            return f"{api_base}/api/webhooks/asaas"
+            return f"{api_base}/api/webhooks/asaas{suffix}"
         return None
-    return f"{base}/api/webhooks/asaas"
+    return f"{base}/api/webhooks/asaas{suffix}"
+
+
+def url_webhook_asaas() -> str | None:
+    return _url_webhook_base("")
+
+
+def url_webhook_transfer_auth_asaas() -> str | None:
+    """URL do mecanismo de autorização de saques (Integrações → Mecanismos de segurança)."""
+    return _url_webhook_base("/transfer-auth")
 
 
 def webhooks_payload_subconta() -> list[dict]:

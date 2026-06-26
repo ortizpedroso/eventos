@@ -76,13 +76,25 @@ def criar_transferencia_pix(
     return client.post("/v3/transfers", json=payload, idempotency_key=f"saque_{external_reference}")
 
 
-def mapear_status_transferencia(status_asaas: str | None) -> str:
-    s = (status_asaas or "").strip().upper()
+def _normalizar_status_transferencia(status: str | None, event_type: str = "") -> str:
+    """Normaliza status Asaas ou event_type (ex.: TRANSFER_DONE → DONE)."""
+    s = (status or "").strip().upper()
+    if not s:
+        s = (event_type or "").strip().upper()
+    if s.startswith("TRANSFER_"):
+        s = s.removeprefix("TRANSFER_")
+    return s
+
+
+def mapear_status_transferencia(status_asaas: str | None, *, event_type: str = "") -> str:
+    s = _normalizar_status_transferencia(status_asaas, event_type)
     if s in _STATUS_TRANSFER_PAGO:
         return "pago"
     if s in _STATUS_TRANSFER_REJEITADO:
         return "rejeitado"
-    if s in _STATUS_TRANSFER_PROCESSANDO or s:
+    if s in _STATUS_TRANSFER_PROCESSANDO:
+        return "processando"
+    if s:
         return "processando"
     return "pendente"
 
@@ -92,11 +104,11 @@ def previsao_liquidacao_saque(criado_em: datetime) -> datetime:
     return criado_em + timedelta(hours=horas)
 
 
-def aplicar_webhook_transferencia(
+def _buscar_saque_por_transferencia(
     db: Session,
     transfer: dict[str, Any],
     *,
-    event_type: str = "",
+    for_update: bool = False,
 ) -> FinanceiroSaque | None:
     transfer_id = str(transfer.get("id") or "").strip()
     external_ref = str(transfer.get("externalReference") or "").strip()
@@ -104,14 +116,76 @@ def aplicar_webhook_transferencia(
         return None
 
     q = db.query(FinanceiroSaque)
+    if for_update:
+        q = q.with_for_update()
     if transfer_id:
-        saque = q.filter(FinanceiroSaque.asaas_transfer_id == transfer_id).with_for_update().first()
-    else:
-        saque = q.filter(FinanceiroSaque.id == external_ref).with_for_update().first()
+        saque = q.filter(FinanceiroSaque.asaas_transfer_id == transfer_id).first()
+        if saque:
+            return saque
+    if external_ref:
+        return q.filter(FinanceiroSaque.id == external_ref).first()
+    return None
+
+
+def autorizar_saque_transferencia(
+    db: Session,
+    transfer: dict[str, Any],
+) -> dict[str, str]:
+    """Valida transferência recebida no webhook de autorização Asaas (BaaS / sem SMS)."""
+    saque = _buscar_saque_por_transferencia(db, transfer, for_update=True)
+    if not saque:
+        logger.warning(
+            "Autorização saque: transferência %s não encontrada",
+            transfer.get("id") or transfer.get("externalReference"),
+        )
+        return {
+            "status": "REFUSED",
+            "refuseReason": "Transferência não encontrada no EventosBR.",
+        }
+
+    if saque.status in ("cancelado", "rejeitado"):
+        return {
+            "status": "REFUSED",
+            "refuseReason": f"Saque {saque.id} não está elegível (status {saque.status}).",
+        }
+
+    valor_asaas = round(float(transfer.get("value") or transfer.get("netValue") or 0), 2)
+    valor_saque = round(float(saque.valor), 2)
+    if abs(valor_asaas - valor_saque) > 0.009:
+        logger.warning(
+            "Autorização saque %s: valor Asaas %.2f != %.2f",
+            saque.id,
+            valor_asaas,
+            valor_saque,
+        )
+        return {
+            "status": "REFUSED",
+            "refuseReason": "Valor da transferência não confere com o saque solicitado.",
+        }
+
+    transfer_id = str(transfer.get("id") or "").strip()
+    if transfer_id and not saque.asaas_transfer_id:
+        saque.asaas_transfer_id = transfer_id
+        saque.atualizado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.add(saque)
+
+    logger.info("Autorização saque %s aprovada (transfer %s)", saque.id, transfer_id or "—")
+    return {"status": "APPROVED"}
+
+
+def aplicar_webhook_transferencia(
+    db: Session,
+    transfer: dict[str, Any],
+    *,
+    event_type: str = "",
+) -> FinanceiroSaque | None:
+    saque = _buscar_saque_por_transferencia(db, transfer, for_update=True)
     if not saque:
         return None
 
-    status_asaas = (transfer.get("status") or event_type or "").strip().upper()
+    transfer_id = str(transfer.get("id") or "").strip()
+
+    status_asaas = _normalizar_status_transferencia(transfer.get("status"), event_type)
     novo = mapear_status_transferencia(status_asaas)
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
 

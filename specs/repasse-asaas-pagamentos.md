@@ -1,6 +1,6 @@
 # Spec: Repasse Asaas, pagamentos e financeiro white-label
 
-**Versão:** 2.0  
+**Versão:** 2.1  
 **Data:** 2026-06-26  
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
@@ -22,6 +22,8 @@ Garantir que vendas de ingressos pagos distribuam valores corretamente entre **o
 
 Implementação: `app/services/pagamento_asaas.py` → `split_para_evento()`.
 
+Ledger por ingresso gravado em `registrar_ledger_ingressos_lote()` (`financeiro_organizador.py`), chamado no checkout.
+
 ---
 
 ## 3. Conta de repasse (organizador)
@@ -33,11 +35,19 @@ Implementação: `app/services/pagamento_asaas.py` → `split_para_evento()`.
 
 Sync de status: webhook `ACCOUNT_STATUS_*` + worker 10 min + UI poll 20s.
 
+**API:** `POST /api/organizador/asaas/subconta`  
+**Acompanhamento:** `GET /api/organizador/asaas/acompanhamento`
+
 ---
 
 ## 4. Financeiro white-label do organizador
 
+**Base:** `GET/POST /api/organizador/financeiro/*`  
+**UI:** `/organizador/financeiro` (`organizador-repasses-painel.tsx`)
+
 ### 4.1 Saldo
+
+`GET /api/organizador/financeiro/saldo`
 
 | Campo | Significado |
 |-------|-------------|
@@ -52,35 +62,47 @@ Sync de status: webhook `ACCOUNT_STATUS_*` + worker 10 min + UI poll 20s.
 - Carência: 48h após confirmação do pagamento (`pago_em` no ingresso).
 - Prazo informado ao organizador: até `FINANCEIRO_PRAZO_TRANSFERENCIA_HORAS` (default 48h).
 - Chave Pix CPF/CNPJ deve coincidir com cadastro da subconta.
-- Comprovante: `GET /api/organizador/financeiro/saque/{id}/comprovante`.
+- Comprovante: `GET /api/organizador/financeiro/saque/{id}/comprovante` (JSON estruturado).
 
 ### 4.3 Extrato e relatórios
 
-- Extrato: vendas, estornos (reembolsos), saques.
-- Vendas agrupadas: dia, semana, mês, ano, evento.
+- Extrato: `GET /api/organizador/financeiro/extrato` — vendas, estornos (reembolsos), saques.
+- Vendas agrupadas: `GET /api/organizador/financeiro/vendas?agrupamento=` — dia, semana, mês, ano, evento.
 - Conciliação: `GET /api/organizador/financeiro/conciliacao` (ledger vs saldo Asaas).
+
+**Fórmula de conciliação** (`financeiro_conciliacao.py`):
+
+| Campo | Cálculo |
+|-------|---------|
+| `ledger.saldo_esperado_asaas` | `liquido_acumulado − saques_pagos_total` |
+| `asaas.balance` | `GET /v3/finance/balance` na subconta |
+| `diferenca` | `saldo_esperado_asaas − balance` — dispara `alerta` se \|diferença\| > R$ 0,05 |
+| `diferenca_disponivel` | `saldo_disponivel_saque − balance` — **informativo**; não dispara alerta |
+
+Valores em carência de saque permanecem no saldo Asaas e **não** devem gerar alerta na conciliação principal.
 
 ### 4.4 Estornos
 
 - Reembolso/chargeback cancela ingresso e grava `estornado_em`.
-- Estorno aparece no extrato como movimento negativo.
+- Estorno aparece no extrato como movimento negativo (`tipo: "estorno"`).
 
 ---
 
 ## 5. Pagamento do comprador
 
-- Checkout bloqueado sem repasse aprovado.
+- Checkout bloqueado sem repasse aprovado (API, schema do evento e UI).
 - Webhooks `PAYMENT_*` marcam ingresso pago e definem `pago_em`.
-- Reembolso automático se fulfillment bloqueado.
+- Reembolso automático se fulfillment bloqueado (`exigir_fulfillment_pagamento`).
 
 ---
 
 ## 6. Assinatura mensal (plataforma)
 
 - Cobrança 100% plataforma (sem split de ingresso).
-- Reutiliza PIX pendente em vez de duplicar cobrança.
+- Reutiliza PIX pendente em vez de duplicar cobrança (`_cobranca_assinatura_pendente`).
 - Idempotency key única por tentativa.
-- Poll em `GET /assinatura` e `POST /assinatura/sincronizar` ativa plano se PIX pago.
+- Poll em `GET /api/organizador/assinatura` e `POST /api/organizador/assinatura/sincronizar` ativa plano se PIX pago.
+- Cobrança: `POST /api/organizador/assinatura/pagar`
 
 ---
 
@@ -96,6 +118,20 @@ Header: `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN`
 **Transferências (saques):** `TRANSFER_CREATED`, `TRANSFER_PENDING`, `TRANSFER_IN_BANK_PROCESSING`, `TRANSFER_DONE`, `TRANSFER_FAILED`, `TRANSFER_CANCELLED`
 
 Subcontas criadas via API recebem webhooks no payload de `POST /v3/accounts` quando `FRONTEND_PUBLIC_URL` e `ASAAS_WEBHOOK_TOKEN` estão configurados.
+
+Idempotência de eventos por `WebhookEvent.id`.
+
+### 7.1 Autorização de saques (BaaS — sem token SMS)
+
+| Mecanismo | URL / config |
+|-----------|----------------|
+| Webhook de autorização | `https://DOMINIO/api/webhooks/asaas/transfer-auth` |
+| IP whitelist | IP fixo do VPS; desabilitar evento crítico em saques para esse IP (painel Asaas) |
+| Header | `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN` |
+
+Resposta da API: `{"status": "APPROVED"}` ou `{"status": "REFUSED", "refuseReason": "..."}`.
+
+Validação: `FinanceiroSaque` por `asaas_transfer_id` ou `externalReference` (id do saque) + valor.
 
 ---
 
@@ -118,18 +154,37 @@ Subcontas criadas via API recebem webhooks no payload de `POST /v3/accounts` qua
 - [x] Split organizador + plataforma
 - [x] Subconta + KYC + bloqueio publicação/venda
 - [x] Saque Pix white-label com carência 48h
-- [x] Saldo Asaas real + conciliação
+- [x] Saldo Asaas real + conciliação (fórmula §4.3)
 - [x] Extrato com estornos
 - [x] Vendas por período/evento
 - [x] Webhooks subconta na criação
 - [x] Assinatura: reutilizar PIX, poll, idempotency
 - [x] Comprovante de transferência
+- [x] Autorização de saques BaaS (webhook + IP whitelist ops) — §7.1
 - [ ] NFSe automática (ops/contabilidade — fora do escopo técnico)
-- [ ] Alinhamento Asaas white-label para transferências sem token SMS (ação comercial)
 
 ---
 
 ## 10. Migrations
 
-- `20260625_000032` — `pago_em`, campos saque Asaas
+- `20260625_000032` — `pago_em`, campos saque Asaas (`asaas_transfer_id`, `previsao_liquidacao_em`, `processado_em`)
 - `20260626_000033` — `asaas_repasse_cpf_cnpj`, `estornado_em`
+
+---
+
+## 11. Extensões implementadas (além do núcleo acima)
+
+Funcionalidades presentes na build, documentadas para revisão — **não são requisitos adicionais de `/build`**.
+
+| Extensão | Onde |
+|----------|------|
+| Cancelamento de saque pendente/processando | `POST /api/organizador/financeiro/saque/{id}/cancelar` |
+| Listagem de saques | `GET /api/organizador/financeiro/saques` |
+| Antecipação automática cartão na subconta | `PUT /api/organizador/asaas/antecipacao`, `POST .../antecipacao/simular` |
+| Reenvio de subconta após rejeição KYC | `organizador_asaas.py` → `reenviar_subconta_organizador` |
+| Backfill `pago_em` e ledger em ingressos antigos | `financeiro_organizador.py` |
+| Comprovante na UI (toast) | `organizador-repasses-painel.tsx` |
+| `PAYMENT_CREATED` / `PAYMENT_UPDATED` inscritos em webhooks de subconta | `asaas_webhooks_config.py` (handler ignora — no-op) |
+| Scripts operacionais de go-live | `scripts/asaas-webhook-setup.sh`, `scripts/asaas-transfer-auth-setup.sh` |
+| Mock Asaas para dev/test (`ASAAS_E2E_MOCK`) | `asaas_e2e_mock.py` |
+| Checks de produção no admin | `production_checks.py` |

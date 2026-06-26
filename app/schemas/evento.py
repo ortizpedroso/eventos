@@ -234,7 +234,7 @@ def montar_evento_response(
         "slug": evento.slug,
         "organizador_id": evento.organizador_id,
         "nome": evento.nome,
-        "descricao": evento.descricao,
+        "descricao": evento.descricao or "",
         "data_inicio": evento.data_inicio,
         "data_fim": evento.data_fim,
         "local": evento.local,

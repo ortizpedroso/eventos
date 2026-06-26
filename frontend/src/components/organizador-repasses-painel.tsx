@@ -50,8 +50,12 @@ type Saldo = {
 };
 
 type Conciliacao = {
-  ledger: { saldo_disponivel_saque?: number };
+  ledger: {
+    saldo_esperado_asaas?: number;
+    saldo_disponivel_saque?: number;
+  };
   asaas: { disponivel?: boolean; balance?: number };
+  diferenca?: number | null;
   diferenca_disponivel?: number | null;
   alerta?: string | null;
   nota?: string;
@@ -391,8 +395,8 @@ export function OrganizadorRepassesPainel() {
       {conciliacao?.alerta ? (
         <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950">
           {conciliacao.alerta}
-          {conciliacao.diferenca_disponivel != null ? (
-            <> Diferença: {fmt(conciliacao.diferenca_disponivel)}.</>
+          {conciliacao.diferenca != null ? (
+            <> Diferença: {fmt(conciliacao.diferenca)}.</>
           ) : null}
         </p>
       ) : null}
