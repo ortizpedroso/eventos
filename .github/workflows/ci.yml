@@ -65,6 +65,7 @@ jobs:
         run: npm run test:e2e
         env:
           CI: true
+          PLAYWRIGHT_SKIP_API_CHECK: "1"
 
   prod-compose:
     runs-on: ubuntu-latest

@@ -46,7 +46,7 @@ def _evento(db, org_id: str, nome: str = "Show") -> Evento:
         nome=nome,
         slug=f"ev-{uuid.uuid4().hex[:8]}",
         organizador_id=org_id,
-        publicado=True,
+        publicado=False,
         asaas_wallet_id="wallet_x",
         data_inicio=agora + timedelta(days=7),
         data_fim=agora + timedelta(days=7, hours=4),

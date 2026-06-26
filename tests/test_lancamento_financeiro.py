@@ -77,6 +77,7 @@ def test_conciliacao_sem_alerta_durante_carencia():
             data_inicio=agora + timedelta(days=1),
             data_fim=agora + timedelta(days=1, hours=2),
             local="L",
+            publicado=False,
         )
         db.add(ev)
         db.commit()
@@ -134,6 +135,7 @@ def test_conciliacao_alerta_quando_saldo_diverge():
             data_inicio=agora + timedelta(days=1),
             data_fim=agora + timedelta(days=1, hours=2),
             local="L",
+            publicado=False,
         )
         db.add(ev)
         db.commit()
@@ -180,6 +182,7 @@ def test_estorno_no_extrato():
             data_inicio=agora,
             data_fim=agora + timedelta(hours=2),
             local="L",
+            publicado=False,
         )
         db.add(ev)
         db.commit()
