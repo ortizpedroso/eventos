@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 
-from app.models import FinanceiroSaque, Usuario
+from app.models import FinanceiroSaque, Usuario, get_db
 from app.services.saque_asaas import autorizar_saque_transferencia
 from app.utils.secret_storage import encrypt_at_rest
 from config.settings import settings
@@ -136,29 +136,46 @@ def test_webhook_transfer_auth_endpoint():
     db = _db()
     try:
         org = _org(db)
-        tid = f"tra_{uuid.uuid4().hex[:8]}"
-        saque = _saque(db, org, transfer_id=tid)
+        tid = f"tra_{uuid.uuid4().hex[:12]}"
+        valor = round(50.0 + int(uuid.uuid4().hex[:2], 16) / 100, 2)
+        saque = _saque(db, org, valor=valor, transfer_id=tid)
+        db.refresh(saque)
+        assert float(saque.valor) == valor
 
-        client = TestClient(test_api.app)
-        token = (settings.ASAAS_WEBHOOK_TOKEN or "test-webhook-token").strip()
-        if not settings.ASAAS_WEBHOOK_TOKEN:
-            settings.ASAAS_WEBHOOK_TOKEN = token
+        def _override_db():
+            try:
+                yield db
+            finally:
+                pass
 
-        resp = client.post(
-            "/api/webhooks/asaas/transfer-auth",
-            json={
-                "type": "TRANSFER",
-                "transfer": {
-                    "id": tid,
-                    "value": 50.0,
-                    "externalReference": saque.id,
-                    "status": "PENDING",
+        prev_override = test_api.app.dependency_overrides.get(get_db)
+        test_api.app.dependency_overrides[get_db] = _override_db
+        try:
+            client = TestClient(test_api.app)
+            token = (settings.ASAAS_WEBHOOK_TOKEN or "test-webhook-token").strip()
+            if not settings.ASAAS_WEBHOOK_TOKEN:
+                settings.ASAAS_WEBHOOK_TOKEN = token
+
+            resp = client.post(
+                "/api/webhooks/asaas/transfer-auth",
+                json={
+                    "type": "TRANSFER",
+                    "transfer": {
+                        "id": tid,
+                        "value": valor,
+                        "externalReference": saque.id,
+                        "status": "PENDING",
+                    },
                 },
-            },
-            headers={"asaas-access-token": token},
-        )
-        assert resp.status_code == 200
-        assert resp.json() == {"status": "APPROVED"}
+                headers={"asaas-access-token": token},
+            )
+            assert resp.status_code == 200, resp.text
+            assert resp.json() == {"status": "APPROVED"}
+        finally:
+            if prev_override is not None:
+                test_api.app.dependency_overrides[get_db] = prev_override
+            else:
+                test_api.app.dependency_overrides.pop(get_db, None)
     finally:
         db.close()
 

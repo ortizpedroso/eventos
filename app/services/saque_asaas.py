@@ -76,13 +76,25 @@ def criar_transferencia_pix(
     return client.post("/v3/transfers", json=payload, idempotency_key=f"saque_{external_reference}")
 
 
-def mapear_status_transferencia(status_asaas: str | None) -> str:
-    s = (status_asaas or "").strip().upper()
+def _normalizar_status_transferencia(status: str | None, event_type: str = "") -> str:
+    """Normaliza status Asaas ou event_type (ex.: TRANSFER_DONE → DONE)."""
+    s = (status or "").strip().upper()
+    if not s:
+        s = (event_type or "").strip().upper()
+    if s.startswith("TRANSFER_"):
+        s = s.removeprefix("TRANSFER_")
+    return s
+
+
+def mapear_status_transferencia(status_asaas: str | None, *, event_type: str = "") -> str:
+    s = _normalizar_status_transferencia(status_asaas, event_type)
     if s in _STATUS_TRANSFER_PAGO:
         return "pago"
     if s in _STATUS_TRANSFER_REJEITADO:
         return "rejeitado"
-    if s in _STATUS_TRANSFER_PROCESSANDO or s:
+    if s in _STATUS_TRANSFER_PROCESSANDO:
+        return "processando"
+    if s:
         return "processando"
     return "pendente"
 
@@ -173,7 +185,7 @@ def aplicar_webhook_transferencia(
 
     transfer_id = str(transfer.get("id") or "").strip()
 
-    status_asaas = (transfer.get("status") or event_type or "").strip().upper()
+    status_asaas = _normalizar_status_transferencia(transfer.get("status"), event_type)
     novo = mapear_status_transferencia(status_asaas)
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
 
