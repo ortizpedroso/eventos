@@ -1,66 +1,90 @@
 # EventosBR — Especificação do Sistema
 
-**Versão:** 1.0  
+**Versão:** 2.1  
 **Última atualização:** 30/06/2026  
-**Fonte de verdade:** este arquivo substitui a documentação fragmentada em `docs/02`–`05` para escopo funcional.  
-**Migração Alembic (head):** `20260616_000019_email_verificado_portaria_token_em`
+**Fonte de verdade:** documento único para escopo funcional, API, regras e front.  
+**Alembic head:** `20260616_000019_email_verificado_portaria_token_em`  
+**Pagamentos:** Stripe Connect Express (sem Asaas nesta base de código)
 
 ---
 
-## 0. Escopo e convenções
+## Índice
 
-### O que este documento cobre
+1. [Escopo e convenções](#1-escopo-e-convenções)
+2. [Visão do produto](#2-visão-do-produto)
+3. [Arquitetura](#3-arquitetura)
+4. [Modelos de dados](#4-modelos-de-dados)
+5. [API REST](#5-api-rest)
+6. [Regras de negócio](#6-regras-de-negócio)
+7. [Fluxos principais](#7-fluxos-principais)
+8. [Frontend](#8-frontend)
+9. [Segurança e privacidade](#9-segurança-e-privacidade)
+10. [Configuração, deploy e CI](#10-configuração-deploy-e-ci)
+11. [Testes](#11-testes)
+12. [Roadmap — fora de escopo](#12-roadmap--fora-de-escopo)
+13. [Lacunas conhecidas](#13-lacunas-conhecidas)
+14. [Histórico de versões](#14-histórico-de-versões)
 
-- Produto, API, modelos de dados, regras de negócio, frontend, workers, segurança, configuração e deploy.
-- Estado **real do código** na branch principal de desenvolvimento (Stripe Connect, sem Asaas).
+---
 
-### O que está fora de escopo (ver §11)
+## 1. Escopo e convenções
 
-- Asaas BaaS / repasse Pix white-label (branch/PR separados).
-- NFSe e conciliação fiscal brasileira.
-- Cobrança de assinatura mensal (UI em `/planos` é simulação; sem API de billing).
-- Login Apple (modelo preparado; sem rota).
-- Lista de espera, lista de interesse, urgência de estoque (não implementados nesta base).
+### 1.1 Cobertura
 
-### Convenções
+| Incluído | Excluído (ver §12) |
+|----------|-------------------|
+| API FastAPI, modelos, workers | Asaas BaaS / repasse Pix white-label |
+| Next.js App Router | NFSe / fiscal BR |
+| Stripe PI + Connect + webhooks | Cobrança de assinatura mensal (só UI) |
+| Admin, portaria, marketing LGPD | Login Apple (modelo preparado) |
+| Deploy Docker/Caddy/VPS | Lista de espera / interesse / urgência |
+
+### 1.2 Convenções
 
 | Item | Convenção |
 |------|-----------|
 | IDs | UUID string |
-| Valores monetários na API | `valor_centavos` (inteiro); compat. `valor` em reais (float) legado |
-| Datas | ISO 8601; BD em UTC naive |
-| Autenticação browser | Cookie HttpOnly `eventosbr_session` (JWT) + header `Authorization: Bearer` |
-| Admin plataforma | Header `X-Platform-Admin-Key` ou cookie `eventosbr_admin_key` no Next.js |
-| QR check-in | Payload `EBR1:{ingresso_uuid}:{hmac12}` |
+| Dinheiro na API | `valor_centavos` (int); legado `valor` em reais |
+| Datas | ISO 8601; persistência UTC naive |
+| Sessão browser | Cookie HttpOnly `eventosbr_session` + `Authorization: Bearer` |
+| Admin | `X-Platform-Admin-Key` ou cookie `eventosbr_admin_key` (BFF Next) |
+| QR check-in | `EBR1:{ingresso_uuid}:{hmac12}` |
+| Categorias evento | Lista fixa em `app/utils/evento_categorias.py` (15 valores) |
+
+### 1.3 Critérios de aceite por ator
+
+| Ator | Critério mínimo |
+|------|-----------------|
+| Participante | Comprar ingresso publicado com termo aceito; ver QR; cancelar no prazo |
+| Organizador | Criar evento pausado → lotes → publicar → ver relatório → comunicado |
+| Portaria | Abrir link `/portaria/{id}/{token}` → scan QR → check-in com feedback |
+| Admin | `/admin/setup` verde; moderar evento; exportar opt-in marketing |
 
 ---
 
-## 1. Visão do produto
+## 2. Visão do produto
 
-A **EventosBR** é uma plataforma brasileira de venda de ingressos online.
+Plataforma brasileira de venda de ingressos online.
 
 | Ator | Capacidades |
 |------|-------------|
-| **Participante** | Descobrir eventos, comprar (cartão/PIX via Stripe), gerenciar ingressos, repassar titularidade, cancelar com reembolso |
-| **Organizador** | Criar/editar eventos e lotes, cupons, publicar na vitrine, relatórios, comunicados, check-in, link de portaria |
-| **Plataforma (admin)** | Moderação, checklist de produção, campanhas de marketing LGPD |
-| **Portaria (sem conta)** | Check-in via link secreto + scanner QR |
+| **Participante** | Vitrine, checkout (cartão/PIX), conta, repasse de titularidade, reembolso |
+| **Organizador** | CRUD eventos/lotes/cupons, publicar, relatórios, comunicados, check-in, portaria |
+| **Admin** | Moderação, checklist produção, campanhas marketing |
+| **Portaria** | Check-in sem conta via link secreto |
 
-### Pagamentos
-
-- **Provedor único:** Stripe (PaymentIntent, Refund, Connect Express para repasse ao organizador).
-- **Modo dev/teste:** `STRIPE_DISABLED=true` marca ingressos como pagos sem gateway.
+**Tarifa estimada (relatórios):** 10% + R$ 2,00 por ingresso pago (`tarifas_plataforma.py`). Não descontada automaticamente no Stripe.
 
 ---
 
-## 2. Stack e arquitetura
+## 3. Arquitetura
 
 ```mermaid
 flowchart LR
   subgraph browser [Browser]
-    Next[Next.js 15 App Router]
+    Next[Next.js App Router]
   end
-  subgraph vps [Servidor]
+  subgraph vps [VPS Docker]
     Caddy[Caddy :443]
     Web[web :3000]
     API[api :8000]
@@ -68,13 +92,13 @@ flowchart LR
     RD[(Redis)]
   end
   subgraph ext [Externo]
-    ST[Stripe API]
-    WH[Stripe Webhooks]
+    ST[Stripe]
+    WH[Webhooks Stripe]
     SMTP[SMTP]
   end
   browser --> Caddy --> Web
   Caddy --> API
-  Web -->|rewrite /api/* ou INTERNAL_API_URL| API
+  Web -->|/api/* rewrite| API
   API --> PG
   API --> RD
   API --> ST
@@ -82,36 +106,42 @@ flowchart LR
   API --> SMTP
 ```
 
-| Camada | Tecnologia |
-|--------|------------|
-| API | Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy |
-| BD | PostgreSQL (prod) / SQLite (dev/test) |
-| Migrações | Alembic |
-| Cache/filas | Redis (rate limit, fila de e-mail; fallback em memória) |
-| Front | Next.js, React, TypeScript, Tailwind v4 |
-| Pagamento browser | Stripe.js + Payment Element |
-| Proxy prod | Caddy + `docker-compose.prod.yml` |
+### 3.1 Workers (`app/main.py` lifespan)
 
-### Workers em background (`app/main.py` lifespan)
+| Worker | Arquivo | Intervalo | Função |
+|--------|---------|-----------|--------|
+| E-mail ingresso/comunicado | `ticket_email.py` | contínuo | Fila Redis ou memória; SMTP |
+| Cleanup reservas | `reserva_cleanup.py` | 5 min | `pendente` expirado → `cancelado`; cancela PI |
+| Lembrete pré-evento | `lembrete_evento.py` | 1 h | E-mail ~24 h antes para `pago` |
 
-| Worker | Intervalo | Função |
-|--------|-----------|--------|
-| `ticket_email` | contínuo | Fila SMTP: ingresso individual + comunicados do organizador |
-| `reserva_cleanup` | 5 min | Cancela reservas `pendente` com `reservado_ate` expirado; cancela PI Stripe |
-| `lembrete_evento` | 1 h | E-mail ~24 h antes do evento para ingressos `pago` |
+### 3.2 Health
 
-### Health
+| Rota | Uso |
+|------|-----|
+| `GET /health` | Liveness |
+| `GET /ready` | Readiness + BD (503 se down) |
 
-| Rota | Papel |
-|------|-------|
-| `GET /health` | Liveness (sem BD) |
-| `GET /ready` | Readiness (`SELECT 1`; 503 se BD down) |
+### 3.3 Migrações Alembic (histórico)
+
+| Revisão | Tema |
+|---------|------|
+| `20260511_000001` | Schema inicial |
+| `20260514_000006` | Lotes de ingresso |
+| `20260516_000007` | Fase B (CPF limite, operação) |
+| `20260517_000008` | Cupons + comunicados |
+| `20260518_000009` | Opt-in marketing usuário |
+| `20260519_000010` | Campanhas marketing admin |
+| `20260520_000011` | OAuth Google |
+| `20260522_000012`–`000013` | Portaria + repasse ingresso |
+| `20260523_000014`–`000017` | token_version, reserva, senha reset |
+| `20260524_000018` | Cidade + multi-ingresso |
+| `20260616_000019` | email_verificado + checkin_token_em |
 
 ---
 
-## 3. Modelos de dados
+## 4. Modelos de dados
 
-### Diagrama simplificado
+### 4.1 Diagrama ER
 
 ```mermaid
 erDiagram
@@ -124,134 +154,83 @@ erDiagram
   CAMPANHA_MARKETING ||--o{ CAMPANHA_ENVIO : gera
 ```
 
-### `Usuario`
+### 4.2 Ciclo de vida do ingresso
 
-| Campo | Descrição |
-|-------|-----------|
-| `email`, `nome`, `senha_hash` | `senha_hash` nullable se OAuth |
-| `tipo` | `cliente` \| `organizador` |
-| `auth_provider` | `email` \| `google` \| `apple` (apple sem rota) |
-| `stripe_customer_id`, `stripe_account_id` | Stripe Customer + Connect Express |
-| `ativo` | Admin pode desativar |
-| `token_version` | Incrementado ao desativar → invalida JWTs |
-| `email_verificado` | Compra rápida / verificação por token |
-| `aceita_comunicacao_email`, `aceita_comunicacao_whatsapp`, `telefone` | LGPD marketing |
-| `password_reset_token`, `password_reset_expires` | Recuperação de senha |
+```mermaid
+stateDiagram-v2
+  [*] --> pendente: POST /pagamentos/criar
+  pendente --> pago: webhook succeeded / STRIPE_DISABLED
+  pendente --> cancelado: reserva expirada / PI failed
+  pago --> usado: check-in OK
+  pago --> cancelado: POST /pagamentos/cancelar
+  usado --> [*]
+  cancelado --> [*]
+```
 
-### `Evento`
+### 4.3 Entidades principais
 
-| Campo | Descrição |
-|-------|-----------|
-| `slug` | Único; URL pública `/eventos/{slug}` |
-| `publicado` | `false` por defeito na API de criação; só publicados na vitrine |
-| `cidade` | Filtro na vitrine |
-| `categoria` | Chips de navegação |
-| `preco_ingresso` | Mínimo entre lotes ativos (sincronizado) |
-| `limite_ingressos_por_cpf` | `NULL` = sem limite |
-| `checkin_token`, `checkin_token_em` | Link portaria; rotação automática |
-| `stripe_account_id` | Connect do organizador (cópia no evento) |
-| `mensagem_confirmacao` | Texto pós-compra |
+**`Usuario`:** `tipo` cliente|organizador; `stripe_*`; `auth_provider` email|google|apple; `token_version`; `email_verificado`; opt-in marketing.
 
-### `EventoIngressoLote`
+**`Evento`:** `slug` UK; `publicado` (default `true` na API `CriarEventoRequest` e no ORM); `cidade`; `checkin_token`+`checkin_token_em`; `limite_ingressos_por_cpf`.
 
-| Campo | Descrição |
-|-------|-----------|
-| `tipo` | `inteira` \| `meia` \| `vip` \| `cortesia` |
-| `preco` | Mín. R$ 0,50 pago; cortesia pode ser 0 |
-| `ordem` | Ordem de venda |
-| `quantidade_maxima` | `NULL` = ilimitado |
-| `vendas_inicio`, `vendas_fim` | Janela opcional |
-| `ativo` | Lote visível na resolução de compra |
+**`EventoIngressoLote`:** `tipo` inteira|meia|vip|cortesia; `ordem`; janela `vendas_*`; `quantidade_maxima`.
 
-### `EventoCupom`
+**`EventoCupom`:** `tipo` percentual|fixo; `max_usos`/`usos`; `valido_ate`.
 
-| Campo | Descrição |
-|-------|-----------|
-| `codigo` | Único por evento; case-insensitive |
-| `tipo` | `percentual` (0–1) \| `fixo` (reais) |
-| `valor` | Percentual ou valor fixo |
-| `max_usos`, `usos` | Limite opcional |
-| `valido_ate` | Expiração opcional |
-
-### `Ingresso`
-
-| Campo | Descrição |
-|-------|-----------|
-| `status` | `pendente` \| `pago` \| `cancelado` \| `usado` |
-| `lote_id`, `cupom_id` | Lote e cupom aplicado |
-| `participante_*` | Quem usa o ingresso (pode ≠ comprador) |
-| `stripe_payment_intent_id` | UK; webhook idempotente |
-| `reservado_ate` | Reserva de vaga (35 min) |
-| `termo_compra_aceito_em`, `termo_compra_versao` | Aceite legal |
-| `data_limite_cancelamento` | Prazo reembolso |
-| `checkin_em`, `checkin_por_id` | Auditoria portaria |
-| `repassado_para_*`, `repassado_em` | Histórico de repasse de titularidade |
-| `cortesia_responsavel` | Obrigatório em lote cortesia |
-
-### Outros
-
-- **`Cancelamento`:** registo de reembolso Stripe.
-- **`StripeEvent`:** idempotência de webhooks.
-- **`CampanhaMarketing` / `CampanhaEnvio`:** marketing da plataforma (admin).
+**`Ingresso`:** `reservado_ate` (35 min); `termo_compra_*`; `repassado_para_*`; `stripe_payment_intent_id` UK.
 
 ---
 
-## 4. API REST
+## 5. API REST
 
-Prefixos montados em `app/main.py`. Autenticação via `get_usuario_atual` salvo indicação.
+Montagem em `app/main.py`. Auth = JWT salvo indicação.
 
-### 4.1 Autenticação — `/api/auth`
-
-| Método | Rota | Auth | Descrição |
-|--------|------|------|-----------|
-| POST | `/registrar` | — | Registo cliente/organizador; Stripe Customer; Connect se organizador |
-| POST | `/compra-rapida` | — | Registo mínimo no checkout (nome+e-mail); envia verificação e-mail |
-| POST | `/login` | — | JWT + cookie; rate limit |
-| POST | `/logout` | — | Remove cookie |
-| POST | `/solicitar-recuperacao-senha` | — | E-mail com token reset |
-| POST | `/redefinir-senha` | — | Nova senha com token |
-| POST | `/verificar-email` | — | Confirma token de verificação |
-| POST | `/reenviar-verificacao-email` | JWT | Reenvia e-mail de verificação |
-| GET | `/oauth-config` | — | `{ google_client_id }` para o front |
-| POST | `/google` | — | Login/registo Google ID token |
-| POST | `/vincular-google` | JWT | Vincula Google a conta com senha |
-| GET | `/me` | JWT | Perfil (`tem_senha`, `email_verificado`, opt-in marketing) |
-| PATCH | `/me` | JWT | Nome, e-mail, senha, telefone, opt-in marketing |
-
-**Stripe no registo:** se `STRIPE_DISABLED=false` e organizador, cria Connect Express salvo `STRIPE_SKIP_CONNECT_ON_REGISTER=true`.
-
-### 4.2 Eventos — `/api/eventos`
+### 5.1 `/api/auth`
 
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
-| POST | `/criar` | Organizador | Cria evento; `publicado` default `false`; lotes opcionais |
-| PATCH | `/id/{evento_id}` | Dono | Atualiza; `substituir_lotes_evento` preserva lotes com vendas |
-| GET | `/meus` | Organizador | Lista eventos do organizador (incl. pausados) |
-| GET | `/stats-publicas` | — | `{ eventos_publicados, ingressos_confirmados }` (home) |
-| GET | `/cidades` | — | Cidades com eventos publicados |
+| POST | `/registrar` | — | Registo + Stripe Customer/Connect |
+| POST | `/compra-rapida` | — | Checkout guest; `email_verificado=false` |
+| POST | `/login` | — | JWT + cookie |
+| POST | `/logout` | — | Limpa cookie |
+| POST | `/solicitar-recuperacao-senha` | — | Token por e-mail |
+| POST | `/redefinir-senha` | — | Nova senha |
+| POST | `/verificar-email` | — | Confirma token |
+| POST | `/reenviar-verificacao-email` | JWT | Reenvio |
+| GET | `/oauth-config` | — | `google_client_id` |
+| POST | `/google` | — | Login/registo Google |
+| POST | `/vincular-google` | JWT | Vincula conta |
+| GET/PATCH | `/me` | JWT | Perfil e opt-in |
+
+### 5.2 `/api/eventos`
+
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| POST | `/criar` | Org | `publicado` default **true**; omitir ou `false` para pausar |
+| PATCH | `/id/{id}` | Dono | Atualiza; lotes com vendas não removíveis |
+| GET | `/meus` | Org | Todos os eventos do organizador |
+| GET | `/stats-publicas` | — | Contagens home |
+| GET | `/cidades` | — | Filtro vitrine |
 | GET | `` | — | Vitrine: `skip`, `limit`, `q`, `categoria`, `cidade` |
-| GET | `/{slug}` | Opcional JWT | Público; dono vê pausado |
-| GET | `/id/{id}/link-portaria` | Dono | URL + token portaria |
-| POST | `/id/{id}/link-portaria/regenerar` | Dono | Novo token manual |
-| GET | `/id/{id}/cupons` | Dono | Lista cupons |
-| POST | `/id/{id}/cupons` | Dono | Cria cupom |
-| DELETE | `/id/{id}/cupons/{cupom_id}` | Dono | Remove cupom |
-| GET | `/id/{id}/resumo` | Dono | Métricas: pagos, pendentes, check-ins, receita |
-| POST | `/id/{id}/duplicar` | Dono | Cópia pausada com mesmos lotes |
+| GET | `/{slug}` | JWT opc. | Público; dono vê pausado |
+| GET/POST | `/id/{id}/link-portaria`… | Dono | Link + regenerar token |
+| GET/POST/DELETE | `/id/{id}/cupons`… | Dono | CRUD cupons |
+| GET | `/id/{id}/resumo` | Dono | Dashboard métricas |
+| POST | `/id/{id}/duplicar` | Dono | Cópia **pausada** |
 
-**`EventoResponse` (campos calculados):** `ingresso_lotes[]` com `vendidos`, `elegivel_compra`; `lote_compra_id`, `preco_compra`, `compra_disponivel`, `motivo_compra_indisponivel`.
+**`EventoResponse` calculado:** `compra_disponivel`, `motivo_compra_indisponivel`, `preco_compra`, `lote_compra_id`, lotes com `vendidos` e `elegivel_compra`.
 
-### 4.3 Pagamentos — `/api/pagamentos`
+### 5.3 `/api/pagamentos`
 
-| Método | Rota | Auth | Descrição |
-|--------|------|------|-----------|
-| POST | `/validar-cupom` | JWT | Preview desconto sem criar pagamento |
-| POST | `/criar` | JWT | Reserva + PaymentIntent (ou pago imediato se disabled/cortesia) |
-| GET | `/meus` | JWT | Histórico; filtro `?status=` |
-| POST | `/retomar` | JWT | Novo `client_secret` para ingresso `pendente` na janela |
-| POST | `/cancelar` | JWT | Reembolso + `status=cancelado` |
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| POST | `/validar-cupom` | Preview preço com cupom |
+| POST | `/criar` | Reserva + PI (ou pago imediato) |
+| GET | `/meus` | Histórico (`?status=`) |
+| POST | `/retomar` | Novo `client_secret` se reserva válida |
+| POST | `/cancelar` | Reembolso |
 
-**`POST /criar` — corpo principal:**
+**`POST /criar` — campos obrigatórios/relevantes:**
 
 ```json
 {
@@ -259,307 +238,316 @@ Prefixos montados em `app/main.py`. Autenticação via `get_usuario_atual` salvo
   "lote_id": "opcional",
   "quantidade": 1,
   "valor_centavos": 5000,
-  "participante_nome": "opcional",
-  "participante_email": "opcional",
-  "participante_cpf": "opcional",
-  "participante_telefone": "opcional",
-  "codigo_cupom": "opcional",
   "termo_compra_aceito": true,
+  "participante_nome": "opcional",
+  "participante_cpf": "obrigatório se terceiro",
+  "codigo_cupom": "opcional",
   "cortesia_responsavel": "se cortesia"
 }
 ```
 
-**Resposta:** `client_secret`, `ingresso_id`, `ingresso_ids[]`, `quantidade`, `pix_disponivel?`, `payments_disabled?`, `cortesia?`.
+**`POST /retomar`:** `{ "ingresso_id", "evento_id?" }` → falha 400 se reserva expirou ou PI fake (`disabled_`/`cortesia_`).
 
-### 4.4 Ingressos — `/api/ingressos`
-
-| Método | Rota | Auth | Descrição |
-|--------|------|------|-----------|
-| GET | `/meus` | JWT | Lista com PII mascarada; `reservado_ate` se pendente |
-| POST | `/{id}/repassar` | JWT | Transfere participante; histórico em `repassado_para_*` |
-| GET | `/{id}/download` | JWT | HTML imprimível |
-| GET | `/{id}/codigo-checkin` | JWT | String `EBR1:…` |
-| GET | `/{id}/qr` | JWT | PNG QR (só `pago`/`usado`) |
-| POST | `/{id}/enviar-email` | JWT | Reenvia ingresso por SMTP |
-
-### 4.5 Check-in — `/api/checkin`
-
-| Método | Rota | Auth | Descrição |
-|--------|------|------|-----------|
-| POST | `/validar` | Organizador JWT | `{ codigo }` → marca `usado` |
-
-### 4.6 Portaria — `/api/portaria`
-
-Sem JWT. Token no query/body.
+### 5.4 `/api/ingressos`
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/evento?evento_id=&k=` | Metadados do evento |
-| POST | `/validar` | `{ evento_id, token, codigo }` → check-in |
+| GET | `/meus` | PII mascarada |
+| POST | `/{id}/repassar` | Ver payload §6.5 |
+| GET | `/{id}/download` | HTML impressão |
+| GET | `/{id}/codigo-checkin` | String EBR1 |
+| GET | `/{id}/qr` | PNG |
+| POST | `/{id}/enviar-email` | Reenvio SMTP |
 
-### 4.7 Organizador — `/api/organizador`
+### 5.5 `/api/checkin` · `/api/portaria` · `/api/organizador`
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| POST | `/comunicados` | `{ evento_id, assunto, mensagem }` → e-mail em massa para `pago`/`usado` |
+| Prefixo | Rota | Descrição |
+|---------|------|-----------|
+| `/api/checkin` | POST `/validar` | Organizador JWT; `{ codigo }` |
+| `/api/portaria` | GET `/evento`, POST `/validar` | Sem JWT; `evento_id` + `token` + `codigo` |
+| `/api/organizador` | POST `/comunicados` | E-mail massa `pago`/`usado` |
 
-### 4.8 Relatórios — `/api/relatorios`
+### 5.6 `/api/relatorios`
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/organizador` | Totais, por evento, série diária; `dias`, `evento_id` |
-| GET | `/organizador/participantes` | `formato=json\|csv\|pdf\|xlsx`; `mascarar_sensiveis` |
+| Rota | Params | Saída |
+|------|--------|-------|
+| GET `/organizador` | `dias`, `evento_id` | Totais, série diária, taxas estimadas |
+| GET `/organizador/participantes` | `formato=json\|csv\|pdf\|xlsx`, `mascarar_sensiveis` | Export presença |
 
-### 4.9 Admin — `/api/admin`
+### 5.7 `/api/admin` (header `X-Platform-Admin-Key`)
 
-Requer `X-Platform-Admin-Key`.
+| Grupo | Rotas |
+|-------|-------|
+| Ops | GET `/setup` |
+| Moderação | GET `/eventos`, PATCH `/{id}/publicado`, GET/PATCH `/usuarios` |
+| Marketing | GET `/marketing/contatos`, CRUD `/marketing/campanhas`, POST `/{id}/disparar` |
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/setup` | Checklist produção (sem segredos) |
-| GET | `/eventos` | Todos os eventos; filtro `publicado` |
-| PATCH | `/eventos/{id}/publicado` | Moderação vitrine |
-| GET | `/usuarios` | Lista usuários |
-| PATCH | `/usuarios/{id}/ativo` | Ativa/desativa + `token_version++` |
-| GET | `/marketing/contatos` | Opt-in LGPD; export JSON/CSV |
-| GET/POST | `/marketing/campanhas` | CRUD campanhas |
-| GET | `/marketing/campanhas/{id}` | Detalhe + log envios |
-| POST | `/marketing/campanhas/{id}/disparar` | Dispara fila |
+**`CampanhaCreate`:** `nome`, `assunto`, `mensagem`, `canal` email|whatsapp|ambos, `usuario_ids[]`, `filtro_canal`, `disparar_agora`.
 
-### 4.10 Webhooks — `/api/webhooks`
+### 5.8 `/api/webhooks`
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| POST | `/stripe` | `payment_intent.succeeded/failed/canceled`; idempotência `stripe_events` |
-| POST | `/mock-payment` | Só `development`+`DEBUG`: marca pago sem Stripe |
+| Rota | Eventos / condição |
+|------|-------------------|
+| POST `/stripe` | `payment_intent.succeeded`, `payment_failed`, `canceled`; idempotência `stripe_events` |
+| POST `/mock-payment` | Só `development` + `DEBUG` |
 
 ---
 
-## 5. Regras de negócio
+## 6. Regras de negócio
 
-### 5.1 Lotes e vitrine
+### 6.1 Lotes e vitrine
 
-1. Lote à venda = menor `ordem` entre ativos, dentro da janela temporal, com vaga.
-2. Ocupação = ingressos `pendente` (reserva válida) + `pago` + `usado`.
-3. Remoção de lote bloqueada se houver vendas/reservas.
-4. Evento pausado (`publicado=false`): oculto na vitrine; dono acessa por slug com JWT.
+1. Lote ativo = menor `ordem` elegível (janela temporal + vaga).
+2. Ocupação = `pendente` (reserva válida) + `pago` + `usado`.
+3. `publicado=false` → fora da vitrine; dono acessa com JWT.
+4. `preco_ingresso` = mínimo dos lotes ativos.
 
-### 5.2 Checkout e pagamento
+### 6.2 Checkout
 
-1. **`termo_compra_aceito`** obrigatório (`versão` default `2026-05-v1`).
-2. **`valor_centavos`** deve coincidir com preço do lote × quantidade (− cupom).
-3. **Quantidade:** 1–10 ingressos por transação.
-4. **CPF:** validado se informado; limite por evento via `limite_ingressos_por_cpf`.
-5. **Cortesia:** `valor_centavos=0`; sem Stripe; exige `cortesia_responsavel`.
-6. **Reserva:** `reservado_ate` = agora + 35 min; PIX expira em 30 min no Stripe.
-7. **Connect:** `transfer_data.destination` = `evento.stripe_account_id` quando presente.
-8. **Cupom:** mínimo R$ 0,50 após desconto; não aplica a cortesia.
+| Regra | Valor |
+|-------|-------|
+| Termo obrigatório | `termo_compra_aceito=true`; versão default `2026-05-v1` |
+| Quantidade | 1–10 por transação |
+| Reserva | 35 min (`reservado_ate`) |
+| PIX Stripe | Expira 30 min |
+| Cupom | Mín. R$ 0,50 após desconto; não em cortesia |
+| Cortesia | `valor_centavos=0`; `cortesia_responsavel` obrigatório |
+| Connect | `transfer_data.destination` = `evento.stripe_account_id` |
+| `STRIPE_DISABLED` | Marca `pago` com PI `disabled_*` |
 
-### 5.3 Cancelamento
+### 6.3 Cancelamento
 
-- Só `pago`, dentro de `data_limite_cancelamento`, dono do ingresso.
-- `stripe.Refund.create` com idempotency key; registo em `Cancelamento`.
+Ingresso `pago`, dono, dentro de `data_limite_cancelamento` → `Refund` Stripe + `Cancelamento` + `status=cancelado`.
 
-### 5.4 Check-in
+### 6.4 Check-in e portaria
 
-- QR assinado `EBR1:{uuid}:{hmac}`; obrigatório fora `development`/`test`.
-- Duplicado retorna `{ ok: false, motivo: "já utilizado" }` sem erro HTTP.
-- Portaria: rate limit por IP + evento + token.
+- QR HMAC obrigatório fora dev/test (`CHECKIN_REQUIRE_SIGNED`).
+- Duplicado: HTTP 200 com `{ ok: false }`.
+- Token portaria: rotação auto 90 dias ou 7 dias pré-evento (token > 7 dias).
 
-### 5.5 Token portaria
+### 6.5 Repasse de titularidade
 
-- Geração lazy no primeiro acesso ao link.
-- Rotação automática: token > 90 dias OU evento em ≤ 7 dias e token > 7 dias.
-- Regeneração manual invalida link anterior.
+```json
+POST /api/ingressos/{id}/repassar
+{
+  "nome": "string",
+  "cpf": "11 dígitos",
+  "email": "email",
+  "telefone": "string",
+  "data_nascimento": "YYYY-MM-DD"
+}
+```
 
-### 5.6 Tarifas (estimativa)
+Só `status=pago`. `usuario_id` (comprador financeiro) não muda. Repasse pode repetir.
 
-| Plano | Taxa por ingresso pago |
-|-------|------------------------|
-| Padrão | 10% + R$ 2,00 |
-| Assinatura (UI only) | Simulado em `/planos`; **sem cobrança real** |
+### 6.6 Rate limiting (produção)
 
-Cálculo: `app/services/tarifas_plataforma.py` — usado em relatórios estimados, não descontado automaticamente no Stripe.
-
-### 5.7 Rate limiting (produção/staging)
-
-| Bucket | Limite |
-|--------|--------|
-| `auth_login` | 30/min IP |
-| `auth_register` | 10/min IP |
-| `checkout_criar` | 25/min IP |
-| `checkin_validar` | 120/min IP |
-| `portaria_*` | 60–120/min IP+evento+token |
-
-Redis se disponível; senão memória do processo.
-
----
-
-## 6. Frontend (Next.js)
-
-### 6.1 Rotas públicas
-
-| Rota | Função |
-|------|--------|
-| `/` | Landing + eventos em destaque + stats |
-| `/eventos` | Vitrine com busca, categoria, cidade |
-| `/eventos/[slug]` | Detalhe + checkout 3 passos |
-| `/planos` | Preços + simulador de lucro (sem billing) |
-| `/funcionalidades` | Marketing de features |
-| `/sobre`, `/termos`, `/privacidade` | Institucional |
-| `/documentacao` | Resumo técnico no site |
-| `/auth` | Login, registo, OAuth Google, recuperação senha |
-| `/auth/verificar-email` | Confirmação de e-mail |
-
-**Alias:** `/evento/:slug` → redirect 308 para `/eventos/:slug`.
-
-### 6.2 Conta (`/conta/*`)
-
-| Rota | Função |
-|------|--------|
-| `/conta` | Hub |
-| `/conta/perfil` | Dados, senha, opt-in marketing |
-| `/conta/ingressos` | Lista; badge "Repassado" |
-| `/conta/ingressos/[id]` | QR, download, e-mail, repasse, cancelar |
-| `/conta/pagamentos` | Histórico + retomar pagamento pendente |
-
-### 6.3 Organizador (`/organizador/*`)
-
-Middleware exige `tipo=organizador`.
-
-| Rota | Função |
-|------|--------|
-| `/organizador/eventos` | Lista + publicar/pausar |
-| `/organizador/novo`, `/eventos/novo` | Criação |
-| `/eventos/[slug]/editar` | Editor completo (lotes, cupons, imagem) |
-| `/organizador/relatorios` | Gráficos + export participantes |
-| `/organizador/financeiro` | Resumo receita (API relatórios) |
-| `/organizador/comunicados` | E-mail em massa |
-| `/organizador/checkin` | Scanner QR (organizador) |
-| `/organizador/perfil` | Perfil organizador |
-
-**Componentes chave:** `comprar-ingresso.tsx` (Stripe Elements + PIX), `evento-lotes-editor.tsx`, `evento-cupons-editor.tsx`, `evento-publicar-checklist.tsx`, `organizador-tour.tsx`, `checkin-portaria-client.tsx`.
-
-### 6.4 Portaria
-
-| Rota | Função |
-|------|--------|
-| `/portaria/[eventoId]/[token]` | Check-in sem login; beep/vibração no sucesso |
-
-`NEXT_PUBLIC_LAN_ORIGIN` — origem alternativa para tablets na rede local.
-
-### 6.5 Admin
-
-| Rota | Função |
-|------|--------|
-| `/admin` | Entrada |
-| `/admin/dashboard` | Abas: Produção, Eventos, Usuários, Contatos, Campanhas |
-
-Proxy BFF: `/api/admin/proxy/*` → API com cookie admin (sem expor `PLATFORM_ADMIN_API_KEY` no browser).
-
-### 6.6 Proxy e sessão
-
-- Browser: `fetch("/api/...")` via rewrite Next → API.
-- SSR Docker: `INTERNAL_API_URL=http://api:8000`.
-- Middleware: valida `/api/auth/me`; CSP com nonce em produção; bloqueia admin sem cookie.
+| Bucket | Limite/min |
+|--------|------------|
+| auth_login | 30/IP |
+| auth_register | 10/IP |
+| checkout_criar | 25/IP |
+| checkin_validar | 120/IP |
+| portaria_* | 60–120/IP+evento+token |
 
 ---
 
-## 7. Segurança e privacidade
+## 7. Fluxos principais
+
+### 7.1 Compra (checkout 3 passos — front)
+
+```mermaid
+sequenceDiagram
+  participant U as Utilizador
+  participant N as Next.js
+  participant A as API
+  participant S as Stripe
+  U->>N: 1 Identidade (login / compra-rápida)
+  U->>N: 2 Participante + termo + cupom
+  N->>A: POST /pagamentos/criar
+  A->>A: reservar vaga + Ingresso pendente
+  A->>S: PaymentIntent.create
+  A-->>N: client_secret
+  U->>N: 3 Stripe Elements (cartão ou PIX)
+  N->>S: confirmPayment
+  S-->>A: webhook payment_intent.succeeded
+  A->>A: status=pago + e-mail fila
+```
+
+### 7.2 Webhook pagamento
+
+1. Verificar assinatura (`STRIPE_WEBHOOK_SECRET`) salvo dev sem secret.
+2. Idempotência por `event.id` em `stripe_events`.
+3. `succeeded` → `marcar_ingressos_pi_pagos` + `enqueue_ticket_email`.
+4. `failed`/`canceled` → `pendente` → `cancelado` se aplicável.
+
+### 7.3 Publicação de evento (organizador)
+
+1. Criar com `publicado=false` (recomendado) ou pausar após criar.
+2. Configurar lotes, imagem, mensagem confirmação.
+3. Checklist `evento-publicar-checklist.tsx` (Connect Stripe se pago).
+4. PATCH `publicado=true` enviando **lotes completos** (evita wipe acidental).
+
+---
+
+## 8. Frontend
+
+### 8.1 Rotas
+
+| Área | Rotas principais |
+|------|------------------|
+| Público | `/`, `/eventos`, `/eventos/[slug]`, `/planos`, `/funcionalidades`, `/documentacao` |
+| Auth | `/auth`, `/auth/verificar-email` |
+| Conta | `/conta`, `/conta/perfil`, `/conta/ingressos`, `/conta/pagamentos` |
+| Organizador | `/organizador/*`, `/eventos/novo`, `/eventos/[slug]/editar` |
+| Portaria | `/portaria/[eventoId]/[token]` |
+| Admin | `/admin/dashboard` |
+
+**Redirect:** `/evento/:slug` → `/eventos/:slug` (308).
+
+### 8.2 Componentes críticos
+
+| Componente | Função |
+|------------|--------|
+| `comprar-ingresso.tsx` | Stripe Elements + PIX |
+| `checkout-stepper.tsx` | 3 passos |
+| `evento-lotes-editor.tsx` | Lotes |
+| `evento-cupons-editor.tsx` | Cupons |
+| `checkin-portaria-client.tsx` | Scanner + beep/vibração |
+| `organizador-tour.tsx` | Onboarding |
+| `evento-publicar-checklist.tsx` | Gate publicação |
+
+### 8.3 Proxy e middleware
+
+- Browser: `/api/*` → rewrite Next → API.
+- Docker SSR: `INTERNAL_API_URL=http://api:8000`.
+- `middleware.ts`: sessão `/organizador`, `/conta`; admin cookie; CSP nonce.
+
+---
+
+## 9. Segurança e privacidade
 
 | Controle | Implementação |
 |----------|----------------|
 | Senhas | bcrypt |
-| JWT | `SECRET_KEY` ≥ 32 chars em produção; `token_version` |
-| Cookie sessão | HttpOnly, Secure em HTTPS |
-| PII em listas | `mask_cpf`, `mask_telefone_br` |
-| Check-in | HMAC no QR (`CHECKIN_REQUIRE_SIGNED`) |
-| Admin | Chave separada; proxy sem leak de env no Next |
-| CSP | Nonce por request (`lib/csp.ts`) |
-| CORS | Lista explícita em produção (nunca `*`) |
-| Request ID | Header `X-Request-ID` |
-| PCI | Cartão só no Stripe.js |
+| JWT + invalidação | `token_version` ao desativar usuário |
+| Cookie | HttpOnly, Secure (HTTPS) |
+| PII listas | `mask_cpf`, `mask_telefone_br` |
+| Admin | BFF sem expor `PLATFORM_ADMIN_API_KEY` no client |
+| CSP | Nonce (`lib/csp.ts`) |
+| PCI | Dados de cartão só no Stripe.js |
+| Request tracing | `X-Request-ID` |
 
 ---
 
-## 8. Configuração
+## 10. Configuração, deploy e CI
 
-### Variáveis críticas (`.env`)
+### 10.1 Variáveis `.env` (críticas)
 
-Ver `.env.production.example` e `GET /api/admin/setup`.
+`SECRET_KEY`, `STRIPE_*`, `GOOGLE_OAUTH_CLIENT_ID`, `EMAIL_SERVER`/`EMAIL_USER`/`EMAIL_PASSWORD`, `REDIS_URL`, `PLATFORM_ADMIN_API_KEY`, `CORS_ORIGINS`, `FRONTEND_PUBLIC_URL`, `PORTARIA_TOKEN_*`.
 
-| Variável | Uso |
-|----------|-----|
-| `SECRET_KEY` | JWT + assinatura QR |
-| `STRIPE_*` | Pagamentos |
-| `STRIPE_DISABLED` | Só dev/teste |
-| `GOOGLE_OAUTH_CLIENT_ID` | Login Google |
-| `EMAIL_*` | SMTP transacional |
-| `REDIS_URL` | Rate limit + fila e-mail |
-| `PLATFORM_ADMIN_API_KEY` | Admin API |
-| `CORS_ORIGINS`, `FRONTEND_PUBLIC_URL` | URLs públicas |
-| `PORTARIA_TOKEN_MAX_AGE_DAYS` (90) | Rotação token |
-| `PORTARIA_TOKEN_ROTATE_BEFORE_EVENT_DAYS` (7) | Rotação pré-evento |
+Checklist runtime: `GET /api/admin/setup`.
 
-### Deploy VPS
+### 10.2 Deploy VPS
 
 ```bash
 cd /opt/eventosbr
-cp .env.production.example .env
-./scripts/generate-secrets.sh
-nano .env
-./scripts/deploy-vps.sh   # git pull + update-env-vps + docker compose prod
+cp .env.production.example .env && ./scripts/generate-secrets.sh && nano .env
+./scripts/deploy-vps.sh   # pull + update-env-vps.sh + compose prod
 ```
 
----
+### 10.3 CI (`.github/workflows/ci.yml`)
 
-## 9. Testes
-
-| Suite | Escopo |
-|-------|--------|
-| `pytest tests/` | API: auth, eventos, pagamentos, cupons, check-in, OAuth, admin, webhooks |
-| Playwright `e2e/smoke` | Páginas públicas |
-| Playwright `e2e/compra` | Checkout com API (`docker-compose.e2e.yml`) |
-| CI | `api`, `web`, `e2e`, `e2e-compra`, `prod-compose` |
-
-Stripe mockado nos testes unitários; E2E compra usa `STRIPE_DISABLED` ou stack dedicada.
+| Job | Escopo |
+|-----|--------|
+| `api` | `pytest tests/` |
+| `web` | `npm run build` |
+| `e2e` | Playwright smoke (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
+| `e2e-compra` | Stack `docker-compose.e2e.yml` + checkout |
+| `prod-compose` | Valida `docker-compose.prod.yml` |
 
 ---
 
-## 10. Roadmap — não implementado
+## 11. Testes
 
-| Item | Notas |
-|------|-------|
-| Asaas BaaS / repasse Pix | Branch `cursor/baas-transfer-auth-bf71` (fora desta spec) |
-| NFSe / comprovante fiscal | Fase D |
-| Assinatura mensal cobrada | Só UI `/planos` |
-| Login Apple | Campo `auth_provider` existe |
-| Lista de espera / interesse | — |
-| Urgência de estoque (badges) | — |
-| SSO admin / operadores | — |
-| WhatsApp nativo | Webhook opcional em campanhas admin |
-| E2E Stripe Elements real | `E2E_STRIPE=1` pendente |
-| Monitoramento estruturado | Alertas `/ready` 503 |
+| Arquivo / suite | Cobertura |
+|-----------------|-----------|
+| `test_api.py` | Health, auth, eventos, compra rápida |
+| `test_fase_b.py` | CPF, cortesia, check-in |
+| `test_fase_c.py` | Cupons, comunicados, relatórios |
+| `test_fase_d.py` | Fluxo compra + e-mail |
+| `test_webhook_stripe_flow.py` | PI → pago |
+| `test_oauth.py` | Google |
+| `test_admin_moderacao.py` | Admin |
+| `test_comunicacao_marketing.py` | LGPD + campanhas |
+| `e2e/smoke.spec.ts` | Páginas públicas |
+| `e2e/compra-checkout.spec.ts` | Checkout E2E |
 
----
-
-## 11. Lacunas conhecidas (código vs spec desejada)
-
-| # | Item | Severidade |
-|---|------|------------|
-| 1 | `comunicados-client.tsx` chama `/api/eventos/organizador/meus` — rota correta é `/api/eventos/meus` | **Bug** |
-| 2 | Página `/planos` promete assinatura mensal sem backend de cobrança | Produto/marketing |
-| 3 | `docs/02`–`04` desatualizados — **usar este arquivo** | Documentação |
-| 4 | `lembrete_evento.py` referencia `EMAIL_HOST`/`EMAIL_USE_TLS`; settings usa `EMAIL_SERVER` | Possível bug SMTP lembrete |
+Stripe mockado em unitários; sem chamadas live na CI padrão.
 
 ---
 
-## 12. Histórico de versões
+## 12. Roadmap — fora de escopo
+
+| Item | Estado |
+|------|--------|
+| Asaas BaaS | Branch/PR separado |
+| NFSe | Não implementado |
+| Assinatura mensal cobrada | Só simulador `/planos` |
+| Login Apple | Sem rota |
+| Lista espera / interesse / urgência | Não implementado |
+| E2E Stripe Elements real | Pendente |
+| SSO admin | Pendente |
+
+---
+
+## 13. Lacunas conhecidas
+
+| # | Item | Severidade | Notas |
+|---|------|------------|-------|
+| 1 | `/planos` promete assinatura sem billing | Produto | Documentado em §12 |
+| 2 | `docs/02`–`04` legados | Docs | Usar **este arquivo** |
+| 3 | Login Apple no modelo sem API | Baixa | Roadmap |
+
+**Corrigidos na v2.0 da spec (código):**
+
+- `comunicados-client.tsx` → `/api/eventos/meus`
+- `lembrete_evento.py` → `EMAIL_SERVER` (alinhado a `ticket_email.py`)
+
+---
+
+## Apêndice A — Mapa código ↔ spec
+
+| Domínio | Rotas | Serviços | Front |
+|---------|-------|----------|-------|
+| Auth | `app/routes/auth.py` | `auth.py`, `oauth_*.py`, `email_verificacao.py` | `auth-client.tsx` |
+| Eventos | `app/routes/eventos.py` | `ingresso_lotes.py`, `evento_portaria.py` | `evento-*-editor.tsx` |
+| Pagamentos | `app/routes/pagamentos.py` | `cupom_desconto.py`, `cpf_limite.py` | `comprar-ingresso.tsx` |
+| Ingressos | `app/routes/ingressos.py` | `ingresso_checkin.py`, `ingresso_qr.py` | `conta/ingressos/` |
+| Portaria | `app/routes/portaria.py` | `evento_portaria.py` | `checkin-portaria-client.tsx` |
+| Admin | `app/routes/admin.py` | `marketing_*.py`, `production_checks.py` | `admin/dashboard/` |
+| Webhooks | `app/routes/webhooks.py` | — | — |
+
+## Apêndice B — Erros HTTP frequentes
+
+| Código | Contexto | Mensagem típica |
+|--------|----------|-----------------|
+| 400 | Checkout | Termo não aceito; valor não confere; cupom inválido; limite CPF |
+| 403 | Checkout | Evento pausado (`!publicado`) |
+| 404 | Recurso | Não encontrado ou sem permissão |
+| 429 | Rate limit | Muitas tentativas |
+| 503 | Produção | Stripe/SMTP indisponível |
+
+---
+
+## 14. Histórico de versões
 
 | Versão | Data | Alteração |
 |--------|------|-----------|
-| 1.0 | 30/06/2026 | Consolidação inicial: API completa, regras, front, workers, segurança, deploy |
+| 1.0 | 30/06/2026 | Consolidação inicial |
+| 2.0 | 30/06/2026 | TOC, fluxos, estados, migrações, critérios aceite; correções código |
+| 2.1 | 30/06/2026 | Apêndices rastreabilidade e erros HTTP |
 
 ---
 
-*Documentos complementares (não substituem esta spec): `docs/08-deploy-hostinger.md` (ops VPS), `docs/09-auditoria-seguranca-ux.md` (checklist auditoria), `TROUBLESHOOTING.md`.*
+*Complementos operacionais: `docs/08-deploy-hostinger.md`, `docs/09-auditoria-seguranca-ux.md`, `TROUBLESHOOTING.md`.*

@@ -50,9 +50,8 @@ def _enviar_lembrete(ingresso: Ingresso) -> bool:
     msg["Subject"] = f"Lembrete: {ingresso.evento.nome} é amanhã"
     msg["From"] = settings.EMAIL_USER
     msg["To"] = destino
-    with smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT) as server:
-        if settings.EMAIL_USE_TLS:
-            server.starttls()
+    with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
+        server.starttls()
         server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
         server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
     return True
