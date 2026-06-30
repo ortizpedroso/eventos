@@ -19,7 +19,7 @@ export function ComunicadosClient() {
   useEffect(() => {
     void (async () => {
       try {
-        const lista = await apiFetch<Evento[]>("/api/eventos/organizador/meus", { cache: "no-store" });
+        const lista = await apiFetch<Evento[]>("/api/eventos/meus", { cache: "no-store" });
         const opcoes = lista.map((e) => ({
           evento_id: e.id,
           nome: e.nome,

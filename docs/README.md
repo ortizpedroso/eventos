@@ -2,6 +2,8 @@
 
 Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + Stripe). Use em conjunto com o [README da raiz](../README.md) para instalação rápida. No site público (Next.js) há uma página resumida em **`/documentacao`**.
 
+**Especificação consolidada (fonte de verdade funcional):** [`../specs/eventosbr-sistema.md`](../specs/eventosbr-sistema.md)
+
 ## Índice
 
 | Documento | Conteúdo |
