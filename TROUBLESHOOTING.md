@@ -240,6 +240,37 @@ pip install -r requirements.txt
 
 ---
 
+## VPS produção: API unhealthy / 502 / senha Postgres
+
+**Causa mais comum:** `POSTGRES_PASSWORD` no `.env` ≠ senha gravada no volume Docker na primeira subida. O Alembic falha e `eventosbr-api-1` fica em loop.
+
+**Use sempre a branch `main` (Asaas).** Branches antigas (`cursor/auditoria-*`, PRs com Stripe) não são para o VPS.
+
+```bash
+cd /opt/eventosbr
+git fetch origin main
+git checkout -B main origin/main
+git pull origin main
+
+# Recuperação completa (recomendado):
+./scripts/recover-vps.sh
+
+# Ou deploy normal (após .env correto):
+./scripts/deploy-vps.sh
+```
+
+O `.env` deve ter `PAYMENT_PROVIDER=asaas` — **não** variáveis `STRIPE_*`. Chaves Asaas com `$` no `.env` do VPS: cada `$` vira `$$` (ver `.env.production.example`).
+
+Se a API ainda falhar:
+
+```bash
+docker compose -f docker-compose.prod.yml logs api --tail=80
+./scripts/sync-postgres-password-vps.sh
+docker compose -f docker-compose.prod.yml up -d --build api
+```
+
+---
+
 ## Site “fora do ar” / lista de eventos vazia / erros ao fazer login
 
 O **Next** (porta **3000**) e a **API FastAPI** (porta **8000**) são **dois processos**. O site precisa dos **dois** a correr (ou Docker com `web` + `api`).

@@ -19,6 +19,8 @@ Ficheiros principais:
 | `deploy/caddy/Caddyfile` | HTTPS automático |
 | `.env.production.example` | Modelo de variáveis |
 | `scripts/deploy-vps.sh` | `git pull` + rebuild |
+| `scripts/recover-vps.sh` | Recuperação: main + `.env` + sync Postgres + rebuild |
+| `scripts/sync-postgres-password-vps.sh` | Alinha senha Postgres ao `.env` |
 | `scripts/backup-postgres.sh` | Backup da base |
 | `scripts/backup-postgres-cron.sh` | Backup + rotação + upload off-site |
 | `scripts/monitor-ready.sh` | Alerta se `/ready` falhar |
