@@ -14,8 +14,14 @@ cd "$ROOT"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 
 if [ ! -f .env ]; then
-  echo "ERRO: crie .env a partir de .env.production.example" >&2
-  exit 1
+  echo "==> .env ausente — gerando com bootstrap-vps-env.sh"
+  ./scripts/bootstrap-vps-env.sh
+elif [ -x ./scripts/bootstrap-vps-env.sh ] && [ -x ./scripts/validate-env-production.sh ]; then
+  if ! ./scripts/validate-env-production.sh 2>/dev/null; then
+    echo ""
+    echo "==> .env com placeholders — preenchendo automaticamente (bootstrap-vps-env.sh)"
+    ./scripts/bootstrap-vps-env.sh
+  fi
 fi
 
 # shellcheck disable=SC1091
