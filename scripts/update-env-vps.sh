@@ -44,6 +44,26 @@ while IFS= read -r line || [ -n "$line" ]; do
   esac
 done < "$TARGET"
 
+SKIP_KEYS=(
+  POSTGRES_PASSWORD
+  SECRET_KEY
+  PLATFORM_ADMIN_API_KEY
+  STRIPE_SECRET_KEY
+  STRIPE_PUBLISHABLE_KEY
+  STRIPE_WEBHOOK_SECRET
+  EMAIL_PASSWORD
+)
+
+_should_skip_key() {
+  local k="$1"
+  for s in "${SKIP_KEYS[@]}"; do
+    if [ "$k" = "$s" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 added=0
 block=()
 flush_block() {
@@ -62,6 +82,11 @@ flush_block() {
     esac
   done
   if [ -n "$key" ] && [ -z "${existing_keys[$key]+x}" ]; then
+    if _should_skip_key "$key"; then
+      echo "  ~ $key (omitido — defina manualmente; nunca copiar placeholder do exemplo)"
+      block=()
+      return
+    fi
     printf '\n' >> "$TARGET"
     printf '%s\n' "${block[@]}" >> "$TARGET"
     existing_keys["$key"]=1

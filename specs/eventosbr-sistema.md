@@ -452,9 +452,12 @@ Checklist runtime: `GET /api/admin/setup`.
 
 ```bash
 cd /opt/eventosbr
-cp .env.production.example .env && ./scripts/generate-secrets.sh && nano .env
-./scripts/deploy-vps.sh   # pull + update-env-vps.sh + compose prod
+./scripts/deploy-vps.sh
 ```
+
+O script: `git pull` → valida `.env` → sincroniza senha Postgres com o volume → `docker compose up -d --build` → aguarda API healthy.
+
+Primeira instalação: `cp .env.production.example .env`, `./scripts/generate-secrets.sh`, `nano .env`, depois `./scripts/deploy-vps.sh`.
 
 ### 10.3 CI (`.github/workflows/ci.yml`)
 

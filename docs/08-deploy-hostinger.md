@@ -18,7 +18,9 @@ Ficheiros principais:
 | `docker-compose.prod.yml` | Stack produção (sem bind mount) |
 | `deploy/caddy/Caddyfile` | HTTPS automático |
 | `.env.production.example` | Modelo de variáveis |
-| `scripts/deploy-vps.sh` | `git pull` + rebuild |
+| `scripts/deploy-vps.sh` | `git pull` + validação `.env` + sync senha Postgres + rebuild |
+| `scripts/sync-postgres-password-vps.sh` | Alinha senha do volume Postgres com `.env` |
+| `scripts/validate-env-production.sh` | Bloqueia deploy com SECRET_KEY/senha inválidos |
 | `scripts/update-env-vps.sh` | Mescla chaves novas do exemplo no `.env` |
 | `scripts/backup-postgres.sh` | Backup da base |
 
@@ -80,6 +82,7 @@ Ficheiros principais:
    ```bash
    ./scripts/deploy-vps.sh
    ```
+   O script valida o `.env`, sincroniza a senha do Postgres com o volume e só então sobe a API.
 6. **Smoke pós-deploy**
    - `curl -fsS https://seudominio.com.br/ready` (via Caddy → API; se expuser health no proxy, use rota interna)
    - Registar organizador → criar evento → compra teste com cartão **live** em valor baixo ou manter test até validar
@@ -96,6 +99,8 @@ Ver `.env.production.example` e checklist em `GET /api/admin/setup` (aba Produç
 cd /opt/eventosbr
 ./scripts/deploy-vps.sh
 ```
+
+Se a API falhar com `password authentication failed`, o `deploy-vps.sh` atualizado corrige automaticamente. Em deploy manual: `./scripts/sync-postgres-password-vps.sh` antes de subir a API.
 
 ## Troubleshooting
 

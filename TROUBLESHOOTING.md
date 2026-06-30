@@ -368,6 +368,19 @@ O script cria organizador, evento, PaymentIntent, confirma com cartão `pm_card_
 | `Invalid signature` | `STRIPE_WEBHOOK_SECRET` diferente do `stripe listen` | Rode `stripe-webhook-setup.ps1` de novo |
 | `404` em `/api/admin/setup` | Container API antigo | `docker compose up -d --build api` |
 
+### VPS — HTTP 502 ou API `Restarting`
+
+| Sintoma | Causa | Solução |
+|--------|--------|---------|
+| **502** no site | `web` parado (API unhealthy) | `./scripts/deploy-vps.sh` |
+| `password authentication failed for user eventosbr` | `POSTGRES_PASSWORD` no `.env` ≠ senha do volume | `./scripts/sync-postgres-password-vps.sh` (já incluso no deploy) |
+| API `unhealthy` | `SECRET_KEY` ausente/curta ou migração falhou | `docker compose -f docker-compose.prod.yml logs api --tail=80` |
+
+```bash
+cd /opt/eventosbr
+./scripts/deploy-vps.sh
+```
+
 ---
 
 **Última atualização:** 15/05/2026
