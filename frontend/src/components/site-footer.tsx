@@ -38,7 +38,7 @@ export function SiteFooter() {
       <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 pt-14 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-4">
-            <EventosBRLogo className="[&_text]:fill-white" />
+            <EventosBRLogo variant="light" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-500">
               Ingressos, reembolsos e repasses com transparência — do primeiro clique ao dia do evento.
             </p>
@@ -98,7 +98,7 @@ export function SiteFooter() {
         <div className="mt-12 border-t border-zinc-800/90 pt-8">
           <p className="text-xs text-zinc-500">
             © {year}{" "}
-            <Link href="/" className="text-zinc-400 hover:text-emerald-300">
+            <Link href="/" className="text-zinc-300 hover:text-emerald-300">
               EventosBR
             </Link>
             . Todos os direitos reservados.

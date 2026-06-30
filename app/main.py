@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 load_dotenv()
 
-from app.routes import admin, auth, checkin, eventos, ingressos, listas, notificacoes, organizador, pagamentos, portaria, produtor, relatorios, simuladores, webhooks
+from app.routes import admin, auth, checkin, eventos, financeiro, ingressos, listas, notificacoes, organizador, pagamentos, portaria, produtor, relatorios, simuladores, webhooks
 from app.models import create_tables, get_db
 from app.middleware.request_id import RequestIdMiddleware
 from config.settings import settings
@@ -54,15 +54,24 @@ async def lifespan(app: FastAPI):
         stop_lista_espera_cleanup_worker,
     )
     from app.services.reserva_cleanup import start_reserva_cleanup_worker, stop_reserva_cleanup_worker
+    from app.services.assinatura_ciclo import start_assinatura_ciclo_worker, stop_assinatura_ciclo_worker
+    from app.services.repasse_status_sync import (
+        start_repasse_status_sync_worker,
+        stop_repasse_status_sync_worker,
+    )
 
     log_production_warnings()
     start_ticket_email_worker()
     start_reserva_cleanup_worker()
     start_lista_espera_cleanup_worker()
     start_lembrete_worker()
+    start_assinatura_ciclo_worker()
+    start_repasse_status_sync_worker()
     try:
         yield
     finally:
+        stop_repasse_status_sync_worker()
+        stop_assinatura_ciclo_worker()
         stop_lembrete_worker()
         stop_lista_espera_cleanup_worker()
         stop_reserva_cleanup_worker()
@@ -101,6 +110,7 @@ app.include_router(relatorios.router, prefix="/api/relatorios", tags=["Relatóri
 app.include_router(checkin.router, prefix="/api/checkin", tags=["Check-in"])
 app.include_router(portaria.router, prefix="/api/portaria", tags=["Portaria"])
 app.include_router(organizador.router, prefix="/api/organizador", tags=["Organizador"])
+app.include_router(financeiro.router, prefix="/api/organizador/financeiro", tags=["Financeiro"])
 app.include_router(listas.router, prefix="/api/listas", tags=["Listas"])
 app.include_router(notificacoes.router, prefix="/api/notificacoes", tags=["Notificações"])
 app.include_router(produtor.router, prefix="/api/produtor", tags=["Produtor"])

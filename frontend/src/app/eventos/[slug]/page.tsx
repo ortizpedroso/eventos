@@ -1,8 +1,7 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { EventoPublicClient } from "./evento-public-client";
-import { fetchEventoBySlug } from "@/lib/eventos-publicos";
+import { getEventoPublicoBySlug } from "@/lib/eventos-publicos";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 
 export async function generateMetadata({
@@ -12,7 +11,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const evento = await fetchEventoBySlug(slug);
+    const evento = await getEventoPublicoBySlug(slug);
     const desc = evento.descricao.trim().slice(0, 160);
     const img = resolveEventoImagemSrc(evento.imagem_url);
     const base = (process.env.NEXT_PUBLIC_LAN_ORIGIN || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
@@ -51,17 +50,21 @@ export default async function EventoPage({
       : Array.isArray(rawRetomar)
         ? rawRetomar[0]
         : undefined;
+
+  let initialEvento = null;
+  try {
+    initialEvento = await getEventoPublicoBySlug(slug);
+  } catch {
+    initialEvento = null;
+  }
+
   return (
-    <Suspense
-      fallback={
-        <div className="space-y-4 py-8 text-sm text-zinc-600">Carregando evento…</div>
-      }
-    >
-      <EventoPublicClient
-        slug={slug}
-        alteracaoGuardada={alteracaoGuardada}
-        ingressoRetomarId={ingressoRetomar ?? null}
-      />
-    </Suspense>
+    <EventoPublicClient
+      key={slug}
+      slug={slug}
+      initialEvento={initialEvento}
+      alteracaoGuardada={alteracaoGuardada}
+      ingressoRetomarId={ingressoRetomar ?? null}
+    />
   );
 }

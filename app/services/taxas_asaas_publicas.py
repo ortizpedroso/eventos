@@ -1,6 +1,7 @@
-"""Taxas públicas Asaas (referência jun/2026) — fonte única para simuladores.
+"""Referência interna Asaas (jun/2026) — https://www.asaas.com/precos-e-taxas
 
-Valores conforme https://www.asaas.com/precos-e-taxas — podem variar por conta/promoção.
+Usado para acréscimo de parcelamento ao comprador e margem interna da plataforma.
+Não expor marca ou linhas Asaas na UI pública.
 """
 
 from __future__ import annotations
@@ -9,19 +10,21 @@ from dataclasses import dataclass
 from typing import Literal
 
 AVISO_LEGAL = (
-    "Valores estimativos. Taxas de processamento podem variar por conta, antecipação ou promoções. "
-    "Não constitui oferta fiscal. Confira nos sites oficiais do gateway."
+    "Valores conforme tabelas públicas de processamento. "
+    "A taxa EventosBR é fixa por plano; parcelamento pode incluir acréscimo explícito ao comprador."
 )
 
-# Comparativo Sympla (ilustrativo — conferir no site oficial)
 SYMPLA_TAXA_PERCENTUAL = 0.12
 SYMPLA_FONTE_URL = "https://www.sympla.com.br/organizador"
 
+INGRESSO_MINIMO_PAGO_REAIS = 10.0
+PARCELAMENTO_MINIMO_REAIS = INGRESSO_MINIMO_PAGO_REAIS
+PARCELAMENTO_MAX_OPCOES = (2, 3, 6, 12)
 
-@dataclass(frozen=True)
-class TaxaAsaasFixa:
-    valor: float
-    descricao: str
+TAXA_ANTECIPACAO_AVISTA_MES = 0.0125
+TAXA_ANTECIPACAO_PARCELADO_MES = 0.0170
+TAXA_SAQUE_PIX_PJ = 2.0
+TRANSFERENCIAS_PIX_GRATIS_MES_PJ = 30
 
 
 @dataclass(frozen=True)
@@ -31,15 +34,12 @@ class TaxaAsaasPercentual:
     descricao: str
 
 
-TAXA_PIX = TaxaAsaasFixa(1.99, "PIX por transação")
-TAXA_BOLETO = TaxaAsaasFixa(1.99, "Boleto por transação")
+TAXA_PIX = 1.99
+TAXA_BOLETO = 1.99
 TAXA_CARTAO_AVISTA = TaxaAsaasPercentual(0.49, 0.0299, "Cartão à vista")
 TAXA_CARTAO_2_6X = TaxaAsaasPercentual(0.49, 0.0349, "Cartão 2–6 parcelas")
 TAXA_CARTAO_7_12X = TaxaAsaasPercentual(0.49, 0.0399, "Cartão 7–12 parcelas")
-
-PARCELAMENTO_MINIMO_REAIS = 5.0
-PARCELAMENTO_MAX_OPCOES = (2, 3, 6, 12)
-
+TAXA_CARTAO_13_21X = TaxaAsaasPercentual(0.49, 0.0429, "Cartão 13–21 parcelas")
 
 MetodoAsaas = Literal["pix", "boleto", "cartao_avista", "cartao_parcelado"]
 
@@ -49,7 +49,9 @@ def taxa_cartao_para_parcelas(parcelas: int) -> TaxaAsaasPercentual:
         return TAXA_CARTAO_AVISTA
     if parcelas <= 6:
         return TAXA_CARTAO_2_6X
-    return TAXA_CARTAO_7_12X
+    if parcelas <= 12:
+        return TAXA_CARTAO_7_12X
+    return TAXA_CARTAO_13_21X
 
 
 def calcular_taxa_asaas(
@@ -58,27 +60,70 @@ def calcular_taxa_asaas(
     *,
     parcelas: int = 1,
 ) -> float:
-    """Taxa de processamento Asaas estimada (não inclui taxa EventosBR)."""
+    """Custo interno de processamento (não exibido ao usuário final)."""
     if valor_bruto <= 0:
         return 0.0
     if metodo == "pix":
-        return TAXA_PIX.valor
+        return TAXA_PIX
     if metodo == "boleto":
-        return TAXA_BOLETO.valor
+        return TAXA_BOLETO
     taxa = taxa_cartao_para_parcelas(parcelas)
     return round(taxa.fixo + valor_bruto * taxa.percentual, 2)
 
 
+def calcular_acrescimo_parcelamento_comprador(valor_base: float, parcelas: int) -> float:
+    """Acréscimo repassado ao comprador (delta % sobre o preço base do ingresso)."""
+    if parcelas <= 1 or valor_base <= 0:
+        return 0.0
+    avista = TAXA_CARTAO_AVISTA.percentual
+    parcelado = taxa_cartao_para_parcelas(parcelas).percentual
+    delta = max(0.0, parcelado - avista)
+    return round(valor_base * delta, 2)
+
+
+RepasseParcelamento = Literal["comprador", "organizador"]
+
+
+def cotacao_checkout(
+    valor_base: float,
+    *,
+    parcelas: int = 1,
+    repasse_parcelamento: RepasseParcelamento = "comprador",
+) -> dict:
+    """Breakdown público para checkout (sem expor Asaas)."""
+    acrescimo_bruto = calcular_acrescimo_parcelamento_comprador(valor_base, parcelas)
+    repasse = repasse_parcelamento if repasse_parcelamento in ("comprador", "organizador") else "comprador"
+    acrescimo_comprador = 0.0 if repasse == "organizador" else acrescimo_bruto
+    total = round(valor_base + acrescimo_comprador, 2)
+    valor_parcela = round(total / parcelas, 2) if parcelas > 1 else total
+    return {
+        "preco_ingresso": round(valor_base, 2),
+        "parcelas": parcelas,
+        "acrescimo_parcelamento": acrescimo_comprador,
+        "acrescimo_bruto": acrescimo_bruto,
+        "repasse_parcelamento": repasse,
+        "total_pagar": total,
+        "valor_parcela": valor_parcela if parcelas > 1 else None,
+        "faixa_parcelamento": taxa_cartao_para_parcelas(parcelas).descricao if parcelas > 1 else None,
+    }
+
+
 def simular_parcelas(valor_total: float, parcelas: int) -> dict:
-    """Retorna valor da parcela e total (sem juros — taxa Asaas separada)."""
+    """Parcelas com acréscimo explícito ao comprador."""
     if parcelas < 1 or valor_total <= 0:
-        return {"parcelas": 1, "valor_parcela": valor_total, "valor_total": valor_total}
-    vp = round(valor_total / parcelas, 2)
+        return {
+            "parcelas": 1,
+            "valor_parcela": valor_total,
+            "valor_total": valor_total,
+            "acrescimo_parcelamento": 0.0,
+        }
+    cot = cotacao_checkout(valor_total, parcelas=parcelas)
     return {
         "parcelas": parcelas,
-        "valor_parcela": vp,
-        "valor_total": round(vp * parcelas, 2),
-        "taxa_asaas_estimada": calcular_taxa_asaas(valor_total, "cartao_parcelado", parcelas=parcelas),
+        "valor_parcela": cot["valor_parcela"],
+        "valor_total": cot["total_pagar"],
+        "acrescimo_parcelamento": cot["acrescimo_parcelamento"],
+        "preco_ingresso": cot["preco_ingresso"],
     }
 
 

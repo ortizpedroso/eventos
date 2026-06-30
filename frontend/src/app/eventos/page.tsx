@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 import { categoriaFromQuery } from "@/lib/evento-categorias";
@@ -83,14 +82,14 @@ export default async function EventosListPage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      <Suspense fallback={<EventosListaFallback />}>
-        <EventosListaPublica
-          initialEventos={eventosIniciais}
-          initialCategoria={categoriaInicial}
-          initialBusca={buscaInicial}
-          initialCidade={cidadeInicial}
-        />
-      </Suspense>
+      <EventosListaPublica
+        initialEventos={eventosIniciais}
+        initialCategoria={categoriaInicial}
+        initialBusca={buscaInicial}
+        initialCidade={cidadeInicial}
+        initialDe={deInicial}
+        initialAte={ateInicial}
+      />
 
       <div className="mx-auto mt-16 max-w-3xl text-center sm:mt-20">
         <p className="text-sm text-zinc-600">Organiza eventos?</p>
@@ -102,19 +101,6 @@ export default async function EventosListPage({ searchParams }: PageProps) {
             Ver planos
           </Link>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function EventosListaFallback() {
-  return (
-    <div className="mx-auto mt-16 max-w-6xl animate-pulse sm:mt-20">
-      <div className="mb-8 h-24 rounded-2xl bg-zinc-100" />
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="aspect-[4/3] rounded-2xl bg-zinc-100" />
-        ))}
       </div>
     </div>
   );

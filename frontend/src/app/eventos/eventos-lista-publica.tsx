@@ -25,6 +25,8 @@ type Props = {
   initialCategoria?: string;
   initialBusca?: string;
   initialCidade?: string;
+  initialDe?: string;
+  initialAte?: string;
 };
 
 type Ordenacao = "data_asc" | "data_desc" | "nome";
@@ -38,6 +40,8 @@ export function EventosListaPublica({
   initialCategoria = "",
   initialBusca = "",
   initialCidade = "",
+  initialDe = "",
+  initialAte = "",
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -65,6 +69,8 @@ export function EventosListaPublica({
   cidadeRef.current = cidade;
   const buscaDebouncedRef = useRef(buscaDebounced);
   buscaDebouncedRef.current = buscaDebounced;
+  const pulouFetchInicialRef = useRef(false);
+  const primeiraSincronizacaoBuscaRef = useRef(true);
 
   const buildUrl = useCallback(
     (overrides: {
@@ -180,12 +186,31 @@ export function EventosListaPublica({
     const id = window.setTimeout(() => {
       const trimmed = busca.trim();
       setBuscaDebounced(trimmed);
+      if (primeiraSincronizacaoBuscaRef.current) {
+        primeiraSincronizacaoBuscaRef.current = false;
+        if (trimmed === initialBusca.trim()) return;
+      }
       router.replace(buildUrl({ busca: trimmed }), { scroll: false });
     }, 400);
     return () => window.clearTimeout(id);
-  }, [busca, buildUrl, router]);
+  }, [busca, buildUrl, router, initialBusca]);
 
   useEffect(() => {
+    const deUrl = searchParams.get("de")?.trim() ?? "";
+    const ateUrl = searchParams.get("ate")?.trim() ?? "";
+    const paramsCoincidemComServidor =
+      initialEventos !== null &&
+      buscaDebounced === initialBusca.trim() &&
+      categoria === initialCategoria &&
+      cidade.trim() === initialCidade.trim() &&
+      deUrl === initialDe.trim() &&
+      ateUrl === initialAte.trim();
+
+    if (!pulouFetchInicialRef.current && paramsCoincidemComServidor) {
+      pulouFetchInicialRef.current = true;
+      return;
+    }
+
     let cancelled = false;
     void (async () => {
       setFetchError(null);
@@ -194,8 +219,6 @@ export function EventosListaPublica({
         if (buscaDebounced) params.set("q", buscaDebounced);
         if (categoria) params.set("categoria", categoria);
         if (cidade.trim()) params.set("cidade", cidade.trim());
-        const deUrl = searchParams.get("de")?.trim();
-        const ateUrl = searchParams.get("ate")?.trim();
         if (deUrl && ateUrl) {
           params.set("de", deUrl);
           params.set("ate", ateUrl);
@@ -218,7 +241,20 @@ export function EventosListaPublica({
     return () => {
       cancelled = true;
     };
-  }, [retryCount, buscaDebounced, categoria, cidade, filtroData, searchParams]);
+  }, [
+    retryCount,
+    buscaDebounced,
+    categoria,
+    cidade,
+    filtroData,
+    searchParams,
+    initialEventos,
+    initialBusca,
+    initialCategoria,
+    initialCidade,
+    initialDe,
+    initialAte,
+  ]);
 
   const eventosFiltrados = useMemo(() => {
     if (!eventos) return [];
@@ -235,13 +271,7 @@ export function EventosListaPublica({
     return lista;
   }, [eventos, somenteVendasAbertas, ordenacao]);
 
-  if (eventos === null) {
-    return (
-      <div className="mx-auto mt-16 max-w-6xl sm:mt-20">
-        <EventosGridSkeleton />
-      </div>
-    );
-  }
+  const listaCarregando = eventos === null;
 
   const temFiltro = Boolean(categoria || buscaDebounced || cidade.trim() || filtroData || dataDe || dataAte);
   const intervaloCustomAtivo = ehIntervaloCustomizado(
@@ -446,7 +476,11 @@ export function EventosListaPublica({
         </p>
       ) : null}
 
-      {fetchError ? (
+      {listaCarregando ? (
+        <EventosGridSkeleton />
+      ) : null}
+
+      {!listaCarregando && fetchError ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
           <p className="text-base font-medium text-red-800">{fetchError}</p>
           <button
@@ -458,7 +492,7 @@ export function EventosListaPublica({
         </div>
       ) : null}
 
-      {!fetchError && eventos.length === 0 ? (
+      {!listaCarregando && !fetchError && eventos.length === 0 ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
           <p className="text-sm text-zinc-600">
             {temFiltro ? (
@@ -496,13 +530,13 @@ export function EventosListaPublica({
         </div>
       ) : null}
 
-      {!fetchError && eventos.length > 0 && eventosFiltrados.length === 0 ? (
+      {!listaCarregando && !fetchError && eventos.length > 0 && eventosFiltrados.length === 0 ? (
         <p className="rounded-2xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-600 shadow-sm">
           Nenhum evento corresponde aos filtros locais. Tente outra busca ou remova filtros.
         </p>
       ) : null}
 
-      {!fetchError && eventosFiltrados.length > 0 ? (
+      {!listaCarregando && !fetchError && eventosFiltrados.length > 0 ? (
         <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {eventosFiltrados.map((e) => (
             <li key={e.id}>

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta, timezone
 import uuid
@@ -22,6 +22,14 @@ class Ingresso(Base):
 
     valor = Column(Float)
     status = Column(String, default="pendente")  # pendente, pago, cancelado, usado
+
+    # Ledger financeiro (valores efetivos no split Asaas no momento da venda)
+    liquido_repassado = Column(Float, nullable=True)
+    taxa_plataforma_aplicada = Column(Float, nullable=True)
+    desconto_parcelamento_organizador = Column(Float, nullable=True)
+    parcelas_cobranca = Column(Integer, nullable=True)
+    plano_tarifa_venda = Column(String(16), nullable=True)
+    valor_cobrado = Column(Float, nullable=True)
 
     lote_id = Column(String, ForeignKey("evento_ingresso_lotes.id"), nullable=True, index=True)
     cupom_id = Column(String, ForeignKey("evento_cupons.id", ondelete="SET NULL"), nullable=True)
@@ -50,6 +58,8 @@ class Ingresso(Base):
     termo_compra_versao = Column(String(32), nullable=True)
 
     # Datas
+    pago_em = Column(DateTime, nullable=True, index=True)
+    estornado_em = Column(DateTime, nullable=True, index=True)
     data_compra = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     data_limite_cancelamento = Column(DateTime)
 

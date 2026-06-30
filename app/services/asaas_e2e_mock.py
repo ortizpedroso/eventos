@@ -48,6 +48,22 @@ def mock_obter_payment(payment_id: str) -> dict[str, Any]:
     return {"id": payment_id, "status": "PENDING", "billingType": "PIX"}
 
 
+_MOCK_TRANSFERS: dict[str, dict[str, Any]] = {}
+
+
+def mock_criar_transfer(payload: dict) -> dict[str, Any]:
+    tid = f"tra_e2e_{uuid.uuid4().hex[:12]}"
+    transfer = {
+        "id": tid,
+        "status": "PENDING",
+        "value": payload.get("value"),
+        "pixAddressKey": payload.get("pixAddressKey"),
+        "externalReference": payload.get("externalReference"),
+    }
+    _MOCK_TRANSFERS[tid] = transfer
+    return transfer
+
+
 def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
     if method == "POST" and path == "/v3/customers":
         return mock_criar_customer(json or {})
@@ -60,4 +76,30 @@ def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
         pid = path.rsplit("/", 1)[-1]
         _MOCK_PAYMENTS.pop(pid, None)
         return {}
+    if method == "POST" and path == "/v3/accounts":
+        aid = f"acc_e2e_{uuid.uuid4().hex[:12]}"
+        wid = f"wallet_e2e_{uuid.uuid4().hex[:12]}"
+        return {
+            "id": aid,
+            "walletId": wid,
+            "apiKey": f"key_e2e_{uuid.uuid4().hex[:16]}",
+        }
+    if method == "GET" and path == "/v3/myAccount/status":
+        return {
+            "commercialInfo": "APPROVED",
+            "bankAccountInfo": "APPROVED",
+            "documentation": "APPROVED",
+            "general": "APPROVED",
+        }
+    if method == "POST" and path == "/v3/transfers":
+        return mock_criar_transfer(json or {})
+    if method == "GET" and path == "/v3/finance/balance":
+        return {"balance": 500.0}
+    if method == "DELETE" and path.startswith("/v3/transfers/"):
+        tid = path.rsplit("/", 1)[-1]
+        _MOCK_TRANSFERS.pop(tid, None)
+        return {}
+    if method == "GET" and path.startswith("/v3/transfers/"):
+        tid = path.rsplit("/", 1)[-1]
+        return _MOCK_TRANSFERS.get(tid, {"id": tid, "status": "PENDING"})
     return {}

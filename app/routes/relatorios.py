@@ -15,7 +15,12 @@ from app.models import Evento, Ingresso, Usuario, get_db
 from app.routes.auth import get_usuario_atual
 from app.services.export_presenca import gerar_pdf_participantes, gerar_xlsx_participantes
 from app.services.metricas_evento import taxa_conversao_por_status, vagas_restantes_evento
-from app.services.tarifas_plataforma import liquido_organizador, taxa_ingresso
+from app.services.tarifas_plataforma import (
+    detalhar_taxa_ingresso,
+    liquido_ingresso_para_saldo,
+    tarifa_para_organizador,
+    taxa_ingresso,
+)
 from app.utils.privacy import mask_cpf, mask_telefone_br
 
 router = APIRouter()
@@ -48,6 +53,7 @@ async def relatorio_organizador(
     comparativo por evento e série diária de vendas confirmadas.
     """
     _require_organizador(usuario_atual)
+    tarifa = tarifa_para_organizador(usuario_atual)
 
     q = (
         db.query(Ingresso)
@@ -124,8 +130,13 @@ async def relatorio_organizador(
         if st == "pago":
             receita_paga += val
             pe["receita_paga"] += val
-            taxa_plataforma += taxa_ingresso(val)
-            liquido_estimado += liquido_organizador(val)
+            liquido = liquido_ingresso_para_saldo(ing, tarifa)
+            taxa_aplicada = getattr(ing, "taxa_plataforma_aplicada", None)
+            if taxa_aplicada is not None:
+                taxa_plataforma += round(float(taxa_aplicada), 2)
+            else:
+                taxa_plataforma += taxa_ingresso(val, tarifa)
+            liquido_estimado += liquido
         elif st == "pendente":
             receita_pendente += val
 
@@ -202,7 +213,12 @@ async def relatorio_organizador(
             "receita_bruta": round(receita_paga, 2),
             "taxa_plataforma_estimada": round(taxa_plataforma, 2),
             "liquido_estimado": round(liquido_estimado, 2),
-            "nota": "Taxa estimada (10% + R$ 2/ingresso pago), alinhada à página de planos.",
+            "plano_tarifa": tarifa.id,
+            "rotulo_taxa": detalhar_taxa_ingresso(100, tarifa)["rotulo_taxa"],
+            "nota": (
+                f"Taxa EventosBR fixa ({detalhar_taxa_ingresso(100, tarifa)['rotulo_taxa']} por ingresso pago). "
+                "Independente de PIX ou cartão."
+            ),
         },
         "mes_atual": {
             "referencia": today.strftime("%Y-%m"),

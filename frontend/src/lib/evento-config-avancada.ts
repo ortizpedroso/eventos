@@ -16,6 +16,10 @@ export function parseEventoConfigFromForm(formData: FormData) {
     urgencia_modo: String(formData.get("urgencia_modo") ?? "desligado"),
     parcelamento_habilitado: parseCheckbox(formData, "parcelamento_habilitado"),
     parcelamento_max: [2, 3, 6, 12].includes(parcelamento_max) ? parcelamento_max : 2,
+    repasse_parcelamento:
+      String(formData.get("repasse_parcelamento") ?? "comprador") === "organizador"
+        ? "organizador"
+        : "comprador",
     aceita_interesse: parseCheckbox(formData, "aceita_interesse", false),
     lista_espera_habilitada: parseCheckbox(formData, "lista_espera_habilitada"),
     lista_espera_prazo_horas: [12, 24, 48].includes(lista_espera_prazo_horas)

@@ -8,7 +8,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 
 from app.deps.platform_admin import require_platform_admin
@@ -34,6 +34,30 @@ class EventoPublicadoUpdate(BaseModel):
 
 class UsuarioAtivoUpdate(BaseModel):
     ativo: bool
+
+
+class AssinaturaAdminUpdate(BaseModel):
+    plano_tarifa: Literal["padrao", "assinatura"] = "assinatura"
+    meses: int = Field(default=1, ge=1, le=24)
+
+
+@router.patch("/organizadores/{usuario_id}/assinatura")
+async def admin_atualizar_assinatura(
+    usuario_id: str,
+    body: AssinaturaAdminUpdate,
+    db: Session = Depends(get_db),
+):
+    """Ativa ou cancela assinatura de organizador (admin plataforma)."""
+    from app.services.assinatura_organizador import cancelar_assinatura, renovar_assinatura_meses
+
+    usuario = db.get(Usuario, usuario_id)
+    if not usuario or usuario.tipo != "organizador":
+        raise HTTPException(status_code=404, detail="Organizador não encontrado.")
+    if body.plano_tarifa == "assinatura":
+        renovar_assinatura_meses(db, usuario, meses=body.meses)
+    else:
+        cancelar_assinatura(db, usuario)
+    return {"id": usuario.id, "plano_tarifa": usuario.plano_tarifa, "assinatura_valida_ate": usuario.assinatura_valida_ate}
 
 
 @router.get("/setup")

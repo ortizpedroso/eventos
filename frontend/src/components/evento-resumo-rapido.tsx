@@ -1,11 +1,7 @@
 import type { IngressoLote } from "@/lib/types";
 import { labelTipoIngresso } from "@/lib/ingresso-tipo-label";
-import {
-  TARIFA_PADRAO,
-  detalharTaxaIngresso,
-  formatBrl,
-  formatPercentual,
-} from "@/lib/tarifas-plataforma";
+import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
+import { labelPagamentoSeguro } from "@/lib/payment-provider";
 
 type Props = {
   fmtInicio: string;
@@ -32,10 +28,8 @@ export function EventoResumoRapido({
 }: Props) {
   const sorted = lotes?.slice().sort((a, b) => a.ordem - b.ordem) ?? [];
   const loteAtivo = loteCompraId ? sorted.find((l) => l.id === loteCompraId) : null;
-  const taxa =
-    precoIngresso !== undefined && precoIngresso >= 0.5
-      ? detalharTaxaIngresso(precoIngresso, TARIFA_PADRAO)
-      : null;
+  const pago =
+    precoIngresso !== undefined && precoIngresso >= INGRESSO_MINIMO_PAGO_REAIS;
 
   return (
     <section
@@ -52,18 +46,15 @@ export function EventoResumoRapido({
           <p className="mt-0.5 line-clamp-2 text-sm font-medium text-zinc-900">{local}</p>
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-            Preço final
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Preço</p>
           <p className="mt-0.5 text-lg font-bold text-emerald-800">{precoFmt}</p>
-          {taxa ? (
+          {pago ? (
             <p className="text-[11px] text-zinc-600">
-              Sem acréscimo no checkout. Inclui taxa EventosBR (
-              {formatPercentual(TARIFA_PADRAO.percentual)} + {formatBrl(TARIFA_PADRAO.fixoPorIngresso)}):{" "}
-              <strong>{formatBrl(taxa.taxaTotal)}</strong>.
+              Valor do ingresso. Parcelamento, quando disponível, pode incluir acréscimo no checkout.{" "}
+              {labelPagamentoSeguro()}.
             </p>
           ) : (
-            <p className="text-[11px] text-zinc-600">Valor na vitrine, sem taxas extras no checkout.</p>
+            <p className="text-[11px] text-zinc-600">Ingresso gratuito ou cortesia.</p>
           )}
         </div>
         <div className="min-w-0">
@@ -92,6 +83,7 @@ export function EventoResumoRapido({
         <ul className="mt-4 flex gap-2 overflow-x-auto pb-1 text-xs">
           {sorted.map((l) => {
             const atual = loteCompraId === l.id;
+            const gratis = l.tipo === "cortesia" || l.preco <= 0;
             return (
               <li
                 key={l.id}
@@ -104,7 +96,7 @@ export function EventoResumoRapido({
                 {l.nome}
                 <span className="text-zinc-500"> · {labelTipoIngresso(l.tipo)}</span>
                 {" · "}
-                {l.tipo === "cortesia" || l.preco < 0.5
+                {gratis
                   ? "Grátis"
                   : l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
               </li>

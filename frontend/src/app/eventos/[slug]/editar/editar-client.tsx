@@ -7,6 +7,10 @@ import { useEffect, useState } from "react";
 import { EVENTO_CATEGORIAS, isoToDatetimeLocalValue, slugFromNome } from "@/lib/eventos";
 import { EventoCuponsEditor } from "@/components/evento-cupons-editor";
 import {
+  checklistPublicacaoPronta,
+  EventoPublicarChecklist,
+} from "@/components/evento-publicar-checklist";
+import {
   EventoLotesEditor,
   eventoLotesToRows,
   lotesRowsToApiPayload,
@@ -18,7 +22,9 @@ import { EventoConfigAvancadaFields } from "@/components/evento-config-avancada-
 import { EventoWizardSimuladorLiquido } from "@/components/evento-wizard-simulador-liquido";
 import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
 import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
+import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import { apiFetch, getApiBaseUrl } from "@/lib/api";
+import type { PlanoTarifaId } from "@/lib/tarifas-plataforma";
 import type { Evento, Usuario } from "@/lib/types";
 
 type Props = { slug: string };
@@ -57,6 +63,12 @@ export function EditarEventoClient({ slug }: Props) {
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>([]);
+  const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
+  const [parcelamentoMax, setParcelamentoMax] = useState(2);
+  const [repasseParcelamento, setRepasseParcelamento] = useState<"comprador" | "organizador">("comprador");
+  const [repasseAprovado, setRepasseAprovado] = useState(false);
+  const [formPublicado, setFormPublicado] = useState(false);
+  const [planoTarifa, setPlanoTarifa] = useState<PlanoTarifaId>("padrao");
   const [csvBusy, setCsvBusy] = useState(false);
   const [interesseRows, setInteresseRows] = useState<{ email: string; nome: string | null; data_criacao: string | null }[]>([]);
   const [interesseLoadErr, setInteresseLoadErr] = useState<string | null>(null);
@@ -116,6 +128,17 @@ export function EditarEventoClient({ slug }: Props) {
   }, []);
 
   useEffect(() => {
+    void apiFetch<{ plano_tarifa?: string }>("/api/organizador/financeiro/saldo")
+      .then((s) => {
+        if (s.plano_tarifa === "assinatura") setPlanoTarifa("assinatura");
+      })
+      .catch(() => {});
+    void apiFetch<{ repasse_aprovado?: boolean }>("/api/organizador/asaas", { cache: "no-store" })
+      .then((s) => setRepasseAprovado(Boolean(s.repasse_aprovado)))
+      .catch(() => setRepasseAprovado(false));
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     void (async () => {
       setLoading(true);
@@ -133,6 +156,10 @@ export function EditarEventoClient({ slug }: Props) {
           setNomeParaSlug(ev.nome);
           setImagemUrl(ev.imagem_url ?? "");
           setLoteRows(eventoLotesToRows(ev));
+          setParcelamentoHabilitado(ev.parcelamento_habilitado ?? false);
+          setParcelamentoMax(ev.parcelamento_max ?? 2);
+          setRepasseParcelamento(ev.repasse_parcelamento ?? "comprador");
+          setFormPublicado(ev.publicado);
           if (ev.aceita_interesse !== false) {
             void carregarListaInteresse(ev.id);
           }
@@ -160,15 +187,19 @@ export function EditarEventoClient({ slug }: Props) {
     const lotesPayload = lotesRowsToApiPayload(loteRows);
     for (const l of lotesPayload) {
       if (l.tipo === "cortesia") continue;
-      if (!Number.isFinite(l.preco) || l.preco < 0.5) {
-        setError("Cada lote pago precisa de preço válido (mínimo R$ 0,50).");
+      if (!Number.isFinite(l.preco) || l.preco < INGRESSO_MINIMO_PAGO_REAIS) {
+        setError(
+          `Cada lote pago precisa de preço válido (mínimo R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}).`,
+        );
         setSaving(false);
         return;
       }
     }
     const temPago = lotesPayload.some((l) => l.tipo !== "cortesia");
-    if (temPago && (!Number.isFinite(preco_ingresso) || preco_ingresso < 0.5)) {
-      setError("Informe pelo menos um lote pago com preço mínimo de R$ 0,50.");
+    if (temPago && (!Number.isFinite(preco_ingresso) || preco_ingresso < INGRESSO_MINIMO_PAGO_REAIS)) {
+      setError(
+        `Informe pelo menos um lote pago com preço mínimo de R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}.`,
+      );
       setSaving(false);
       return;
     }
@@ -183,6 +214,14 @@ export function EditarEventoClient({ slug }: Props) {
 
     const msg = String(formData.get("mensagem_confirmacao") ?? "").trim();
     const publicado = String(formData.get("publicado") ?? "true") !== "false";
+    const eventoGratuito = !lotesPayload.some((l) => l.tipo !== "cortesia");
+    if (publicado && !eventoGratuito && !repasseAprovado) {
+      setError(
+        "Para publicar um evento com ingressos pagos, crie e aguarde a aprovação da conta de repasses em Organizador → Financeiro.",
+      );
+      setSaving(false);
+      return;
+    }
     const limiteRaw = String(formData.get("limite_ingressos_por_cpf") ?? "").trim();
     const limite_ingressos_por_cpf = limiteRaw ? Number.parseInt(limiteRaw, 10) : null;
 
@@ -269,6 +308,21 @@ export function EditarEventoClient({ slug }: Props) {
   }
 
   const slugPrev = slugFromNome(nomeParaSlug);
+  const eventoGratuito = !loteRows.some((l) => l.tipo !== "cortesia");
+  const checklistProps = {
+    nome: nomeParaSlug,
+    descricao: evento.descricao,
+    dataInicio: isoToDatetimeLocalValue(evento.data_inicio),
+    local: evento.local,
+    imagemUrl,
+    modoSimples: false,
+    eventoGratuito,
+    precoSimples: "",
+    loteRowsCount: loteRows.length,
+    publicado: formPublicado,
+    repasseAprovado,
+  };
+  const prontoPublicar = checklistPublicacaoPronta(checklistProps);
 
   return (
     <div className="mx-auto mt-10 w-full max-w-2xl">
@@ -415,9 +469,11 @@ export function EditarEventoClient({ slug }: Props) {
             <EventoLotesEditor rows={loteRows} onChange={setLoteRows} />
             <EventoWizardSimuladorLiquido
               preco={precoMinimoDosLotes(loteRows)}
-              ocultar={precoMinimoDosLotes(loteRows) < 0.5}
-              parcelamentoHabilitado={evento.parcelamento_habilitado ?? false}
-              parcelamentoMax={evento.parcelamento_max ?? 2}
+              ocultar={precoMinimoDosLotes(loteRows) < 10}
+              parcelamentoHabilitado={parcelamentoHabilitado}
+              parcelamentoMax={parcelamentoMax}
+              repasseParcelamento={repasseParcelamento}
+              planoTarifa={planoTarifa}
             />
           </div>
 
@@ -452,16 +508,27 @@ export function EditarEventoClient({ slug }: Props) {
 
           <div className="rounded-lg border border-zinc-200 p-4">
             <p className="text-sm font-medium text-zinc-900">Visibilidade</p>
-            <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
+            <EventoPublicarChecklist {...checklistProps} />
+            <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
               <input
                 type="radio"
                 name="publicado"
                 value="true"
-                defaultChecked={evento.publicado}
+                checked={formPublicado}
+                disabled={!eventoGratuito && !repasseAprovado}
+                onChange={() => setFormPublicado(true)}
                 className="mt-1"
               />
               <span>
                 <strong className="font-semibold">Publicar</strong> — na vitrine e com venda.
+                {!eventoGratuito && !repasseAprovado ? (
+                  <span className="mt-1 block text-xs text-amber-800">
+                    Requer conta de repasses aprovada.{" "}
+                    <Link href="/organizador/financeiro/conta-repasse" className="font-medium underline">
+                      Acompanhar abertura da conta
+                    </Link>
+                  </span>
+                ) : null}
               </span>
             </label>
             <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
@@ -469,7 +536,8 @@ export function EditarEventoClient({ slug }: Props) {
                 type="radio"
                 name="publicado"
                 value="false"
-                defaultChecked={!evento.publicado}
+                checked={!formPublicado}
+                onChange={() => setFormPublicado(false)}
                 className="mt-1"
               />
               <span>
@@ -481,10 +549,21 @@ export function EditarEventoClient({ slug }: Props) {
 
           <EventoImagemField value={imagemUrl} onChange={setImagemUrl} />
 
-          <EventoConfigAvancadaFields evento={evento} />
+          <EventoConfigAvancadaFields
+            evento={evento}
+            onParcelamentoChange={(hab, max, repasse) => {
+              setParcelamentoHabilitado(hab);
+              setParcelamentoMax(max);
+              if (repasse) setRepasseParcelamento(repasse);
+            }}
+          />
 
           <div className="mt-6 flex justify-end border-t border-zinc-100 pt-4">
-            <button disabled={saving} className="btn-success px-8" type="submit">
+            <button
+              disabled={saving || (formPublicado && !prontoPublicar)}
+              className="btn-success px-8"
+              type="submit"
+            >
               {saving ? "Salvando…" : "Salvar alterações"}
             </button>
           </div>

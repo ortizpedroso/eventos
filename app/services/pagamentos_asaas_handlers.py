@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
+from app.services.evento_repasse import MOTIVO_CHECKOUT_SEM_REPASSE, garantir_wallet_repasse_evento, organizador_pode_vender
 from app.services.asaas_client import AsaasAPIError
 from app.services.ingresso_pago import (
     ingressos_lote_pendente,
@@ -27,7 +28,13 @@ from app.services.pagamento_asaas import (
     status_eh_pago,
 )
 from app.services.usuario_asaas import garantir_customer_asaas
-from app.services.taxas_asaas_publicas import PARCELAMENTO_MINIMO_REAIS
+from app.services.taxas_asaas_publicas import (
+    INGRESSO_MINIMO_PAGO_REAIS,
+    PARCELAMENTO_MINIMO_REAIS,
+    calcular_acrescimo_parcelamento_comprador,
+)
+from app.services.tarifas_plataforma import detalhar_taxa_ingresso, ledger_ingresso_venda, tarifa_para_organizador
+from app.services.financeiro_organizador import registrar_ledger_ingressos_lote
 from app.utils.public_errors import PAGAMENTO_CLIENTE, REEMBOLSO_CLIENTE
 from config.settings import settings
 
@@ -124,11 +131,14 @@ def iniciar_cobranca_asaas(
     if not evento:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
 
-    if not (evento.asaas_wallet_id or "").strip():
+    if not garantir_wallet_repasse_evento(db, evento):
         raise HTTPException(
             status_code=400,
-            detail="Organizador ainda não configurou conta Asaas para repasses.",
+            detail=MOTIVO_CHECKOUT_SEM_REPASSE,
         )
+    pode_vender, motivo_venda = organizador_pode_vender(db, evento)
+    if not pode_vender:
+        raise HTTPException(status_code=400, detail=motivo_venda or MOTIVO_CHECKOUT_SEM_REPASSE)
     if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
         raise HTTPException(
             status_code=503,
@@ -185,32 +195,70 @@ def iniciar_cobranca_asaas(
         logger.exception("Customer Asaas")
         raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
 
-    valor = _valor_lote_reais(lote)
-    if valor <= 0:
+    valor_base = _valor_lote_reais(lote)
+    if valor_base <= 0:
         raise HTTPException(status_code=400, detail="Valor inválido para cobrança.")
+    if valor_base < INGRESSO_MINIMO_PAGO_REAIS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Valor mínimo para ingressos pagos: R$ {INGRESSO_MINIMO_PAGO_REAIS:.2f}.",
+        )
+
+    organizador = db.query(Usuario).filter(Usuario.id == evento.organizador_id).first()
+    tarifa = tarifa_para_organizador(organizador)
+    repasse = (getattr(evento, "repasse_parcelamento", None) or "comprador").strip()
+    if repasse not in ("comprador", "organizador"):
+        repasse = "comprador"
 
     installment_count: int | None = None
+    acrescimo_parcelamento = 0.0
+    desconto_organizador = 0.0
     if body.metodo == "card" and body.parcelas and body.parcelas > 1:
         if not evento.parcelamento_habilitado:
             raise HTTPException(status_code=400, detail="Parcelamento não disponível para este evento.")
         max_p = int(evento.parcelamento_max or 2)
         if body.parcelas > max_p:
             raise HTTPException(status_code=400, detail=f"Máximo de {max_p}x para este evento.")
-        if valor < PARCELAMENTO_MINIMO_REAIS:
+        if valor_base < PARCELAMENTO_MINIMO_REAIS:
             raise HTTPException(
                 status_code=400,
                 detail=f"Valor mínimo para parcelamento: R$ {PARCELAMENTO_MINIMO_REAIS:.2f}.",
             )
         installment_count = body.parcelas
+        acrescimo_parcelamento = calcular_acrescimo_parcelamento_comprador(valor_base, installment_count)
+        if repasse == "organizador" and acrescimo_parcelamento > 0:
+            det = detalhar_taxa_ingresso(valor_base, tarifa)
+            liquido = float(det.get("liquido_organizador") or 0)
+            if liquido < acrescimo_parcelamento:
+                raise HTTPException(
+                    status_code=400,
+                    detail="O organizador não pode absorver o acréscimo de parcelamento neste valor.",
+                )
+            desconto_organizador = acrescimo_parcelamento
+            valor_cobranca = valor_base
+        else:
+            valor_cobranca = round(valor_base + acrescimo_parcelamento, 2)
+    else:
+        valor_cobranca = valor_base
 
     billing = "PIX" if body.metodo == "pix" else "CREDIT_CARD"
     if body.metodo == "invoice":
         billing = "UNDEFINED"
 
+    if body.metodo == "card":
+        from app.utils.cartao_validacao import validar_dados_cartao
+
+        try:
+            validar_dados_cartao(body.credit_card, body.credit_card_holder_info)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+
     try:
         payment = criar_cobranca_asaas(
             customer_id=customer_id,
-            valor_reais=valor,
+            valor_reais=valor_cobranca,
+            valor_base_reais=valor_base,
+            tarifa=tarifa,
             billing_type=billing,
             external_reference=ingresso.id,
             descricao=f"Ingresso — {evento.nome}"[:500],
@@ -221,6 +269,7 @@ def iniciar_cobranca_asaas(
             installment_count=installment_count,
             quantidade=len(lote),
             idempotency_key=f"cobranca_{ingresso.id}",
+            desconto_organizador=desconto_organizador,
         )
     except AsaasAPIError as e:
         logger.exception("Erro Asaas ao criar cobrança")
@@ -230,8 +279,20 @@ def iniciar_cobranca_asaas(
     if not pid:
         raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE)
 
-    for ing in lote:
+    n_lote = max(1, len(lote))
+    share = round(valor_cobranca / n_lote, 2)
+    for idx, ing in enumerate(lote):
         ing.asaas_payment_id = pid
+        if idx == n_lote - 1:
+            ing.valor_cobrado = round(valor_cobranca - share * (n_lote - 1), 2)
+        else:
+            ing.valor_cobrado = share
+    registrar_ledger_ingressos_lote(
+        lote,
+        tarifa=tarifa,
+        desconto_parcelamento_total=desconto_organizador,
+        parcelas=installment_count,
+    )
     db.commit()
 
     if status_eh_pago(payment.get("status")):
@@ -253,13 +314,13 @@ def iniciar_cobranca_asaas(
     out = resposta_checkout_asaas(payment)
     out["ingresso_id"] = ingresso.id
     out["reservado_ate"] = ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None
-    out["valor_centavos"] = int(round(valor * 100))
+    out["valor_centavos"] = int(round(valor_cobranca * 100))
     return out
 
 
 def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
     lote_pendente = ingressos_lote_pendente(db, ingresso) or [ingresso]
-    valor_total_centavos = int(round(_valor_lote_reais(lote_pendente) * 100))
+    valor_base_centavos = int(round(_valor_lote_reais(lote_pendente) * 100))
 
     pay_id = (ingresso.asaas_payment_id or "").strip()
     if not pay_id:
@@ -272,7 +333,7 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
             "reservado_ate": ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None,
             "participante_nome": ingresso.participante_nome,
             "participante_email": ingresso.participante_email,
-            "valor_centavos": valor_total_centavos,
+            "valor_centavos": valor_base_centavos,
             "evento_slug": ingresso.evento.slug,
         }
 
@@ -281,6 +342,8 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
     except AsaasAPIError as e:
         logger.exception("Erro ao consultar cobrança Asaas %s", pay_id)
         raise HTTPException(status_code=400, detail=PAGAMENTO_CLIENTE) from e
+
+    valor_cobranca_centavos = int(round(float(payment.get("value") or 0) * 100)) or valor_base_centavos
 
     if status_eh_pago(payment.get("status")):
         pagos = processar_cobranca_confirmada_gateway(db, pay_id)
@@ -317,7 +380,7 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
             "reservado_ate": ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None,
             "participante_nome": ingresso.participante_nome,
             "participante_email": ingresso.participante_email,
-            "valor_centavos": valor_total_centavos,
+            "valor_centavos": valor_cobranca_centavos,
             "evento_slug": ingresso.evento.slug,
         }
     )
@@ -337,7 +400,7 @@ def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
         )
         .count()
     )
-    valor = float(ingresso.valor or 0)
+    valor = float(getattr(ingresso, "valor_cobrado", None) or ingresso.valor or 0)
     try:
         idem_key = f"refund_{pay_id}_{ingresso.id}"
         if outros_pagos > 0:

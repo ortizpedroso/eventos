@@ -75,6 +75,7 @@ def _criar_evento(org_token: str, **extra) -> dict:
         "local": "SP",
         "preco_ingresso": 50,
         "categoria": "Outros",
+        "publicado": True,
         "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
     }
     payload.update(extra)

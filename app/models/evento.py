@@ -38,6 +38,8 @@ class Evento(Base):
     # Parcelamento no cartão (Asaas)
     parcelamento_habilitado = Column(Boolean, default=False, nullable=False)
     parcelamento_max = Column(Integer, nullable=False, default=2)
+    # comprador | organizador — quem absorve acréscimo de parcelamento
+    repasse_parcelamento = Column(String(16), nullable=False, default="comprador")
     # Lista de interesse (pré-venda)
     aceita_interesse = Column(Boolean, default=True, nullable=False)
     # Lista de espera (esgotado)

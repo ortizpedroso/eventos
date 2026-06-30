@@ -54,10 +54,68 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     await expect(page.getByText(/Pagamento seguro/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Stripe/i)).not.toBeVisible();
 
-    await expect(page.getByRole("button", { name: "Gerar PIX" })).toBeVisible({ timeout: 30_000 });
-    await page.getByRole("button", { name: "Gerar PIX" }).click();
+    await expect(page.getByRole("button", { name: /Pagar .* com PIX/i })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: /Pagar .* com PIX/i }).click();
 
-    await expect(page.getByText(/PIX copia e cola/i)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Copiar código PIX|QR Code PIX/i)).toBeVisible({ timeout: 20_000 });
+
+    const token = await apiLogin(email, senha);
+    const ingressoId = await fetchIngressoPendente(token);
+    expect(ingressoId).toBeTruthy();
+
+    const payId = await fetchPaymentId(token, ingressoId!);
+    expect(payId).toBeTruthy();
+
+    await simularWebhookAsaasPago(payId!, ingressoId!);
+
+    await expect(page.getByTestId("checkout-confirmacao")).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByRole("heading", { name: /compra confirmada/i })).toBeVisible();
+  });
+
+  test("cartão parcelado 3x, webhook e confirmação", async ({ page }) => {
+    const { slug } = await seedParcelamentoEventAsaas();
+    const suf = Date.now();
+    const email = `e2e_parc_full_${suf}@test.com`;
+    const senha = "senha12345";
+    const cpf = "52998224725";
+
+    await page.goto("/auth?mode=register", { waitUntil: "networkidle" });
+    await page.waitForSelector("form[data-auth-ready=true]", { timeout: 15_000 });
+    await page.locator("#email").fill(email);
+    await page.locator("#nome").fill("Cliente Parcelado Full");
+    await page.locator("#senha").fill(senha);
+    await page.getByRole("button", { name: "Cadastrar", exact: true }).click();
+    await page.waitForURL((url) => !url.pathname.startsWith("/auth"), { timeout: 30_000 });
+
+    await page.goto(`/eventos/${slug}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: /sobre o evento/i })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await page.getByRole("button", { name: /li o termo/i }).click();
+    await page.getByRole("checkbox", { name: /li e aceito o termo/i }).check();
+    const cpfInput = page.locator("#cpf_comprador, #part_cpf").first();
+    if (await cpfInput.isVisible().catch(() => false)) {
+      await cpfInput.fill(cpf);
+    }
+    await page.getByTestId("checkout-continuar").click();
+
+    await expect(page.getByText(/Pagamento seguro/i)).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /cartão/i }).click();
+    await expect(page.getByTestId("checkout-parcelas")).toBeVisible({ timeout: 15_000 });
+    await page.getByLabel(/3x de/i).check();
+
+    await page.getByPlaceholder("Nome no cartão").fill("Teste Silva");
+    await page.getByPlaceholder("Número do cartão").fill("4111111111111111");
+    await page.getByPlaceholder("MM").fill("12");
+    await page.getByPlaceholder("AAAA").fill("2030");
+    await page.getByPlaceholder("CVV").fill("123");
+    await page.getByPlaceholder("CPF do titular").fill(cpf);
+    await page.getByPlaceholder("CEP").fill("01310100");
+    await page.getByPlaceholder("Nº endereço").fill("100");
+
+    await page.getByRole("button", { name: /Pagar /i }).click();
+    await expect(page.getByText(/confirmação|Aguardando/i)).toBeVisible({ timeout: 30_000 });
 
     const token = await apiLogin(email, senha);
     const ingressoId = await fetchIngressoPendente(token);
@@ -98,8 +156,8 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     await expect(page.getByText(/Pagamento seguro/i)).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /cartão/i }).click();
     await expect(page.getByTestId("checkout-parcelas")).toBeVisible({ timeout: 15_000 });
-    await page.getByTestId("checkout-parcelas").selectOption("3");
-    await expect(page.getByText(/3x/i).first()).toBeVisible();
+    await page.getByLabel(/3x de/i).check();
+    await expect(page.getByText(/3x de/i).first()).toBeVisible();
   });
 });
 

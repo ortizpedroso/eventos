@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -14,11 +15,52 @@ from app.services.ticket_email import enqueue_ticket_email
 logger = logging.getLogger(__name__)
 
 
+def _garantir_ledger_ingresso(db: Session, ingresso: Ingresso) -> None:
+    """Preenche ledger em ingressos antigos sem valores gravados."""
+    if getattr(ingresso, "liquido_repassado", None) is not None:
+        return
+    from app.models import Evento, Usuario
+    from app.services.tarifas_plataforma import ledger_ingresso_venda, TARIFAS, tarifa_para_organizador
+    from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
+
+    evento = db.get(Evento, ingresso.evento_id)
+    if not evento:
+        return
+    organizador = db.get(Usuario, evento.organizador_id)
+    valor = float(ingresso.valor or 0)
+    parcelas = int(getattr(ingresso, "parcelas_cobranca", None) or 1)
+    repasse = (getattr(evento, "repasse_parcelamento", None) or "comprador").strip()
+    acrescimo_bruto = (
+        calcular_acrescimo_parcelamento_comprador(valor, parcelas) if parcelas > 1 and valor > 0 else 0.0
+    )
+    desconto_total = acrescimo_bruto if repasse == "organizador" else 0.0
+
+    plano_venda = (getattr(ingresso, "plano_tarifa_venda", None) or "").strip().lower()
+    if plano_venda in TARIFAS:
+        tarifa = TARIFAS[plano_venda]  # type: ignore[index]
+    else:
+        tarifa = tarifa_para_organizador(organizador)
+    ledger = ledger_ingresso_venda(
+        valor,
+        tarifa=tarifa,
+        desconto_parcelamento_total=desconto_total,
+        parcelas=parcelas if parcelas > 1 else None,
+    )
+    ingresso.liquido_repassado = ledger["liquido_repassado"]
+    ingresso.taxa_plataforma_aplicada = ledger["taxa_plataforma_aplicada"]
+    ingresso.desconto_parcelamento_organizador = ledger["desconto_parcelamento_organizador"]
+    ingresso.parcelas_cobranca = ledger["parcelas_cobranca"]
+    ingresso.plano_tarifa_venda = ledger["plano_tarifa_venda"]
+    if getattr(ingresso, "valor_cobrado", None) is None and valor > 0:
+        acrescimo_comprador = 0.0 if repasse == "organizador" else acrescimo_bruto
+        ingresso.valor_cobrado = round(valor + acrescimo_comprador, 2)
+
+
 def _pay_id_reembolsavel(pay_id: str) -> bool:
     return bool(pay_id) and not pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:"))
 
 
-def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
+def marcar_ingresso_pago(db: Session, ingresso: Ingresso, *, pago_em: datetime | None = None) -> bool:
     """Marca como pago (sem commit). Retorna True se o status mudou."""
     if ingresso.status == "pago":
         return False
@@ -44,6 +86,11 @@ def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
 
     ingresso.status = "pago"
     ingresso.reservado_ate = None
+    if pago_em is not None:
+        ingresso.pago_em = pago_em.replace(tzinfo=None) if pago_em.tzinfo else pago_em
+    elif not getattr(ingresso, "pago_em", None):
+        ingresso.pago_em = datetime.now(timezone.utc).replace(tzinfo=None)
+    _garantir_ledger_ingresso(db, ingresso)
     registrar_uso_cupom(db, getattr(ingresso, "cupom_id", None))
     email = (ingresso.participante_email or "").strip()
     if email:
@@ -186,7 +233,7 @@ def processar_cobranca_confirmada_gateway(
     if not pay_id or pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:")):
         return []
 
-    if payment is None:
+    if payment is None or not (payment.get("status") or "").strip():
         payment = _obter_cobranca_gateway(pay_id, raise_on_error=raise_on_gateway_error)
     elif not isinstance(payment, dict):
         payment = {}
@@ -199,7 +246,7 @@ def processar_cobranca_confirmada_gateway(
     if not status_eh_pago(payment.get("status")):
         return []
 
-    marcados = marcar_ingressos_pi_pagos(db, pay_id)
+    marcados = marcar_ingressos_pi_pagos(db, pay_id, payment=payment)
     exigir_fulfillment_pagamento(
         db,
         pay_id,
@@ -210,11 +257,26 @@ def processar_cobranca_confirmada_gateway(
     return marcados
 
 
-def marcar_ingressos_pi_pagos(db: Session, payment_ref: str) -> list[str]:
+def _extrair_data_pagamento(payment: dict) -> datetime | None:
+    for key in ("paymentDate", "confirmedDate", "clientPaymentDate", "creditDate"):
+        raw = payment.get(key)
+        if not raw:
+            continue
+        try:
+            if isinstance(raw, datetime):
+                return raw.replace(tzinfo=None) if raw.tzinfo else raw
+            return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).replace(tzinfo=None)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def marcar_ingressos_pi_pagos(db: Session, payment_ref: str, *, payment: dict | None = None) -> list[str]:
     """Marca todos os ingressos pendentes de um pagamento externo como pagos."""
+    pago_em = _extrair_data_pagamento(payment or {})
     alterados: list[str] = []
     for ingresso in _ingressos_por_ref(db, payment_ref):
-        if marcar_ingresso_pago(db, ingresso):
+        if marcar_ingresso_pago(db, ingresso, pago_em=pago_em):
             alterados.append(ingresso.id)
     return alterados
 
@@ -230,11 +292,11 @@ def cancelar_ingressos_pi_pendentes(db: Session, payment_ref: str) -> int:
 
 
 def cancelar_ingressos_reembolsados(db: Session, payment_ref: str) -> int:
-    """Cancela ingressos pagos ou pendentes após reembolso/cancelamento no gateway."""
+    """Cancela ingressos pagos, usados ou pendentes após reembolso/cancelamento no gateway."""
     return _cancelar_ingressos_por_ref(
         db,
         payment_ref,
-        status_permitidos=("pendente", "pago"),
+        status_permitidos=("pendente", "pago", "usado"),
         liberar_espera=True,
     )
 
@@ -251,8 +313,11 @@ def _cancelar_ingressos_por_ref(
     for ingresso in _ingressos_por_ref(db, payment_ref):
         if ingresso.status not in status_permitidos:
             continue
+        era_pago = ingresso.status in ("pago", "usado") or getattr(ingresso, "liquido_repassado", None)
         ingresso.status = "cancelado"
         ingresso.reservado_ate = None
+        if era_pago:
+            ingresso.estornado_em = datetime.now(timezone.utc).replace(tzinfo=None)
         n += 1
         if liberar_espera:
             from app.services.lista_espera import expirar_espera_reserva_nao_concluida

@@ -16,15 +16,26 @@ class Usuario(Base):
     auth_provider_id = Column(String(255), nullable=True, index=True)
     tipo = Column(String)  # "cliente" ou "organizador"
 
-    # Asaas
+    # Asaas (motor invisível de repasses)
     asaas_customer_id = Column(String, nullable=True)
     asaas_wallet_id = Column(String, nullable=True)
     asaas_account_id = Column(String, nullable=True)
     asaas_subaccount_api_key = Column(String, nullable=True)
+    # pending | awaiting_approval | approved | rejected | manual
+    asaas_repasse_status = Column(String(32), nullable=True)
+    asaas_repasse_status_em = Column(DateTime, nullable=True)
+    asaas_repasse_detalhes = Column(Text, nullable=True)
+    # CPF/CNPJ informado na abertura da conta de repasses (validação Pix)
+    asaas_repasse_cpf_cnpj = Column(String(14), nullable=True)
     # Opt-in antecipação automática no cartão (espelho da config Asaas)
     asaas_anticipacao_cartao = Column(Boolean, nullable=True)
 
-    # Status
+    # plano_tarifa: padrao | assinatura (taxa por ingresso no split)
+    plano_tarifa = Column(String(16), default="padrao", nullable=False)
+    assinatura_valida_ate = Column(DateTime, nullable=True)
+    assinatura_ultimo_payment_id = Column(String(64), nullable=True)
+    assinatura_aviso_expiracao_enviado_em = Column(DateTime, nullable=True)
+    assinatura_renovacao_payment_id = Column(String(64), nullable=True)
     ativo = Column(Boolean, default=True)
     # Incrementado ao desativar conta ou alterar senha — invalida JWTs antigos.
     token_version = Column(Integer, default=0, nullable=False)

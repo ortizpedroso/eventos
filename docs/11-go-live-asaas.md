@@ -75,12 +75,15 @@ nano .env
 
 A API executa `alembic upgrade head` automaticamente no arranque.
 
-Migrações obrigatórias (head atual: `20260618_000024`):
+Migrações obrigatórias (head atual: `20260626_000033`):
 - `20260617_000020` — colunas `asaas_*` em usuários, eventos, ingressos
 - `20260617_000021` — subconta e antecipação do organizador
 - `20260618_000022` — `stripe_events` → `webhook_events`
 - `20260618_000023` — remove colunas Stripe; backfill wallet; refs legadas
 - `20260618_000024` — cifra `asaas_subaccount_api_key` (não rotacione `SECRET_KEY` após go-live sem re-cifrar)
+- `20260624_000031` — status de repasse (`asaas_repasse_status`, detalhes)
+- `20260625_000032` — `pago_em`, campos saque Asaas (`asaas_transfer_id`)
+- `20260626_000033` — `asaas_repasse_cpf_cnpj`, `estornado_em`
 
 ---
 
@@ -90,9 +93,53 @@ Migrações obrigatórias (head atual: `20260618_000024`):
 
 No painel Asaas → Integrações → Webhooks:
 - Token = valor de `ASAAS_WEBHOOK_TOKEN` no `.env`
-- Eventos: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_REFUNDED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED`
+- Eventos pagamento: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_REFUNDED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED`, `PAYMENT_CHARGEBACK_*`
+- Eventos conta: `ACCOUNT_STATUS_GENERAL_APPROVAL_*`, `ACCOUNT_STATUS_COMMERCIAL_INFO_*`, `ACCOUNT_STATUS_DOCUMENT_*`, `ACCOUNT_STATUS_BANK_ACCOUNT_INFO_*`
+- Transferências (saques): `TRANSFER_CREATED`, `TRANSFER_PENDING`, `TRANSFER_IN_BANK_PROCESSING`, `TRANSFER_DONE`, `TRANSFER_FAILED`, `TRANSFER_CANCELLED`
+
+Subcontas criadas pela plataforma recebem webhooks automaticamente no `POST /v3/accounts` quando `FRONTEND_PUBLIC_URL` e `ASAAS_WEBHOOK_TOKEN` estão configurados.
 
 Referência: `./scripts/asaas-webhook-setup.sh SEU_DOMINIO.com.br`
+
+---
+
+## 3.1 Transferências sem token SMS (BaaS white-label)
+
+Para saques automatizados via API **sem aprovação manual/SMS** no painel Asaas, combine **duas** camadas (recomendado pelo Asaas):
+
+### A) IP fixo na whitelist (conta raiz BaaS)
+
+1. Alinhar com o **gerente de contas Asaas** o modelo BaaS e liberação de subcontas.
+2. Configurar **NAT/egress IP fixo** no VPS (Hostinger ou cloud).
+3. Painel Asaas → **Integrações → Mecanismos de segurança** → **Lista de IPs autorizados**:
+   - Adicionar o IP público de saída da API.
+   - Em **Evento crítico em requisições de saque**: **Desabilitado** para esse IP (processamento automático).
+4. Subcontas **herdam** a configuração da conta raiz.
+
+Documentação: [IP Whitelisting](https://docs.asaas.com/docs/ip-whitelisting)
+
+### B) Webhook de autorização de saque (obrigatório se desabilitar evento crítico)
+
+**URL:** `https://SEU_DOMINIO/api/webhooks/asaas/transfer-auth`
+
+Painel Asaas → **Integrações → Mecanismos de segurança** → **Autorização de saque via Webhook**:
+
+| Campo | Valor |
+|-------|--------|
+| URL | `https://SEU_DOMINIO/api/webhooks/asaas/transfer-auth` |
+| Token | Mesmo `ASAAS_WEBHOOK_TOKEN` do `.env` (header `asaas-access-token`) |
+| E-mail de erro | E-mail ops da plataforma |
+
+Fluxo:
+
+1. Organizador solicita saque → API grava `FinanceiroSaque` e chama `POST /v3/transfers`.
+2. ~5s depois o Asaas envia POST com `type: TRANSFER` e objeto `transfer`.
+3. A API valida `id` / `externalReference` e valor contra o saque e responde `{"status": "APPROVED"}` ou `REFUSED`.
+4. Se falhar 3 vezes ou não responder, o Asaas **cancela** a transferência.
+
+Documentação: [Validação de saques via webhook](https://docs.asaas.com/docs/mechanism-for-validating-withdrawals-via-webhooks)
+
+Script de referência: `./scripts/asaas-transfer-auth-setup.sh SEU_DOMINIO.com.br`
 
 ---
 
@@ -100,10 +147,15 @@ Referência: `./scripts/asaas-webhook-setup.sh SEU_DOMINIO.com.br`
 
 Antes de vender ingressos pagos, cada organizador deve:
 1. Aceder **Organizador → Financeiro**
-2. Informar o `walletId` da conta Asaas **ou** criar subconta pela plataforma
-3. Confirmar badge «Repasses configurados»
+2. **Criar conta de repasses** (subconta Asaas — dados validados pelo Asaas)
+3. Aguardar aprovação em `/organizador/financeiro/conta-repasse`
+4. Confirmar status **Conta aprovada**
 
-Sem `walletId`, o checkout retorna erro (proteção de split).
+Em produção, colar `walletId` manualmente está desativado (`ASAAS_ALLOW_MANUAL_WALLET=false`).
+
+Sem repasse aprovado, publicação de eventos pagos e checkout retornam erro.
+
+Organizadores sacam via **Financeiro → Solicitar transferência Pix** (carência 48h após confirmação de cada venda). Não é necessário acessar o painel Asaas.
 
 ---
 

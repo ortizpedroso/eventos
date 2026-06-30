@@ -20,9 +20,27 @@ from app.services.lista_espera import (
     validar_token_espera,
 )
 from app.services.lista_interesse import inscrever_interesse
-from app.services.taxas_asaas_publicas import calcular_taxa_asaas, simular_parcelas
+from app.services.taxas_asaas_publicas import calcular_taxa_asaas, calcular_acrescimo_parcelamento_comprador, simular_parcelas
 from app.services.urgencia import calcular_urgencia
 from tests import test_api
+
+CARD_TESTE_ASAAS = {
+    "credit_card": {
+        "holderName": "Teste Silva",
+        "number": "4111111111111111",
+        "expiryMonth": "12",
+        "expiryYear": "2030",
+        "ccv": "123",
+    },
+    "credit_card_holder_info": {
+        "name": "Teste Silva",
+        "email": "buyer@ex.com",
+        "cpfCnpj": "52998224725",
+        "postalCode": "01310100",
+        "addressNumber": "100",
+        "phone": "11987654321",
+    },
+}
 
 
 def _db():
@@ -134,12 +152,293 @@ def test_taxas_asaas_pix():
 def test_simular_parcelas():
     r = simular_parcelas(120.0, 3)
     assert r["parcelas"] == 3
-    assert r["valor_parcela"] == 40.0
+    assert r["acrescimo_parcelamento"] == calcular_acrescimo_parcelamento_comprador(120.0, 3)
+    assert r["valor_total"] == round(120.0 + r["acrescimo_parcelamento"], 2)
+
+
+def test_acrescimo_parcelamento_comprador():
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 1) == 0.0
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 12) == 1.0
+
+
+def test_cotacao_total_pagar_alinha_com_valor_cobrado():
+    from app.services.taxas_asaas_publicas import cotacao_checkout
+
+    c = cotacao_checkout(100.0, parcelas=12, repasse_parcelamento="comprador")
+    esperado = round(100.0 + calcular_acrescimo_parcelamento_comprador(100.0, 12), 2)
+    assert c["total_pagar"] == esperado == 101.0
+    assert round(c["valor_parcela"] * 12, 2) == 101.04
+
+
+def test_cotacao_repasse_organizador_absorve():
+    from app.services.taxas_asaas_publicas import cotacao_checkout
+
+    c = cotacao_checkout(120.0, parcelas=6, repasse_parcelamento="organizador")
+    assert c["acrescimo_parcelamento"] == 0.0
+    assert c["acrescimo_bruto"] > 0
+    assert c["total_pagar"] == 120.0
+
+
+def test_split_desconto_organizador_parcelamento():
+    from unittest.mock import MagicMock
+
+    from app.services.pagamento_asaas import split_para_evento
+    from app.services.tarifas_plataforma import TARIFA_PADRAO
+    from config.settings import settings
+
+    evento = MagicMock()
+    evento.asaas_wallet_id = "wallet_org"
+    old = settings.ASAAS_PLATFORM_WALLET_ID
+    settings.ASAAS_PLATFORM_WALLET_ID = "wallet_plat"
+    try:
+        sem = split_para_evento(evento, 120.0, tarifa=TARIFA_PADRAO)
+        com = split_para_evento(evento, 120.0, tarifa=TARIFA_PADRAO, desconto_organizador=4.2)
+        org_sem = next(s["fixedValue"] for s in sem if s["walletId"] == "wallet_org")
+        org_com = next(s["fixedValue"] for s in com if s["walletId"] == "wallet_org")
+        assert org_com == round(org_sem - 4.2, 2)
+    finally:
+        settings.ASAAS_PLATFORM_WALLET_ID = old
+
+
+def test_ledger_organizador_absorve_parcelamento():
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso, ledger_ingresso_venda
+    from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
+
+    valor = 120.0
+    acrescimo = calcular_acrescimo_parcelamento_comprador(valor, 3)
+    ledger = ledger_ingresso_venda(
+        valor,
+        tarifa=TARIFA_PADRAO,
+        desconto_parcelamento_total=acrescimo,
+        parcelas=3,
+    )
+    det = detalhar_taxa_ingresso(valor, TARIFA_PADRAO)
+    assert ledger["liquido_repassado"] == round(det["liquido_organizador"] - acrescimo, 2)
+    assert ledger["plano_tarifa_venda"] == "padrao"
+
+
+def test_backfill_ledger_valor_cobrado_comprador_parcelamento():
+    from app.services.ingresso_pago import _garantir_ledger_ingresso
+    from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, nome="Parcelado")
+        ev.repasse_parcelamento = "comprador"
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            valor=100.0,
+            status="pago",
+            parcelas_cobranca=12,
+        )
+        db.add(ing)
+        db.commit()
+        _garantir_ledger_ingresso(db, ing)
+        acrescimo = calcular_acrescimo_parcelamento_comprador(100.0, 12)
+        assert ing.valor_cobrado == round(100.0 + acrescimo, 2)
+        assert ing.taxa_plataforma_aplicada == 12.0
+    finally:
+        db.close()
+
+
+def test_cancelar_saque_libera_saldo():
+    from datetime import datetime, timezone
+
+    from app.models import FinanceiroSaque, Ingresso
+    from app.services.financeiro_organizador import calcular_saldo_organizador, cancelar_saque
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        org.asaas_wallet_id = f"wallet_{uuid.uuid4().hex[:8]}"
+        ev = _criar_evento(db, org.id, nome="Saque Teste")
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        pago_em = agora - timedelta(hours=72)
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            valor=50.0,
+            status="pago",
+            liquido_repassado=50.0,
+            taxa_plataforma_aplicada=7.0,
+            plano_tarifa_venda="padrao",
+            asaas_payment_id=f"pay_{uuid.uuid4().hex[:8]}",
+            pago_em=pago_em,
+            data_compra=pago_em,
+        )
+        db.add(ing)
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        saque = FinanceiroSaque(
+            organizador_id=org.id,
+            valor=10.0,
+            pix_chave="teste@exemplo.com",
+            status="pendente",
+            criado_em=agora,
+            atualizado_em=agora,
+        )
+        db.add(saque)
+        db.commit()
+        db.refresh(org)
+
+        saldo0 = calcular_saldo_organizador(db, org)["saldo_disponivel"]
+        saldo_reservado = calcular_saldo_organizador(db, org)["saques_reservados"]
+        assert saldo_reservado >= 10.0
+
+        cancelar_saque(db, org, saque.id)
+        saldo2 = calcular_saldo_organizador(db, org)["saldo_disponivel"]
+        assert saldo2 >= saldo0
+
+        pendente = db.query(FinanceiroSaque).filter(FinanceiroSaque.id == saque.id).first()
+        assert pendente is not None
+        assert pendente.status == "cancelado"
+    finally:
+        db.close()
+
+
+def test_plano_tarifa_expira_sem_assinatura_valida():
+    from datetime import datetime, timedelta, timezone
+
+    from app.models import Usuario
+    from app.services.tarifas_plataforma import plano_tarifa_id
+
+    u = Usuario(email="a@b.com", nome="A", tipo="organizador", plano_tarifa="assinatura")
+    assert plano_tarifa_id(u) == "padrao"
+    u.assinatura_valida_ate = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
+    assert plano_tarifa_id(u) == "padrao"
+    u.assinatura_valida_ate = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=10)
+    assert plano_tarifa_id(u) == "assinatura"
+
+
+def test_processar_pagamento_assinatura_gateway():
+    from unittest.mock import MagicMock
+
+    from app.services.assinatura_organizador import processar_pagamento_assinatura_gateway
+
+    db = MagicMock()
+    org = MagicMock()
+    org.id = "org-1"
+    org.tipo = "organizador"
+    org.asaas_customer_id = "cus_1"
+    org.assinatura_valida_ate = None
+    org.assinatura_renovacao_payment_id = "pay_sub_1"
+    org.assinatura_ultimo_payment_id = None
+    db.get.return_value = org
+    payload = {
+        "id": "pay_sub_1",
+        "externalReference": "assinatura:org-1",
+        "status": "CONFIRMED",
+        "value": 500.0,
+        "customer": "cus_1",
+    }
+    ok = processar_pagamento_assinatura_gateway(db, payload)
+    assert ok is True
+    ok2 = processar_pagamento_assinatura_gateway(db, payload)
+    assert ok2 is True
+    assert org.assinatura_ultimo_payment_id == "pay_sub_1"
 
 
 def test_urgencia_exato():
     b = calcular_urgencia("exato", restantes=7)
     assert b.ativo and "7" in (b.texto or "")
+
+
+def test_extrato_inclui_saques_e_vendas():
+    from datetime import datetime, timezone
+
+    from app.models import FinanceiroSaque, Ingresso
+    from app.services.financeiro_organizador import listar_extrato
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, nome="Extrato Mix")
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=org.id,
+            valor=30.0,
+            status="pago",
+            liquido_repassado=24.0,
+            taxa_plataforma_aplicada=6.0,
+            plano_tarifa_venda="padrao",
+            asaas_payment_id=f"pay_{uuid.uuid4().hex[:8]}",
+        )
+        db.add(ing)
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        saque = FinanceiroSaque(
+            organizador_id=org.id,
+            valor=5.0,
+            pix_chave="a@b.com",
+            status="cancelado",
+            criado_em=agora,
+            atualizado_em=agora,
+        )
+        db.add(saque)
+        db.commit()
+
+        ex = listar_extrato(db, org, limite=50, offset=0)
+        tipos = {m["tipo"] for m in ex["movimentos"]}
+        assert "venda" in tipos
+        assert "saque" in tipos
+        assert ex["total_movimentos"] >= 2
+    finally:
+        db.close()
+
+
+def test_extrato_paginacao_offset():
+    from app.models import Ingresso
+    from app.services.financeiro_organizador import listar_extrato
+
+    db = _db()
+    try:
+        org = _criar_org(db)
+        ev = _criar_evento(db, org.id, nome="Paginacao")
+        for i in range(5):
+            db.add(
+                Ingresso(
+                    evento_id=ev.id,
+                    usuario_id=org.id,
+                    valor=20.0 + i,
+                    status="pago",
+                    liquido_repassado=18.0,
+                    taxa_plataforma_aplicada=2.0 + i,
+                    plano_tarifa_venda="padrao",
+                    asaas_payment_id=f"pay_{uuid.uuid4().hex[:8]}",
+                )
+            )
+        db.commit()
+
+        p1 = listar_extrato(db, org, limite=2, offset=0)
+        p2 = listar_extrato(db, org, limite=2, offset=2)
+        assert p1["total_movimentos"] >= 5
+        assert len(p1["movimentos"]) == 2
+        assert len(p2["movimentos"]) == 2
+        ids1 = {m["id"] for m in p1["movimentos"]}
+        ids2 = {m["id"] for m in p2["movimentos"]}
+        assert ids1.isdisjoint(ids2)
+    finally:
+        db.close()
+
+
+def test_validar_dados_cartao_rejeita_numero_invalido():
+    from app.utils.cartao_validacao import validar_dados_cartao
+
+    with pytest.raises(ValueError, match="inválido"):
+        validar_dados_cartao(
+            {
+                "holderName": "Teste Silva",
+                "number": "4111111111111112",
+                "expiryMonth": "12",
+                "expiryYear": "2030",
+                "ccv": "123",
+            },
+            {
+                "name": "Teste Silva",
+                "cpfCnpj": "52998224725",
+                "postalCode": "01310100",
+            },
+        )
 
 
 def test_urgencia_sem_estoque_conhecido():
@@ -974,7 +1273,7 @@ def test_iniciar_cobranca_nova_409_se_pago_mas_nao_liberado():
                 iniciar_cobranca_asaas(
                     db,
                     org,
-                    AsaasCobrancaRequest(ingresso_id=ing.id, metodo="card"),
+                    AsaasCobrancaRequest(ingresso_id=ing.id, metodo="card", **CARD_TESTE_ASAAS),
                 )
         assert exc.value.status_code == 409
         assert ing.asaas_payment_id == "pay_novo_card"
@@ -1096,31 +1395,28 @@ def test_api_lista_interesse():
 
 
 def test_api_simuladores():
-    r = test_api.client.get("/api/simuladores/simular", params={"preco": 50, "metodo": "pix"})
+    r = test_api.client.get("/api/simuladores/simular", params={"preco": 50, "parcelas": 1})
     assert r.status_code == 200
     data = r.json()
-    assert data["preco_bruto"] == 50
+    assert data["preco_ingresso"] == 50
     assert "aviso_legal" in data
+    assert data["liquido_organizador"] == 50 - data["taxa_eventosbr"]
 
 
 def test_simuladores_coerencia_api():
-    from app.services.tarifas_plataforma import TARIFA_PADRAO, taxa_ingresso
-    from app.services.taxas_asaas_publicas import AVISO_LEGAL, calcular_taxa_asaas
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso
 
     preco = 100.0
     r = test_api.client.get(
         "/api/simuladores/simular",
-        params={"preco": preco, "metodo": "cartao_parcelado", "parcelas": 3},
+        params={"preco": preco, "parcelas": 3},
     )
     assert r.status_code == 200
     data = r.json()
-    taxa_plat = taxa_ingresso(preco, TARIFA_PADRAO)
-    taxa_asaas = calcular_taxa_asaas(preco, "cartao_parcelado", parcelas=3)
-    liquido = round(max(0.0, preco - taxa_plat - taxa_asaas), 2)
-    assert data["taxa_eventosbr"] == round(taxa_plat, 2)
-    assert data["taxa_asaas_estimada"] == taxa_asaas
-    assert data["liquido_organizador"] == liquido
-    assert data["aviso_legal"] == AVISO_LEGAL
+    det = detalhar_taxa_ingresso(preco, TARIFA_PADRAO)
+    assert data["taxa_eventosbr"] == det["taxa_total"]
+    assert data["liquido_organizador"] == det["liquido_organizador"]
+    assert data["comprador"]["acrescimo_parcelamento"] > 0
     assert data["parcelamento"]["parcelas"] == 3
 
 
@@ -1307,7 +1603,7 @@ def test_parcelamento_cobranca_installment_count():
         cob = test_api.client.post(
             "/api/pagamentos/asaas/cobranca",
             headers={"Authorization": f"Bearer {cli_token}"},
-            json={"ingresso_id": iid, "metodo": "card", "parcelas": 3},
+            json={"ingresso_id": iid, "metodo": "card", "parcelas": 3, **CARD_TESTE_ASAAS},
         )
     assert cob.status_code == 200, cob.text
     assert captured.get("installment_count") == 3
@@ -1345,28 +1641,26 @@ def test_parcelamento_cobranca_installment_count():
 
 
 def test_simulador_planos_coerencia_asaas():
-    """REQ-16: API /simuladores alinhada às taxas públicas (base do simulador /planos)."""
-    from app.services.tarifas_plataforma import TARIFA_PADRAO, taxa_ingresso
-    from app.services.taxas_asaas_publicas import calcular_taxa_asaas
+    """API /simuladores: taxa EventosBR fixa; acréscimo parcelamento ao comprador."""
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso
+    from app.services.taxas_asaas_publicas import calcular_acrescimo_parcelamento_comprador
 
     preco = 49.90
-    metodo = "cartao_parcelado"
     parcelas = 3
 
     r = test_api.client.get(
         "/api/simuladores/simular",
-        params={"preco": preco, "metodo": metodo, "parcelas": parcelas},
+        params={"preco": preco, "parcelas": parcelas},
     )
     assert r.status_code == 200
     api = r.json()
 
-    taxa_plat = taxa_ingresso(preco, TARIFA_PADRAO)
-    taxa_asaas = calcular_taxa_asaas(preco, metodo, parcelas=parcelas)
-    liquido_esperado = round(max(0.0, preco - taxa_plat - taxa_asaas), 2)
-
-    assert api["taxa_eventosbr"] == round(taxa_plat, 2)
-    assert api["taxa_asaas_estimada"] == taxa_asaas
-    assert api["liquido_organizador"] == liquido_esperado
+    det = detalhar_taxa_ingresso(preco, TARIFA_PADRAO)
+    assert api["taxa_eventosbr"] == det["taxa_total"]
+    assert api["liquido_organizador"] == det["liquido_organizador"]
+    assert api["comprador"]["acrescimo_parcelamento"] == calcular_acrescimo_parcelamento_comprador(
+        preco, parcelas
+    )
 
 
 def test_deve_notificar_abertura_quando_lote_abre():
@@ -1519,8 +1813,6 @@ def test_produtor_rejeita_url_javascript():
 
 
 def test_pagamento_rejeita_valor_abaixo_minimo_asaas():
-    from unittest.mock import patch
-
     suf = uuid.uuid4().hex[:8]
     org_reg = test_api.client.post(
         "/api/auth/registrar",
@@ -1541,42 +1833,31 @@ def test_pagamento_rejeita_valor_abaixo_minimo_asaas():
             "data_inicio": "2026-12-01T10:00:00",
             "data_fim": "2026-12-01T22:00:00",
             "local": "SP",
-            "preco_ingresso": 3,
+            "preco_ingresso": 8,
             "categoria": "Outros",
             "publicado": True,
-            "ingresso_lotes": [{"nome": "Geral", "preco": 3, "ordem": 1, "ativo": True}],
+            "ingresso_lotes": [{"nome": "Geral", "preco": 8, "ordem": 1, "ativo": True}],
         },
     )
-    assert ev_resp.status_code == 200
-    ev = ev_resp.json()
-    cli_reg = test_api.client.post(
-        "/api/auth/registrar",
+    assert ev_resp.status_code == 422
+    assert "10" in str(ev_resp.json())
+
+    ev_ok = test_api.client.post(
+        "/api/eventos/criar",
+        headers={"Authorization": f"Bearer {org_token}"},
         json={
-            "email": f"cli_min_{suf}@test.com",
-            "nome": "Cli",
-            "senha": "senha12345",
-            "tipo": "cliente",
+            "nome": f"Minimo {suf}",
+            "descricao": "d",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 10,
+            "categoria": "Outros",
+            "publicado": True,
+            "ingresso_lotes": [{"nome": "Geral", "preco": 10, "ordem": 1, "ativo": True}],
         },
     )
-    cli_token = cli_reg.json()["access_token"]
-    with patch("app.routes.pagamentos.settings") as route_settings:
-        route_settings.payments_disabled = False
-        route_settings.use_asaas = True
-        criar = test_api.client.post(
-            "/api/pagamentos/criar",
-            headers={"Authorization": f"Bearer {cli_token}"},
-            json={
-                "evento_id": ev["id"],
-                "valor_centavos": 300,
-                "participante_nome": "Comprador",
-                "participante_email": f"cli_min_{suf}@test.com",
-                "participante_cpf": "52998224725",
-                "participante_telefone": "11987654321",
-                "termo_compra_aceito": True,
-            },
-        )
-    assert criar.status_code == 400
-    assert "5" in criar.json()["detail"]
+    assert ev_ok.status_code == 200
 
 
 def test_deve_notificar_abertura_exige_venda_aberta_na_criacao():
@@ -1738,7 +2019,10 @@ def test_evento_pausado_nao_aparece_vitrine():
     ev_id = criar.json()["id"]
     assert criar.json().get("publicado") is False
     lista = test_api.client.get("/api/eventos")
-    assert all(e["slug"] != slug for e in lista.json())
+    assert lista.status_code == 200, lista.text
+    eventos = lista.json()
+    assert isinstance(eventos, list)
+    assert all(e["slug"] != slug for e in eventos)
     pub = anon.get(f"/api/eventos/{slug}")
     assert pub.status_code == 404
     org_view = test_api.client.get(
@@ -1804,3 +2088,73 @@ def test_lista_espera_dedup_email():
 def test_taxas_asaas_parcelamento_7_12x():
     taxa = calcular_taxa_asaas(100.0, "cartao_parcelado", parcelas=10)
     assert taxa > calcular_taxa_asaas(100.0, "cartao_parcelado", parcelas=3)
+
+
+def test_ciclo_assinatura_envia_aviso_e_gera_renovacao():
+    from unittest.mock import patch
+
+    from app.models import Usuario
+    from app.services.assinatura_ciclo import processar_ciclo_assinaturas
+
+    db = _db()
+    try:
+        org = Usuario(
+            email=f"sub_{uuid.uuid4().hex[:8]}@ex.com",
+            nome="Org Sub",
+            tipo="organizador",
+            plano_tarifa="assinatura",
+            assinatura_valida_ate=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=2),
+        )
+        db.add(org)
+        db.commit()
+        db.refresh(org)
+
+        with (
+            patch(
+                "app.services.assinatura_email.enviar_email_aviso_expiracao_assinatura",
+                return_value=True,
+            ) as aviso,
+            patch(
+                "app.services.assinatura_email.enviar_email_renovacao_assinatura_gerada",
+                return_value=True,
+            ),
+            patch(
+                "app.services.assinatura_organizador.iniciar_cobranca_assinatura",
+                return_value={"payment_id": "pay_renov_auto", "ja_pago": False},
+            ) as cobranca,
+        ):
+            stats = processar_ciclo_assinaturas(db)
+
+        assert stats["avisos"] >= 1
+        assert stats["renovacoes"] >= 1
+        aviso.assert_called()
+        cobranca.assert_called()
+        db.refresh(org)
+        assert org.assinatura_renovacao_payment_id == "pay_renov_auto"
+    finally:
+        db.close()
+
+
+def test_ciclo_assinatura_expirada_rebaixa_plano():
+    from app.models import Usuario
+    from app.services.assinatura_ciclo import processar_ciclo_assinaturas
+
+    db = _db()
+    try:
+        org = Usuario(
+            email=f"exp_{uuid.uuid4().hex[:8]}@ex.com",
+            nome="Org Exp",
+            tipo="organizador",
+            plano_tarifa="assinatura",
+            assinatura_valida_ate=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1),
+        )
+        db.add(org)
+        db.commit()
+
+        stats = processar_ciclo_assinaturas(db)
+        assert stats["expiradas"] >= 1
+        db.refresh(org)
+        assert org.plano_tarifa == "padrao"
+        assert org.assinatura_valida_ate is None
+    finally:
+        db.close()

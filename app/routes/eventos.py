@@ -77,6 +77,7 @@ async def criar_evento(
         urgencia_modo=evento_data.urgencia_modo,
         parcelamento_habilitado=evento_data.parcelamento_habilitado,
         parcelamento_max=evento_data.parcelamento_max,
+        repasse_parcelamento=evento_data.repasse_parcelamento,
         aceita_interesse=evento_data.aceita_interesse,
         lista_espera_habilitada=evento_data.lista_espera_habilitada,
         lista_espera_prazo_horas=evento_data.lista_espera_prazo_horas,
@@ -91,6 +92,12 @@ async def criar_evento(
         substituir_lotes_evento(db, novo_evento, itens)
     else:
         criar_lotes_iniciais(db, novo_evento, float(evento_data.preco_ingresso))
+
+    from app.services.evento_repasse import validar_publicacao_evento_pago
+    from app.services.organizador_asaas import atualizar_status_repasse_organizador
+
+    usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
+    validar_publicacao_evento_pago(db, usuario_atual, novo_evento, evento_data.publicado)
 
     db.commit()
     db.refresh(novo_evento)
@@ -144,7 +151,8 @@ async def atualizar_evento(
     evento.preco_ingresso = body.preco_ingresso
     evento.categoria = body.categoria.strip() or "Outros"
     evento.mensagem_confirmacao = body.mensagem_confirmacao
-    evento.publicado = body.publicado
+    if body.publicado is not None:
+        evento.publicado = body.publicado
     if "limite_ingressos_por_cpf" in body.model_fields_set:
         evento.limite_ingressos_por_cpf = body.limite_ingressos_por_cpf
 
@@ -154,6 +162,8 @@ async def atualizar_evento(
         evento.parcelamento_habilitado = body.parcelamento_habilitado
     if "parcelamento_max" in body.model_fields_set:
         evento.parcelamento_max = body.parcelamento_max
+    if "repasse_parcelamento" in body.model_fields_set:
+        evento.repasse_parcelamento = body.repasse_parcelamento
     if "aceita_interesse" in body.model_fields_set:
         evento.aceita_interesse = body.aceita_interesse
     if "lista_espera_habilitada" in body.model_fields_set:
@@ -180,6 +190,13 @@ async def atualizar_evento(
             raise HTTPException(status_code=400, detail=str(e)) from e
 
     sincronizar_preco_ingresso_evento(db, evento)
+
+    from app.services.evento_repasse import validar_publicacao_evento_pago
+    from app.services.organizador_asaas import atualizar_status_repasse_organizador
+
+    usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
+    if body.publicado is not None:
+        validar_publicacao_evento_pago(db, usuario_atual, evento, body.publicado)
 
     db.commit()
     db.refresh(evento)
@@ -573,6 +590,7 @@ async def duplicar_evento(
         urgencia_modo=getattr(evento, "urgencia_modo", "desligado"),
         parcelamento_habilitado=getattr(evento, "parcelamento_habilitado", False),
         parcelamento_max=getattr(evento, "parcelamento_max", 2),
+        repasse_parcelamento=getattr(evento, "repasse_parcelamento", "comprador") or "comprador",
         aceita_interesse=getattr(evento, "aceita_interesse", True),
         lista_espera_habilitada=getattr(evento, "lista_espera_habilitada", False),
         lista_espera_prazo_horas=getattr(evento, "lista_espera_prazo_horas", 24),

@@ -18,6 +18,7 @@ import { CheckoutTermoResponsabilidade } from "@/components/checkout-termo-respo
 import { TERMO_COMPRA_VERSAO } from "@/lib/termo-compra";
 import { formatCpfMask, isValidCpf, onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask, isTelefoneBrasilOk } from "@/lib/telefone-br";
+import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import type { CriarPagamentoResponse, IngressoLote, RetomarPagamentoResponse, Usuario } from "@/lib/types";
 import { urlRetomarPagamento } from "@/lib/reserva-pagamento";
 
@@ -45,6 +46,7 @@ type Props = {
   eventoLocal?: string;
   parcelamentoHabilitado?: boolean;
   parcelamentoMax?: number;
+  repasseParcelamento?: "comprador" | "organizador";
   urgenciaAtivo?: boolean;
   urgenciaBadge?: string | null;
   tokenEspera?: string | null;
@@ -79,6 +81,7 @@ export function ComprarIngresso({
   eventoLocal,
   parcelamentoHabilitado = false,
   parcelamentoMax = 2,
+  repasseParcelamento = "comprador",
   urgenciaAtivo = false,
   urgenciaBadge = null,
   tokenEspera = null,
@@ -322,7 +325,7 @@ export function ComprarIngresso({
     })();
   }, []);
 
-  const ehCortesia = Number.isFinite(precoUnitario) && precoUnitario < 0.5;
+  const ehCortesia = Number.isFinite(precoUnitario) && precoUnitario <= 0;
   const precoCentavosUnit = ehCortesia ? 0 : Math.round(precoUnitario * 100);
   const precoCentavosCheckout = cupomPreview?.valor_centavos ?? precoCentavosUnit * quantidade;
   const precoReaisCheckout = precoCentavosCheckout / 100;
@@ -383,13 +386,13 @@ export function ComprarIngresso({
   async function criarIntent() {
     setError(null);
     const v = precoUnitario;
-    if (!Number.isFinite(v) || (!ehCortesia && v < 0.5)) {
-      setError("Preço do ingresso inválido para pagamento (mínimo R$ 0,50).");
+    if (!Number.isFinite(v) || (!ehCortesia && v < INGRESSO_MINIMO_PAGO_REAIS)) {
+      setError(`Preço do ingresso inválido para pagamento (mínimo R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}).`);
       return;
     }
     const valor_centavos = ehCortesia ? 0 : precoCentavosCheckout;
-    if (!ehCortesia && valor_centavos < 50) {
-      setError("Valor muito baixo");
+    if (!ehCortesia && valor_centavos < INGRESSO_MINIMO_PAGO_REAIS * 100) {
+      setError(`Valor mínimo para ingressos pagos: R$ ${INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}.`);
       return;
     }
 
@@ -942,6 +945,7 @@ export function ComprarIngresso({
                 reservadoAte={reservadoAte?.toISOString()}
                 parcelamentoHabilitado={parcelamentoHabilitado}
                 parcelamentoMax={parcelamentoMax}
+                repasseParcelamento={repasseParcelamento}
                 tokenEspera={tokenEspera}
                 onSuccess={() => setStep(3)}
               />

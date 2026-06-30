@@ -53,7 +53,7 @@ _needs_bootstrap() {
 }
 
 echo ""
-echo "[1/8] .env..."
+echo "[1/9] .env..."
 if _needs_bootstrap; then
   ./scripts/bootstrap-vps-env.sh
 fi
@@ -61,20 +61,20 @@ fi
 DOMAIN="$(env_get DOMAIN .env || echo eventosbr.app.br)"
 
 echo ""
-echo "[2/8] Postgres + Redis..."
+echo "[2/9] Postgres + Redis..."
 docker compose -f "$COMPOSE" up -d db redis
 
 echo ""
-echo "[3/8] Sync senha Postgres..."
+echo "[3/9] Sync senha Postgres com .env..."
 ./scripts/sync-postgres-password-vps.sh
 
 echo ""
-echo "[4/8] API..."
+echo "[4/9] Build API..."
 docker compose -f "$COMPOSE" build api
 docker compose -f "$COMPOSE" up -d --force-recreate api
 
 echo ""
-echo "[5/8] Aguardando API healthy (até 4 min)..."
+echo "[5/9] Aguardando API healthy (até 4 min)..."
 ok_api=0
 for i in $(seq 1 48); do
   status="$(docker compose -f "$COMPOSE" ps api --format '{{.Health}}' 2>/dev/null || true)"
@@ -95,19 +95,37 @@ if [ "$ok_api" -ne 1 ]; then
 fi
 
 echo ""
-echo "[6/8] Build frontend (5-15 min)..."
+echo "[6/9] Verificar preços abaixo de R\$ 10 (dry-run)..."
+docker compose -f "$COMPOSE" exec -T api python3 scripts/migrar_precos_minimo_r10.py 2>/dev/null || true
+
+echo ""
+echo "[7/9] Build frontend (5-15 min)..."
 docker compose -f "$COMPOSE" build --no-cache web
 
 echo ""
-echo "[7/8] Web + Caddy..."
+echo "[8/9] Web + Caddy..."
 docker compose -f "$COMPOSE" up -d --force-recreate web caddy
 
-sleep 12
+sleep 15
 docker compose -f "$COMPOSE" ps
 
 echo ""
-echo "[8/8] Verificação..."
+echo "[9/9] Verificação..."
+ok=0
+
 if curl -fsS --max-time 20 "https://${DOMAIN}/ready" >/dev/null 2>&1; then
+  echo "  OK  /ready"
+else
+  echo "  FALHA  /ready"
+  ok=1
+fi
+
+if [ -x ./scripts/verify-production.sh ]; then
+  ./scripts/verify-production.sh || echo "  AVISO: verify-production retornou erro — revise manualmente"
+fi
+
+echo ""
+if [ "$ok" -eq 0 ]; then
   echo "✅ SITE NO AR: https://${DOMAIN}"
 else
   echo "❌ /ready falhou — logs: docker compose -f $COMPOSE logs api --tail=60" >&2

@@ -1,10 +1,11 @@
 "use client";
 
 import type { Evento } from "@/lib/types";
+import type { RepasseParcelamento } from "@/lib/taxas-asaas-publicas";
 
 type Props = {
   evento?: Evento | null;
-  onParcelamentoChange?: (habilitado: boolean, max: number) => void;
+  onParcelamentoChange?: (habilitado: boolean, max: number, repasse?: RepasseParcelamento) => void;
 };
 
 export function EventoConfigAvancadaFields({ evento, onParcelamentoChange }: Props) {
@@ -70,6 +71,61 @@ export function EventoConfigAvancadaFields({ evento, onParcelamentoChange }: Pro
           </select>
         </label>
       </div>
+
+      <fieldset className="space-y-2 rounded-lg border border-zinc-100 bg-zinc-50/80 p-3">
+        <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-zinc-600">
+          Acréscimo de parcelamento
+        </legend>
+        <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
+          <input
+            type="radio"
+            name="repasse_parcelamento"
+            value="comprador"
+            defaultChecked={(evento?.repasse_parcelamento ?? "comprador") !== "organizador"}
+            className="mt-1"
+            onChange={(e) => {
+              const form = e.target.form;
+              const hab =
+                (form?.elements.namedItem("parcelamento_habilitado") as HTMLInputElement | null)?.checked ??
+                false;
+              const max = Number(
+                (form?.elements.namedItem("parcelamento_max") as HTMLSelectElement | null)?.value ??
+                  evento?.parcelamento_max ??
+                  2,
+              );
+              onParcelamentoChange?.(hab, max, "comprador");
+            }}
+          />
+          <span>
+            <strong>Repassar ao comprador</strong> — o comprador paga o acréscimo no parcelamento (padrão Sympla).
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-800">
+          <input
+            type="radio"
+            name="repasse_parcelamento"
+            value="organizador"
+            defaultChecked={evento?.repasse_parcelamento === "organizador"}
+            className="mt-1"
+            onChange={(e) => {
+              const form = e.target.form;
+              const hab =
+                (form?.elements.namedItem("parcelamento_habilitado") as HTMLInputElement | null)?.checked ??
+                false;
+              const max = Number(
+                (form?.elements.namedItem("parcelamento_max") as HTMLSelectElement | null)?.value ??
+                  evento?.parcelamento_max ??
+                  2,
+              );
+              onParcelamentoChange?.(hab, max, "organizador");
+            }}
+          />
+          <span>
+            <strong>Absorver como organizador</strong> — comprador paga só o preço do ingresso; você recebe menos no
+            repasse.
+          </span>
+        </label>
+      </fieldset>
 
       <label className="flex items-start gap-2 text-sm text-zinc-800">
         <input

@@ -12,6 +12,11 @@ from app.deps.rate_limit import rate_limit_checkout
 from app.routes.auth import get_usuario_atual
 from app.services.cpf_limite import validar_limite_cpf_evento
 from app.services.cupom_desconto import centavos_com_cupom, resolver_cupom_evento
+from app.services.evento_repasse import (
+    MOTIVO_CHECKOUT_SEM_REPASSE,
+    garantir_wallet_repasse_evento,
+    organizador_pode_vender,
+)
 from app.services.ingresso_lotes import (
     motivo_lote_indisponivel,
     reservar_vaga_lote,
@@ -28,7 +33,7 @@ from app.services.pagamentos_asaas_handlers import (
     status_cobranca_asaas,
 )
 from app.services.ticket_email import enqueue_ticket_email
-from app.services.taxas_asaas_publicas import PARCELAMENTO_MINIMO_REAIS
+from app.services.taxas_asaas_publicas import INGRESSO_MINIMO_PAGO_REAIS
 from app.utils.cpf import cpf_valido, normalizar_cpf
 from app.utils.ingresso_tipos import lote_e_cortesia
 from app.utils.privacy import mask_cpf, mask_telefone_br
@@ -264,10 +269,10 @@ async def criar_pagamento(
             status_code=400,
             detail=f"Valor incorreto para o lote atual ({lote.nome}). Recarregue a página e tente novamente.",
         )
-    if not eh_cortesia and unit_centavos < int(PARCELAMENTO_MINIMO_REAIS * 100):
+    if not eh_cortesia and unit_centavos < int(INGRESSO_MINIMO_PAGO_REAIS * 100):
         raise HTTPException(
             status_code=400,
-            detail=f"Valor mínimo de R$ {PARCELAMENTO_MINIMO_REAIS:.2f} para ingressos pagos (Asaas).",
+            detail=f"Valor mínimo de R$ {INGRESSO_MINIMO_PAGO_REAIS:.2f} para ingressos pagos.",
         )
 
     limite_cpf = getattr(evento, "limite_ingressos_por_cpf", None)
@@ -360,14 +365,14 @@ async def criar_pagamento(
         logger.warning("Pagamentos desativados: ingresso pago sem gateway evento %s", evento.id)
         return _ingressos_gratis("disabled")
 
-    if not (evento.asaas_wallet_id or "").strip():
+    if not garantir_wallet_repasse_evento(db, evento):
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Este evento ainda não tem conta de repasse Asaas. "
-                "O organizador deve configurar o walletId em Financeiro antes de vender ingressos."
-            ),
+            detail=MOTIVO_CHECKOUT_SEM_REPASSE,
         )
+    pode_vender, motivo_venda = organizador_pode_vender(db, evento)
+    if not pode_vender:
+        raise HTTPException(status_code=400, detail=motivo_venda or MOTIVO_CHECKOUT_SEM_REPASSE)
     if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
         raise HTTPException(
             status_code=503,
@@ -606,6 +611,36 @@ async def cancelar_ingresso(
     except Exception as e:
         logger.exception("Erro ao processar reembolso")
         raise HTTPException(status_code=400, detail=REEMBOLSO_CLIENTE) from e
+
+
+@router.get("/cotacao")
+async def cotacao_pagamento(
+    ingresso_id: str = Query(..., min_length=8),
+    parcelas: int = Query(1, ge=1, le=21),
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Breakdown all-in para o comprador (preço + parcelamento)."""
+    from app.services.taxas_asaas_publicas import cotacao_checkout
+
+    ingresso = db.get(Ingresso, ingresso_id)
+    if not ingresso or ingresso.usuario_id != usuario_atual.id:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+    evento = db.get(Evento, ingresso.evento_id)
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+
+    valor_base = float(ingresso.valor or 0)
+    comprador = cotacao_checkout(
+        valor_base,
+        parcelas=parcelas,
+        repasse_parcelamento=getattr(evento, "repasse_parcelamento", "comprador") or "comprador",
+    )
+    return {
+        "ingresso_id": ingresso.id,
+        "evento_nome": evento.nome,
+        "comprador": comprador,
+    }
 
 
 @router.post("/asaas/cobranca")

@@ -1,4 +1,4 @@
-"""Cobranças, split e reembolso via Asaas."""
+"""Cobranças, split e reembolso via Asaas (motor invisível)."""
 
 from __future__ import annotations
 
@@ -6,37 +6,59 @@ import logging
 from datetime import date, timedelta
 from typing import Any
 
-from app.models import Evento, Ingresso, Usuario
+from app.models import Evento, Ingresso
 from app.services.asaas_client import AsaasAPIError, get_asaas_client
-from app.services.tarifas_plataforma import taxa_ingresso
+from app.services.tarifas_plataforma import PlanoTarifa, TARIFA_PADRAO, taxa_ingresso
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
-# Status Asaas que equivalem a pago
 _ASAAS_PAGO = frozenset({"RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"})
 _ASAAS_PENDENTE = frozenset({"PENDING", "OVERDUE"})
-_ASAAS_CANCELADO = frozenset({"REFUNDED", "REFUND_REQUESTED", "CHARGEBACK_REQUESTED", "CHARGEBACK_DISPUTE", "AWAITING_CHARGEBACK_REVERSAL", "DUNNING_REQUESTED", "DUNNING_RECEIVED", "DELETED"})
+_ASAAS_CANCELADO = frozenset(
+    {
+        "REFUNDED",
+        "REFUND_REQUESTED",
+        "CHARGEBACK_REQUESTED",
+        "CHARGEBACK_DISPUTE",
+        "AWAITING_CHARGEBACK_REVERSAL",
+        "DUNNING_REQUESTED",
+        "DUNNING_RECEIVED",
+        "DELETED",
+    }
+)
 
 
 def ingresso_payment_ref(ingresso: Ingresso) -> str:
-    """ID externo do pagamento Asaas."""
     return (ingresso.asaas_payment_id or "").strip()
 
 
 def split_para_evento(
     evento: Evento,
-    valor_reais: float,
+    valor_base_reais: float,
     *,
     quantidade: int = 1,
+    tarifa: PlanoTarifa | None = None,
+    desconto_organizador: float = 0.0,
 ) -> list[dict[str, Any]]:
-    """Split: taxa plataforma por ingresso + líquido organizador."""
+    """Split sobre preço base do ingresso.
+
+    Distribuição do valor base (preço do ingresso):
+    - Organizador: líquido após taxa EventosBR (percentual + fixo por plano)
+    - Plataforma: taxa EventosBR → wallet `ASAAS_PLATFORM_WALLET_ID`
+    - Asaas: taxas de processamento/parcelamento ficam no gateway (fora do split)
+
+    Acréscimo de parcelamento pago pelo comprador entra no `value` total da cobrança
+    mas não entra no split — permanece na conta mestre (plataforma cobre taxas Asaas).
+    """
+    t = tarifa or TARIFA_PADRAO
     splits: list[dict[str, Any]] = []
     q = max(1, int(quantidade or 1))
-    valor_unit = valor_reais / q if q > 1 else valor_reais
-    taxa = round(q * taxa_ingresso(valor_unit), 2)
-    taxa = min(taxa, valor_reais)
-    liquido = round(max(0.0, valor_reais - taxa), 2)
+    valor_unit = valor_base_reais / q if q > 1 else valor_base_reais
+    taxa = round(q * taxa_ingresso(valor_unit, t), 2)
+    taxa = min(taxa, valor_base_reais)
+    desconto = round(max(0.0, float(desconto_organizador or 0)), 2)
+    liquido = round(max(0.0, valor_base_reais - taxa - desconto), 2)
     org_wallet = (evento.asaas_wallet_id or "").strip()
     platform_wallet = (settings.ASAAS_PLATFORM_WALLET_ID or "").strip()
 
@@ -61,9 +83,13 @@ def criar_cobranca_asaas(
     installment_count: int | None = None,
     quantidade: int = 1,
     idempotency_key: str | None = None,
+    valor_base_reais: float | None = None,
+    tarifa: PlanoTarifa | None = None,
+    desconto_organizador: float = 0.0,
 ) -> dict[str, Any]:
     client = get_asaas_client()
     due = (date.today() + timedelta(days=1)).isoformat()
+    base = valor_base_reais if valor_base_reais is not None else valor_reais
     payload: dict[str, Any] = {
         "customer": customer_id,
         "billingType": billing_type,
@@ -72,7 +98,13 @@ def criar_cobranca_asaas(
         "description": descricao[:500],
         "externalReference": external_reference[:100],
     }
-    splits = split_para_evento(evento, valor_reais, quantidade=quantidade)
+    splits = split_para_evento(
+        evento,
+        base,
+        quantidade=quantidade,
+        tarifa=tarifa,
+        desconto_organizador=desconto_organizador,
+    )
     if splits:
         payload["split"] = splits
 
@@ -145,7 +177,6 @@ def extrair_pix(payment: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def resposta_checkout_asaas(payment: dict[str, Any]) -> dict[str, Any]:
-    """Normaliza resposta para o frontend."""
     out: dict[str, Any] = {
         "payment_provider": "asaas",
         "payment_id": payment.get("id"),

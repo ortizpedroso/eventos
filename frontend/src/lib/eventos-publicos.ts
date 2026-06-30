@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { apiFetch } from "@/lib/api";
 import type { Evento } from "@/lib/types";
 
@@ -23,3 +25,6 @@ export function eventosDestaqueHome(eventos: Evento[]): Evento[] {
 export async function fetchEventoBySlug(slug: string): Promise<Evento> {
   return apiFetch<Evento>(`/api/eventos/${encodeURIComponent(slug)}`, { cache: "no-store" });
 }
+
+/** Uma única chamada por request SSR (metadata + página do evento). */
+export const getEventoPublicoBySlug = cache(fetchEventoBySlug);
