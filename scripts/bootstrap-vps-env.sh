@@ -62,7 +62,7 @@ ASAAS_ENVIRONMENT="production"
 if env_is_placeholder "$ASAAS_API_KEY" || [ -z "$ASAAS_API_KEY" ]; then
   ASAAS_API_KEY=""
   ASAAS_DISABLED="true"
-  echo "==> AVISO: Asaas não configurado — ASAAS_DISABLED=true até ./scripts/configure-asaas-env.sh"
+  echo "==> AVISO: Asaas sem chave — ASAAS_DISABLED=true (site sobe; pagamentos depois)"
 fi
 
 EMAIL_PASSWORD="${old_email_pass:-}"
@@ -120,11 +120,4 @@ chmod 600 "$ENV_FILE" 2>/dev/null || true
 
 echo ""
 echo "==> $ENV_FILE escrito (Asaas — sem Stripe)."
-echo "    Guarde num gestor de senhas:"
-echo "    POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
-echo "    SECRET_KEY=${SECRET_KEY}"
-echo "    PLATFORM_ADMIN_API_KEY=${PLATFORM_ADMIN_API_KEY}"
-echo "    ASAAS_WEBHOOK_TOKEN=${ASAAS_WEBHOOK_TOKEN}"
-echo ""
-echo "    Próximo: ./scripts/configure-asaas-env.sh  (se ainda não tiver chaves)"
-echo "             ./scripts/recover-vps.sh"
+echo "    (secrets gravados em $ENV_FILE — não precisa copiar manualmente)"
