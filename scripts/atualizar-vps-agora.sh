@@ -32,6 +32,7 @@ echo "=============================================="
 COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD)}"
 export GIT_COMMIT="$COMMIT"
 echo "    Commit: $COMMIT ($(git log -1 --oneline))"
+echo "    Última migração no disco: $(ls alembic/versions/*.py 2>/dev/null | xargs -n1 basename | sort | tail -1)"
 
 if ! grep -q 'PAYMENT_PROVIDER' config/settings.py 2>/dev/null; then
   echo "ERRO: código inesperado (sem Asaas)." >&2
@@ -68,9 +69,27 @@ echo ""
 echo "[3/9] Sync senha Postgres com .env..."
 ./scripts/sync-postgres-password-vps.sh
 
+LATEST_MIGRATION="$(ls alembic/versions/*.py | xargs -n1 basename | sort | tail -1)"
 echo ""
-echo "[4/9] Build API..."
+echo "[4/9] Build API (migração mais recente no código: ${LATEST_MIGRATION})..."
 docker compose -f "$COMPOSE" build api
+
+_migration_in_image() {
+  docker compose -f "$COMPOSE" run --rm --no-deps --entrypoint sh api \
+    -c "test -f alembic/versions/${LATEST_MIGRATION}" >/dev/null 2>&1
+}
+
+if ! _migration_in_image; then
+  echo "  AVISO: imagem da API sem ${LATEST_MIGRATION} (cache desatualizado) — rebuild --no-cache..."
+  docker compose -f "$COMPOSE" build --no-cache api
+  if ! _migration_in_image; then
+    echo "ERRO: a imagem ainda não contém ${LATEST_MIGRATION} mesmo após --no-cache." >&2
+    echo "      git HEAD local: $(git rev-parse HEAD)" >&2
+    exit 1
+  fi
+fi
+echo "  OK  imagem da API contém ${LATEST_MIGRATION}"
+
 docker compose -f "$COMPOSE" up -d --force-recreate api
 
 echo ""
