@@ -19,6 +19,12 @@ fi
 echo "==> git pull"
 git pull --ff-only
 
+if [ -x ./scripts/update-env-vps.sh ]; then
+  echo ""
+  echo "==> Verificar novas chaves no .env (sem sobrescrever segredos)"
+  ./scripts/update-env-vps.sh || true
+fi
+
 echo "==> docker compose up (build)"
 docker compose -f "$COMPOSE_FILE" up -d --build
 

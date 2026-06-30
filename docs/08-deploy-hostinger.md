@@ -19,6 +19,7 @@ Ficheiros principais:
 | `deploy/caddy/Caddyfile` | HTTPS automático |
 | `.env.production.example` | Modelo de variáveis |
 | `scripts/deploy-vps.sh` | `git pull` + rebuild |
+| `scripts/update-env-vps.sh` | Mescla chaves novas do exemplo no `.env` |
 | `scripts/backup-postgres.sh` | Backup da base |
 
 ## Fase A — Antes de ter o VPS (pode fazer agora)
@@ -45,6 +46,11 @@ Ficheiros principais:
    ```bash
    cp .env.production.example .env
    nano .env   # DOMAIN, senhas, chaves test primeiro
+   ```
+   Após `git pull` com novas variáveis no repositório:
+   ```bash
+   ./scripts/update-env-vps.sh   # adiciona chaves faltantes sem apagar segredos
+   nano .env
    ```
 5. **Staging com chaves test** (opcional): subir stack e testar por IP:
    ```bash
