@@ -502,15 +502,17 @@ def solicitar_saque(
     chave_norm = normalizar_pix_chave(chave, tipo)
     validar_pix_cadastro_repasse(usuario, chave_norm, tipo)
 
-    saldo = calcular_saldo_organizador(db, usuario)
-    disponivel = float(saldo["saldo_disponivel_saque"])
-    if valor_f > disponivel + 0.009:
+    # Verificação rápida sem lock (evita chamada Asaas desnecessária se claramente insuficiente).
+    saldo_preview = calcular_saldo_organizador(db, usuario)
+    disponivel_preview = float(saldo_preview["saldo_disponivel_saque"])
+    if valor_f > disponivel_preview + 0.009:
         raise ValueError(
-            f"Saldo disponível para saque: R$ {disponivel:.2f}. "
-            f"Valores em carência ({saldo['carencia_horas']}h após confirmação) ainda não podem ser sacados."
+            f"Saldo disponível para saque: R$ {disponivel_preview:.2f}. "
+            f"Valores em carência ({saldo_preview['carencia_horas']}h após confirmação) ainda não podem ser sacados."
         )
 
-    # Reserva saldo com lock pessimista contra saques concorrentes.
+    # Lock pessimista: bloqueia FinanceiroSaque E recalcula saldo dentro da mesma transação
+    # para eliminar TOCTOU entre o cálculo de saldo e a reserva de saques concorrentes.
     reservado = (
         db.query(func.coalesce(func.sum(FinanceiroSaque.valor), 0))
         .filter(
@@ -520,7 +522,9 @@ def solicitar_saque(
         .with_for_update()
         .scalar()
     )
-    liberado = float(saldo["saldo_liberado_bruto"])
+    # Recalcular saldo_liberado_bruto dentro do lock (após travar saques existentes).
+    saldo_locked = calcular_saldo_organizador(db, usuario)
+    liberado = float(saldo_locked["saldo_liberado_bruto"])
     disponivel_locked = round(max(0.0, liberado - float(reservado or 0)), 2)
     if valor_f > disponivel_locked + 0.009:
         raise ValueError(f"Saldo disponível para saque: R$ {disponivel_locked:.2f}.")

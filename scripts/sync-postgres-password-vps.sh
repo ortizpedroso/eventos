@@ -48,11 +48,19 @@ if ! docker compose -f "$COMPOSE_FILE" exec -T db pg_isready -U eventosbr -d eve
   exit 1
 fi
 
-sql_pass="$(printf '%s' "$pg_pass" | sed "s/'/''/g")"
-
 echo "==> Sincronizando senha do usuário eventosbr com .env"
-docker compose -f "$COMPOSE_FILE" exec -T db \
+# Usa variável psql --set= (evita interpolação shell da senha — PGPASSWORD não interfere aqui
+# pois -U já é o próprio superuser do container).
+docker compose -f "$COMPOSE_FILE" exec -T \
+  -e "NEWPW=${pg_pass}" \
+  db \
   psql -v ON_ERROR_STOP=1 -U eventosbr -d eventosbr \
-  -c "ALTER USER eventosbr WITH PASSWORD '${sql_pass}';"
+  -c "ALTER USER eventosbr WITH PASSWORD current_setting('newpw');" \
+  --set=newpw="${pg_pass}" 2>/dev/null || \
+docker compose -f "$COMPOSE_FILE" exec -T \
+  db \
+  psql -v ON_ERROR_STOP=1 -U postgres -d eventosbr \
+  --set=newpw="${pg_pass}" \
+  -c "ALTER USER eventosbr WITH PASSWORD :'newpw';"
 
 echo "==> OK — senha do Postgres alinhada ao .env"

@@ -42,12 +42,22 @@ def _validar_token_webhook_asaas(token_header: str) -> None:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
+_WEBHOOK_MAX_BODY = 512 * 1024  # 512 KB — payload Asaas real fica bem abaixo disto
+
+
 @router.post("/asaas")
 async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
     """Recebe eventos do Asaas (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.)."""
-    payload = await request.body()
+    # Valida token antes de ler o corpo para evitar DoS com payloads grandes.
     token_header = request.headers.get("asaas-access-token", "")
     _validar_token_webhook_asaas(token_header)
+
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > _WEBHOOK_MAX_BODY:
+        raise HTTPException(status_code=413, detail="Payload too large")
+    payload = await request.body()
+    if len(payload) > _WEBHOOK_MAX_BODY:
+        raise HTTPException(status_code=413, detail="Payload too large")
 
     try:
         event = json.loads(payload.decode("utf-8"))
@@ -61,9 +71,17 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
 
     logger.info("Webhook Asaas: %s (%s)", event_type, event_id or pay_id)
 
+    # INSERT atômico ANTES de processar: garante que dois requests concorrentes com o mesmo
+    # event_id não processem o evento duas vezes (fast-path SELECT + INSERT ON CONFLICT).
     if event_id:
         existente = db.get(WebhookEvent, event_id)
         if existente:
+            return {"status": "success", "idempotent": True}
+        try:
+            db.add(WebhookEvent(id=event_id, tipo=event_type))
+            db.flush()  # reserva o id antes de processar
+        except IntegrityError:
+            db.rollback()
             return {"status": "success", "idempotent": True}
 
     ingressos_recém_pagos: list[str] = []
@@ -121,9 +139,7 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
             transfer = event.get("transfer") or {}
             aplicar_webhook_transferencia(db, transfer, event_type=event_type)
 
-        if event_id:
-            db.add(WebhookEvent(id=event_id, tipo=event_type))
-        db.commit()
+        db.commit()  # WebhookEvent já inserido com flush() acima
         for iid in ingressos_recém_pagos:
             notificar_ingresso_pago(iid)
     except AsaasAPIError:
@@ -143,10 +159,17 @@ async def asaas_transfer_auth(request: Request, db: Session = Depends(get_db)):
 
     O Asaas envia POST ~5s após criar a transferência. Resposta esperada:
     ``{"status": "APPROVED"}`` ou ``{"status": "REFUSED", "refuseReason": "..."}``.
-  """
-    payload_raw = await request.body()
+    """
+    # Valida token antes de ler o corpo.
     token_header = request.headers.get("asaas-access-token", "")
     _validar_token_webhook_asaas(token_header)
+
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > _WEBHOOK_MAX_BODY:
+        raise HTTPException(status_code=413, detail="Payload too large")
+    payload_raw = await request.body()
+    if len(payload_raw) > _WEBHOOK_MAX_BODY:
+        raise HTTPException(status_code=413, detail="Payload too large")
 
     try:
         body = json.loads(payload_raw.decode("utf-8"))
