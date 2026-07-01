@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.deps.rate_limit import rate_limit_financeiro_saque
 from app.models import Usuario, get_db
 from app.routes.auth import get_usuario_atual
 from app.services.financeiro_conciliacao import conciliar_financeiro_organizador
@@ -116,9 +117,11 @@ async def financeiro_comprovante_saque(
 
 @router.post("/saque")
 async def financeiro_solicitar_saque(
+    request: Request,
     body: SaqueRequest,
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
+    _rl: None = Depends(rate_limit_financeiro_saque),
 ):
     _require_organizador(usuario_atual)
     try:

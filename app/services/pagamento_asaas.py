@@ -139,6 +139,8 @@ def reembolsar_cobranca(
     valor: float | None = None,
     idempotency_key: str | None = None,
 ) -> dict[str, Any]:
+    if valor is not None and valor == 0.0:
+        raise ValueError("Valor de reembolso não pode ser zero. Para reembolso total omita o valor.")
     payload: dict[str, Any] | None = None
     if valor is not None and valor > 0:
         payload = {"value": round(valor, 2)}

@@ -272,10 +272,14 @@ def _extrair_data_pagamento(payment: dict) -> datetime | None:
 
 
 def marcar_ingressos_pi_pagos(db: Session, payment_ref: str, *, payment: dict | None = None) -> list[str]:
-    """Marca todos os ingressos pendentes de um pagamento externo como pagos."""
+    """Marca todos os ingressos pendentes de um pagamento externo como pagos.
+
+    Usa WITH FOR UPDATE para evitar que webhook e polling PIX confirmem o mesmo pagamento
+    simultaneamente (race condition).
+    """
     pago_em = _extrair_data_pagamento(payment or {})
     alterados: list[str] = []
-    for ingresso in _ingressos_por_ref(db, payment_ref):
+    for ingresso in _lock_ingressos_por_ref(db, payment_ref):
         if marcar_ingresso_pago(db, ingresso, pago_em=pago_em):
             alterados.append(ingresso.id)
     return alterados

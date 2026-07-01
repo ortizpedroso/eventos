@@ -29,7 +29,8 @@ def _secret() -> bytes:
 
 
 def assinatura_ingresso(ingresso_id: str) -> str:
-    return hmac.new(_secret(), ingresso_id.encode("utf-8"), hashlib.sha256).hexdigest()[:12]
+    # 20 chars hex = 80 bits de entropia (recomendado para HMAC truncado).
+    return hmac.new(_secret(), ingresso_id.encode("utf-8"), hashlib.sha256).hexdigest()[:20]
 
 
 def codigo_checkin(ingresso_id: str) -> str:

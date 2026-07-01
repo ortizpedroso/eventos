@@ -42,12 +42,22 @@ def _validar_token_webhook_asaas(token_header: str) -> None:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
+_WEBHOOK_MAX_BODY = 512 * 1024  # 512 KB — payload Asaas real fica bem abaixo disto
+
+
 @router.post("/asaas")
 async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
     """Recebe eventos do Asaas (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.)."""
-    payload = await request.body()
+    # Valida token antes de ler o corpo para evitar DoS com payloads grandes.
     token_header = request.headers.get("asaas-access-token", "")
     _validar_token_webhook_asaas(token_header)
+
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > _WEBHOOK_MAX_BODY:
+        raise HTTPException(status_code=413, detail="Payload too large")
+    payload = await request.body()
+    if len(payload) > _WEBHOOK_MAX_BODY:
+        raise HTTPException(status_code=413, detail="Payload too large")
 
     try:
         event = json.loads(payload.decode("utf-8"))
@@ -122,7 +132,14 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
             aplicar_webhook_transferencia(db, transfer, event_type=event_type)
 
         if event_id:
-            db.add(WebhookEvent(id=event_id, tipo=event_type))
+            # INSERT ON CONFLICT: se dois requests do mesmo event_id chegarem simultaneamente,
+            # apenas um processa. O segundo recebe IntegrityError → resposta idempotente.
+            try:
+                db.add(WebhookEvent(id=event_id, tipo=event_type))
+                db.flush()
+            except IntegrityError:
+                db.rollback()
+                return {"status": "success", "idempotent": True}
         db.commit()
         for iid in ingressos_recém_pagos:
             notificar_ingresso_pago(iid)
@@ -143,10 +160,17 @@ async def asaas_transfer_auth(request: Request, db: Session = Depends(get_db)):
 
     O Asaas envia POST ~5s após criar a transferência. Resposta esperada:
     ``{"status": "APPROVED"}`` ou ``{"status": "REFUSED", "refuseReason": "..."}``.
-  """
-    payload_raw = await request.body()
+    """
+    # Valida token antes de ler o corpo.
     token_header = request.headers.get("asaas-access-token", "")
     _validar_token_webhook_asaas(token_header)
+
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > _WEBHOOK_MAX_BODY:
+        raise HTTPException(status_code=413, detail="Payload too large")
+    payload_raw = await request.body()
+    if len(payload_raw) > _WEBHOOK_MAX_BODY:
+        raise HTTPException(status_code=413, detail="Payload too large")
 
     try:
         body = json.loads(payload_raw.decode("utf-8"))
