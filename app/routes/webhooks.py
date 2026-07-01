@@ -71,9 +71,17 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
 
     logger.info("Webhook Asaas: %s (%s)", event_type, event_id or pay_id)
 
+    # INSERT atômico ANTES de processar: garante que dois requests concorrentes com o mesmo
+    # event_id não processem o evento duas vezes (fast-path SELECT + INSERT ON CONFLICT).
     if event_id:
         existente = db.get(WebhookEvent, event_id)
         if existente:
+            return {"status": "success", "idempotent": True}
+        try:
+            db.add(WebhookEvent(id=event_id, tipo=event_type))
+            db.flush()  # reserva o id antes de processar
+        except IntegrityError:
+            db.rollback()
             return {"status": "success", "idempotent": True}
 
     ingressos_recém_pagos: list[str] = []
@@ -131,16 +139,7 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
             transfer = event.get("transfer") or {}
             aplicar_webhook_transferencia(db, transfer, event_type=event_type)
 
-        if event_id:
-            # INSERT ON CONFLICT: se dois requests do mesmo event_id chegarem simultaneamente,
-            # apenas um processa. O segundo recebe IntegrityError → resposta idempotente.
-            try:
-                db.add(WebhookEvent(id=event_id, tipo=event_type))
-                db.flush()
-            except IntegrityError:
-                db.rollback()
-                return {"status": "success", "idempotent": True}
-        db.commit()
+        db.commit()  # WebhookEvent já inserido com flush() acima
         for iid in ingressos_recém_pagos:
             notificar_ingresso_pago(iid)
     except AsaasAPIError:

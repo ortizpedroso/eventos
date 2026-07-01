@@ -339,4 +339,5 @@ async def disparar_campanha_marketing(campanha_id: str, db: Session = Depends(ge
         campanha = disparar_campanha(db, campanha_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    logger.info("admin_action=disparar_campanha campanha_id=%s canal=%s", campanha.id, campanha.canal)
     return CampanhaResponse.model_validate(campanha)
