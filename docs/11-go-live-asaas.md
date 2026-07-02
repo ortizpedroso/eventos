@@ -31,6 +31,30 @@ O CI **não faz deploy** para o VPS — produção continua manual com `./script
 
 ---
 
+## Testes sandbox no VPS (sem perder produção)
+
+Para validar PIX + webhooks antes do KYC produção liberar cobrança real:
+
+```bash
+cd /opt/eventosbr
+./scripts/backup-asaas-prod-env.sh
+./scripts/switch-asaas-sandbox.sh --reload \
+  --api-key '$aact_hmlg_...' \
+  --platform-wallet 'uuid-sandbox' \
+  --webhook-token 'token-sandbox'
+```
+
+Restaurar produção após os testes:
+
+```bash
+./scripts/restore-asaas-prod-env.sh --reload
+```
+
+Scripts: `scripts/backup-asaas-prod-env.sh`, `scripts/switch-asaas-sandbox.sh`, `scripts/restore-asaas-prod-env.sh`.  
+O backup fica em `.env.asaas-prod-backup` (gitignore, chmod 600).
+
+---
+
 ## Pré-requisitos
 
 - VPS com Docker (≥ 2 GB RAM)

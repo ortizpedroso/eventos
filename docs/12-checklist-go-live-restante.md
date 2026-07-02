@@ -125,6 +125,39 @@ curl -sS -H "Authorization: Bearer TOKEN" \
 
 ---
 
+### 4b. Testes PIX no sandbox Asaas (antes da 1ª venda real)
+
+Use quando o KYC produção ainda não liberou cobrança paga, mas você quer validar webhook → ingresso → e-mail.
+
+**No VPS** (`/opt/eventosbr`):
+
+```bash
+# 1) Backup automático das credenciais de produção (fica em .env.asaas-prod-backup, fora do git)
+./scripts/backup-asaas-prod-env.sh
+
+# 2) Alternar para sandbox (cole as chaves do painel Asaas sandbox)
+./scripts/switch-asaas-sandbox.sh --reload \
+  --api-key '$aact_hmlg_...' \
+  --platform-wallet 'uuid-wallet-sandbox' \
+  --webhook-token 'token-webhook-sandbox'
+```
+
+Webhooks no painel **sandbox**: mesmas URLs de produção (`https://eventosbr.app.br/api/webhooks/asaas` etc.) e IP `187.77.240.125`.
+
+**Após os testes — voltar para produção:**
+
+```bash
+./scripts/restore-asaas-prod-env.sh --reload
+./scripts/verify-production.sh
+```
+
+- [ ] Backup produção feito
+- [ ] Sandbox configurado + api recriada
+- [ ] PIX sandbox pago → ingresso `pago` + e-mail
+- [ ] Produção restaurada
+
+---
+
 ### 5. Primeira venda real (PIX teste)
 
 **Pré-requisito:** item 4 concluído.
