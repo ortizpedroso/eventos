@@ -257,8 +257,9 @@ Elevar o EventosBR ao patamar de produto e confiança de mercado (UX, vitrine, p
 | Logo final | `NEXT_PUBLIC_LOGO_URL` | Recomendado |
 | Asaas produção | `ASAAS_*` | Sim |
 | SMTP | `EMAIL_*` | Sim |
-| Google Maps embed | `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` | Opcional (sessão com usuário) |
-| Google Maps API | `GOOGLE_MAPS_API_KEY` | Opcional (sessão com usuário) |
+| Google Maps embed | `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` | Configurado em produção |
+| Google OAuth | `GOOGLE_OAUTH_CLIENT_ID` | Configurado em produção |
+| Google Maps API | `GOOGLE_MAPS_API_KEY` | Não necessário (embed usa chave acima) |
 | Redes sociais | `NEXT_PUBLIC_SOCIAL_*` | Recomendado |
 | Apple/Google Wallet | futuro | Não nesta fase |
 
