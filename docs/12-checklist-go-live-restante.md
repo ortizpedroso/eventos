@@ -20,14 +20,15 @@ Marque mentalmente — não precisa refazer:
 | Webhook transfer-auth | Configurado no painel + IP `187.77.240.125` |
 | Google Maps embed | Página do evento mostra iframe do mapa |
 | Login com Google | `curl -s https://eventosbr.app.br/api/auth/oauth-config` → `google_enabled: true` |
-| E-mail SPF/DKIM + teste SMTP | ✅ |
+| E-mail SPF/DKIM + teste SMTP | `smtp-test` → caixa recebida ✅ |
+| Ingresso cortesia (fluxo grátis) | Checkout cortesia gera ingresso `pago` |
 | PR #30 / branch `cursor/spec-consolidada-build-bf71` | Review aprovado no repositório |
 
 ---
 
 ## Pendente — faça nesta ordem
 
-### 1. E-mail SPF + DKIM (Hostinger)
+### 1. E-mail SPF + DKIM (Hostinger) — ✅ concluído
 
 **Por quê:** sem isso, ingressos e notificações caem em spam ou falham.
 
@@ -51,7 +52,7 @@ curl -sS -X POST "https://eventosbr.app.br/api/admin/smtp-test" \
 - [x] SPF publicado (`v=spf1 include:_spf.mail.hostinger.com ~all`)
 - [x] DKIM publicado (CNAME `hostingermail-a/b/c._domainkey`)
 - [x] DMARC publicado (`v=DMARC1; p=none`)
-- [ ] E-mail de teste recebido (rodar `smtp-test` acima)
+- [x] E-mail de teste recebido (`smtp-test` → ortizphp@gmail.com, jul/2026)
 
 ---
 
