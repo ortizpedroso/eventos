@@ -177,7 +177,7 @@ Elevar o EventosBR ao patamar de produto e confiança de mercado (UX, vitrine, p
 - `GOOGLE_MAPS_API_KEY` — configurável pelo usuário em sessão dedicada (Anexo A).
 
 ### REQ-32 — Scripts e docs
-- `configure-asaas-env.sh`, `backup-postgres-cron.sh`, `monitor-ready.sh`, `verify-production.sh`, `atualizar-vps-agora.sh`, `docs/11-go-live-asaas.md`.
+- `configure-asaas-env.sh`, `configure-google-maps-env.sh`, `backup-postgres-cron.sh`, `monitor-ready.sh`, `verify-production.sh`, `atualizar-vps-agora.sh`, `docs/11-go-live-asaas.md`.
 
 ---
 

@@ -33,13 +33,14 @@ _rand() {
   openssl rand -base64 "$nbytes" | tr -d '\n=' | tr '+/' '-_'
 }
 
-old_asaas_key="" old_asaas_wh="" old_asaas_wallet="" old_email_pass="" old_google=""
+old_asaas_key="" old_asaas_wh="" old_asaas_wallet="" old_email_pass="" old_google="" old_maps_embed=""
 if [ -f "$ENV_FILE" ]; then
   old_asaas_key="$(env_get ASAAS_API_KEY "$ENV_FILE" || true)"
   old_asaas_wh="$(env_get ASAAS_WEBHOOK_TOKEN "$ENV_FILE" || true)"
   old_asaas_wallet="$(env_get ASAAS_PLATFORM_WALLET_ID "$ENV_FILE" || true)"
   old_email_pass="$(env_get EMAIL_PASSWORD "$ENV_FILE" || true)"
   old_google="$(env_get GOOGLE_OAUTH_CLIENT_ID "$ENV_FILE" || true)"
+  old_maps_embed="$(env_get NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY "$ENV_FILE" || true)"
 fi
 
 SECRET_KEY="$(env_get SECRET_KEY "$ENV_FILE" || true)"
@@ -67,6 +68,7 @@ fi
 
 EMAIL_PASSWORD="${old_email_pass:-}"
 GOOGLE_OAUTH_CLIENT_ID="${old_google:-}"
+NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY="${old_maps_embed:-}"
 
 if [ -f "$ENV_FILE" ]; then
   cp "$ENV_FILE" "${ENV_FILE}.bak.$(date +%Y%m%d-%H%M%S)"
@@ -95,6 +97,7 @@ printf '\n' >> "$ENV_FILE"
 
 _write_env "GOOGLE_OAUTH_CLIENT_ID"            "$GOOGLE_OAUTH_CLIENT_ID"
 _write_env "NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID" "$GOOGLE_OAUTH_CLIENT_ID"
+_write_env "NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY"  "$NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY"
 printf '\n' >> "$ENV_FILE"
 
 _write_env "POSTGRES_PASSWORD"          "$POSTGRES_PASSWORD"
