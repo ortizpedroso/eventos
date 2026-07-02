@@ -81,6 +81,13 @@ if [[ -f .env ]]; then
     echo "  AVISO  CORS_ORIGINS contém '*' — use URLs HTTPS explícitas"
     fail=1
   fi
+
+  google_oauth="$(env_get GOOGLE_OAUTH_CLIENT_ID || true)"
+  if [[ -n "$google_oauth" ]]; then
+    echo "  OK  GOOGLE_OAUTH_CLIENT_ID definida (login Google)"
+  else
+    echo "  INFO  GOOGLE_OAUTH_CLIENT_ID vazia — login Google desabilitado"
+  fi
 fi
 
 echo ""
