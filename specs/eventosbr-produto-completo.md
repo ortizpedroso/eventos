@@ -267,6 +267,8 @@ Elevar o EventosBR ao patamar de produto e confiança de mercado (UX, vitrine, p
 
 ## Anexo B — Produção VPS (usuário executa)
 
+Checklist detalhado com comandos: [`docs/12-checklist-go-live-restante.md`](../docs/12-checklist-go-live-restante.md)
+
 1. DNS `eventosbr.app.br` → VPS  
 2. `/opt/eventosbr` + `.env`  
 3. `./scripts/atualizar-vps-agora.sh`  
@@ -295,6 +297,7 @@ Elevar o EventosBR ao patamar de produto e confiança de mercado (UX, vitrine, p
 - [x] Wallet “Em breve” + doc  
 - [x] `/funcionalidades`: PNGs marketing  
 - [x] Disclaimers legais em todos simuladores  
-- [x] `pytest` + E2E  
-- [ ] Go-live VPS completo — **Anexo B (usuário)**  
-- [ ] Google Maps API — **Anexo A (sessão com usuário)**  
+- [x] Google Maps embed na página do evento  
+- [x] Login com Google (`/api/auth/oauth-config` → `google_enabled: true`)  
+- [x] `pytest` + E2E (CI)  
+- [ ] Go-live operacional completo — **Anexo B** (SPF/DKIM, crons, 1ª venda PIX paga com KYC)  

@@ -220,5 +220,6 @@ Manual:
 ## Referências
 
 - `docs/08-deploy-hostinger.md` — VPS e Caddy
+- `docs/12-checklist-go-live-restante.md` — itens pendentes pós-review
 - `docs/06-configuracao-operacao.md` — operação geral
 - `docs/10-checklist-proximo-patamar.md` — roadmap produto
