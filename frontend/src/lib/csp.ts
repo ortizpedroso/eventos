@@ -42,6 +42,6 @@ export function buildContentSecurityPolicy(nonce: string, dev: boolean): string 
     "style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com",
     `script-src ${scriptSrc}`,
     `connect-src ${[...connect].join(" ")}`,
-    "frame-src https://accounts.google.com",
+    "frame-src https://accounts.google.com https://www.google.com",
   ].join("; ");
 }

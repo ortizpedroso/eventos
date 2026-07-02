@@ -8,6 +8,7 @@ def test_csp_fonte_cobre_google_oauth_e_nonce():
     for fragment in (
         "strict-dynamic",
         "https://accounts.google.com",
+        "https://www.google.com",
         "https://apis.google.com",
         "https://oauth2.googleapis.com",
         "https://api.asaas.com",
