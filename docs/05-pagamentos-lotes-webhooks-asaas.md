@@ -1,6 +1,6 @@
 # 05 — Pagamentos, lotes de ingressos e webhooks Asaas
 
-**Spec detalhada:** [specs/repasse-asaas-pagamentos.md](../specs/repasse-asaas-pagamentos.md)
+**Spec detalhada:** [specs/eventosbr-produto-completo.md](../specs/eventosbr-produto-completo.md)
 
 ## Modos de operação na API
 

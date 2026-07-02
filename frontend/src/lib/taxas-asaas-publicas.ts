@@ -1,7 +1,7 @@
 /** Espelho de app/services/taxas_asaas_publicas.py — uso interno e acréscimo parcelamento. */
 
 export const AVISO_LEGAL_TAXAS =
-  "Valores conforme tabelas públicas. A taxa EventosBR é fixa por plano; parcelamento pode incluir acréscimo explícito.";
+  "Valores estimativos. Taxas de processamento podem variar por conta, antecipação e condições do provedor. Não constitui oferta fiscal. A taxa EventosBR é fixa por plano; parcelamento pode incluir acréscimo explícito ao comprador.";
 
 export const TAXA_PIX = 1.99;
 export const TAXA_BOLETO = 1.99;

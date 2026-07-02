@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { InputValorBrl } from "@/components/input-valor-brl";
+import { AVISO_LEGAL_TAXAS } from "@/lib/taxas-asaas-publicas";
 import {
   TARIFA_ASSINATURA,
   TARIFA_PADRAO,
@@ -155,10 +156,7 @@ export function IngressoPrecoCalculadora({
         <p className="mt-3 text-xs text-amber-800">Informe um valor válido (ex.: 45 ou 45,90).</p>
       ) : null}
 
-      <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
-        Valores ilustrativos da EventosBR; tarifas de cartão/PIX do provedor de pagamento não estão
-        incluídas. A mensalidade da assinatura é cobrada à parte.
-      </p>
+      <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">{AVISO_LEGAL_TAXAS}</p>
     </div>
   );
 }

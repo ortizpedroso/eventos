@@ -12,7 +12,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 |-------|-----------|----------|
 | **Patamar 1 — MVP sólido** | Compra, pagamento, ingresso, check-in, painel organizador | ✅ Concluído |
 | **Patamar 2 — Produção confiável** | Deploy real, **Asaas** live, SMTP, webhook, monitoramento | 🟡 Código pronto; falta VPS + credenciais (`eventosbr.app.br` → 502) |
-| **Patamar 3 — Paridade Sympla (UX produto)** | Parcelamento, listas, página organizador, simuladores, vitrine | ✅ **Código concluído** (spec `patamar-completo-ux-produto.md`) |
+| **Patamar 3 — Paridade Sympla (UX produto)** | Parcelamento, listas, página organizador, simuladores, vitrine | ✅ **Código concluído** (spec `eventosbr-produto-completo.md`) |
 | **Patamar 4 — Diferenciação** | Transparência financeira, migração, CRM, selo confiança | 🟡 Parcial (simuladores + taxas públicas OK) |
 | **Patamar 5 — Escala** | App equipe offline, API pública, NFSe, assinatura ativa | 🔮 Futuro |
 
@@ -22,7 +22,7 @@ Documento mestre de **produto**, **operação** e **diferenciação** do Eventos
 
 **Extras pós-spec (PR #10+):** máscara BRL em campos de valor (`InputValorBrl`); copy sem marca Asaas no checkout público.
 
-**Documentação consolidada:** [00-sistema-completo.md](./00-sistema-completo.md) · Spec: `specs/patamar-completo-ux-produto.md`
+**Documentação consolidada:** [00-sistema-completo.md](./00-sistema-completo.md) · Spec: `specs/eventosbr-produto-completo.md`
 
 ---
 

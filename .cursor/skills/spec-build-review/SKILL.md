@@ -32,7 +32,7 @@ Três comandos que formam um ciclo completo de desenvolvimento disciplinado.
 
 ### Ao ter informações suficientes
 
-Escreva a especificação em `specs/<nome-kebab-case>.md` seguindo este template:
+Escreva a especificação em `specs/<nome-kebab-case>.md` seguindo este template. A spec canônica do produto é `specs/eventosbr-produto-completo.md`.
 
 ```markdown
 # Spec: <título>
@@ -94,7 +94,7 @@ Após salvar o arquivo, exiba o caminho e pergunte ao usuário se a spec está c
 
 ### Regras
 
-- Leia `specs/<nome>.md` **antes** de escrever qualquer código.
+- Leia `specs/eventosbr-produto-completo.md` (ou `specs/<nome>.md` se indicado) **antes** de escrever qualquer código.
 - Implemente apenas o que está na spec. Não refatore código não relacionado.
 - Não invente requisitos ausentes — se algo for ambíguo, implemente a interpretação mais conservadora.
 - Ao concluir, liste cada REQ-XX e DC-XX da spec e marque como ✅ atendido ou ⚠️ parcial, com notas.
@@ -125,7 +125,7 @@ Após salvar o arquivo, exiba o caminho e pergunte ao usuário se a spec está c
 
 ### Regras
 
-- Leia `specs/<nome>.md` e compare com o código atual.
+- Leia `specs/eventosbr-produto-completo.md` e compare com o código atual.
 - Analise **cada** REQ-XX e DC-XX individualmente.
 - Seja exato: cite o item da spec que falha ou passa.
 - A build só é aprovada quando **todos** os itens estiverem OK.

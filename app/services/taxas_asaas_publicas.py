@@ -10,8 +10,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 AVISO_LEGAL = (
-    "Valores conforme tabelas públicas de processamento. "
-    "A taxa EventosBR é fixa por plano; parcelamento pode incluir acréscimo explícito ao comprador."
+    "Valores estimativos. Taxas de processamento podem variar por conta, antecipação e "
+    "condições do provedor. Não constitui oferta fiscal. A taxa EventosBR é fixa por plano; "
+    "parcelamento pode incluir acréscimo explícito ao comprador."
 )
 
 SYMPLA_TAXA_PERCENTUAL = 0.12
