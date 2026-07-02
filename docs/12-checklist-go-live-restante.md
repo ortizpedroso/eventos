@@ -48,9 +48,10 @@ curl -sS -X POST "https://eventosbr.app.br/api/admin/smtp-test" \
   -d '{"destino":"seu-email@gmail.com"}'
 ```
 
-- [ ] SPF publicado
-- [ ] DKIM publicado
-- [ ] E-mail de teste recebido (verificar caixa e spam)
+- [x] SPF publicado (`v=spf1 include:_spf.mail.hostinger.com ~all`)
+- [x] DKIM publicado (CNAME `hostingermail-a/b/c._domainkey`)
+- [x] DMARC publicado (`v=DMARC1; p=none`)
+- [ ] E-mail de teste recebido (rodar `smtp-test` acima)
 
 ---
 
