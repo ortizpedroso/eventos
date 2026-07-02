@@ -20,7 +20,7 @@ Marque mentalmente — não precisa refazer:
 | Webhook transfer-auth | Configurado no painel + IP `187.77.240.125` |
 | Google Maps embed | Página do evento mostra iframe do mapa |
 | Login com Google | `curl -s https://eventosbr.app.br/api/auth/oauth-config` → `google_enabled: true` |
-| Ingresso cortesia (fluxo grátis) | Checkout cortesia gera ingresso `pago` |
+| E-mail SPF/DKIM + teste SMTP | ✅ |
 | PR #30 / branch `cursor/spec-consolidada-build-bf71` | Review aprovado no repositório |
 
 ---
