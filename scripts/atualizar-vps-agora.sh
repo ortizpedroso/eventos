@@ -16,9 +16,7 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-# shellcheck source=scripts/env-file-lib.sh
-source "$ROOT/scripts/env-file-lib.sh"
-DOMAIN_VAL="$(env_get DOMAIN .env 2>/dev/null || true)"
+DOMAIN_VAL="$(grep -m1 '^DOMAIN=' .env 2>/dev/null | cut -d= -f2- | tr -d '\r' || true)"
 DOMAIN_VAL="${DOMAIN_VAL:-eventosbr.app.br}"
 
 echo "==> git pull"
