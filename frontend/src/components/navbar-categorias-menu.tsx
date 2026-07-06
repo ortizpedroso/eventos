@@ -87,6 +87,7 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
         }`}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label="Explorar eventos por categoria"
         onClick={() => setOpen((o) => !o)}
       >
         Explorar

@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { HomeDepoimentos } from "@/components/home-depoimentos";
 import { HomeDiferenciais } from "@/components/home-diferenciais";
 import { HomeHeroExplorar } from "@/components/home-hero-explorar";
 import { HomeEventosDestaque } from "@/components/home-eventos-destaque";
@@ -7,13 +9,17 @@ import { HomeProvaSocial } from "@/components/home-prova-social";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
+import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { eventosDestaqueHome, fetchEventosPublicos } from "@/lib/eventos-publicos";
+import { homeMetadata } from "@/lib/site-metadata";
+
+export const metadata: Metadata = homeMetadata;
 
 export default async function Home() {
   let eventosDestaque = null;
   let eventosHero = null;
   try {
-    const todos = await fetchEventosPublicos(12);
+    const todos = filtrarEventosVitrine(await fetchEventosPublicos(24));
     eventosDestaque = eventosDestaqueHome(todos);
     eventosHero = todos;
   } catch {
@@ -52,6 +58,8 @@ export default async function Home() {
       <HomeDiferenciais />
 
       <HomeEventosDestaque initialEventos={eventosDestaque} />
+
+      <HomeDepoimentos />
 
       <div className="mx-auto mt-24 max-w-6xl sm:mt-32">
         <div className="text-center">
