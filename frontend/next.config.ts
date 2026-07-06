@@ -53,7 +53,13 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${apiTarget}/api/:path*` }];
+    return [
+      { source: "/api/:path*", destination: `${apiTarget}/api/:path*` },
+      { source: "/docs", destination: `${apiTarget}/docs` },
+      { source: "/docs/:path*", destination: `${apiTarget}/docs/:path*` },
+      { source: "/redoc", destination: `${apiTarget}/redoc` },
+      { source: "/openapi.json", destination: `${apiTarget}/openapi.json` },
+    ];
   },
 };
 

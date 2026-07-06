@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 import { categoriaFromQuery } from "@/lib/evento-categorias";
+import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { fetchEventosPublicos } from "@/lib/eventos-publicos";
 
 import { EventosListaPublica } from "./eventos-lista-publica";
@@ -47,11 +48,13 @@ export default async function EventosListPage({ searchParams }: PageProps) {
 
   let eventosIniciais = null;
   try {
-    eventosIniciais = await fetchEventosPublicos(50, {
+    eventosIniciais = filtrarEventosVitrine(
+      await fetchEventosPublicos(50, {
       categoria: categoriaInicial || undefined,
       q: buscaInicial || undefined,
       cidade: cidadeInicial || undefined,
-    });
+    }),
+    );
   } catch {
     eventosIniciais = null;
   }

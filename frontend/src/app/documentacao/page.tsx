@@ -284,34 +284,31 @@ export default function DocumentacaoPage() {
 
             <Section id="api-interativa" title="API interativa (OpenAPI)">
               <p>
-                Com a API em execução (por exemplo <code className="rounded bg-zinc-100 px-1">http://localhost:8000</code>):
+                A documentação interativa da API FastAPI está disponível em produção no mesmo domínio:
               </p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>
                   <strong className="text-zinc-900">Swagger UI</strong>:{" "}
-                  <a
-                    href="http://localhost:8000/docs"
-                    className="font-medium text-emerald-800 underline-offset-2 hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <Link href="/docs" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
                     /docs
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <strong className="text-zinc-900">ReDoc</strong>:{" "}
-                  <a
-                    href="http://localhost:8000/redoc"
-                    className="font-medium text-emerald-800 underline-offset-2 hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <Link href="/redoc" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
                     /redoc
-                  </a>
+                  </Link>
+                </li>
+                <li>
+                  <strong className="text-zinc-900">Esquema OpenAPI</strong>:{" "}
+                  <Link href="/openapi.json" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+                    /openapi.json
+                  </Link>
                 </li>
               </ul>
               <p className="text-zinc-600">
-                Os links acima assumem a API local na porta 8000; ajuste o host se usar outro ambiente.
+                Em desenvolvimento local, a API costuma rodar em{" "}
+                <code className="rounded bg-zinc-100 px-1">http://localhost:8000/docs</code>.
               </p>
             </Section>
           </article>

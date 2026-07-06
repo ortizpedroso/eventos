@@ -25,19 +25,20 @@ export function EventoCardVitrine({ evento: e }: Props) {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={thumbSrc}
-          alt=""
+          alt={`Imagem do evento ${e.nome}`}
           className="aspect-[16/10] w-full object-cover"
           loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className="aspect-[16/10] w-full bg-gradient-to-br from-emerald-100 to-zinc-100" />
       )}
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start justify-between gap-2">
-          <h2 className="font-semibold text-zinc-900 line-clamp-2">{e.nome}</h2>
+          <h3 className="font-semibold text-zinc-900 line-clamp-2">{e.nome}</h3>
           <EventoCategoriaBadge categoria={e.categoria} variant="card" />
         </div>
-        <p className="mt-2 text-xs text-zinc-500">
+        <p className="mt-2 text-xs text-zinc-600">
           {fmtInicio} · {e.local}
         </p>
         <p className="mt-auto pt-4 text-sm font-semibold text-emerald-800">

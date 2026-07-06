@@ -82,7 +82,7 @@ export function SiteFooter() {
               EventosBR
               <span className="text-lg font-bold text-emerald-400">.</span>
             </Link>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-500">
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-400">
               Ingressos, reembolsos e repasses com transparência — do primeiro clique ao dia do evento.
             </p>
           </div>
@@ -111,6 +111,11 @@ export function SiteFooter() {
                 <li>
                   <Link href="/documentacao" className="text-zinc-400 transition-colors hover:text-emerald-300">
                     Documentação
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/documentacao#api-interativa" className="text-zinc-400 transition-colors hover:text-emerald-300">
+                    API (OpenAPI)
                   </Link>
                 </li>
                 <li>

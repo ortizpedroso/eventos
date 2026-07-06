@@ -15,6 +15,7 @@ from app.services.ingresso_lotes import (
     substituir_lotes_evento,
 )
 from app.services.evento_portaria import garantir_checkin_token, regenerar_checkin_token, url_portaria
+from app.services.evento_vitrine import evento_parece_teste
 from app.utils.evento_cidade import resolver_cidade
 from app.utils.public_errors import LISTA_EVENTOS_CLIENTE
 
@@ -231,6 +232,11 @@ async def listar_eventos(
             .limit(limit)
             .all()
         )
+        eventos = [
+            e
+            for e in eventos
+            if not evento_parece_teste(nome=e.nome, local=e.local, slug=e.slug or "")
+        ]
         return _montar_lista_eventos(db, eventos)
     except Exception:
         logger.exception("Erro inesperado ao listar eventos públicos")

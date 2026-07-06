@@ -5,9 +5,9 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-routes";
 
 export const metadata: Metadata = {
-  title: "Funcionalidades | EventosBR",
+  title: "Funcionalidades",
   description:
-    "O que o EventosBR oferece para organizadores e participantes: eventos, ingressos, pagamentos seguros e reembolsos.",
+    "Crie eventos, venda ingressos com PIX e cartão, check-in por QR Code e reembolsos automáticos. Conheça as funcionalidades da EventosBR para organizadores e participantes.",
 };
 
 const iconClass = "h-6 w-6 shrink-0 text-emerald-700";
@@ -142,23 +142,14 @@ const destaques = [
       <div className="relative flex h-full min-h-[320px] w-full overflow-hidden rounded-2xl ring-1 ring-zinc-200 lg:min-h-[400px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80"
-          alt="Multidão animada em um evento com luzes"
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+          src="/marketing/screenshot-vitrine-evento.svg"
+          alt="Screenshot da página pública de evento na EventosBR com banner, detalhes e compra de ingresso"
+          className="h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+          width={800}
+          height={500}
         />
-        {/* Overlay escuro para destacar o texto flutuante */}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 via-zinc-900/20 to-transparent" />
-        
-        {/* Selo flutuante premium */}
-        <div className="absolute bottom-6 left-6">
-          <div className="flex w-fit items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 backdrop-blur-md">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-            </span>
-            <span className="text-sm font-medium tracking-wide text-white">Vendas a todo vapor</span>
-          </div>
-        </div>
       </div>
     ),
   },
@@ -172,26 +163,17 @@ const destaques = [
       "Recebimento direto na sua conta, sem dor de cabeça",
     ],
     visual: (
-      <div className="relative flex h-full min-h-[320px] w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-emerald-50 p-6 shadow-xl ring-1 ring-emerald-200 lg:min-h-[400px]">
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-10" />
-        <div className="relative w-full max-w-[280px] rounded-xl bg-white p-5 shadow-lg ring-1 ring-zinc-200/50">
-          <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-zinc-900">Pagamento aprovado</p>
-              <p className="text-xs text-zinc-500">R$ 150,00 via Cartão</p>
-            </div>
-          </div>
-          <div className="mt-4 space-y-2">
-            <div className="h-2 w-full rounded bg-zinc-100" />
-            <div className="h-2 w-4/5 rounded bg-zinc-100" />
-            <div className="h-2 w-2/3 rounded bg-zinc-100" />
-          </div>
-        </div>
+      <div className="relative flex h-full min-h-[320px] w-full overflow-hidden rounded-2xl ring-1 ring-emerald-200 lg:min-h-[400px]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/marketing/screenshot-checkout-pix.svg"
+          alt="Screenshot do checkout PIX na EventosBR com QR Code e confirmação de pagamento"
+          className="h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+          width={800}
+          height={500}
+        />
       </div>
     ),
   },
@@ -208,27 +190,14 @@ const destaques = [
       <div className="relative flex h-full min-h-[320px] w-full overflow-hidden rounded-2xl ring-1 ring-zinc-200 lg:min-h-[400px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80"
-          alt="Público em um evento noturno"
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+          src="/marketing/screenshot-checkin-portaria.svg"
+          alt="Screenshot da validação de ingressos por QR Code na portaria EventosBR"
+          className="h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+          width={800}
+          height={500}
         />
-        {/* Overlay escuro para destacar o elemento flutuante */}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/20 to-transparent" />
-        
-        {/* Selo flutuante de Check-in de Sucesso */}
-        <div className="absolute bottom-6 left-6 right-6 sm:right-auto">
-          <div className="flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-black/50 p-4 backdrop-blur-md sm:w-auto">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-bold tracking-wide text-white">Acesso Liberado</p>
-              <p className="mt-0.5 text-xs font-medium text-zinc-300">TKT-8A9F • Ingresso VIP</p>
-            </div>
-          </div>
-        </div>
       </div>
     ),
   },
@@ -249,7 +218,7 @@ const outrosRecursos = [
   {
     icone: "api",
     titulo: "API documentada",
-    texto: "Precisa de uma integração específica? Nosso backend em FastAPI possui documentação interativa completa (OpenAPI).",
+    texto: "Precisa de uma integração específica? Nosso backend em FastAPI possui documentação interativa OpenAPI em /docs.",
   },
 ] as const;
 
@@ -324,6 +293,16 @@ export default function FuncionalidadesPage() {
                 <h2 className="text-lg font-semibold leading-tight text-zinc-900">{b.titulo}</h2>
               </div>
               <p className="mt-4 text-justify text-sm leading-6 text-zinc-600">{b.texto}</p>
+              {b.icone === "api" ? (
+                <p className="mt-4">
+                  <Link
+                    href="/docs"
+                    className="text-sm font-semibold text-emerald-800 underline-offset-2 hover:underline"
+                  >
+                    Abrir documentação da API →
+                  </Link>
+                </p>
+              ) : null}
             </div>
             </ScrollReveal>
           ))}

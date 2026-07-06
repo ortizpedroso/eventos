@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventoCardVitrine } from "@/components/evento-card-vitrine";
 import { EventoCategoriasChips } from "@/components/evento-categorias-chips";
 import { EventosGridSkeleton } from "@/components/eventos-grid-skeleton";
-import { apiFetch } from "@/lib/api";
+import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 import { EVENTO_CATEGORIAS, categoriaFromQuery } from "@/lib/evento-categorias";
 import type { Evento } from "@/lib/types";
@@ -130,7 +130,7 @@ export function EventosListaPublica({
         const data = await apiFetch<Evento[]>(`/api/eventos?${params.toString()}`, {
           cache: "no-store",
         });
-        if (!cancelled) setEventos(data);
+        if (!cancelled) setEventos(filtrarEventosVitrine(data));
       } catch {
         if (!cancelled) {
           setFetchError("Não foi possível carregar a lista agora. Tente novamente em instantes.");
@@ -145,7 +145,7 @@ export function EventosListaPublica({
 
   const eventosFiltrados = useMemo(() => {
     if (!eventos) return [];
-    let lista = [...eventos];
+    let lista = filtrarEventosVitrine([...eventos]);
     if (somenteVendasAbertas) {
       lista = lista.filter((e) => e.compra_disponivel !== false && Boolean(e.lote_compra_id));
     }
