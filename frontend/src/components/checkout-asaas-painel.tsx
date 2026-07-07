@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import { validarDadosCartao } from "@/lib/cartao-validacao";
@@ -110,18 +110,27 @@ export function CheckoutAsaasPainel({
     return () => window.clearInterval(id);
   }, [reservadoAte]);
 
+  // Mantém a referência mais recente sem incluir `onSuccess` nas deps do polling:
+  // o pai (comprar-ingresso.tsx) recria esse callback a cada re-render (ex.: contador
+  // de reserva atualizando a cada segundo), o que reiniciava o setInterval de 4s antes
+  // de ele disparar — o status de pagamento nunca era consultado.
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
   useEffect(() => {
     if (!pix && !invoiceUrl && !aguardandoConfirmacao) return;
     const id = window.setInterval(async () => {
       try {
         const st = await apiFetch<{ pago?: boolean }>(`/api/pagamentos/asaas/status/${ingressoId}`);
-        if (st.pago) onSuccess();
+        if (st.pago) onSuccessRef.current();
       } catch {
         /* polling */
       }
     }, 4000);
     return () => window.clearInterval(id);
-  }, [pix, invoiceUrl, aguardandoConfirmacao, ingressoId, onSuccess]);
+  }, [pix, invoiceUrl, aguardandoConfirmacao, ingressoId]);
 
   async function iniciar(e: FormEvent) {
     e.preventDefault();
