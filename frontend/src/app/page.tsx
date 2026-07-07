@@ -6,6 +6,7 @@ import { HomeHeroExplorar } from "@/components/home-hero-explorar";
 import { HomeEventosDestaque } from "@/components/home-eventos-destaque";
 import { HomeHeroVisual } from "@/components/home-hero-visual";
 import { HomeProvaSocial } from "@/components/home-prova-social";
+import { HomeSelosConfianca } from "@/components/home-selos-confianca";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
@@ -32,16 +33,21 @@ export default async function Home() {
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
       <div className="mx-auto max-w-3xl text-center">
-        <h1 className="text-5xl font-extrabold tracking-tight text-zinc-900 sm:text-6xl">
-          Encontre eventos. <span className="text-emerald-700">Compre em minutos.</span>
+        <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700">
+          PIX, cartão e QR Code na entrada
+        </p>
+        <h1 className="mt-3 text-5xl font-extrabold tracking-tight text-zinc-900 sm:text-6xl">
+          Venda ingressos sem complicação.{" "}
+          <span className="text-emerald-700">Compre em minutos.</span>
         </h1>
-        <p className="mt-6 text-lg text-zinc-600 sm:text-xl">
-          Shows, feijoadas, palestras e muito mais — escolha uma categoria, veja os eventos e
-          compre com segurança.
+        <p className="mt-6 text-lg text-zinc-700 sm:text-xl">
+          Publique seu evento em minutos, receba com repasse direto na sua conta e ofereça
+          reembolso automático ao seu público — tudo em um só lugar, sem mensalidade obrigatória.
         </p>
 
         <HomeHeroExplorar />
         <HomeProvaSocial />
+        <HomeSelosConfianca />
 
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link href="/eventos" className="btn-success px-8 py-3.5 text-base shadow-sm">

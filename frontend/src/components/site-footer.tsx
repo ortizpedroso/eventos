@@ -60,6 +60,7 @@ export function SiteFooter() {
                 <li><Link href="/funcionalidades" className="text-zinc-400 hover:text-emerald-300">Funcionalidades</Link></li>
                 <li><Link href="/ajuda" className="text-zinc-400 hover:text-emerald-300">Central de ajuda</Link></li>
                 <li><Link href="/blog" className="text-zinc-400 hover:text-emerald-300">Blog</Link></li>
+                <li><Link href="/documentacao/api" className="text-zinc-400 hover:text-emerald-300">Documentação da API</Link></li>
                 <li><Link href={hrefCriarEvento} className="text-zinc-400 hover:text-emerald-300">Publicar evento</Link></li>
               </ul>
             </div>

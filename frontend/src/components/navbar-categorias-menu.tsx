@@ -87,10 +87,10 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
         }`}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label="Explorar eventos por categoria"
+        aria-label="Abrir menu de categorias de eventos"
         onClick={() => setOpen((o) => !o)}
       >
-        Explorar
+        Categorias
         <IconChevron className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} />
       </button>
       {open ? (

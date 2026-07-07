@@ -42,7 +42,11 @@ export function ProdutorPublicClient({ slug }: { slug: string }) {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start">
         {fotoSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={fotoSrc} alt="" className="h-24 w-24 rounded-full object-cover" />
+          <img
+            src={fotoSrc}
+            alt={`Foto de ${perfil.nome}`}
+            className="h-24 w-24 rounded-full object-cover"
+          />
         ) : (
           <div className="flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-800">
             {perfil.nome.charAt(0)}

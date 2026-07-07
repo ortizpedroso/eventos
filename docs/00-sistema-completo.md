@@ -210,10 +210,19 @@ Documentação interativa (apenas `ENVIRONMENT=development`): Swagger `/docs`, R
 | `/portaria/{eventoId}/{token}` | Token | Check-in colaborador |
 | `/admin/*` | Admin | Moderação e marketing |
 | `/documentacao` | Sim | Resumo técnico no site |
+| `/documentacao/api` | Sim | Referência de rotas gerada a partir do `openapi.json` estático (produção não expõe `/docs` do FastAPI) |
 | `/funcionalidades`, `/planos`, `/ajuda/*`, `/blog` | Sim | Conteúdo institucional |
 | `/termos`, `/privacidade`, `/sobre` | Sim | Legal |
 
 Componentes-chave: `comprar-ingresso.tsx`, `checkout-asaas-painel.tsx`, `evento-lotes-editor.tsx`, `eventos-lista-publica.tsx`, `lista-interesse-form.tsx`, `lista-espera-form.tsx`.
+
+### SEO, acessibilidade e vitrine
+
+- **Metadata**: `lib/site-metadata.ts` centraliza `<title>`/description/Open Graph; `app/sitemap.ts` e `app/robots.ts` geram `sitemap.xml`/`robots.txt`.
+- **Filtro de eventos de teste**: `lib/eventos-vitrine.ts` (frontend) e `app/services/evento_vitrine.py` (API) escondem eventos com nomes/locais de teste (`Cortesia Grátis`, `Rua Teste`, `E2E`, `QA`) da vitrine pública — evita que dados de QA apareçam para visitantes.
+- **Prova social**: `home-prova-social.tsx` (números reais via `/api/eventos/stats-publicas`), `home-depoimentos.tsx` e `home-selos-confianca.tsx` na home.
+- **Acessibilidade**: skip-link (`skip-to-content.tsx`), `focus-visible` global em `globals.css`, `alt` descritivo em imagens de evento e no logo (`eventosbr-logo.tsx`).
+- **API documentada**: `scripts/export-openapi.py` gera `frontend/public/openapi.json` a partir do schema real do FastAPI; regenerar sempre que rotas mudarem.
 
 ---
 
@@ -589,6 +598,15 @@ Ficheiros em `alembic/versions/`. Produção: `alembic upgrade head`.
 | `20260618_000022` | Renomeia `stripe_events` → `webhook_events` |
 | `20260618_000023` | Remove colunas Stripe legadas |
 | `20260618_000024` | Cifra `asaas_subaccount_api_key` |
+| `20260619_000025` | `plano_tarifa` do organizador + solicitações de saque |
+| `20260620_000026` | `repasse_parcelamento` no evento |
+| `20260621_000027` | Valor líquido repassado por ingresso (ledger financeiro) |
+| `20260622_000028` | Validade da assinatura mensal do organizador |
+| `20260622_000029` | Idempotência do pagamento da assinatura |
+| `20260623_000030` | Ciclo de renovação e aviso de assinatura |
+| `20260624_000031` | Status de aprovação da conta de repasse Asaas |
+| `20260625_000032` | `ingressos.pago_em` + campos de saque Asaas (white-label) |
+| `20260626_000033` | Lançamento: CPF de repasse, estorno em ingresso |
 
 ---
 
@@ -649,8 +667,7 @@ Testes usam SQLite em memória e `ASAAS_DISABLED=true` por padrão (`conftest.py
 | [05-pagamentos-lotes-webhooks-asaas.md](./05-pagamentos-lotes-webhooks-asaas.md) | Fluxo de pagamento |
 | [06-configuracao-operacao.md](./06-configuracao-operacao.md) | Env, Docker, Alembic |
 | [wallet-passes.md](./wallet-passes.md) | Apple/Google Wallet (futuro) |
-| [`specs/patamar-completo-ux-produto.md`](../specs/patamar-completo-ux-produto.md) | Requisitos de produto (REQ-01…) |
 
 ---
 
-*Última atualização: junho de 2026 — alinhado aos modelos SQLAlchemy e migração `20260618_000024`.*
+*Última atualização: julho de 2026 — alinhado aos modelos SQLAlchemy e migração `20260626_000033`.*

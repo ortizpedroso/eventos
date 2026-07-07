@@ -1,0 +1,7499 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "EventosBR API",
+    "description": "API da EventosBR: eventos, ingressos, pagamentos PIX/cartão via Asaas, repasse a organizadores e reembolsos automáticos.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/registrar": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Registrar",
+        "description": "Registra novo usuário",
+        "operationId": "registrar_api_auth_registrar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/compra-rapida": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Compra Rapida",
+        "description": "Checkout convidado: cria conta cliente mínima (sem senha) e autentica via cookie.",
+        "operationId": "compra_rapida_api_auth_compra_rapida_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompraRapidaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Login",
+        "description": "Login de usuário",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/solicitar-recuperacao-senha": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Solicitar Recuperacao Senha",
+        "description": "Envia link de recuperação por e-mail (resposta genérica por segurança).",
+        "operationId": "solicitar_recuperacao_senha_api_auth_solicitar_recuperacao_senha_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitarRecuperacaoSenhaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/redefinir-senha": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Redefinir Senha",
+        "description": "Define nova senha a partir do token recebido por e-mail.",
+        "operationId": "redefinir_senha_api_auth_redefinir_senha_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedefinirSenhaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verificar-email": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Verificar Email",
+        "description": "Confirma propriedade do e-mail via link enviado na compra rápida.",
+        "operationId": "verificar_email_api_auth_verificar_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Logout",
+        "description": "Encerra sessão (remove cookie HttpOnly).",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth-config": {
+      "get": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Oauth Config",
+        "description": "Client ID Google — o frontend usa para exibir login social.",
+        "operationId": "oauth_config_api_auth_oauth_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/google": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Login Google",
+        "operationId": "login_google_api_auth_google_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/reenviar-verificacao-email": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Reenviar Verificacao Email",
+        "description": "Reenvia link de confirmação para a conta autenticada.",
+        "operationId": "reenviar_verificacao_email_api_auth_reenviar_verificacao_email_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/vincular-google": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Vincular Google",
+        "description": "Vincula Google à conta com senha (perfil).",
+        "operationId": "vincular_google_api_auth_vincular_google_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VincularGoogleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Usuario Me",
+        "description": "Dados do utilizador: nova leitura na tabela `usuarios` (evita cache de sessão).",
+        "operationId": "usuario_me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Atualizar Perfil",
+        "description": "Atualiza nome, email (login) e/ou senha. Email ou senha exigem a senha atual correta.",
+        "operationId": "atualizar_perfil_api_auth_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizarPerfilRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/eventos/criar": {
+      "post": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Criar Evento",
+        "description": "Cria novo evento",
+        "operationId": "criar_evento_api_eventos_criar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarEventoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/eventos/id/{evento_id}": {
+      "patch": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Atualizar Evento",
+        "description": "Atualiza dados do evento. Apenas o organizador dono. O slug (URL) não muda.",
+        "operationId": "atualizar_evento_api_eventos_id__evento_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizarEventoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/meus": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Listar Meus Eventos",
+        "description": "Lista eventos criados pelo organizador autenticado (publicados e pausados).",
+        "operationId": "listar_meus_eventos_api_eventos_meus_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventoResponse"
+                  },
+                  "title": "Response Listar Meus Eventos Api Eventos Meus Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/stats-publicas": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Stats Publicas",
+        "description": "Números agregados para prova social na home.",
+        "operationId": "stats_publicas_api_eventos_stats_publicas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/cidades": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Listar Cidades Eventos",
+        "description": "Cidades com eventos publicados (para filtro na vitrine).",
+        "operationId": "listar_cidades_eventos_api_eventos_cidades_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 80,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Listar Eventos",
+        "description": "Lista eventos publicados na vitrine.",
+        "operationId": "listar_eventos_api_eventos_get",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Busca por nome, descrição ou local",
+              "title": "Q"
+            },
+            "description": "Busca por nome, descrição ou local"
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoria"
+            }
+          },
+          {
+            "name": "cidade",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cidade"
+            }
+          },
+          {
+            "name": "de",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data início mínima (inclusive)",
+              "title": "De"
+            },
+            "description": "Data início mínima (inclusive)"
+          },
+          {
+            "name": "ate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data início máxima (inclusive)",
+              "title": "Ate"
+            },
+            "description": "Data início máxima (inclusive)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventoResponse"
+                  },
+                  "title": "Response Listar Eventos Api Eventos Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/{slug}/relacionados": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Eventos Relacionados",
+        "description": "Até 4 eventos relacionados (organizador, depois cidade+categoria).",
+        "operationId": "eventos_relacionados_api_eventos__slug__relacionados_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventoResponse"
+                  },
+                  "title": "Response Eventos Relacionados Api Eventos  Slug  Relacionados Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/{slug}": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Obter Evento",
+        "description": "Obtém evento pelo slug. Evento pausado só é visível para o organizador autenticado.",
+        "operationId": "obter_evento_api_eventos__slug__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/id/{evento_id}/lista-interesse": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Listar Lista Interesse",
+        "description": "Inscritos na lista de interesse (organizador).",
+        "operationId": "listar_lista_interesse_api_eventos_id__evento_id__lista_interesse_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/id/{evento_id}/lista-interesse/export": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Exportar Lista Interesse",
+        "description": "CSV de inscritos na lista de interesse.",
+        "operationId": "exportar_lista_interesse_api_eventos_id__evento_id__lista_interesse_export_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/id/{evento_id}/link-portaria": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Link Portaria Evento",
+        "description": "URL e token para colaboradores validarem ingressos (câmera ou digitação).",
+        "operationId": "link_portaria_evento_api_eventos_id__evento_id__link_portaria_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/id/{evento_id}/link-portaria/regenerar": {
+      "post": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Regenerar Link Portaria",
+        "description": "Invalida o link anterior e gera um novo (se vazou o link antigo).",
+        "operationId": "regenerar_link_portaria_api_eventos_id__evento_id__link_portaria_regenerar_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/id/{evento_id}/cupons": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Listar Cupons Evento",
+        "operationId": "listar_cupons_evento_api_eventos_id__evento_id__cupons_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CupomResponse"
+                  },
+                  "title": "Response Listar Cupons Evento Api Eventos Id  Evento Id  Cupons Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Criar Cupom Evento",
+        "operationId": "criar_cupom_evento_api_eventos_id__evento_id__cupons_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CupomWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CupomResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/id/{evento_id}/cupons/{cupom_id}": {
+      "delete": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Remover Cupom Evento",
+        "operationId": "remover_cupom_evento_api_eventos_id__evento_id__cupons__cupom_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          },
+          {
+            "name": "cupom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cupom Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/id/{evento_id}/resumo": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Resumo Evento Organizador",
+        "description": "Indicadores simples para o painel do organizador.",
+        "operationId": "resumo_evento_organizador_api_eventos_id__evento_id__resumo_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eventos/id/{evento_id}/duplicar": {
+      "post": {
+        "tags": [
+          "Eventos"
+        ],
+        "summary": "Duplicar Evento",
+        "description": "Cria cópia do evento (pausada) com os mesmos lotes.",
+        "operationId": "duplicar_evento_api_eventos_id__evento_id__duplicar_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingressos/qr-preview": {
+      "get": {
+        "tags": [
+          "Ingressos"
+        ],
+        "summary": "Qr Preview Publico",
+        "description": "Dados públicos mínimos do ingresso para a tela /ingresso/qr (código EBR1 assinado).",
+        "operationId": "qr_preview_publico_api_ingressos_qr_preview_get",
+        "parameters": [
+          {
+            "name": "c",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "C"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingressos/meus": {
+      "get": {
+        "tags": [
+          "Ingressos"
+        ],
+        "summary": "Listar Meus Ingressos",
+        "description": "Lista ingressos do usuário",
+        "operationId": "listar_meus_ingressos_api_ingressos_meus_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/ingressos/{ingresso_id}/repassar": {
+      "post": {
+        "tags": [
+          "Ingressos"
+        ],
+        "summary": "Repassar Ingresso",
+        "description": "Repassa (transfere) a titularidade do participante para outra pessoa.",
+        "operationId": "repassar_ingresso_api_ingressos__ingresso_id__repassar_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ingresso_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingresso Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepassarIngressoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingressos/{ingresso_id}/download": {
+      "get": {
+        "tags": [
+          "Ingressos"
+        ],
+        "summary": "Download Ingresso",
+        "description": "Gera um HTML amigável para impressão/PDF do ingresso",
+        "operationId": "download_ingresso_api_ingressos__ingresso_id__download_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ingresso_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingresso Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingressos/{ingresso_id}/codigo-checkin": {
+      "get": {
+        "tags": [
+          "Ingressos"
+        ],
+        "summary": "Codigo Checkin Ingresso",
+        "description": "Código EBR1 para digitar na portaria (apenas ingresso confirmado do titular).",
+        "operationId": "codigo_checkin_ingresso_api_ingressos__ingresso_id__codigo_checkin_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ingresso_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingresso Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingressos/{ingresso_id}/qr": {
+      "get": {
+        "tags": [
+          "Ingressos"
+        ],
+        "summary": "Qr Ingresso",
+        "description": "PNG do QR Code do ingresso (apenas pago).",
+        "operationId": "qr_ingresso_api_ingressos__ingresso_id__qr_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ingresso_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingresso Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingressos/{ingresso_id}/enviar-email": {
+      "post": {
+        "tags": [
+          "Ingressos"
+        ],
+        "summary": "Enviar Email Ingresso",
+        "description": "Endpoint para enviar o ingresso por email.",
+        "operationId": "enviar_email_ingresso_api_ingressos__ingresso_id__enviar_email_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ingresso_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingresso Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pagamentos/validar-cupom": {
+      "post": {
+        "tags": [
+          "Pagamentos"
+        ],
+        "summary": "Validar Cupom Checkout",
+        "description": "Calcula preço com cupom para exibir no checkout (sem criar pagamento).",
+        "operationId": "validar_cupom_checkout_api_pagamentos_validar_cupom_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidarCupomRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/pagamentos/criar": {
+      "post": {
+        "tags": [
+          "Pagamentos"
+        ],
+        "summary": "Criar Pagamento",
+        "description": "Cria pagamento",
+        "operationId": "criar_pagamento_api_pagamentos_criar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarPagamentoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/pagamentos/meus": {
+      "get": {
+        "tags": [
+          "Pagamentos"
+        ],
+        "summary": "Listar Meus Pagamentos",
+        "description": "Lista pagamentos do usuário",
+        "operationId": "listar_meus_pagamentos_api_pagamentos_meus_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filtrar por status: pendente, pago, cancelado, usado",
+              "title": "Status"
+            },
+            "description": "Filtrar por status: pendente, pago, cancelado, usado"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pagamentos/retomar": {
+      "post": {
+        "tags": [
+          "Pagamentos"
+        ],
+        "summary": "Retomar Pagamento",
+        "description": "Retoma pagamento de ingresso pendente com reserva ainda válida.",
+        "operationId": "retomar_pagamento_api_pagamentos_retomar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetomarPagamentoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/pagamentos/cancelar": {
+      "post": {
+        "tags": [
+          "Pagamentos"
+        ],
+        "summary": "Cancelar Ingresso",
+        "description": "Cancela um ingresso e solicita reembolso",
+        "operationId": "cancelar_ingresso_api_pagamentos_cancelar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelarIngressoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/pagamentos/cotacao": {
+      "get": {
+        "tags": [
+          "Pagamentos"
+        ],
+        "summary": "Cotacao Pagamento",
+        "description": "Breakdown all-in para o comprador (preço + parcelamento).",
+        "operationId": "cotacao_pagamento_api_pagamentos_cotacao_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ingresso_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "title": "Ingresso Id"
+            }
+          },
+          {
+            "name": "parcelas",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 21,
+              "minimum": 1,
+              "default": 1,
+              "title": "Parcelas"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pagamentos/asaas/cobranca": {
+      "post": {
+        "tags": [
+          "Pagamentos"
+        ],
+        "summary": "Asaas Iniciar Cobranca",
+        "description": "Gera cobrança Asaas (PIX, cartão ou fatura) para ingresso reservado.",
+        "operationId": "asaas_iniciar_cobranca_api_pagamentos_asaas_cobranca_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasCobrancaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/pagamentos/asaas/status/{ingresso_id}": {
+      "get": {
+        "tags": [
+          "Pagamentos"
+        ],
+        "summary": "Asaas Status Cobranca",
+        "description": "Consulta status da cobrança Asaas (polling PIX).",
+        "operationId": "asaas_status_cobranca_api_pagamentos_asaas_status__ingresso_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ingresso_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingresso Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/relatorios/organizador": {
+      "get": {
+        "tags": [
+          "Relatórios"
+        ],
+        "summary": "Relatorio Organizador",
+        "description": "Resumo de ingressos dos eventos do organizador: totais por status, receita,\ncomparativo por evento e série diária de vendas confirmadas.",
+        "operationId": "relatorio_organizador_api_relatorios_organizador_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dias",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 366,
+              "minimum": 7,
+              "description": "Janela do gráfico diário (últimos N dias)",
+              "default": 90,
+              "title": "Dias"
+            },
+            "description": "Janela do gráfico diário (últimos N dias)"
+          },
+          {
+            "name": "evento_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtra todos os blocos por um evento",
+              "title": "Evento Id"
+            },
+            "description": "Filtra todos os blocos por um evento"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/relatorios/organizador/participantes": {
+      "get": {
+        "tags": [
+          "Relatórios"
+        ],
+        "summary": "Participantes Organizador",
+        "description": "Lista participantes (nome/e-mail informados na compra) dos eventos do organizador.\nUse `evento_id` para exportar um evento; sem filtro, retorna até `limite` registros recentes.",
+        "operationId": "participantes_organizador_api_relatorios_organizador_participantes_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Evento Id"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 1,
+              "default": 2000,
+              "title": "Limite"
+            }
+          },
+          {
+            "name": "formato",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "json",
+                "csv",
+                "pdf",
+                "xlsx"
+              ],
+              "type": "string",
+              "default": "json",
+              "title": "Formato"
+            }
+          },
+          {
+            "name": "mascarar_sensiveis",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Se true, mascara CPF e telefone na exportação (útil para partilhar ficheiros).",
+              "default": true,
+              "title": "Mascarar Sensiveis"
+            },
+            "description": "Se true, mascara CPF e telefone na exportação (útil para partilhar ficheiros)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkin/validar": {
+      "post": {
+        "tags": [
+          "Check-in"
+        ],
+        "summary": "Validar Checkin",
+        "operationId": "validar_checkin_api_checkin_validar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/checkin/buscar": {
+      "post": {
+        "tags": [
+          "Check-in"
+        ],
+        "summary": "Buscar Checkin",
+        "operationId": "buscar_checkin_api_checkin_buscar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinBuscarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinBuscarResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/checkin/validar-id": {
+      "post": {
+        "tags": [
+          "Check-in"
+        ],
+        "summary": "Validar Checkin Por Id",
+        "operationId": "validar_checkin_por_id_api_checkin_validar_id_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinValidarIdRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/portaria/evento": {
+      "get": {
+        "tags": [
+          "Portaria"
+        ],
+        "summary": "Info Evento Portaria",
+        "operationId": "info_evento_portaria_api_portaria_evento_get",
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "title": "Evento Id"
+            }
+          },
+          {
+            "name": "k",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "title": "K"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortariaEventoInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portaria/validar": {
+      "post": {
+        "tags": [
+          "Portaria"
+        ],
+        "summary": "Validar Portaria",
+        "operationId": "validar_portaria_api_portaria_validar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortariaValidarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portaria/buscar": {
+      "post": {
+        "tags": [
+          "Portaria"
+        ],
+        "summary": "Buscar Portaria",
+        "operationId": "buscar_portaria_api_portaria_buscar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortariaBuscarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortariaBuscarResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portaria/validar-id": {
+      "post": {
+        "tags": [
+          "Portaria"
+        ],
+        "summary": "Validar Portaria Por Id",
+        "operationId": "validar_portaria_por_id_api_portaria_validar_id_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortariaValidarIdRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizador/comunicados": {
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Enviar Comunicado",
+        "description": "Envia e-mail para participantes com ingresso pago ou já utilizado.",
+        "operationId": "enviar_comunicado_api_organizador_comunicados_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComunicadoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/asaas": {
+      "get": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Status Organizador",
+        "operationId": "asaas_status_organizador_api_organizador_asaas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/asaas/acompanhamento": {
+      "get": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Acompanhamento Repasse",
+        "operationId": "asaas_acompanhamento_repasse_api_organizador_asaas_acompanhamento_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/asaas/wallet": {
+      "put": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Definir Wallet",
+        "operationId": "asaas_definir_wallet_api_organizador_asaas_wallet_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasWalletRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizador/asaas/subconta": {
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Criar Subconta",
+        "operationId": "asaas_criar_subconta_api_organizador_asaas_subconta_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasSubcontaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/asaas/subconta/reenviar": {
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Reenviar Subconta",
+        "description": "Reenvia dados ao Asaas após reprovação da subconta (KYC).",
+        "operationId": "asaas_reenviar_subconta_api_organizador_asaas_subconta_reenviar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasSubcontaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/asaas/antecipacao": {
+      "put": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Antecipacao",
+        "operationId": "asaas_antecipacao_api_organizador_asaas_antecipacao_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasAntecipacaoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/asaas/antecipacao/simular": {
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Simular Antecipacao",
+        "operationId": "asaas_simular_antecipacao_api_organizador_asaas_antecipacao_simular_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasSimularAntecipacaoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/assinatura": {
+      "get": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Obter Assinatura",
+        "description": "Status da assinatura mensal (taxa reduzida por ingresso).",
+        "operationId": "obter_assinatura_api_organizador_assinatura_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/assinatura/sincronizar": {
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Sincronizar Assinatura",
+        "operationId": "sincronizar_assinatura_api_organizador_assinatura_sincronizar_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/assinatura/pagar": {
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Pagar Assinatura",
+        "description": "Gera cobrança PIX da mensalidade EventosBR.",
+        "operationId": "pagar_assinatura_api_organizador_assinatura_pagar_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/financeiro/saldo": {
+      "get": {
+        "tags": [
+          "Financeiro"
+        ],
+        "summary": "Financeiro Saldo",
+        "operationId": "financeiro_saldo_api_organizador_financeiro_saldo_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/financeiro/extrato": {
+      "get": {
+        "tags": [
+          "Financeiro"
+        ],
+        "summary": "Financeiro Extrato",
+        "operationId": "financeiro_extrato_api_organizador_financeiro_extrato_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limite"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizador/financeiro/vendas": {
+      "get": {
+        "tags": [
+          "Financeiro"
+        ],
+        "summary": "Financeiro Vendas",
+        "operationId": "financeiro_vendas_api_organizador_financeiro_vendas_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agrupamento",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(dia|semana|mes|ano|evento)$",
+              "default": "mes",
+              "title": "Agrupamento"
+            }
+          },
+          {
+            "name": "de",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "De"
+            }
+          },
+          {
+            "name": "ate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizador/financeiro/saques": {
+      "get": {
+        "tags": [
+          "Financeiro"
+        ],
+        "summary": "Financeiro Listar Saques",
+        "operationId": "financeiro_listar_saques_api_organizador_financeiro_saques_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limite"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizador/financeiro/conciliacao": {
+      "get": {
+        "tags": [
+          "Financeiro"
+        ],
+        "summary": "Financeiro Conciliacao",
+        "operationId": "financeiro_conciliacao_api_organizador_financeiro_conciliacao_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/financeiro/saque/{saque_id}/comprovante": {
+      "get": {
+        "tags": [
+          "Financeiro"
+        ],
+        "summary": "Financeiro Comprovante Saque",
+        "operationId": "financeiro_comprovante_saque_api_organizador_financeiro_saque__saque_id__comprovante_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "saque_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Saque Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizador/financeiro/saque": {
+      "post": {
+        "tags": [
+          "Financeiro"
+        ],
+        "summary": "Financeiro Solicitar Saque",
+        "operationId": "financeiro_solicitar_saque_api_organizador_financeiro_saque_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaqueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/financeiro/saque/{saque_id}/cancelar": {
+      "post": {
+        "tags": [
+          "Financeiro"
+        ],
+        "summary": "Financeiro Cancelar Saque",
+        "operationId": "financeiro_cancelar_saque_api_organizador_financeiro_saque__saque_id__cancelar_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "saque_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Saque Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/listas/interesse/{slug}": {
+      "post": {
+        "tags": [
+          "Listas"
+        ],
+        "summary": "Inscrever Lista Interesse",
+        "operationId": "inscrever_lista_interesse_api_listas_interesse__slug__post",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InscricaoInteresseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/listas/espera/{slug}": {
+      "post": {
+        "tags": [
+          "Listas"
+        ],
+        "summary": "Inscrever Lista Espera",
+        "operationId": "inscrever_lista_espera_api_listas_espera__slug__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InscricaoEsperaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/listas/espera/validar/{slug}": {
+      "get": {
+        "tags": [
+          "Listas"
+        ],
+        "summary": "Validar Link Espera",
+        "operationId": "validar_link_espera_api_listas_espera_validar__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notificacoes": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Listar Notificacoes",
+        "operationId": "listar_notificacoes_api_notificacoes_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "nao_lidas",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Nao Lidas"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificacaoResponse"
+                  },
+                  "title": "Response Listar Notificacoes Api Notificacoes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notificacoes/contagem": {
+      "get": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Contagem Nao Lidas",
+        "operationId": "contagem_nao_lidas_api_notificacoes_contagem_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/notificacoes/{notificacao_id}/lida": {
+      "post": {
+        "tags": [
+          "Notificações"
+        ],
+        "summary": "Marcar Lida",
+        "operationId": "marcar_lida_api_notificacoes__notificacao_id__lida_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notificacao_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Notificacao Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/produtor/meu-perfil": {
+      "get": {
+        "tags": [
+          "Produtor"
+        ],
+        "summary": "Obter Meu Perfil Publico",
+        "operationId": "obter_meu_perfil_publico_api_produtor_meu_perfil_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Produtor"
+        ],
+        "summary": "Atualizar Perfil Publico",
+        "operationId": "atualizar_perfil_publico_api_produtor_meu_perfil_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PerfilPublicoUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/produtor/{slug}": {
+      "get": {
+        "tags": [
+          "Produtor"
+        ],
+        "summary": "Obter Produtor",
+        "operationId": "obter_produtor_api_produtor__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/simuladores/simular": {
+      "get": {
+        "tags": [
+          "Simuladores"
+        ],
+        "summary": "Simular Liquido",
+        "description": "Simulador organizador: taxa EventosBR fixa; parcelamento com acréscimo ao comprador.",
+        "operationId": "simular_liquido_api_simuladores_simular_get",
+        "parameters": [
+          {
+            "name": "preco",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 500000.0,
+              "exclusiveMinimum": 0.0,
+              "title": "Preco"
+            }
+          },
+          {
+            "name": "parcelas",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 21,
+              "minimum": 1,
+              "default": 1,
+              "title": "Parcelas"
+            }
+          },
+          {
+            "name": "plano",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(padrao|assinatura)$",
+              "default": "padrao",
+              "title": "Plano"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/organizadores/{usuario_id}/assinatura": {
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin Atualizar Assinatura",
+        "description": "Ativa ou cancela assinatura de organizador (admin plataforma).",
+        "operationId": "admin_atualizar_assinatura_api_admin_organizadores__usuario_id__assinatura_patch",
+        "parameters": [
+          {
+            "name": "usuario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Usuario Id"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssinaturaAdminUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/setup": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Status Setup",
+        "description": "Checklist de produção (sem segredos).",
+        "operationId": "status_setup_api_admin_setup_get",
+        "parameters": [
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/smtp-test": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Testar Smtp",
+        "description": "Envia e-mail de teste para validar SMTP (requer X-Platform-Admin-Key).",
+        "operationId": "testar_smtp_api_admin_smtp_test_post",
+        "parameters": [
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmtpTestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/eventos": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Listar Eventos Plataforma",
+        "operationId": "listar_eventos_plataforma_api_admin_eventos_get",
+        "parameters": [
+          {
+            "name": "publicado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Publicado"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/eventos/{evento_id}/publicado": {
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Atualizar Publicacao Evento",
+        "operationId": "atualizar_publicacao_evento_api_admin_eventos__evento_id__publicado_patch",
+        "parameters": [
+          {
+            "name": "evento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evento Id"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventoPublicadoUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Listar Usuarios Plataforma",
+        "operationId": "listar_usuarios_plataforma_api_admin_usuarios_get",
+        "parameters": [
+          {
+            "name": "ativo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ativo"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "cliente",
+                    "organizador"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tipo"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios/{usuario_id}/ativo": {
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Atualizar Status Usuario",
+        "operationId": "atualizar_status_usuario_api_admin_usuarios__usuario_id__ativo_patch",
+        "parameters": [
+          {
+            "name": "usuario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Usuario Id"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioAtivoUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/marketing/contatos": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Listar Contatos",
+        "operationId": "listar_contatos_api_admin_marketing_contatos_get",
+        "parameters": [
+          {
+            "name": "canal",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "email",
+                "whatsapp",
+                "qualquer"
+              ],
+              "type": "string",
+              "default": "qualquer",
+              "title": "Canal"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "formato",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "type": "string",
+              "default": "json",
+              "title": "Formato"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/marketing/campanhas": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Listar Campanhas",
+        "operationId": "listar_campanhas_api_admin_marketing_campanhas_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CampanhaResponse"
+                  },
+                  "title": "Response Listar Campanhas Api Admin Marketing Campanhas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Criar Campanha Marketing",
+        "operationId": "criar_campanha_marketing_api_admin_marketing_campanhas_post",
+        "parameters": [
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampanhaCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampanhaResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/marketing/campanhas/{campanha_id}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Detalhe Campanha",
+        "operationId": "detalhe_campanha_api_admin_marketing_campanhas__campanha_id__get",
+        "parameters": [
+          {
+            "name": "campanha_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Campanha Id"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampanhaDetalheResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/marketing/campanhas/{campanha_id}/disparar": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Disparar Campanha Marketing",
+        "operationId": "disparar_campanha_marketing_api_admin_marketing_campanhas__campanha_id__disparar_post",
+        "parameters": [
+          {
+            "name": "campanha_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Campanha Id"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampanhaResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/asaas": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Asaas Webhook",
+        "description": "Recebe eventos do Asaas (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.).",
+        "operationId": "asaas_webhook_api_webhooks_asaas_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/asaas/transfer-auth": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Asaas Transfer Auth",
+        "description": "Autorização de saques/transferências Asaas (BaaS — sem token SMS).\n\nO Asaas envia POST ~5s após criar a transferência. Resposta esperada:\n``{\"status\": \"APPROVED\"}`` ou ``{\"status\": \"REFUSED\", \"refuseReason\": \"...\"}``.",
+        "operationId": "asaas_transfer_auth_api_webhooks_asaas_transfer_auth_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/mock-payment": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Mock Payment",
+        "description": "(Apenas para Desenvolvimento) Simula a aprovação de um pagamento.",
+        "operationId": "mock_payment_api_webhooks_mock_payment_post",
+        "parameters": [
+          {
+            "name": "ingresso_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingresso Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Liveness: o processo HTTP responde (orquestradores não devem reiniciar por falha de BD).",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Ready",
+        "description": "Readiness: aplicação aceita tráfego (inclui verificação à base de dados).",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AsaasAntecipacaoRequest": {
+        "properties": {
+          "credit_card_automatic_enabled": {
+            "type": "boolean",
+            "title": "Credit Card Automatic Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "credit_card_automatic_enabled"
+        ],
+        "title": "AsaasAntecipacaoRequest"
+      },
+      "AsaasCobrancaRequest": {
+        "properties": {
+          "ingresso_id": {
+            "type": "string",
+            "title": "Ingresso Id"
+          },
+          "metodo": {
+            "type": "string",
+            "enum": [
+              "pix",
+              "card",
+              "invoice"
+            ],
+            "title": "Metodo",
+            "default": "pix"
+          },
+          "credit_card": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Card"
+          },
+          "credit_card_holder_info": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Card Holder Info"
+          },
+          "remote_ip": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 45
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Ip"
+          },
+          "parcelas": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 12.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcelas"
+          },
+          "token_espera": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Espera"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingresso_id"
+        ],
+        "title": "AsaasCobrancaRequest"
+      },
+      "AsaasSimularAntecipacaoRequest": {
+        "properties": {
+          "valor_reais": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Valor Reais"
+          },
+          "payment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valor_reais"
+        ],
+        "title": "AsaasSimularAntecipacaoRequest"
+      },
+      "AsaasSubcontaRequest": {
+        "properties": {
+          "cpf_cnpj": {
+            "type": "string",
+            "maxLength": 18,
+            "minLength": 11,
+            "title": "Cpf Cnpj"
+          },
+          "telefone": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 10,
+            "title": "Telefone"
+          },
+          "renda_mensal": {
+            "type": "number",
+            "maximum": 10000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Renda Mensal"
+          },
+          "cep": {
+            "type": "string",
+            "maxLength": 10,
+            "minLength": 8,
+            "title": "Cep"
+          },
+          "endereco": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Endereco"
+          },
+          "numero": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Numero"
+          },
+          "bairro": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Bairro"
+          },
+          "complemento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complemento"
+          },
+          "company_type": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Company Type",
+            "default": "INDIVIDUAL"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cpf_cnpj",
+          "telefone",
+          "renda_mensal",
+          "cep",
+          "endereco",
+          "numero",
+          "bairro"
+        ],
+        "title": "AsaasSubcontaRequest"
+      },
+      "AsaasWalletRequest": {
+        "properties": {
+          "wallet_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Wallet Id"
+          },
+          "sincronizar_eventos": {
+            "type": "boolean",
+            "title": "Sincronizar Eventos",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "wallet_id"
+        ],
+        "title": "AsaasWalletRequest"
+      },
+      "AssinaturaAdminUpdate": {
+        "properties": {
+          "plano_tarifa": {
+            "type": "string",
+            "enum": [
+              "padrao",
+              "assinatura"
+            ],
+            "title": "Plano Tarifa",
+            "default": "assinatura"
+          },
+          "meses": {
+            "type": "integer",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Meses",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "title": "AssinaturaAdminUpdate"
+      },
+      "AtualizarEventoRequest": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descricao"
+          },
+          "data_inicio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data Inicio"
+          },
+          "data_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Fim"
+          },
+          "local": {
+            "type": "string",
+            "title": "Local"
+          },
+          "cidade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cidade"
+          },
+          "imagem_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagem Url"
+          },
+          "preco_ingresso": {
+            "type": "number",
+            "maximum": 500000.0,
+            "minimum": 0.0,
+            "title": "Preco Ingresso"
+          },
+          "categoria": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Categoria",
+            "default": "Outros"
+          },
+          "mensagem_confirmacao": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mensagem Confirmacao"
+          },
+          "publicado": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publicado"
+          },
+          "limite_ingressos_por_cpf": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limite Ingressos Por Cpf"
+          },
+          "ingresso_lotes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/IngressoLoteWrite"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingresso Lotes"
+          },
+          "urgencia_modo": {
+            "type": "string",
+            "pattern": "^(desligado|exato|faixa)$",
+            "title": "Urgencia Modo",
+            "default": "desligado"
+          },
+          "parcelamento_habilitado": {
+            "type": "boolean",
+            "title": "Parcelamento Habilitado",
+            "default": false
+          },
+          "parcelamento_max": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 2.0,
+            "title": "Parcelamento Max",
+            "default": 2
+          },
+          "repasse_parcelamento": {
+            "type": "string",
+            "pattern": "^(comprador|organizador)$",
+            "title": "Repasse Parcelamento",
+            "default": "comprador"
+          },
+          "aceita_interesse": {
+            "type": "boolean",
+            "title": "Aceita Interesse",
+            "default": true
+          },
+          "lista_espera_habilitada": {
+            "type": "boolean",
+            "title": "Lista Espera Habilitada",
+            "default": false
+          },
+          "lista_espera_prazo_horas": {
+            "type": "integer",
+            "maximum": 48.0,
+            "minimum": 12.0,
+            "title": "Lista Espera Prazo Horas",
+            "default": 24
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "descricao",
+          "data_inicio",
+          "local",
+          "preco_ingresso"
+        ],
+        "title": "AtualizarEventoRequest",
+        "description": "Mesmos campos da criação; omitir `publicado` mantém o valor atual."
+      },
+      "AtualizarPerfilRequest": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "senha_atual": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Senha Atual"
+          },
+          "nova_senha": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nova Senha"
+          },
+          "aceita_comunicacao_email": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aceita Comunicacao Email"
+          },
+          "aceita_comunicacao_whatsapp": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aceita Comunicacao Whatsapp"
+          },
+          "telefone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telefone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "email"
+        ],
+        "title": "AtualizarPerfilRequest"
+      },
+      "CampanhaCreate": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Nome"
+          },
+          "assunto": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Assunto"
+          },
+          "mensagem": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 10,
+            "title": "Mensagem"
+          },
+          "canal": {
+            "type": "string",
+            "pattern": "^(email|whatsapp|ambos)$",
+            "title": "Canal"
+          },
+          "usuario_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "title": "Usuario Ids"
+          },
+          "busca": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Busca"
+          },
+          "filtro_canal": {
+            "type": "string",
+            "pattern": "^(email|whatsapp|qualquer)$",
+            "title": "Filtro Canal",
+            "default": "qualquer"
+          },
+          "disparar_agora": {
+            "type": "boolean",
+            "title": "Disparar Agora",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "assunto",
+          "mensagem",
+          "canal"
+        ],
+        "title": "CampanhaCreate"
+      },
+      "CampanhaDetalheResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "assunto": {
+            "type": "string",
+            "title": "Assunto"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem"
+          },
+          "canal": {
+            "type": "string",
+            "title": "Canal"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "total_destinatarios": {
+            "type": "integer",
+            "title": "Total Destinatarios"
+          },
+          "enviados_ok": {
+            "type": "integer",
+            "title": "Enviados Ok"
+          },
+          "enviados_erro": {
+            "type": "integer",
+            "title": "Enviados Erro"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          },
+          "disparado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disparado Em"
+          },
+          "envios": {
+            "items": {
+              "$ref": "#/components/schemas/CampanhaEnvioResponse"
+            },
+            "type": "array",
+            "title": "Envios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "assunto",
+          "mensagem",
+          "canal",
+          "status",
+          "total_destinatarios",
+          "enviados_ok",
+          "enviados_erro",
+          "criado_em",
+          "disparado_em"
+        ],
+        "title": "CampanhaDetalheResponse"
+      },
+      "CampanhaEnvioResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "usuario_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usuario Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "telefone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telefone"
+          },
+          "canal_envio": {
+            "type": "string",
+            "title": "Canal Envio"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "erro_msg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erro Msg"
+          },
+          "enviado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enviado Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "usuario_id",
+          "nome",
+          "email",
+          "telefone",
+          "canal_envio",
+          "status",
+          "erro_msg",
+          "enviado_em"
+        ],
+        "title": "CampanhaEnvioResponse"
+      },
+      "CampanhaResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "assunto": {
+            "type": "string",
+            "title": "Assunto"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem"
+          },
+          "canal": {
+            "type": "string",
+            "title": "Canal"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "total_destinatarios": {
+            "type": "integer",
+            "title": "Total Destinatarios"
+          },
+          "enviados_ok": {
+            "type": "integer",
+            "title": "Enviados Ok"
+          },
+          "enviados_erro": {
+            "type": "integer",
+            "title": "Enviados Erro"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          },
+          "disparado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disparado Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "assunto",
+          "mensagem",
+          "canal",
+          "status",
+          "total_destinatarios",
+          "enviados_ok",
+          "enviados_erro",
+          "criado_em",
+          "disparado_em"
+        ],
+        "title": "CampanhaResponse"
+      },
+      "CancelarIngressoRequest": {
+        "properties": {
+          "ingresso_id": {
+            "type": "string",
+            "title": "Ingresso Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingresso_id"
+        ],
+        "title": "CancelarIngressoRequest"
+      },
+      "CheckinBuscarRequest": {
+        "properties": {
+          "q": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Q"
+          },
+          "evento_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evento Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "q"
+        ],
+        "title": "CheckinBuscarRequest"
+      },
+      "CheckinBuscarResponse": {
+        "properties": {
+          "resultados": {
+            "items": {
+              "$ref": "#/components/schemas/IngressoBuscaItem"
+            },
+            "type": "array",
+            "title": "Resultados"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resultados"
+        ],
+        "title": "CheckinBuscarResponse"
+      },
+      "CheckinRequest": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 4,
+            "title": "Codigo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo"
+        ],
+        "title": "CheckinRequest"
+      },
+      "CheckinValidarIdRequest": {
+        "properties": {
+          "ingresso_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Ingresso Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingresso_id"
+        ],
+        "title": "CheckinValidarIdRequest"
+      },
+      "CompraRapidaRequest": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "email"
+        ],
+        "title": "CompraRapidaRequest",
+        "description": "Checkout convidado: cria conta cliente mínima e autentica via cookie."
+      },
+      "ComunicadoRequest": {
+        "properties": {
+          "evento_id": {
+            "type": "string",
+            "title": "Evento Id"
+          },
+          "assunto": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Assunto"
+          },
+          "mensagem": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 10,
+            "title": "Mensagem"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evento_id",
+          "assunto",
+          "mensagem"
+        ],
+        "title": "ComunicadoRequest"
+      },
+      "CriarEventoRequest": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descricao"
+          },
+          "data_inicio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data Inicio"
+          },
+          "data_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Fim"
+          },
+          "local": {
+            "type": "string",
+            "title": "Local"
+          },
+          "cidade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cidade"
+          },
+          "imagem_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagem Url"
+          },
+          "preco_ingresso": {
+            "type": "number",
+            "maximum": 500000.0,
+            "minimum": 0.0,
+            "title": "Preco Ingresso"
+          },
+          "categoria": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Categoria",
+            "default": "Outros"
+          },
+          "mensagem_confirmacao": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mensagem Confirmacao"
+          },
+          "publicado": {
+            "type": "boolean",
+            "title": "Publicado",
+            "default": false
+          },
+          "limite_ingressos_por_cpf": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limite Ingressos Por Cpf"
+          },
+          "ingresso_lotes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/IngressoLoteWrite"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingresso Lotes"
+          },
+          "urgencia_modo": {
+            "type": "string",
+            "pattern": "^(desligado|exato|faixa)$",
+            "title": "Urgencia Modo",
+            "default": "desligado"
+          },
+          "parcelamento_habilitado": {
+            "type": "boolean",
+            "title": "Parcelamento Habilitado",
+            "default": false
+          },
+          "parcelamento_max": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 2.0,
+            "title": "Parcelamento Max",
+            "default": 2
+          },
+          "repasse_parcelamento": {
+            "type": "string",
+            "pattern": "^(comprador|organizador)$",
+            "title": "Repasse Parcelamento",
+            "default": "comprador"
+          },
+          "aceita_interesse": {
+            "type": "boolean",
+            "title": "Aceita Interesse",
+            "default": true
+          },
+          "lista_espera_habilitada": {
+            "type": "boolean",
+            "title": "Lista Espera Habilitada",
+            "default": false
+          },
+          "lista_espera_prazo_horas": {
+            "type": "integer",
+            "maximum": 48.0,
+            "minimum": 12.0,
+            "title": "Lista Espera Prazo Horas",
+            "default": 24
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "descricao",
+          "data_inicio",
+          "local",
+          "preco_ingresso"
+        ],
+        "title": "CriarEventoRequest"
+      },
+      "CriarPagamentoRequest": {
+        "properties": {
+          "evento_id": {
+            "type": "string",
+            "title": "Evento Id"
+          },
+          "lote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lote Id"
+          },
+          "quantidade": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Quantidade",
+            "default": 1
+          },
+          "valor_centavos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Centavos"
+          },
+          "valor": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor"
+          },
+          "participante_nome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participante Nome"
+          },
+          "participante_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participante Email"
+          },
+          "participante_cpf": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participante Cpf"
+          },
+          "participante_telefone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participante Telefone"
+          },
+          "cortesia_responsavel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cortesia Responsavel"
+          },
+          "codigo_cupom": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codigo Cupom"
+          },
+          "termo_compra_aceito": {
+            "type": "boolean",
+            "title": "Termo Compra Aceito",
+            "default": false
+          },
+          "termo_compra_versao": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termo Compra Versao"
+          },
+          "token_espera": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Espera"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evento_id"
+        ],
+        "title": "CriarPagamentoRequest"
+      },
+      "CupomResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "codigo": {
+            "type": "string",
+            "title": "Codigo"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "valor": {
+            "type": "number",
+            "title": "Valor"
+          },
+          "max_usos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Usos"
+          },
+          "usos": {
+            "type": "integer",
+            "title": "Usos"
+          },
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo"
+          },
+          "valido_ate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valido Ate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "codigo",
+          "tipo",
+          "valor",
+          "max_usos",
+          "usos",
+          "ativo",
+          "valido_ate"
+        ],
+        "title": "CupomResponse"
+      },
+      "CupomWrite": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 3,
+            "title": "Codigo"
+          },
+          "tipo": {
+            "type": "string",
+            "pattern": "^(percentual|fixo)$",
+            "title": "Tipo"
+          },
+          "valor": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Valor"
+          },
+          "max_usos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Usos"
+          },
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo",
+            "default": true
+          },
+          "valido_ate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valido Ate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo",
+          "tipo",
+          "valor"
+        ],
+        "title": "CupomWrite"
+      },
+      "EmailRequest": {
+        "properties": {},
+        "type": "object",
+        "title": "EmailRequest"
+      },
+      "EventoPublicadoUpdate": {
+        "properties": {
+          "publicado": {
+            "type": "boolean",
+            "title": "Publicado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "publicado"
+        ],
+        "title": "EventoPublicadoUpdate"
+      },
+      "EventoResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "organizador_id": {
+            "type": "string",
+            "title": "Organizador Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descricao"
+          },
+          "data_inicio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data Inicio"
+          },
+          "data_fim": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data Fim"
+          },
+          "local": {
+            "type": "string",
+            "title": "Local"
+          },
+          "cidade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cidade"
+          },
+          "imagem_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagem Url"
+          },
+          "preco_ingresso": {
+            "type": "number",
+            "title": "Preco Ingresso"
+          },
+          "categoria": {
+            "type": "string",
+            "title": "Categoria"
+          },
+          "mensagem_confirmacao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mensagem Confirmacao"
+          },
+          "publicado": {
+            "type": "boolean",
+            "title": "Publicado"
+          },
+          "limite_ingressos_por_cpf": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limite Ingressos Por Cpf"
+          },
+          "data_criacao": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data Criacao"
+          },
+          "ingresso_lotes": {
+            "items": {
+              "$ref": "#/components/schemas/IngressoLoteResponse"
+            },
+            "type": "array",
+            "title": "Ingresso Lotes"
+          },
+          "lote_compra_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lote Compra Id"
+          },
+          "preco_compra": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preco Compra"
+          },
+          "compra_disponivel": {
+            "type": "boolean",
+            "title": "Compra Disponivel",
+            "default": false
+          },
+          "motivo_compra_indisponivel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo Compra Indisponivel"
+          },
+          "compra_indisponivel_codigo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compra Indisponivel Codigo"
+          },
+          "urgencia_modo": {
+            "type": "string",
+            "title": "Urgencia Modo",
+            "default": "desligado"
+          },
+          "urgencia_badge": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgencia Badge"
+          },
+          "urgencia_ativo": {
+            "type": "boolean",
+            "title": "Urgencia Ativo",
+            "default": false
+          },
+          "parcelamento_habilitado": {
+            "type": "boolean",
+            "title": "Parcelamento Habilitado",
+            "default": false
+          },
+          "parcelamento_max": {
+            "type": "integer",
+            "title": "Parcelamento Max",
+            "default": 2
+          },
+          "repasse_parcelamento": {
+            "type": "string",
+            "title": "Repasse Parcelamento",
+            "default": "comprador"
+          },
+          "aceita_interesse": {
+            "type": "boolean",
+            "title": "Aceita Interesse",
+            "default": true
+          },
+          "lista_espera_habilitada": {
+            "type": "boolean",
+            "title": "Lista Espera Habilitada",
+            "default": false
+          },
+          "lista_espera_prazo_horas": {
+            "type": "integer",
+            "title": "Lista Espera Prazo Horas",
+            "default": 24
+          },
+          "espera_janela_exclusiva_ativa": {
+            "type": "boolean",
+            "title": "Espera Janela Exclusiva Ativa",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "organizador_id",
+          "nome",
+          "descricao",
+          "data_inicio",
+          "data_fim",
+          "local",
+          "imagem_url",
+          "preco_ingresso",
+          "categoria",
+          "mensagem_confirmacao",
+          "publicado",
+          "data_criacao"
+        ],
+        "title": "EventoResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IngressoBuscaItem": {
+        "properties": {
+          "ingresso_id": {
+            "type": "string",
+            "title": "Ingresso Id"
+          },
+          "participante_nome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participante Nome"
+          },
+          "participante_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participante Email"
+          },
+          "participante_cpf": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participante Cpf"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "checkin_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkin Em"
+          },
+          "evento_id": {
+            "type": "string",
+            "title": "Evento Id"
+          },
+          "evento_nome": {
+            "type": "string",
+            "title": "Evento Nome"
+          },
+          "lote_nome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lote Nome"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingresso_id",
+          "participante_nome",
+          "participante_email",
+          "participante_cpf",
+          "status",
+          "checkin_em",
+          "evento_id",
+          "evento_nome"
+        ],
+        "title": "IngressoBuscaItem"
+      },
+      "IngressoLoteResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo",
+            "default": "inteira"
+          },
+          "preco": {
+            "type": "number",
+            "title": "Preco"
+          },
+          "ordem": {
+            "type": "integer",
+            "title": "Ordem"
+          },
+          "quantidade_maxima": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantidade Maxima"
+          },
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo"
+          },
+          "vendas_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendas Inicio"
+          },
+          "vendas_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendas Fim"
+          },
+          "vendidos": {
+            "type": "integer",
+            "title": "Vendidos",
+            "default": 0
+          },
+          "elegivel_compra": {
+            "type": "boolean",
+            "title": "Elegivel Compra",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "preco",
+          "ordem",
+          "quantidade_maxima",
+          "ativo",
+          "vendas_inicio",
+          "vendas_fim"
+        ],
+        "title": "IngressoLoteResponse"
+      },
+      "IngressoLoteWrite": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "tipo": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Tipo",
+            "default": "inteira"
+          },
+          "preco": {
+            "type": "number",
+            "maximum": 500000.0,
+            "minimum": 0.0,
+            "title": "Preco"
+          },
+          "ordem": {
+            "type": "integer",
+            "maximum": 999.0,
+            "minimum": 1.0,
+            "title": "Ordem",
+            "default": 1
+          },
+          "quantidade_maxima": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantidade Maxima"
+          },
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo",
+            "default": true
+          },
+          "vendas_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendas Inicio"
+          },
+          "vendas_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendas Fim"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "preco"
+        ],
+        "title": "IngressoLoteWrite",
+        "description": "Payload para criar/atualizar um lote (id opcional = já existente no evento)."
+      },
+      "InscricaoEsperaRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "nome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nome"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "InscricaoEsperaRequest"
+      },
+      "InscricaoInteresseRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "nome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nome"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "InscricaoInteresseRequest"
+      },
+      "NotificacaoResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "titulo": {
+            "type": "string",
+            "title": "Titulo"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "lida": {
+            "type": "boolean",
+            "title": "Lida"
+          },
+          "data_criacao": {
+            "type": "string",
+            "title": "Data Criacao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tipo",
+          "titulo",
+          "mensagem",
+          "link",
+          "lida",
+          "data_criacao"
+        ],
+        "title": "NotificacaoResponse"
+      },
+      "OAuthConfigResponse": {
+        "properties": {
+          "google_enabled": {
+            "type": "boolean",
+            "title": "Google Enabled"
+          },
+          "google_client_id": {
+            "type": "string",
+            "title": "Google Client Id",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "google_enabled"
+        ],
+        "title": "OAuthConfigResponse",
+        "description": "Configuração pública de login com Google (Client ID é público no browser)."
+      },
+      "OAuthLoginRequest": {
+        "properties": {
+          "id_token": {
+            "type": "string",
+            "maxLength": 8192,
+            "minLength": 20,
+            "title": "Id Token"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo",
+            "default": "cliente"
+          },
+          "aceita_comunicacao_email": {
+            "type": "boolean",
+            "title": "Aceita Comunicacao Email",
+            "default": false
+          },
+          "aceita_comunicacao_whatsapp": {
+            "type": "boolean",
+            "title": "Aceita Comunicacao Whatsapp",
+            "default": false
+          },
+          "telefone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telefone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_token"
+        ],
+        "title": "OAuthLoginRequest",
+        "description": "ID token emitido pelo Google no browser."
+      },
+      "PerfilPublicoUpdate": {
+        "properties": {
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "foto_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foto Url"
+          },
+          "social_instagram": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Instagram"
+          },
+          "social_whatsapp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Whatsapp"
+          },
+          "social_site": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Site"
+          }
+        },
+        "type": "object",
+        "title": "PerfilPublicoUpdate"
+      },
+      "PortariaBuscarRequest": {
+        "properties": {
+          "evento_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Evento Id"
+          },
+          "token": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Token"
+          },
+          "q": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Q"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evento_id",
+          "token",
+          "q"
+        ],
+        "title": "PortariaBuscarRequest"
+      },
+      "PortariaBuscarResponse": {
+        "properties": {
+          "resultados": {
+            "items": {
+              "$ref": "#/components/schemas/IngressoBuscaItem"
+            },
+            "type": "array",
+            "title": "Resultados"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resultados"
+        ],
+        "title": "PortariaBuscarResponse"
+      },
+      "PortariaEventoInfo": {
+        "properties": {
+          "evento_id": {
+            "type": "string",
+            "title": "Evento Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "local": {
+            "type": "string",
+            "title": "Local"
+          },
+          "data_inicio": {
+            "type": "string",
+            "title": "Data Inicio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evento_id",
+          "nome",
+          "local",
+          "data_inicio"
+        ],
+        "title": "PortariaEventoInfo"
+      },
+      "PortariaValidarIdRequest": {
+        "properties": {
+          "evento_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Evento Id"
+          },
+          "token": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Token"
+          },
+          "ingresso_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Ingresso Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evento_id",
+          "token",
+          "ingresso_id"
+        ],
+        "title": "PortariaValidarIdRequest"
+      },
+      "PortariaValidarRequest": {
+        "properties": {
+          "evento_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Evento Id"
+          },
+          "token": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Token"
+          },
+          "codigo": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 4,
+            "title": "Codigo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evento_id",
+          "token",
+          "codigo"
+        ],
+        "title": "PortariaValidarRequest"
+      },
+      "RedefinirSenhaRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 16,
+            "title": "Token"
+          },
+          "nova_senha": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Nova Senha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "nova_senha"
+        ],
+        "title": "RedefinirSenhaRequest"
+      },
+      "RepassarIngressoRequest": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "cpf": {
+            "type": "string",
+            "title": "Cpf"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "telefone": {
+            "type": "string",
+            "title": "Telefone"
+          },
+          "data_nascimento": {
+            "type": "string",
+            "title": "Data Nascimento"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "cpf",
+          "email",
+          "telefone",
+          "data_nascimento"
+        ],
+        "title": "RepassarIngressoRequest"
+      },
+      "RetomarPagamentoRequest": {
+        "properties": {
+          "ingresso_id": {
+            "type": "string",
+            "title": "Ingresso Id"
+          },
+          "evento_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evento Id"
+          },
+          "token_espera": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Espera"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingresso_id"
+        ],
+        "title": "RetomarPagamentoRequest"
+      },
+      "SaqueRequest": {
+        "properties": {
+          "valor": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Valor"
+          },
+          "pix_chave": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 5,
+            "title": "Pix Chave"
+          },
+          "pix_tipo": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Pix Tipo",
+            "default": "EVP"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valor",
+          "pix_chave"
+        ],
+        "title": "SaqueRequest"
+      },
+      "SmtpTestBody": {
+        "properties": {
+          "destino": {
+            "type": "string",
+            "title": "Destino"
+          }
+        },
+        "type": "object",
+        "required": [
+          "destino"
+        ],
+        "title": "SmtpTestBody"
+      },
+      "SolicitarRecuperacaoSenhaRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "SolicitarRecuperacaoSenhaRequest"
+      },
+      "Token": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/UsuarioResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "token_type",
+          "usuario"
+        ],
+        "title": "Token"
+      },
+      "UsuarioAtivoUpdate": {
+        "properties": {
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ativo"
+        ],
+        "title": "UsuarioAtivoUpdate"
+      },
+      "UsuarioCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "senha": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Senha"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "aceita_comunicacao_email": {
+            "type": "boolean",
+            "title": "Aceita Comunicacao Email",
+            "default": false
+          },
+          "aceita_comunicacao_whatsapp": {
+            "type": "boolean",
+            "title": "Aceita Comunicacao Whatsapp",
+            "default": false
+          },
+          "telefone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telefone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "nome",
+          "senha",
+          "tipo"
+        ],
+        "title": "UsuarioCreate"
+      },
+      "UsuarioLogin": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "senha": {
+            "type": "string",
+            "title": "Senha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "senha"
+        ],
+        "title": "UsuarioLogin"
+      },
+      "UsuarioResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "data_criacao": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data Criacao"
+          },
+          "tem_senha": {
+            "type": "boolean",
+            "title": "Tem Senha",
+            "default": false
+          },
+          "email_verificado": {
+            "type": "boolean",
+            "title": "Email Verificado",
+            "default": true
+          },
+          "aceita_comunicacao_email": {
+            "type": "boolean",
+            "title": "Aceita Comunicacao Email",
+            "default": false
+          },
+          "aceita_comunicacao_whatsapp": {
+            "type": "boolean",
+            "title": "Aceita Comunicacao Whatsapp",
+            "default": false
+          },
+          "telefone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telefone"
+          },
+          "comunicacao_consentimento_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comunicacao Consentimento Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "nome",
+          "tipo",
+          "data_criacao"
+        ],
+        "title": "UsuarioResponse"
+      },
+      "ValidarCupomRequest": {
+        "properties": {
+          "evento_id": {
+            "type": "string",
+            "title": "Evento Id"
+          },
+          "codigo_cupom": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 3,
+            "title": "Codigo Cupom"
+          },
+          "lote_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lote Id"
+          },
+          "quantidade": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Quantidade",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "evento_id",
+          "codigo_cupom"
+        ],
+        "title": "ValidarCupomRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerificarEmailRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 16,
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "VerificarEmailRequest"
+      },
+      "VincularGoogleRequest": {
+        "properties": {
+          "id_token": {
+            "type": "string",
+            "maxLength": 8192,
+            "minLength": 20,
+            "title": "Id Token"
+          },
+          "senha_atual": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Senha Atual"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_token",
+          "senha_atual"
+        ],
+        "title": "VincularGoogleRequest"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/auth/login"
+          }
+        }
+      }
+    }
+  }
+}
