@@ -141,7 +141,7 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/organizador.png"
+        src="/marketing/organizador.webp"
         alt="Captura de tela do painel Meus eventos do organizador na EventosBR, com lista de eventos e status de publicação"
         width={800}
         height={500}
@@ -161,7 +161,7 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/checkout.png"
+        src="/marketing/checkout.webp"
         alt="Captura de tela do checkout EventosBR mostrando pagamento PIX com QR Code e código copia e cola"
         width={800}
         height={500}
@@ -181,7 +181,7 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/portaria.png"
+        src="/marketing/portaria.webp"
         alt="Captura de tela da validação de ingressos na portaria EventosBR com leitura de QR Code"
         width={800}
         height={500}

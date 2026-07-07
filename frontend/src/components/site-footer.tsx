@@ -39,7 +39,7 @@ export function SiteFooter() {
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-4">
             <EventosBRLogo variant="light" />
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-500">
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-400">
               Ingressos, reembolsos e repasses com transparência — do primeiro clique ao dia do evento.
             </p>
             {emailContato ? (
@@ -97,9 +97,9 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-12 border-t border-zinc-800/90 pt-8">
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-400">
             © {year}{" "}
-            <Link href="/" className="text-zinc-300 hover:text-emerald-300">
+            <Link href="/" className="text-zinc-300 underline underline-offset-2 hover:text-emerald-300">
               EventosBR
             </Link>
             . Todos os direitos reservados.
