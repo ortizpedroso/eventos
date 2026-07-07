@@ -65,7 +65,7 @@ export async function seedPublishedEventAsaas(): Promise<SeededEvent> {
   await api(
     "PUT",
     "/api/organizador/asaas/wallet",
-    { wallet_id: "e2e-org-wallet", sincronizar_eventos: true },
+    { wallet_id: "aaaa1111-eeee-2222-cccc-333344445566", sincronizar_eventos: true },
     orgToken,
   );
 
@@ -284,7 +284,7 @@ export async function seedPublicProducer(): Promise<{ slug: string; nome: string
     "/api/produtor/meu-perfil",
     {
       bio: "Produtor de testes E2E",
-      social_instagram: "@eventosbr",
+      social_instagram: "https://instagram.com/eventosbr",
     },
     orgToken,
   );
@@ -388,7 +388,7 @@ export async function seedParcelamentoEventAsaas(): Promise<SeededEvent> {
   await api(
     "PUT",
     "/api/organizador/asaas/wallet",
-    { wallet_id: "e2e-org-wallet-parc", sincronizar_eventos: true },
+    { wallet_id: "bbbb2222-ffff-3333-dddd-444455556677", sincronizar_eventos: true },
     orgToken,
   );
 

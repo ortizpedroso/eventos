@@ -28,6 +28,7 @@ export function EventosBRLogo({ className = "", showWordmark = true, variant = "
       href="/"
       scroll
       onClick={onClick}
+      aria-label="EventosBR — início"
       className={`inline-flex items-center gap-2 ${className}`}
     >
       <Image
