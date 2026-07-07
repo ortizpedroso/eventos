@@ -221,8 +221,9 @@ Componentes-chave: `comprar-ingresso.tsx`, `checkout-asaas-painel.tsx`, `evento-
 - **Metadata**: `lib/site-metadata.ts` centraliza `<title>`/description/Open Graph; `app/sitemap.ts` e `app/robots.ts` geram `sitemap.xml`/`robots.txt`.
 - **Filtro de eventos de teste**: `lib/eventos-vitrine.ts` (frontend) e `app/services/evento_vitrine.py` (API) escondem eventos com nomes/locais de teste (`Cortesia Grátis`, `Rua Teste`, `E2E`, `QA`) da vitrine pública — evita que dados de QA apareçam para visitantes.
 - **Prova social**: `home-prova-social.tsx` (números reais via `/api/eventos/stats-publicas`), `home-depoimentos.tsx` e `home-selos-confianca.tsx` na home.
-- **Acessibilidade**: skip-link (`skip-to-content.tsx`), `focus-visible` global em `globals.css`, `alt` descritivo em imagens de evento e no logo (`eventosbr-logo.tsx`).
+- **Acessibilidade**: skip-link (`skip-to-content.tsx`), `focus-visible` global em `globals.css`, `alt` descritivo em imagens de evento e no logo (`eventosbr-logo.tsx`); imagens de marketing em WebP (menor peso, melhora LCP).
 - **API documentada**: `scripts/export-openapi.py` gera `frontend/public/openapi.json` a partir do schema real do FastAPI; regenerar sempre que rotas mudarem.
+- **Lighthouse (build de produção local, jul/2026)**: `/` — performance 97, acessibilidade 100, boas práticas 96, SEO 100; `/eventos` — performance 96, acessibilidade 100, SEO 100; `/funcionalidades` — performance 92, acessibilidade 96, SEO 100.
 
 ---
 

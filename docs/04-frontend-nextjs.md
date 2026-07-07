@@ -19,7 +19,7 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 | `getPublicApiUrl()` | No browser: base vazia — chamadas usam o proxy same-origin `/api/*` do Next |
 | `getApiBaseUrl()` | Alias do `getPublicApiUrl` — usado para chamadas diretas com `fetch` (QR, download) |
 | `getServerApiUrl()` | SSR: prioriza `INTERNAL_API_URL` (Docker), senão `NEXT_PUBLIC_API_URL`, senão fallback `127.0.0.1:8000` |
-| `apiFetch(path, init)` | Junta base + `path`; envia cookie `eventosbr_session` com `credentials: "include"`; em **401** dispara `dispatchAuthSync` e redireciona para `/auth?expirado=1` em rotas protegidas |
+| `apiFetch(path, init)` | Junta base + `path`; envia cookie `eventosbr_session` com `credentials: "include"`; define `Content-Type: application/json` por padrão quando há `body` e o chamador não definiu o header (evita 422 silencioso no FastAPI); em **401** dispara `dispatchAuthSync` e redireciona para `/auth?expirado=1` em rotas protegidas |
 | Erros HTTP | Mensagens em português via `lib/api-errors.ts` (401, 403, 404, 429, etc.) |
 
 ---
