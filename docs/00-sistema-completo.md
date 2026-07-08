@@ -620,6 +620,7 @@ Ficheiros em `alembic/versions/`. Produção: `alembic upgrade head`.
 | `ASAAS_API_KEY` | Chave API Asaas |
 | `ASAAS_WEBHOOK_TOKEN` | Token do webhook |
 | `ASAAS_PLATFORM_WALLET_ID` | Wallet da plataforma (split) |
+| `ASAAS_ENVIRONMENT` | `sandbox` ou `production` |
 | `ASAAS_DISABLED` | Desliga pagamentos reais |
 | `CORS_ORIGINS` | Origens permitidas (lista separada por vírgula) |
 | `REDIS_URL` | Redis para filas e rate limit |
@@ -639,7 +640,7 @@ Lista completa: `config/settings.py` e [06-configuracao-operacao.md](./06-config
 |------|-------|---------|
 | API (unit/integration) | `tests/` | `pytest` |
 | Build frontend | `frontend/` | `npm run build` |
-| E2E Playwright | `frontend/e2e/` | `npm run test:e2e` |
+| E2E Playwright | `frontend/e2e/` | `npm run test:e2e` (build + servidor de produção local) |
 | E2E compra / Asaas | CI | projetos `compra`, `asaas` |
 
 Testes usam SQLite em memória e `ASAAS_DISABLED=true` por padrão (`conftest.py`).
@@ -651,7 +652,7 @@ Testes usam SQLite em memória e `ASAAS_DISABLED=true` por padrão (`conftest.py
 | Documento | Conteúdo |
 |-----------|----------|
 | [08-deploy-hostinger.md](./08-deploy-hostinger.md) | Docker, Caddy, DNS, VPS |
-| [11-go-live-asaas.md](./11-go-live-asaas.md) | Webhook, chaves, checklist Asaas |
+| [11-go-live-asaas.md](./11-go-live-asaas.md) | Webhook, chaves, checklist Asaas, **testes sandbox no VPS** |
 | [09-auditoria-seguranca-ux.md](./09-auditoria-seguranca-ux.md) | Segurança e UX |
 | [10-checklist-proximo-patamar.md](./10-checklist-proximo-patamar.md) | Roadmap produto |
 
