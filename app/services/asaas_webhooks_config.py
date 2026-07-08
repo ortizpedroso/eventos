@@ -24,6 +24,18 @@ def url_webhook_transfer_auth_asaas() -> str | None:
     return _url_webhook_base("/transfer-auth")
 
 
+def _webhook_notification_email() -> str:
+    user = (settings.EMAIL_USER or "").strip()
+    if user and "@" in user:
+        return user[:255]
+    base = (settings.FRONTEND_PUBLIC_URL or "").strip().rstrip("/")
+    if base.startswith("https://"):
+        host = base.removeprefix("https://").split("/")[0].split(":")[0]
+        if host and "localhost" not in host:
+            return f"webhooks@{host}"
+    return "webhooks@eventosbr.app.br"
+
+
 def webhooks_payload_subconta() -> list[dict]:
     """Webhooks recomendados na criação de subconta (white-label)."""
     url = url_webhook_asaas()
@@ -65,7 +77,7 @@ def webhooks_payload_subconta() -> list[dict]:
         {
             "name": "EventosBR — pagamentos e repasses",
             "url": url,
-            "email": None,
+            "email": _webhook_notification_email(),
             "sendType": "SEQUENTIALLY",
             "interrupted": False,
             "enabled": True,

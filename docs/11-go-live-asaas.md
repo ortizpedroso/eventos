@@ -143,6 +143,56 @@ Script de referência: `./scripts/asaas-transfer-auth-setup.sh SEU_DOMINIO.com.b
 
 ---
 
+## 3.2 Testes sandbox no VPS (produção com credenciais de homologação)
+
+Para validar PIX/cartão real no ambiente `eventosbr.app.br` **sem** perder as credenciais de produção:
+
+### Fluxo recomendado
+
+```bash
+cd /opt/eventosbr
+
+# 1. Deploy da branch em teste (ou main após merge do PR)
+./scripts/atualizar-vps-branch.sh cursor/ux-seo-melhorias-v2-bf71
+# — ou, após merge: ./scripts/atualizar-vps-agora.sh
+
+# 2. Guardar credenciais de produção
+./scripts/backup-asaas-prod-env.sh
+
+# 3. Alternar para sandbox (interativo ou via arquivo pendente)
+cp .env.asaas-sandbox-pending.example .env.asaas-sandbox-pending
+nano .env.asaas-sandbox-pending   # preencher $aact_hmlg_... e walletId sandbox
+./scripts/switch-asaas-sandbox.sh --reload
+
+# 4. Webhook no painel Asaas SANDBOX (não o de produção)
+./scripts/asaas-webhook-setup.sh eventosbr.app.br
+
+# 5. Vitrine profissional (opcional)
+python3 scripts/seed-vitrine-profissional.py
+
+# 6. Testes manuais: compra PIX/cartão em valor baixo, confirmação de ingresso
+
+# 7. Restaurar produção
+./scripts/restore-asaas-prod-env.sh --reload
+```
+
+### Scripts
+
+| Script | Função |
+|--------|--------|
+| `backup-asaas-prod-env.sh` | Grava `.env.asaas-prod-backup` (gitignored) |
+| `switch-asaas-sandbox.sh` | Backup + `ASAAS_ENVIRONMENT=sandbox` + chaves sandbox |
+| `restore-asaas-prod-env.sh` | Restaura backup; `--reload` reinicia a API |
+| `atualizar-vps-branch.sh` | Deploy de branch específica (sem reset para main) |
+
+**Importante:** o webhook de sandbox e o de produção são contas separadas no Asaas. Configure o webhook na conta **sandbox** com a mesma URL pública (`https://SEU_DOMINIO/api/webhooks/asaas`) e o mesmo `ASAAS_WEBHOOK_TOKEN` do `.env`.
+
+**Conta raiz sandbox (API key):** para criar subcontas via `POST /v3/accounts` (BaaS), a conta Asaas que gera a chave `$aact_hmlg_...` precisa ser **Pessoa Jurídica (CNPJ)**. Contas PF (CPF) retornam HTTP 403 com a mensagem *"Contas de pessoa física não podem criar subcontas"*. Crie uma conta sandbox PJ em https://sandbox.asaas.com, habilite BaaS em **Minha conta → Configurações → Sandbox**, e use a nova API key + `walletId` da plataforma em `.env.asaas-sandbox-pending`.
+
+**Workaround sandbox (sem subconta API):** com `ASAAS_ALLOW_MANUAL_WALLET=true` no `.env` (apenas testes), defina o `walletId` do organizador via `PUT /api/organizador/asaas/wallet` usando o wallet de uma segunda conta sandbox criada manualmente.
+
+---
+
 ## 4. Organizadores — repasses
 
 Antes de vender ingressos pagos, cada organizador deve:

@@ -26,10 +26,16 @@ Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + **A
 
 ## Documentação interativa da API
 
-Com a API em execução:
+Em **desenvolvimento local**, com a API em execução:
 
 - **Swagger**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
+
+Em **produção**, `/docs`/`/redoc` ficam desligados por segurança. Use a referência estática gerada a partir do schema real:
+
+- Site: **`/documentacao/api`**
+- Esquema bruto: **`/openapi.json`**
+- Regenerar após mudar rotas: `python3 scripts/export-openapi.py`
 
 ## Convenções desta pasta
 
