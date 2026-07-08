@@ -301,7 +301,7 @@ MIT License
 
 ## 👥 Autores
 
-- Seu Nome aqui
+- Ortiz Pedroso
 
 ## 📞 Suporte
 
