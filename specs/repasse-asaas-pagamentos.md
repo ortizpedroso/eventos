@@ -16,8 +16,8 @@ Garantir que vendas de ingressos pagos distribuam valores corretamente entre **o
 
 | Destino | O que recebe | Como |
 |---------|----------------|------|
-| **Organizador** | Preço − taxa EventosBR − descontos | `split[].walletId` = wallet subconta |
-| **Plataforma** | Taxa EventosBR (% + fixo) | `ASAAS_PLATFORM_WALLET_ID` |
+| **Organizador** | Preço − taxa EventosBR − descontos | `split[].walletId` = wallet do organizador |
+| **Plataforma** | Taxa EventosBR (% + fixo) | Permanece na conta emissora (fora do array `split`) |
 | **Asaas** | Taxas gateway | Fora do split |
 
 Implementação: `app/services/pagamento_asaas.py` → `split_para_evento()`.
@@ -28,9 +28,13 @@ Ledger por ingresso gravado em `registrar_ledger_ingressos_lote()` (`financeiro_
 
 ## 3. Conta de repasse (organizador)
 
-1. Criar conta em Financeiro → `POST /v3/accounts` com **webhooks** configurados (`asaas_webhooks_config.py`).
-2. Acompanhar em `/organizador/financeiro/conta-repasse`.
-3. Status: `pending` → `awaiting_approval` → `approved` | `rejected`.
+**Modo padrão (`ASAAS_ONBOARDING_MODE=linked`):** organizador vincula conta Asaas própria (`PUT /api/organizador/asaas/wallet` com `walletId`). Status `linked` libera publicação/venda.
+
+**Modo BaaS (`baas` ou `both`):** criação via `POST /v3/accounts` com webhooks (`asaas_webhooks_config.py`).
+
+1. Vincular ou criar conta em Financeiro.
+2. Acompanhar em `/organizador/financeiro/conta-repasse` (modo BaaS: KYC).
+3. Status: `linked` | `pending` → `awaiting_approval` → `approved` | `rejected`.
 4. CPF/CNPJ gravado em `usuario.asaas_repasse_cpf_cnpj` para validação Pix no saque.
 
 Sync de status: webhook `ACCOUNT_STATUS_*` + worker 10 min + UI poll 20s.

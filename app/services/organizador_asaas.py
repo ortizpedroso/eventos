@@ -49,6 +49,7 @@ def _rotulo_status_repasse(status: str | None) -> str:
     s = (status or "").lower()
     return {
         "approved": "Conta aprovada",
+        "linked": "Conta vinculada",
         "manual": "Conta configurada",
         "awaiting_approval": "Em análise",
         "rejected": "Conta reprovada",
@@ -70,7 +71,7 @@ def _passos_acompanhamento(status: str | None, detalhes: dict | None) -> list[di
         {
             "id": "aprovacao",
             "titulo": "Conta liberada para vendas",
-            "concluido": geral == "APPROVED" or status in ("approved", "manual"),
+            "concluido": geral == "APPROVED" or status in ("approved", "manual", "linked"),
             "ativo": geral == "AWAITING_APPROVAL",
         },
     ]
@@ -111,7 +112,12 @@ def atualizar_status_repasse_organizador(db: Session, usuario: Usuario) -> Usuar
             usuario.asaas_repasse_status_em = agora
             usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(remoto)
     elif (usuario.asaas_wallet_id or "").strip() and not (usuario.asaas_account_id or "").strip():
-        usuario.asaas_repasse_status = "manual"
+        status_atual = (usuario.asaas_repasse_status or "").strip().lower()
+        if status_atual not in ("rejected", "pending", "awaiting_approval"):
+            if settings.permite_vinculo_wallet_organizador():
+                usuario.asaas_repasse_status = "linked"
+            elif settings.asaas_allow_manual_wallet:
+                usuario.asaas_repasse_status = "manual"
         usuario.asaas_repasse_status_em = agora
     db.add(usuario)
     return usuario
@@ -189,8 +195,11 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "pode_publicar_eventos_pagos": aprovado and settings.use_asaas and not settings.payments_disabled,
         "eventos_sem_wallet": eventos_sem_wallet,
         "anticipacao": anticipacao,
+        "onboarding_mode": settings.asaas_onboarding_mode,
+        "permite_vinculo_wallet": settings.permite_vinculo_wallet_organizador(),
+        "permite_subconta": settings.permite_subconta_baas(),
         "nota_wallet": (
-            "Crie sua conta de repasses pela plataforma para publicar eventos pagos e receber vendas."
+            "Vincule sua conta Asaas em Financeiro para publicar eventos pagos e receber vendas via split."
             if not wallet
             else (
                 "Sua conta de repasses está em análise. Acompanhe o andamento em Financeiro."
@@ -241,14 +250,25 @@ def definir_wallet_organizador(
         raise ValueError("walletId inválido. Cole o identificador completo da conta Asaas.")
     if not settings.use_asaas:
         raise ValueError("Asaas não está ativo neste ambiente.")
-    if not settings.asaas_allow_manual_wallet and not admin_override:
+    pode_vincular = (
+        settings.permite_vinculo_wallet_organizador()
+        or settings.asaas_allow_manual_wallet
+        or admin_override
+    )
+    if not pode_vincular:
         raise ValueError(
-            "A configuração manual de wallet está desativada. "
-            "Crie sua conta de repasses em Financeiro para o Asaas validar seus dados."
+            "O vínculo manual de conta Asaas está desativado neste ambiente. "
+            "Entre em contato com o suporte da plataforma."
+        )
+    if (usuario.asaas_account_id or "").strip() and settings.permite_subconta_baas():
+        raise ValueError(
+            "Você já possui subconta criada pela plataforma. "
+            "Use o acompanhamento da conta ou contate o suporte para alterar o modo de repasse."
         )
 
+    novo_status = "linked" if settings.permite_vinculo_wallet_organizador() else "manual"
     usuario.asaas_wallet_id = wid
-    usuario.asaas_repasse_status = "manual"
+    usuario.asaas_repasse_status = novo_status
     usuario.asaas_repasse_status_em = agora_utc_naive()
     db.add(usuario)
     atualizados = 0
@@ -264,7 +284,7 @@ def definir_wallet_organizador(
         "ok": True,
         "wallet_id": wid,
         "eventos_atualizados": atualizados,
-        "mensagem": "Conta de repasse configurada. Novas vendas usarão split para esta carteira.",
+        "mensagem": "Conta Asaas vinculada. Novas vendas usarão split para esta carteira.",
     }
 
 
@@ -285,6 +305,11 @@ def criar_subconta_organizador(
 ) -> dict[str, Any]:
     if usuario.tipo != "organizador":
         raise ValueError("Apenas organizadores podem criar subconta.")
+    if not settings.permite_subconta_baas():
+        raise ValueError(
+            "A criação de subconta pela plataforma está desativada. "
+            "Vincule sua conta Asaas informando o walletId em Financeiro."
+        )
     if (usuario.asaas_account_id or "").strip():
         raise ValueError("Você já possui subconta Asaas vinculada.")
     if not settings.use_asaas:

@@ -5,7 +5,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
-import { ContaNav } from "@/components/conta-nav";
 import { PerfilPublicoOrganizador } from "@/components/perfil-publico-organizador";
 import { apiFetch } from "@/lib/api";
 import type { Usuario } from "@/lib/types";
@@ -52,8 +51,7 @@ export function PerfilClient() {
   }, []);
 
   useEffect(() => {
-    const isPerfil =
-      pathname === "/conta/perfil" || pathname === "/organizador/perfil";
+    const isPerfil = pathname === "/conta/perfil";
     if (isPerfil) {
       void carregarDoBanco();
     }
@@ -197,7 +195,7 @@ export function PerfilClient() {
   });
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Meu perfil</h1>
         <Link href="/eventos" className="text-sm text-zinc-600 hover:underline">
@@ -205,9 +203,7 @@ export function PerfilClient() {
         </Link>
       </div>
 
-      <ContaNav />
-
-      <section className="rounded-2xl border border-zinc-200 bg-zinc-50/90 p-6 shadow-sm sm:p-8">
+      <section className="max-w-lg rounded-2xl border border-zinc-200 bg-zinc-50/90 p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">

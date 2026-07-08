@@ -74,8 +74,13 @@ class TestOrganizadorAsaas:
         ):
             route_settings.payments_disabled = False
             route_settings.use_asaas = True
+            route_settings.permite_vinculo_wallet_organizador.return_value = True
+            route_settings.asaas_allow_manual_wallet = False
             mock_settings.use_asaas = True
             mock_settings.payments_disabled = False
+            mock_settings.permite_vinculo_wallet_organizador.return_value = True
+            mock_settings.asaas_allow_manual_wallet = False
+            mock_settings.permite_subconta_baas.return_value = True
             r = client.put(
                 "/api/organizador/asaas/wallet",
                 headers={"Authorization": f"Bearer {token}"},
@@ -125,6 +130,7 @@ class TestOrganizadorAsaas:
             route_settings.payments_disabled = False
             route_settings.use_asaas = True
             mock_settings.use_asaas = True
+            mock_settings.permite_subconta_baas.return_value = True
             r = client.post(
                 "/api/organizador/asaas/subconta",
                 headers={"Authorization": f"Bearer {token}"},
@@ -153,6 +159,7 @@ class TestOrganizadorAsaas:
             route_settings.payments_disabled = False
             route_settings.use_asaas = True
             mock_settings.use_asaas = True
+            mock_settings.permite_subconta_baas.return_value = True
             mock_settings.payments_disabled = False
             mock_client = MagicMock()
             mock_client.post.return_value = mock_resp
@@ -208,6 +215,7 @@ class TestOrganizadorAsaas:
                 patch("app.services.organizador_asaas.get_asaas_client") as mock_client_factory,
             ):
                 mock_settings.use_asaas = True
+                mock_settings.permite_subconta_baas.return_value = True
                 mock_client = MagicMock()
                 mock_client.post.return_value = mock_resp
                 mock_client_factory.return_value = mock_client

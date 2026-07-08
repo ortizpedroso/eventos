@@ -143,6 +143,14 @@ Script de referência: `./scripts/asaas-transfer-auth-setup.sh SEU_DOMINIO.com.b
 
 ---
 
+## 3.3 Modo de repasse (conta vinculada)
+
+Por padrão (`ASAAS_ONBOARDING_MODE=linked`), o organizador **vincula a própria conta Asaas** informando o `walletId` em Organizador → Financeiro. O split envia apenas o líquido do organizador; a taxa EventosBR permanece na conta emissora (plataforma).
+
+Para reativar subcontas BaaS via API: `ASAAS_ONBOARDING_MODE=baas` ou `both`.
+
+---
+
 ## 3.2 Testes sandbox no VPS (produção com credenciais de homologação)
 
 Para validar PIX/cartão real no ambiente `eventosbr.app.br` **sem** perder as credenciais de produção:

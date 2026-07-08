@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     ASAAS_E2E_MOCK: bool = False
     # Colar walletId manualmente (bypass subconta/KYC). Desligado em produção por padrão.
     ASAAS_ALLOW_MANUAL_WALLET: bool = False
+    # linked = organizador vincula conta Asaas própria (walletId); baas = subconta via API; both = os dois
+    ASAAS_ONBOARDING_MODE: str = "linked"
     # Horas de carência após confirmação do pagamento antes de liberar valor para saque.
     FINANCEIRO_CARENCIA_SAQUE_HORAS: int = 48
     # Prazo máximo informado ao organizador para conclusão da transferência após solicitação.
@@ -116,6 +118,19 @@ class Settings(BaseSettings):
         if self.ASAAS_ALLOW_MANUAL_WALLET:
             return True
         return self.ENVIRONMENT in ("development", "test")
+
+    @property
+    def asaas_onboarding_mode(self) -> str:
+        mode = (self.ASAAS_ONBOARDING_MODE or "linked").strip().lower()
+        if mode not in ("linked", "baas", "both"):
+            return "linked"
+        return mode
+
+    def permite_vinculo_wallet_organizador(self) -> bool:
+        return self.asaas_onboarding_mode in ("linked", "both")
+
+    def permite_subconta_baas(self) -> bool:
+        return self.asaas_onboarding_mode in ("baas", "both")
 
 
 settings = Settings()

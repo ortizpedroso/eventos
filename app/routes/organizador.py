@@ -165,12 +165,19 @@ async def asaas_definir_wallet(
     _require_organizador(usuario_atual)
     if settings.payments_disabled:
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
-    if not settings.asaas_allow_manual_wallet and not admin_override:
+    if not settings.use_asaas:
+        raise HTTPException(status_code=503, detail="Asaas não está ativo neste ambiente.")
+    pode_vincular = (
+        settings.permite_vinculo_wallet_organizador()
+        or settings.asaas_allow_manual_wallet
+        or admin_override
+    )
+    if not pode_vincular:
         raise HTTPException(
             status_code=403,
             detail=(
-                "Configuração manual de wallet desativada. "
-                "Crie sua conta de repasses em Financeiro para validação pelo Asaas."
+                "O vínculo de conta Asaas está desativado neste ambiente. "
+                "Entre em contato com o suporte da plataforma."
             ),
         )
     try:

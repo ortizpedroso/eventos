@@ -242,7 +242,7 @@ export default function AuthClient({
   const formularioDesabilitado = loading || aguardandoRedirect;
 
   return (
-    <div className="mx-auto w-full max-w-md min-h-[32rem]">
+    <div className="mx-auto w-full max-w-md">
       {sessaoExpirada ? (
         <div
           className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"

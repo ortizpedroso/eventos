@@ -6,7 +6,9 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { InputValorBrl } from "@/components/input-valor-brl";
 import { apiFetch } from "@/lib/api";
-import { formatCpfMask, onlyDigits } from "@/lib/cpf";
+import { formatCepMask } from "@/lib/cep";
+import { formatCpfCnpjMask, formatCpfMask, onlyDigits } from "@/lib/cpf";
+import { formatTelefoneBrMask } from "@/lib/telefone-br";
 import { moedaBrlFromNumber } from "@/lib/moeda-brl";
 import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
 
@@ -24,6 +26,10 @@ type RepasseStatus = {
   eventos_sem_wallet: number;
   nota_wallet: string | null;
   anticipacao?: { credit_card_automatic_enabled?: boolean | null };
+  onboarding_mode?: string;
+  permite_vinculo_wallet?: boolean;
+  permite_subconta?: boolean;
+  wallet_id?: string | null;
 };
 
 type Saldo = {
@@ -162,6 +168,8 @@ export function OrganizadorRepassesPainel() {
   const [busy, setBusy] = useState(false);
 
   const [mostrarSubconta, setMostrarSubconta] = useState(false);
+  const [mostrarVinculo, setMostrarVinculo] = useState(false);
+  const [walletId, setWalletId] = useState("");
   const [modoReenvio, setModoReenvio] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -233,6 +241,27 @@ export function OrganizadorRepassesPainel() {
       setMostrarSubconta(true);
     }
   }, [searchParams, status?.pode_reenviar_subconta]);
+
+  async function vincularConta(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    setError(null);
+    try {
+      const r = await apiFetch<{ mensagem: string }>("/api/organizador/asaas/wallet", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ wallet_id: walletId.trim(), sincronizar_eventos: true }),
+      });
+      setMsg(r.mensagem);
+      setMostrarVinculo(false);
+      await carregar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível vincular a conta Asaas.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function criarSubconta(e: FormEvent) {
     e.preventDefault();
@@ -417,19 +446,30 @@ export function OrganizadorRepassesPainel() {
 
       {status && !status.repasses_prontos ? (
         <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
-          <p className="font-medium">Abra sua conta de repasses</p>
+          <p className="font-medium">Configure sua conta de repasses</p>
           <p className="mt-1">
             {status.nota_wallet ??
-              "É obrigatório para publicar eventos com ingressos pagos. Todo o processo é feito aqui na plataforma."}
+              "É obrigatório para publicar eventos com ingressos pagos. Vincule sua conta Asaas para receber via split."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
-              onClick={() => setMostrarSubconta(true)}
-            >
-              Criar conta de repasses
-            </button>
+            {status.permite_vinculo_wallet !== false ? (
+              <button
+                type="button"
+                className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
+                onClick={() => setMostrarVinculo(true)}
+              >
+                Vincular conta Asaas
+              </button>
+            ) : null}
+            {status.permite_subconta ? (
+              <button
+                type="button"
+                className="rounded-lg border border-emerald-700 bg-white px-4 py-2 text-sm font-medium text-emerald-900"
+                onClick={() => setMostrarSubconta(true)}
+              >
+                Criar subconta pela plataforma
+              </button>
+            ) : null}
             {status.tem_subconta && !status.repasse_aprovado ? (
               <Link
                 href="/organizador/financeiro/conta-repasse"
@@ -456,14 +496,45 @@ export function OrganizadorRepassesPainel() {
 
       {status?.repasse_aprovado ? (
         <p className="mt-4 text-sm text-emerald-800">
-          Conta aprovada — vendas e saques ativos.{" "}
+          {status.repasse_status === "linked"
+            ? "Conta Asaas vinculada — vendas ativas com split automático."
+            : "Conta aprovada — vendas e saques ativos."}{" "}
           <Link href="/organizador/financeiro/conta-repasse" className="font-medium underline">
             Ver detalhes da conta
           </Link>
         </p>
       ) : null}
 
-      {mostrarSubconta ? (
+      {mostrarVinculo ? (
+        <form onSubmit={vincularConta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5">
+          <h3 className="text-sm font-semibold text-zinc-900">Vincular conta Asaas</h3>
+          <ol className="list-decimal space-y-1 pl-5 text-xs text-zinc-600">
+            <li>Crie ou acesse sua conta no Asaas (sandbox ou produção).</li>
+            <li>No painel Asaas, copie o <strong>walletId</strong> da sua conta.</li>
+            <li>Cole abaixo e confirme — os repasses das vendas cairão nessa conta via split.</li>
+          </ol>
+          <label className="grid gap-1 text-sm">
+            <span className="text-xs text-zinc-600">Wallet ID (UUID)</span>
+            <input
+              className="rounded-lg border px-3 py-2 font-mono text-sm"
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              value={walletId}
+              onChange={(e) => setWalletId(e.target.value.trim())}
+              required
+            />
+          </label>
+          <div className="flex gap-2">
+            <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white">
+              Confirmar vínculo
+            </button>
+            <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setMostrarVinculo(false)}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {mostrarSubconta && status?.permite_subconta ? (
         <form onSubmit={criarSubconta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5 sm:grid-cols-2">
           <h3 className="sm:col-span-2 text-sm font-semibold text-zinc-900">
             {modoReenvio ? "Reenviar dados da conta de repasses" : "Dados para conta de repasses"}
@@ -476,13 +547,14 @@ export function OrganizadorRepassesPainel() {
           <input
             className="rounded-lg border px-3 py-2 text-sm"
             placeholder="CPF ou CNPJ"
-            value={formatCpfMask(cpfCnpj)}
+            value={formatCpfCnpjMask(cpfCnpj)}
             onChange={(e) => setCpfCnpj(onlyDigits(e.target.value, 14))}
           />
           <input
             className="rounded-lg border px-3 py-2 text-sm"
             placeholder="Telefone"
-            value={telefone}
+            inputMode="tel"
+            value={formatTelefoneBrMask(telefone)}
             onChange={(e) => setTelefone(onlyDigits(e.target.value, 11))}
           />
           {onlyDigits(cpfCnpj, 14).length === 11 ? (
@@ -505,7 +577,8 @@ export function OrganizadorRepassesPainel() {
           <input
             className="rounded-lg border px-3 py-2 text-sm"
             placeholder="CEP"
-            value={cep}
+            inputMode="numeric"
+            value={formatCepMask(cep)}
             onChange={(e) => setCep(onlyDigits(e.target.value, 8))}
           />
           <input

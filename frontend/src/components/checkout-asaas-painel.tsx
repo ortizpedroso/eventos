@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { validarDadosCartao } from "@/lib/cartao-validacao";
 import { mapCheckoutError } from "@/lib/checkout-errors";
+import { formatCepMask } from "@/lib/cep";
 import { formatCpfMask, onlyDigits } from "@/lib/cpf";
 import {
   AVISO_LEGAL_TAXAS,
@@ -415,7 +416,7 @@ export function CheckoutAsaasPainel({
             <input
               className="rounded border px-3 py-2 text-sm"
               placeholder="CEP"
-              value={cardCep}
+              value={formatCepMask(cardCep)}
               onChange={(e) => setCardCep(onlyDigits(e.target.value, 8))}
             />
             <input
