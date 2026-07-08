@@ -116,6 +116,31 @@ class TestOrganizadorAsaas:
         assert r.status_code == 400
         assert "subconta" in r.json()["detail"].lower()
 
+    def test_criar_subconta_exige_data_nascimento_cpf(self):
+        token = _registrar_organizador("sub_birth")
+        with (
+            patch("app.routes.organizador.settings") as route_settings,
+            patch("app.services.organizador_asaas.settings") as mock_settings,
+        ):
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            mock_settings.use_asaas = True
+            r = client.post(
+                "/api/organizador/asaas/subconta",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "cpf_cnpj": "52998224725",
+                    "telefone": "11987654321",
+                    "renda_mensal": 8000,
+                    "cep": "89010025",
+                    "endereco": "Rua Teste",
+                    "numero": "100",
+                    "bairro": "Centro",
+                },
+            )
+        assert r.status_code == 400
+        assert "nascimento" in r.json()["detail"].lower()
+
     def test_criar_subconta_mock(self):
         token = _registrar_organizador("sub")
         wallet = str(uuid.uuid4())
@@ -143,10 +168,13 @@ class TestOrganizadorAsaas:
                     "endereco": "Rua Teste",
                     "numero": "100",
                     "bairro": "Centro",
+                    "data_nascimento": "1990-05-15",
                 },
             )
         assert r.status_code == 200, r.text
         assert r.json()["wallet_id"] == wallet
+        posted = mock_client.post.call_args.kwargs.get("json") or mock_client.post.call_args[1].get("json")
+        assert posted.get("birthDate") == "1990-05-15"
 
         st = client.get(
             "/api/organizador/asaas",
@@ -193,6 +221,7 @@ class TestOrganizadorAsaas:
                     endereco="Rua Teste",
                     numero="100",
                     bairro="Centro",
+                    data_nascimento="1990-05-15",
                 )
 
             db.refresh(usuario)

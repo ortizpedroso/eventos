@@ -281,6 +281,7 @@ def criar_subconta_organizador(
     bairro: str,
     complemento: str | None = None,
     company_type: str = "INDIVIDUAL",
+    data_nascimento: str | None = None,
 ) -> dict[str, Any]:
     if usuario.tipo != "organizador":
         raise ValueError("Apenas organizadores podem criar subconta.")
@@ -292,6 +293,12 @@ def criar_subconta_organizador(
     doc = _digits(cpf_cnpj, 14)
     if len(doc) not in (11, 14):
         raise ValueError("Informe CPF (11 dígitos) ou CNPJ (14 dígitos) válido.")
+    if len(doc) == 11:
+        birth = (data_nascimento or "").strip()
+        if not birth:
+            raise ValueError("É necessário informar a data de nascimento.")
+        if len(birth) != 10 or birth[4] != "-" or birth[7] != "-":
+            raise ValueError("Data de nascimento inválida (use AAAA-MM-DD).")
     mobile = _digits(telefone, 11)
     if len(mobile) < 10:
         raise ValueError("Telefone inválido (DDD + número).")
@@ -313,6 +320,8 @@ def criar_subconta_organizador(
     }
     if complemento and complemento.strip():
         payload["complement"] = complemento.strip()[:80]
+    if len(doc) == 11:
+        payload["birthDate"] = (data_nascimento or "").strip()
 
     from app.services.asaas_webhooks_config import webhooks_payload_subconta
 
@@ -483,6 +492,7 @@ def reenviar_subconta_organizador(
     bairro: str,
     complemento: str | None = None,
     company_type: str = "INDIVIDUAL",
+    data_nascimento: str | None = None,
 ) -> dict[str, Any]:
     limpar_subconta_rejeitada(db, usuario)
     db.commit()
@@ -499,6 +509,7 @@ def reenviar_subconta_organizador(
         bairro=bairro,
         complemento=complemento,
         company_type=company_type,
+        data_nascimento=data_nascimento,
     )
 
 

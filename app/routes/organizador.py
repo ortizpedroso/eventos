@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import Evento, Ingresso, Usuario, get_db
@@ -107,6 +109,17 @@ class AsaasSubcontaRequest(BaseModel):
     bairro: str = Field(min_length=2, max_length=80)
     complemento: str | None = Field(default=None, max_length=80)
     company_type: str = Field(default="INDIVIDUAL", max_length=20)
+    data_nascimento: str | None = Field(default=None, max_length=10)
+
+    @field_validator("data_nascimento")
+    @classmethod
+    def validar_data_nascimento(cls, v: str | None) -> str | None:
+        if v is None or not str(v).strip():
+            return None
+        d = str(v).strip()
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d):
+            raise ValueError("data_nascimento deve estar no formato AAAA-MM-DD")
+        return d
 
 
 class AsaasAntecipacaoRequest(BaseModel):
@@ -194,6 +207,7 @@ async def asaas_criar_subconta(
             bairro=body.bairro,
             complemento=body.complemento,
             company_type=body.company_type,
+            data_nascimento=body.data_nascimento,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -222,6 +236,7 @@ async def asaas_reenviar_subconta(
             bairro=body.bairro,
             complemento=body.complemento,
             company_type=body.company_type,
+            data_nascimento=body.data_nascimento,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

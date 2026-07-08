@@ -170,6 +170,7 @@ export function OrganizadorRepassesPainel() {
   const [endereco, setEndereco] = useState("");
   const [numero, setNumero] = useState("");
   const [bairro, setBairro] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
 
   const [saqueValor, setSaqueValor] = useState(() => moedaBrlFromNumber(100));
   const [pixChave, setPixChave] = useState("");
@@ -256,6 +257,8 @@ export function OrganizadorRepassesPainel() {
           endereco: endereco.trim(),
           numero: numero.trim(),
           bairro: bairro.trim(),
+          data_nascimento:
+            onlyDigits(cpfCnpj, 14).length === 11 ? dataNascimento.trim() || undefined : undefined,
         }),
       });
       setMsg(r.mensagem);
@@ -482,6 +485,22 @@ export function OrganizadorRepassesPainel() {
             value={telefone}
             onChange={(e) => setTelefone(onlyDigits(e.target.value, 11))}
           />
+          {onlyDigits(cpfCnpj, 14).length === 11 ? (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs text-zinc-600">
+                Data de nascimento <span className="text-red-600">*</span>
+              </span>
+              <input
+                type="date"
+                required
+                className="rounded-lg border px-3 py-2 text-sm"
+                value={dataNascimento}
+                onChange={(e) => setDataNascimento(e.target.value)}
+              />
+            </label>
+          ) : (
+            <div />
+          )}
           <InputValorBrl value={renda} onChange={setRenda} className="rounded-lg" />
           <input
             className="rounded-lg border px-3 py-2 text-sm"
