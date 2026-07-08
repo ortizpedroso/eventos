@@ -187,6 +187,10 @@ python3 scripts/seed-vitrine-profissional.py
 
 **Importante:** o webhook de sandbox e o de produção são contas separadas no Asaas. Configure o webhook na conta **sandbox** com a mesma URL pública (`https://SEU_DOMINIO/api/webhooks/asaas`) e o mesmo `ASAAS_WEBHOOK_TOKEN` do `.env`.
 
+**Conta raiz sandbox (API key):** para criar subcontas via `POST /v3/accounts` (BaaS), a conta Asaas que gera a chave `$aact_hmlg_...` precisa ser **Pessoa Jurídica (CNPJ)**. Contas PF (CPF) retornam HTTP 403 com a mensagem *"Contas de pessoa física não podem criar subcontas"*. Crie uma conta sandbox PJ em https://sandbox.asaas.com, habilite BaaS em **Minha conta → Configurações → Sandbox**, e use a nova API key + `walletId` da plataforma em `.env.asaas-sandbox-pending`.
+
+**Workaround sandbox (sem subconta API):** com `ASAAS_ALLOW_MANUAL_WALLET=true` no `.env` (apenas testes), defina o `walletId` do organizador via `PUT /api/organizador/asaas/wallet` usando o wallet de uma segunda conta sandbox criada manualmente.
+
 ---
 
 ## 4. Organizadores — repasses

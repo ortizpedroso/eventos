@@ -79,6 +79,10 @@ class AsaasClient:
                 parts = [p for p in parts if p]
                 if parts:
                     desc = "; ".join(parts)
+            if not desc and isinstance(body, dict):
+                msg = str(body.get("message") or "").strip()
+                if msg:
+                    desc = msg
             raise AsaasAPIError(
                 desc or f"Asaas HTTP {resp.status_code}",
                 status_code=resp.status_code,
