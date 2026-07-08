@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 .env.vps.generated
+.env.asaas-prod-backup
+.env.asaas-*-backup
+.env.backup-producao-*
 
 # Python
 __pycache__/

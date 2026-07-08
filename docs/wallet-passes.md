@@ -1,6 +1,6 @@
 # Apple Wallet e Google Wallet — fase futura
 
-## Estado atual (build patamar-completo)
+## Estado atual (build produto completo)
 
 - Ingresso em **PDF/HTML** e tela **QR** na conta do comprador
 - Botão **“Adicionar à Carteira”** na UI com estado **Em breve** (desabilitado)

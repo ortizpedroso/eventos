@@ -243,7 +243,9 @@ def consultar_saldo_subconta(usuario: Usuario) -> dict[str, Any]:
 
 def validar_pix_cadastro_repasse(usuario: Usuario, pix_chave: str, pix_tipo: str) -> None:
     """Exige CPF/CNPJ Pix igual ao cadastro da subconta quando aplicável."""
-    doc = re.sub(r"\D", "", (getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
+    from app.utils.secret_storage import decrypt_at_rest
+    raw_cpf = decrypt_at_rest(getattr(usuario, "asaas_repasse_cpf_cnpj", None) or "")
+    doc = re.sub(r"\D", "", raw_cpf)
     if not doc:
         return
     tipo = inferir_pix_tipo(pix_chave, pix_tipo)

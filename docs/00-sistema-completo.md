@@ -1,6 +1,6 @@
 # 00 — Documentação completa do sistema EventosBR
 
-Documento **único e consolidado** do produto, arquitetura, funcionalidades, tecnologias e esquema do banco de dados. Complementa o [índice da pasta `docs/`](./README.md) e a spec de produto em [`specs/patamar-completo-ux-produto.md`](../specs/patamar-completo-ux-produto.md).
+Documento **único e consolidado** do produto, arquitetura, funcionalidades, tecnologias e esquema do banco de dados. Complementa o [índice da pasta `docs/`](./README.md) e a spec de produto em [`specs/eventosbr-produto-completo.md`](../specs/eventosbr-produto-completo.md).
 
 ---
 
@@ -649,7 +649,7 @@ Testes usam SQLite em memória e `ASAAS_DISABLED=true` por padrão (`conftest.py
 | [05-pagamentos-lotes-webhooks-asaas.md](./05-pagamentos-lotes-webhooks-asaas.md) | Fluxo de pagamento |
 | [06-configuracao-operacao.md](./06-configuracao-operacao.md) | Env, Docker, Alembic |
 | [wallet-passes.md](./wallet-passes.md) | Apple/Google Wallet (futuro) |
-| [`specs/patamar-completo-ux-produto.md`](../specs/patamar-completo-ux-produto.md) | Requisitos de produto (REQ-01…) |
+| [`specs/eventosbr-produto-completo.md`](../specs/eventosbr-produto-completo.md) | Requisitos de produto (REQ-01…) |
 
 ---
 
