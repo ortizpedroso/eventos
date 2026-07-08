@@ -72,50 +72,68 @@ if [ -f "$ENV_FILE" ]; then
   cp "$ENV_FILE" "${ENV_FILE}.bak.$(date +%Y%m%d-%H%M%S)"
 fi
 
-cat >"$ENV_FILE" <<EOF
-# Gerado por scripts/bootstrap-vps-env.sh em $(date -Iseconds)
-# Domínio: ${DOMAIN}
+# Usa <<'EOF' (sem expansão) e escreve cada variável com printf para evitar que valores com
+# $, backticks ou aspas sejam expandidos pelo bash durante a escrita do arquivo.
+_write_env() {
+  local key="$1"
+  local val="$2"
+  printf '%s=%s\n' "$key" "$val" >> "$ENV_FILE"
+}
 
-DOMAIN=${DOMAIN}
-ACME_EMAIL=${ACME_EMAIL}
-NEXT_PUBLIC_API_URL=https://${DOMAIN}
-FRONTEND_PUBLIC_URL=https://${DOMAIN}
-NEXT_PUBLIC_PAYMENT_PROVIDER=asaas
+: > "$ENV_FILE"
+chmod 600 "$ENV_FILE" 2>/dev/null || true
 
-GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
-NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+printf '# Gerado por scripts/bootstrap-vps-env.sh em %s\n' "$(date -Iseconds)" >> "$ENV_FILE"
+printf '# Domínio: %s\n\n' "$DOMAIN" >> "$ENV_FILE"
 
-POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+_write_env "DOMAIN"                     "$DOMAIN"
+_write_env "ACME_EMAIL"                 "$ACME_EMAIL"
+_write_env "NEXT_PUBLIC_API_URL"        "https://${DOMAIN}"
+_write_env "FRONTEND_PUBLIC_URL"        "https://${DOMAIN}"
+_write_env "NEXT_PUBLIC_PAYMENT_PROVIDER" "asaas"
+printf '\n' >> "$ENV_FILE"
 
-PAYMENT_PROVIDER=asaas
-ASAAS_API_KEY=$(docker_env_escape "${ASAAS_API_KEY}")
-ASAAS_WEBHOOK_TOKEN=${ASAAS_WEBHOOK_TOKEN}
-ASAAS_ENVIRONMENT=${ASAAS_ENVIRONMENT}
-ASAAS_DISABLED=${ASAAS_DISABLED}
-ASAAS_PLATFORM_WALLET_ID=${ASAAS_PLATFORM_WALLET_ID}
-ASAAS_CREATE_SUBACCOUNT_ON_REGISTER=false
-ASAAS_ALLOW_MANUAL_WALLET=false
+_write_env "GOOGLE_OAUTH_CLIENT_ID"            "$GOOGLE_OAUTH_CLIENT_ID"
+_write_env "NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID" "$GOOGLE_OAUTH_CLIENT_ID"
+printf '\n' >> "$ENV_FILE"
 
-SECRET_KEY=${SECRET_KEY}
-PLATFORM_ADMIN_API_KEY=${PLATFORM_ADMIN_API_KEY}
+_write_env "POSTGRES_PASSWORD"          "$POSTGRES_PASSWORD"
+printf '\n' >> "$ENV_FILE"
 
-EMAIL_SERVER=smtp.hostinger.com
-EMAIL_PORT=587
-EMAIL_USER=noreply@${DOMAIN}
-EMAIL_PASSWORD=${EMAIL_PASSWORD}
-EMAIL_FROM_NAME=EventosBR
-EMAIL_USE_TLS=true
+_write_env "PAYMENT_PROVIDER"           "asaas"
+# ASAAS_API_KEY pode conter $ — Docker Compose exige $$ para $ literal no .env.
+_write_env "ASAAS_API_KEY"              "$(docker_env_escape "${ASAAS_API_KEY}")"
+_write_env "ASAAS_WEBHOOK_TOKEN"        "$ASAAS_WEBHOOK_TOKEN"
+_write_env "ASAAS_ENVIRONMENT"          "$ASAAS_ENVIRONMENT"
+_write_env "ASAAS_DISABLED"             "$ASAAS_DISABLED"
+_write_env "ASAAS_PLATFORM_WALLET_ID"   "$ASAAS_PLATFORM_WALLET_ID"
+_write_env "ASAAS_CREATE_SUBACCOUNT_ON_REGISTER" "false"
+_write_env "ASAAS_ALLOW_MANUAL_WALLET"  "false"
+printf '\n' >> "$ENV_FILE"
 
-REDIS_URL=redis://redis:6379
-RATE_LIMIT_USE_REDIS=true
-TICKET_EMAIL_USE_REDIS=true
+_write_env "SECRET_KEY"                 "$SECRET_KEY"
+_write_env "PLATFORM_ADMIN_API_KEY"     "$PLATFORM_ADMIN_API_KEY"
+printf '\n' >> "$ENV_FILE"
 
-CORS_ORIGINS=https://${DOMAIN},https://www.${DOMAIN}
+_write_env "EMAIL_SERVER"               "smtp.hostinger.com"
+_write_env "EMAIL_PORT"                 "587"
+_write_env "EMAIL_USER"                 "noreply@${DOMAIN}"
+_write_env "EMAIL_PASSWORD"             "$EMAIL_PASSWORD"
+_write_env "EMAIL_FROM_NAME"            "EventosBR"
+_write_env "EMAIL_USE_TLS"              "true"
+printf '\n' >> "$ENV_FILE"
 
-TRUST_FORWARDED_HEADERS=true
-ENVIRONMENT=production
-DEBUG=False
-EOF
+_write_env "REDIS_URL"                  "redis://redis:6379"
+_write_env "RATE_LIMIT_USE_REDIS"       "true"
+_write_env "TICKET_EMAIL_USE_REDIS"     "true"
+printf '\n' >> "$ENV_FILE"
+
+_write_env "CORS_ORIGINS"               "https://${DOMAIN},https://www.${DOMAIN}"
+printf '\n' >> "$ENV_FILE"
+
+_write_env "TRUST_FORWARDED_HEADERS"    "true"
+_write_env "ENVIRONMENT"                "production"
+_write_env "DEBUG"                      "False"
 
 chmod 600 "$ENV_FILE" 2>/dev/null || true
 

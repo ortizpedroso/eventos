@@ -120,6 +120,11 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+if settings.ENVIRONMENT == "production" and "sqlite" in settings.DATABASE_URL.lower():
+    raise RuntimeError(
+        "SQLite não é suportado em produção (FOR UPDATE não funciona, saques e checkin sem lock). "
+        "Configure DATABASE_URL com PostgreSQL."
+    )
 
 if settings.ASAAS_DISABLED:
     import logging as _logging

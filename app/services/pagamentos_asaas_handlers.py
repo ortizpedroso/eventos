@@ -180,6 +180,8 @@ def iniciar_cobranca_asaas(
             for ing in lote:
                 ing.asaas_payment_id = None
             db.flush()
+            # Limpa o ingresso.id para forçar nova idempotency_key abaixo (evita reuso de
+            # "cobranca_{ingresso.id}" após cancelamento, o que faria Asaas retornar cache antigo).
         except AsaasAPIError as e:
             logger.warning("Cobrança Asaas anterior %s: %s", pay_id, e)
             raise HTTPException(
@@ -253,6 +255,9 @@ def iniciar_cobranca_asaas(
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e)) from e
 
+    # Idempotency-key inclui o método de pagamento para que uma nova cobrança após cancelamento
+    # da anterior (troca PIX→cartão) não reutilize o cache da chave original no Asaas.
+    idempotency_key = f"cobranca_{ingresso.id}_{billing.lower()}"
     try:
         payment = criar_cobranca_asaas(
             customer_id=customer_id,
@@ -268,7 +273,7 @@ def iniciar_cobranca_asaas(
             remote_ip=body.remote_ip,
             installment_count=installment_count,
             quantidade=len(lote),
-            idempotency_key=f"cobranca_{ingresso.id}",
+            idempotency_key=idempotency_key,
             desconto_organizador=desconto_organizador,
         )
     except AsaasAPIError as e:

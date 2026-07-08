@@ -292,6 +292,9 @@ def criar_subconta_organizador(
     doc = _digits(cpf_cnpj, 14)
     if len(doc) not in (11, 14):
         raise ValueError("Informe CPF (11 dígitos) ou CNPJ (14 dígitos) válido.")
+    from app.utils.cpf import cpf_ou_cnpj_valido
+    if not cpf_ou_cnpj_valido(doc):
+        raise ValueError("CPF ou CNPJ inválido (dígito verificador incorreto).")
     mobile = _digits(telefone, 11)
     if len(mobile) < 10:
         raise ValueError("Telefone inválido (DDD + número).")
@@ -329,18 +332,32 @@ def criar_subconta_organizador(
     account_id = sub.get("id")
     wallet_id = sub.get("walletId")
     api_key = sub.get("apiKey")
-    if not wallet_id:
-        raise ValueError("Subconta criada, mas walletId não retornado. Contate o suporte.")
 
+    # Salva account_id antes de verificar walletId: se wallet vier ausente,
+    # o suporte pode consultar/associar manualmente via admin sem perder referência.
     usuario.asaas_account_id = account_id
-    usuario.asaas_wallet_id = wallet_id
-    usuario.asaas_repasse_cpf_cnpj = doc
+    # Cifra CPF/CNPJ em repouso (LGPD — dado pessoal sensível).
+    usuario.asaas_repasse_cpf_cnpj = encrypt_at_rest(doc)
     if api_key:
         usuario.asaas_subaccount_api_key = encrypt_at_rest(str(api_key))
+    db.add(usuario)
+    db.flush()  # persiste account_id/api_key mesmo se wallet ausente abaixo
+
+    if not wallet_id:
+        db.commit()
+        logger.error(
+            "Subconta criada (account_id=%s) mas walletId ausente para usuário %s.",
+            account_id, usuario.id,
+        )
+        raise ValueError(
+            "Subconta criada, mas walletId não retornado. "
+            "account_id salvo — contate o suporte para associar o wallet manualmente."
+        )
+
+    usuario.asaas_wallet_id = wallet_id
     usuario.asaas_repasse_status = "pending"
     usuario.asaas_repasse_status_em = agora_utc_naive()
     usuario.asaas_repasse_detalhes = None
-    db.add(usuario)
     db.query(Evento).filter(Evento.organizador_id == usuario.id).update(
         {Evento.asaas_wallet_id: wallet_id},
         synchronize_session=False,

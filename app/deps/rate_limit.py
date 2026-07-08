@@ -30,6 +30,7 @@ _LIMITS: dict[str, tuple[int, int]] = {
     "portaria_buscar": (60, 60),
     "checkin_buscar": (60, 60),
     "lista_publica": (20, 60),
+    "financeiro_saque": (5, 60),
 }
 
 
@@ -176,6 +177,10 @@ def rate_limit_lista_publica(request: Request, slug: str = "") -> None:
     ip = _client_ip(request)
     scope = f"{ip}:{slug}" if slug else ip
     enforce_rate_limit(request, "lista_publica", scope)
+
+
+def rate_limit_financeiro_saque(request: Request) -> None:
+    enforce_rate_limit(request, "financeiro_saque")
 
 
 def client_ip_from_request(request: Request) -> str:
