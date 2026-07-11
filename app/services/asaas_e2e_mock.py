@@ -115,6 +115,12 @@ def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
             "documentation": "APPROVED",
             "general": "APPROVED",
         }
+    if method == "GET" and path == "/v3/myAccount":
+        return {
+            "id": "acc_e2e_mock",
+            "walletId": "wallet_e2e_mock",
+            "name": "Organizador E2E Mock",
+        }
     if method == "POST" and path == "/v3/transfers":
         return mock_criar_transfer(json or {})
     if method == "GET" and path == "/v3/finance/balance":

@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -64,6 +65,47 @@ class TestOrganizadorAsaas:
         body = r.json()
         assert body["wallet_configurado"] is False
         assert body["repasses_prontos"] is False
+
+    def test_definir_wallet_rejeita_wallet_plataforma(self):
+        from app.services.organizador_asaas import validar_wallet_repasse
+        from config.settings import settings
+
+        old = settings.ASAAS_PLATFORM_WALLET_ID
+        settings.ASAAS_PLATFORM_WALLET_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        try:
+            with pytest.raises(ValueError, match="plataforma"):
+                validar_wallet_repasse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
+        finally:
+            settings.ASAAS_PLATFORM_WALLET_ID = old
+
+    def test_definir_wallet_valida_api_key(self):
+        token = _registrar_organizador("wal_api")
+        wallet = str(uuid.uuid4())
+        with (
+            patch("app.routes.organizador.settings") as route_settings,
+            patch("app.services.organizador_asaas.settings") as mock_settings,
+            patch("app.services.organizador_asaas.AsaasClient") as mock_client_cls,
+        ):
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            route_settings.permite_vinculo_wallet_organizador.return_value = True
+            route_settings.asaas_allow_manual_wallet = False
+            mock_settings.use_asaas = True
+            mock_settings.permite_vinculo_wallet_organizador.return_value = True
+            mock_settings.asaas_allow_manual_wallet = False
+            mock_settings.permite_subconta_baas.return_value = True
+            mock_settings.ASAAS_PLATFORM_WALLET_ID = "wallet-platform-other"
+            mock_client = MagicMock()
+            mock_client.enabled = True
+            mock_client.get.return_value = {"walletId": wallet}
+            mock_client_cls.return_value = mock_client
+            r = client.put(
+                "/api/organizador/asaas/wallet",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"wallet_id": wallet, "api_key": "org_api_key_test"},
+            )
+        assert r.status_code == 200, r.text
+        assert r.json().get("verificado_api") is True
 
     def test_definir_wallet(self):
         token = _registrar_organizador("wal")

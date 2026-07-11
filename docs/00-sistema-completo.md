@@ -1,6 +1,6 @@
 # 00 — Documentação completa do sistema EventosBR
 
-Documento **único e consolidado** do produto, arquitetura, funcionalidades, tecnologias e esquema do banco de dados. Complementa o [índice da pasta `docs/`](./README.md) e a spec de produto em [`specs/patamar-completo-ux-produto.md`](../specs/patamar-completo-ux-produto.md).
+Documento **único e consolidado** do produto, arquitetura, funcionalidades, tecnologias e esquema do banco de dados. Complementa o [índice da pasta `docs/`](./README.md) e a spec de produção em [`specs/eventosbr-producao.md`](../specs/eventosbr-producao.md).
 
 ---
 

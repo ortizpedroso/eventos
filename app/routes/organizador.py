@@ -97,6 +97,11 @@ async def enviar_comunicado(
 class AsaasWalletRequest(BaseModel):
     wallet_id: str = Field(min_length=8, max_length=64)
     sincronizar_eventos: bool = True
+    api_key: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Opcional: chave API Asaas do organizador para validar que o walletId pertence à conta.",
+    )
 
 
 class AsaasSubcontaRequest(BaseModel):
@@ -187,6 +192,7 @@ async def asaas_definir_wallet(
             body.wallet_id,
             sincronizar_eventos=body.sincronizar_eventos,
             admin_override=admin_override,
+            api_key_organizador=body.api_key,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

@@ -130,6 +130,41 @@ def _client_subconta(usuario: Usuario) -> AsaasClient | None:
     return AsaasClient(api_key=key)
 
 
+def validar_wallet_repasse(
+    wallet_id: str,
+    *,
+    api_key_organizador: str | None = None,
+) -> dict[str, Any]:
+    """Valida walletId antes de vincular conta (formato, ≠ plataforma, opcional API key)."""
+    wid = (wallet_id or "").strip()
+    if not _WALLET_RE.match(wid):
+        raise ValueError("walletId inválido. Cole o identificador completo da conta Asaas.")
+    platform = (settings.ASAAS_PLATFORM_WALLET_ID or "").strip()
+    if platform and wid.lower() == platform.lower():
+        raise ValueError(
+            "Este walletId é o da conta da plataforma. "
+            "Informe o walletId da sua conta Asaas de organizador."
+        )
+    verificado_api = False
+    key = (api_key_organizador or "").strip()
+    if key:
+        org_client = AsaasClient(api_key=key)
+        if not org_client.enabled:
+            raise ValueError("Chave API Asaas do organizador inválida ou vazia.")
+        try:
+            account = org_client.get("/v3/myAccount")
+        except AsaasAPIError as e:
+            raise ValueError(str(e) or "Não foi possível validar a conta Asaas.") from e
+        acc_wallet = str((account or {}).get("walletId") or "").strip()
+        if acc_wallet and acc_wallet.lower() != wid.lower():
+            raise ValueError(
+                "O walletId não corresponde à chave API informada. "
+                "Use o walletId da mesma conta Asaas da chave API."
+            )
+        verificado_api = True
+    return {"wallet_id": wid, "verificado_api": verificado_api}
+
+
 def sincronizar_wallet_eventos_organizador(db: Session, usuario: Usuario) -> int:
     """Propaga wallet do organizador para eventos ainda sem repasse configurado."""
     wid = (usuario.asaas_wallet_id or "").strip()
@@ -244,10 +279,10 @@ def definir_wallet_organizador(
     *,
     sincronizar_eventos: bool = True,
     admin_override: bool = False,
+    api_key_organizador: str | None = None,
 ) -> dict[str, Any]:
-    wid = (wallet_id or "").strip()
-    if not _WALLET_RE.match(wid):
-        raise ValueError("walletId inválido. Cole o identificador completo da conta Asaas.")
+    validacao = validar_wallet_repasse(wallet_id, api_key_organizador=api_key_organizador)
+    wid = validacao["wallet_id"]
     if not settings.use_asaas:
         raise ValueError("Asaas não está ativo neste ambiente.")
     pode_vincular = (
@@ -284,6 +319,7 @@ def definir_wallet_organizador(
         "ok": True,
         "wallet_id": wid,
         "eventos_atualizados": atualizados,
+        "verificado_api": validacao.get("verificado_api", False),
         "mensagem": "Conta Asaas vinculada. Novas vendas usarão split para esta carteira.",
     }
 

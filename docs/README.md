@@ -22,6 +22,8 @@ Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + **A
 | [08 — Deploy Hostinger (VPS)](./08-deploy-hostinger.md) | Docker prod, Caddy, DNS, go-live |
 | [09 — Auditoria segurança e UX](./09-auditoria-seguranca-ux.md) | Checklist do que foi melhorado e o que falta (jun/2026) |
 | [10 — Próximo patamar](./10-checklist-proximo-patamar.md) | Checklist completo: o que temos vs o que falta (produto, paridade, diferenciação) |
+| [11 — Go-live Asaas](./11-go-live-asaas.md) | Checklist operacional de deploy em produção |
+| **Spec produção** | [`specs/eventosbr-producao.md`](../specs/eventosbr-producao.md) — documento único `/build` e `/review` |
 | [11 — Go-live Asaas](./11-go-live-asaas.md) | Checklist produção com Asaas |
 
 ## Documentação interativa da API

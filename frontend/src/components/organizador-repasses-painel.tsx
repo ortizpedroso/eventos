@@ -170,6 +170,7 @@ export function OrganizadorRepassesPainel() {
   const [mostrarSubconta, setMostrarSubconta] = useState(false);
   const [mostrarVinculo, setMostrarVinculo] = useState(false);
   const [walletId, setWalletId] = useState("");
+  const [apiKeyOrganizador, setApiKeyOrganizador] = useState("");
   const [modoReenvio, setModoReenvio] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -251,7 +252,11 @@ export function OrganizadorRepassesPainel() {
       const r = await apiFetch<{ mensagem: string }>("/api/organizador/asaas/wallet", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ wallet_id: walletId.trim(), sincronizar_eventos: true }),
+        body: JSON.stringify({
+          wallet_id: walletId.trim(),
+          sincronizar_eventos: true,
+          api_key: apiKeyOrganizador.trim() || undefined,
+        }),
       });
       setMsg(r.mensagem);
       setMostrarVinculo(false);
@@ -509,7 +514,7 @@ export function OrganizadorRepassesPainel() {
         <form onSubmit={vincularConta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5">
           <h3 className="text-sm font-semibold text-zinc-900">Vincular conta Asaas</h3>
           <ol className="list-decimal space-y-1 pl-5 text-xs text-zinc-600">
-            <li>Crie ou acesse sua conta no Asaas (sandbox ou produção).</li>
+            <li>Crie ou acesse sua conta no Asaas.</li>
             <li>No painel Asaas, copie o <strong>walletId</strong> da sua conta.</li>
             <li>Cole abaixo e confirme — os repasses das vendas cairão nessa conta via split.</li>
           </ol>
@@ -521,6 +526,19 @@ export function OrganizadorRepassesPainel() {
               value={walletId}
               onChange={(e) => setWalletId(e.target.value.trim())}
               required
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="text-xs text-zinc-600">
+              Chave API Asaas (opcional — valida que o wallet pertence à conta)
+            </span>
+            <input
+              type="password"
+              autoComplete="off"
+              className="rounded-lg border px-3 py-2 font-mono text-sm"
+              placeholder="$aact_..."
+              value={apiKeyOrganizador}
+              onChange={(e) => setApiKeyOrganizador(e.target.value)}
             />
           </label>
           <div className="flex gap-2">
