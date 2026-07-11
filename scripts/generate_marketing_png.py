@@ -67,15 +67,15 @@ def _save(name: str, painter) -> None:
     img = Image.new("RGB", (800, 500), "#ffffff")
     painter(ImageDraw.Draw(img), 800, 500)
     path = OUT / name
-    img.save(path, format="PNG", optimize=True)
+    img.save(path, format="WEBP", quality=88, method=6)
     print(f"Wrote {path}")
 
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    _save("organizador.png", _draw_organizador)
-    _save("checkout.png", _draw_checkout)
-    _save("portaria.png", _draw_portaria)
+    _save("organizador.webp", _draw_organizador)
+    _save("checkout.webp", _draw_checkout)
+    _save("portaria.webp", _draw_portaria)
 
 
 if __name__ == "__main__":
