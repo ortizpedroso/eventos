@@ -57,10 +57,12 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 | `/eventos/[slug]` | `evento-public-client.tsx` | Detalhe + compra; lotes e preço atual |
 | `/eventos/[slug]/editar` | `editar-client.tsx` | Organizador dono |
 | `/eventos/novo` | `novo-evento-client.tsx` | Criação |
-| `/auth` | `auth-client.tsx` | Login / registo + botões OAuth Google |
+| `/auth` | `auth-client.tsx` + `auth/layout.tsx` | Login / registo + OAuth; layout centraliza formulário e fixa rodapé |
+| `/conta` | `conta/layout.tsx` + `ContaShell` | Shell com menu lateral: Perfil, Pagamentos, Ingressos, Notificações |
 | `/conta/perfil` | `perfil/page.tsx` | Edição de dados pessoais e senha |
 | `/conta/pagamentos` | `pagamentos/page.tsx` | Lista de compras com opção de cancelamento |
 | `/conta/ingressos` | `ingressos/page.tsx` | Lista de ingressos; badge âmbar "Repassado para [Nome]" |
+| `/conta/notificacoes` | `notificacoes/page.tsx` | Lista de notificações in-app |
 | `/conta/ingressos/[id]` | `ingressos/[id]/page.tsx` | QR Code, baixar/imprimir, enviar e-mail, **formulário de repasse** |
 | `/organizador/*` | layout shell | Meus eventos, novo evento, relatórios, financeiro, comunicados |
 | `/termos`, `/privacidade`, `/sobre` | páginas estáticas | Conteúdo legal/informativo |
@@ -79,6 +81,7 @@ Pasta **`frontend/`**. App Router em **`src/app/`**.
 | **`evento-imagem-field.tsx`** | URL ou ficheiro para imagem do evento |
 | **`evento-hero-banner.tsx`** | Banner da página pública |
 | **`site-footer.tsx`**, **`navbar.tsx`** | Navegação global |
+| **`conta-shell.tsx`** | Menu lateral persistente da área `/conta/*` |
 
 ---
 

@@ -62,7 +62,9 @@ Elevar o EventosBR ao próximo patamar de produto e confiança de mercado, imple
 - `compra-info-confianca.tsx` e `checkout-preco-detalhe.tsx` citam **gateway de pagamento certificado** (sem expor marca do provedor ao comprador).
 - **Comprador:** vê preço do ingresso, total a pagar (com acréscimo de parcelamento quando aplicável) e nota genérica de processamento incluído — **sem** breakdown de taxa EventosBR nem “organizador recebe”.
 - **Organizador:** vê taxa EventosBR e líquido em wizard, planos e painel financeiro.
-- Repasses automáticos via split no momento da venda; saque manual pela plataforma **desabilitado** (`saque_habilitado: false`).
+- Repasses automáticos via split no momento da venda.
+- **Modo linked** (`ASAAS_ONBOARDING_MODE=linked`): organizador saca no painel Asaas; `saque_habilitado: false` na plataforma.
+- **Modo BaaS:** saque Pix white-label na plataforma com carência 48h.
 - **Concluído quando:** página de evento + checkout sem texto contraditório nem menção a processadores legados (Stripe etc.).
 
 ### REQ-07 — Badges de pagamento no checkout
@@ -72,6 +74,14 @@ Elevar o EventosBR ao próximo patamar de produto e confiança de mercado, imple
 ---
 
 ## 3. Requisitos — Vitrine e descoberta (P1)
+
+### REQ-07b — Área da conta com menu lateral persistente
+- Layout `ContaShell` em `frontend/src/app/conta/layout.tsx`: menu lateral fixo (desktop) com **Perfil**, **Pagamentos**, **Ingressos**, **Notificações**.
+- Sem link “Painel” no menu da conta (organizador acessa eventos pelo shell `/organizador/*`).
+- Dropdown do avatar na navbar: mesmas quatro opções + Sair; todas apontam para `/conta/*`.
+- `/organizador/perfil` redireciona para `/conta/perfil`.
+- `auth/layout.tsx`: rodapé permanece no fim da viewport na tela de login.
+- **Concluído quando:** navegar entre `/conta/*` mantém o menu lateral visível; login sem rodapé flutuando no meio da tela.
 
 ### REQ-08 — Filtros de data (sem calendário visual)
 - Em `/eventos`, adicionar chips: **Hoje**, **Este fim de semana**, **Esta semana**.
@@ -354,12 +364,13 @@ Taxas EventosBR (por plano): **Padrão** 10% + R$ 2,00/ingresso; **Assinatura** 
 - [x] Checkout: badges PIX/cartão/seguro; sem texto de outro processador  
 - [x] Vitrine: chips Hoje/Fim de semana/Semana; intervalo De/Até; sem calendário mensal  
 - [x] `/planos`: ícones SVG; comparativo Sympla com disclaimer; simulador all-in EventosBR  
-- [x] Wizard + Financeiro: simuladores coerentes (split automático, sem saque manual)  
+- [x] Wizard + Financeiro: simuladores coerentes (split automático; saque na plataforma só modo BaaS)  
 - [x] Parcelamento: toggle organizador 2/3/6/12x; checkout parcelas  
 - [x] Lista interesse: form + CSV + e-mail abertura  
 - [x] Lista espera: fila + e-mail + notificação conta + prazo 12/24/48h  
 - [x] Página pública organizador (`/produtor/{slug}`)  
 - [x] `/ajuda` + `/blog`  
+- [x] Área da conta: `ContaShell` com menu lateral (Perfil, Pagamentos, Ingressos, Notificações)  
 - [x] Wallet: “Em breve” + doc; tela `/ingresso/qr` com evento e participante  
 - [x] Mobile: smoke E2E viewport 390px (home + vitrine sem overflow horizontal) — **validação em dispositivo real recomendada**  
 - [x] `pytest` + E2E verdes (CI)  
