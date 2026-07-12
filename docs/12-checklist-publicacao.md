@@ -1,6 +1,6 @@
 # 12 — Checklist de publicação EventosBR
 
-**Atualizado:** 2026-07-11  
+**Atualizado:** 2026-07-12  
 **Spec de referência:** [`specs/eventosbr-producao.md`](../specs/eventosbr-producao.md)
 
 Use este documento para saber o que **já está no código** e o que **ainda depende de você** (VPS, Asaas, DNS, etc.).
@@ -86,6 +86,22 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 | 15 | Primeira venda real | PIX ou cartão + webhook + ingresso pago |
 
 **Scripts úteis:** `docs/11-go-live-asaas.md`, `scripts/go-live-anexo-b.sh`, `scripts/verify-production.sh`
+
+### Testes sandbox Asaas (antes do go-live) 🧪
+
+| # | Passo | Comando |
+|---|-------|---------|
+| 1 | Guardar produção | `./scripts/backup-asaas-prod-env.sh` |
+| 2 | Preencher sandbox | `cp .env.asaas-sandbox-pending.example .env.asaas-sandbox-pending` |
+| 3 | Alternar para sandbox | `./scripts/switch-asaas-sandbox.sh --reload` |
+| 4 | Webhook no painel **sandbox** | `https://DOMINIO/api/webhooks/asaas` |
+| 5 | Validar API | `./scripts/test-asaas-sandbox.sh` |
+| 6 | Compra teste + vínculo wallet | Financeiro → Vincular conta Asaas |
+| 7 | Voltar produção | `./scripts/restore-asaas-prod-env.sh --reload` |
+
+**Se o `.env` perder credenciais de produção:** `./scripts/sync-asaas-prod-from-backup.sh`
+
+Templates: `.env.asaas-prod-backup.example`, `.env.asaas-sandbox-pending.example`
 
 ---
 

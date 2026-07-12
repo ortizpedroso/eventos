@@ -5,16 +5,19 @@
 # Uso interativo:
 #   ./scripts/configure-asaas-env.sh
 #
-# Uso não interativo (CI / quando o utilizador passar os valores):
+# Uso não interativo:
 #   ./scripts/configure-asaas-env.sh \
 #     --api-key '$aact_prod_...' \
 #     --platform-wallet 'uuid-wallet-plataforma' \
-#     --webhook-token 'token-forte'
+#     --webhook-token 'token-forte' \
+#     --env production
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/env-file-lib.sh
+source "$ROOT/scripts/env-file-lib.sh"
 
 ENV_FILE="${ENV_FILE:-.env}"
 EXAMPLE="$ROOT/.env.production.example"
@@ -23,6 +26,8 @@ API_KEY=""
 PLATFORM_WALLET=""
 WEBHOOK_TOKEN=""
 ENVIRONMENT="production"
+ONBOARDING_MODE="linked"
+ALLOW_MANUAL="false"
 
 usage() {
   echo "Uso: $0 [--api-key KEY] [--platform-wallet ID] [--webhook-token TOKEN] [--env sandbox|production]"
@@ -51,56 +56,59 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 if [ -z "$API_KEY" ]; then
-  read -r -p "ASAAS_API_KEY (ex.: \$aact_prod_...): " API_KEY
+  read -r -p "ASAAS_API_KEY (ex.: \$aact_prod_... ou \$aact_hmlg_...): " API_KEY
 fi
 if [ -z "$PLATFORM_WALLET" ]; then
   read -r -p "ASAAS_PLATFORM_WALLET_ID (walletId da conta EventosBR): " PLATFORM_WALLET
 fi
 if [ -z "$WEBHOOK_TOKEN" ]; then
-  read -r -p "ASAAS_WEBHOOK_TOKEN (token forte para webhook): " WEBHOOK_TOKEN
+  WEBHOOK_TOKEN="$(env_get ASAAS_WEBHOOK_TOKEN "$ENV_FILE" 2>/dev/null || true)"
+  if [ -z "$WEBHOOK_TOKEN" ]; then
+    read -r -p "ASAAS_WEBHOOK_TOKEN (token forte para webhook): " WEBHOOK_TOKEN
+  fi
   if [ -z "$WEBHOOK_TOKEN" ]; then
     WEBHOOK_TOKEN="$(openssl rand -hex 24 2>/dev/null || head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
     echo "Token de webhook gerado e gravado em $ENV_FILE (não exibido por segurança)."
   fi
 fi
 
-# Docker Compose interpreta $ no .env — escape com $$ (API keys Asaas começam com $aact_).
-docker_env_escape() {
-  printf '%s' "$1" | sed 's/\$/$$/g'
-}
+if [ "$ENVIRONMENT" = "sandbox" ]; then
+  ONBOARDING_MODE="linked"
+  ALLOW_MANUAL="true"
+fi
 
-set_env_var() {
-  local key="$1"
-  local val="$2"
-  local escaped
-  escaped="$(docker_env_escape "$val")"
-  if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
-    # shellcheck disable=SC2016
-    sed -i "s|^${key}=.*|${key}=${escaped}|" "$ENV_FILE"
-  else
-    echo "${key}=${escaped}" >>"$ENV_FILE"
-  fi
-}
+set_env_var "PAYMENT_PROVIDER" "asaas" "$ENV_FILE"
+set_env_var "ASAAS_API_KEY" "$API_KEY" "$ENV_FILE"
+set_env_var "ASAAS_PLATFORM_WALLET_ID" "$PLATFORM_WALLET" "$ENV_FILE"
+set_env_var "ASAAS_WEBHOOK_TOKEN" "$WEBHOOK_TOKEN" "$ENV_FILE"
+set_env_var "ASAAS_ENVIRONMENT" "$ENVIRONMENT" "$ENV_FILE"
+set_env_var "ASAAS_DISABLED" "false" "$ENV_FILE"
+set_env_var "ASAAS_ONBOARDING_MODE" "$ONBOARDING_MODE" "$ENV_FILE"
+set_env_var "ASAAS_ALLOW_MANUAL_WALLET" "$ALLOW_MANUAL" "$ENV_FILE"
+set_env_var "ASAAS_CREATE_SUBACCOUNT_ON_REGISTER" "false" "$ENV_FILE"
 
-set_env_var "PAYMENT_PROVIDER" "asaas"
-set_env_var "ASAAS_API_KEY" "$API_KEY"
-set_env_var "ASAAS_PLATFORM_WALLET_ID" "$PLATFORM_WALLET"
-set_env_var "ASAAS_WEBHOOK_TOKEN" "$WEBHOOK_TOKEN"
-set_env_var "ASAAS_ENVIRONMENT" "$ENVIRONMENT"
-set_env_var "ASAAS_DISABLED" "false"
+if [ "$ENVIRONMENT" = "production" ]; then
+  echo "==> Gravando backup de produção..."
+  ./scripts/backup-asaas-prod-env.sh
+fi
 
 echo ""
 echo "==> Asaas configurado em $ENV_FILE"
 echo "    PAYMENT_PROVIDER=asaas"
 echo "    ASAAS_ENVIRONMENT=$ENVIRONMENT"
 echo "    ASAAS_PLATFORM_WALLET_ID=$PLATFORM_WALLET"
+echo "    ASAAS_ONBOARDING_MODE=$ONBOARDING_MODE"
 echo ""
-DOMAIN="$(grep '^DOMAIN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || echo 'SEU_DOMINIO')"
+DOMAIN="$(env_get DOMAIN "$ENV_FILE" || echo 'SEU_DOMINIO')"
 echo "Próximos passos:"
 echo "  1. ./scripts/deploy-vps.sh"
 echo "  2. Webhook Asaas → https://${DOMAIN}/api/webhooks/asaas"
 echo "     Use o valor de ASAAS_WEBHOOK_TOKEN definido em $ENV_FILE"
-echo "  3. ./scripts/verify-production.sh"
+if [ "$ENVIRONMENT" = "sandbox" ]; then
+  echo "  3. ./scripts/test-asaas-sandbox.sh"
+else
+  echo "  3. ./scripts/verify-production.sh"
+fi
 echo "  4. Organizadores: Financeiro → walletId"
 echo ""
 echo "Referência: ./scripts/asaas-webhook-setup.sh ${DOMAIN}"

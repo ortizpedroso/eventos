@@ -75,6 +75,22 @@ Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos
 - Conta/saques: modo BaaS apenas
 - Transfer-auth (BaaS): `https://DOMINIO/api/webhooks/asaas/transfer-auth`
 
+### 2.8 Testes sandbox (antes do go-live)
+
+Fluxo no VPS com credenciais de homologação Asaas:
+
+1. **Backup produção:** `./scripts/backup-asaas-prod-env.sh` → `.env.asaas-prod-backup` (gitignored)
+2. **Credenciais sandbox:** copiar `.env.asaas-sandbox-pending.example` → `.env.asaas-sandbox-pending` e preencher `$aact_hmlg_...` + `walletId`
+3. **Alternar:** `./scripts/switch-asaas-sandbox.sh --reload` (backup automático da produção)
+4. **Webhook** no painel **sandbox** Asaas (mesma URL pública + mesmo `ASAAS_WEBHOOK_TOKEN`)
+5. **Validar API:** `./scripts/test-asaas-sandbox.sh`
+6. **Teste manual:** organizador vincula `walletId` (modo `linked` + `ASAAS_ALLOW_MANUAL_WALLET=true` em sandbox)
+7. **Restaurar produção:** `./scripts/restore-asaas-prod-env.sh --reload`
+
+Se o `.env` for recriado sem credenciais: `./scripts/sync-asaas-prod-from-backup.sh` lê `.env.asaas-prod-backup`.
+
+Templates versionados: `.env.asaas-prod-backup.example`, `.env.asaas-sandbox-pending.example`.
+
 ---
 
 ## 3. UX — Área da conta
@@ -166,8 +182,9 @@ Checks: `production_checks.py` → `GET /api/admin/setup`.
 
 ### Operação (usuário no VPS)
 
-- [ ] `.env` produção preenchido
+- [ ] `.env` produção preenchido (ou `sync-asaas-prod-from-backup.sh` a partir de `.env.asaas-prod-backup`)
 - [ ] Webhook Asaas configurado no painel
+- [ ] Testes sandbox concluídos (`switch-asaas-sandbox.sh` → `test-asaas-sandbox.sh` → `restore-asaas-prod-env.sh`)
 - [ ] SMTP + SPF/DKIM
 - [ ] `alembic upgrade head`
 - [ ] Primeira venda real validada
@@ -185,6 +202,7 @@ Checks: `production_checks.py` → `GET /api/admin/setup`.
 | Conta | `conta-shell.tsx`, `conta/layout.tsx`, `auth/layout.tsx` |
 | Config | `config/settings.py`, `production_checks.py` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `scripts/deploy-vps.sh` |
+| Backup / sandbox Asaas | `backup-asaas-prod-env.sh`, `sync-asaas-prod-from-backup.sh`, `switch-asaas-sandbox.sh`, `restore-asaas-prod-env.sh`, `test-asaas-sandbox.sh` |
 
 ---
 

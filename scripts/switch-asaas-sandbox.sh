@@ -51,6 +51,8 @@ if [ -z "$API_KEY" ] && [ -f "$PENDING" ]; then
   API_KEY="$(env_get ASAAS_API_KEY "$PENDING" 2>/dev/null || true)"
   WALLET_ID="$(env_get ASAAS_PLATFORM_WALLET_ID "$PENDING" 2>/dev/null || true)"
   WEBHOOK_TOKEN="$(env_get ASAAS_WEBHOOK_TOKEN "$PENDING" 2>/dev/null || true)"
+  ONBOARDING_MODE="$(env_get ASAAS_ONBOARDING_MODE "$PENDING" 2>/dev/null || true)"
+  ALLOW_MANUAL="$(env_get ASAAS_ALLOW_MANUAL_WALLET "$PENDING" 2>/dev/null || true)"
   echo "==> Credenciais lidas de $PENDING"
 fi
 
@@ -86,6 +88,9 @@ set_env_var "ASAAS_PLATFORM_WALLET_ID" "$WALLET_ID" "$ENV_FILE"
 set_env_var "ASAAS_WEBHOOK_TOKEN" "$WEBHOOK_TOKEN" "$ENV_FILE"
 set_env_var "ASAAS_ENVIRONMENT" "sandbox" "$ENV_FILE"
 set_env_var "ASAAS_DISABLED" "false" "$ENV_FILE"
+set_env_var "ASAAS_ONBOARDING_MODE" "${ONBOARDING_MODE:-linked}" "$ENV_FILE"
+set_env_var "ASAAS_ALLOW_MANUAL_WALLET" "${ALLOW_MANUAL:-true}" "$ENV_FILE"
+set_env_var "ASAAS_CREATE_SUBACCOUNT_ON_REGISTER" "false" "$ENV_FILE"
 
 echo ""
 echo "==> Sandbox ativo em $ENV_FILE"
@@ -100,6 +105,7 @@ echo "  2. No painel Asaas SANDBOX → Webhooks:"
 echo "     URL: https://${DOMAIN}/api/webhooks/asaas"
 echo "     Token = ASAAS_WEBHOOK_TOKEN do .env"
 echo "  3. Após os testes: ./scripts/restore-asaas-prod-env.sh --reload"
+echo "  4. Validar API: ./scripts/test-asaas-sandbox.sh"
 echo ""
 echo "Referência: ./scripts/asaas-webhook-setup.sh ${DOMAIN}"
 

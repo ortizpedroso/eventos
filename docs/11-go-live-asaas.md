@@ -189,8 +189,10 @@ python3 scripts/seed-vitrine-profissional.py
 | Script | Função |
 |--------|--------|
 | `backup-asaas-prod-env.sh` | Grava `.env.asaas-prod-backup` (gitignored) |
+| `sync-asaas-prod-from-backup.sh` | Restaura produção do backup no `.env` (deploy/bootstrap) |
 | `switch-asaas-sandbox.sh` | Backup + `ASAAS_ENVIRONMENT=sandbox` + chaves sandbox |
-| `restore-asaas-prod-env.sh` | Restaura backup; `--reload` reinicia a API |
+| `restore-asaas-prod-env.sh` | Restaura produção a partir do backup; `--reload` reinicia a API |
+| `test-asaas-sandbox.sh` | Valida conectividade API sandbox (`GET /v3/myAccount`) |
 | `atualizar-vps-branch.sh` | Deploy de branch específica (sem reset para main) |
 
 **Importante:** o webhook de sandbox e o de produção são contas separadas no Asaas. Configure o webhook na conta **sandbox** com a mesma URL pública (`https://SEU_DOMINIO/api/webhooks/asaas`) e o mesmo `ASAAS_WEBHOOK_TOKEN` do `.env`.

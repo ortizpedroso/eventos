@@ -57,6 +57,9 @@ restore_key ASAAS_PLATFORM_WALLET_ID
 restore_key ASAAS_WEBHOOK_TOKEN
 restore_key ASAAS_ENVIRONMENT
 restore_key ASAAS_DISABLED
+restore_key ASAAS_ONBOARDING_MODE
+restore_key ASAAS_ALLOW_MANUAL_WALLET
+restore_key ASAAS_CREATE_SUBACCOUNT_ON_REGISTER
 
 echo "==> Produção restaurada em $ENV_FILE"
 echo "    ASAAS_ENVIRONMENT=$(env_get ASAAS_ENVIRONMENT "$ENV_FILE" || echo production)"
