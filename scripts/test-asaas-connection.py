@@ -38,6 +38,15 @@ def main() -> int:
         return 2
 
     wallet = (data.get("walletId") or data.get("id") or "").strip()
+    if not wallet:
+        try:
+            wallets = client.request("GET", "/v3/wallets/")
+            if isinstance(wallets, dict):
+                items = wallets.get("data") or []
+                if items and isinstance(items[0], dict):
+                    wallet = str(items[0].get("id") or "").strip()
+        except AsaasAPIError:
+            pass
     name = (data.get("name") or data.get("company") or "").strip()
     email = (data.get("email") or "").strip()
 

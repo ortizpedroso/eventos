@@ -46,6 +46,15 @@ echo "=============================================="
 echo " EventosBR — entrar em SANDBOX Asaas"
 echo "=============================================="
 
+CURRENT_ENV="$(env_get ASAAS_ENVIRONMENT .env 2>/dev/null || true)"
+if [ "$CURRENT_ENV" = "sandbox" ]; then
+  echo ""
+  echo "AVISO: .env já está em ASAAS_ENVIRONMENT=sandbox."
+  echo "       O backup abaixo pode NÃO conter credenciais de produção."
+  echo "       Se ainda não testou em produção, configure produção antes e rode backup-prod-env.sh."
+  echo ""
+fi
+
 echo ""
 echo "[1/5] Backup completo da produção..."
 ./scripts/backup-prod-env.sh
