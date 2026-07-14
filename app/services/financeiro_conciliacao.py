@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.models import Usuario
 from app.services.financeiro_organizador import calcular_saldo_organizador
 from app.services.saque_asaas import consultar_saldo_subconta
+from config.settings import settings
 
 
 def conciliar_financeiro_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
@@ -32,6 +33,20 @@ def conciliar_financeiro_organizador(db: Session, usuario: Usuario) -> dict[str,
             "Isso pode ocorrer por antecipações, taxas do gateway, estornos recentes ou saques em processamento."
         )
 
+    nota = (
+        "Com conta Asaas vinculada (modo linked), os repasses caem via split na sua conta Asaas. "
+        "A conciliação de saldo na subconta não se aplica — acompanhe vendas pelo extrato da plataforma."
+        if not asaas.get("disponivel")
+        and settings.permite_vinculo_wallet_organizador()
+        and (usuario.asaas_repasse_status or "").strip().lower() == "linked"
+        else (
+            "A conciliação principal compara o ledger esperado na subconta "
+            "(líquido acumulado − saques pagos) com o saldo Asaas. "
+            "Valores em carência de saque permanecem no saldo Asaas e não geram divergência. "
+            "A diferença disponível (saldo liberado para saque vs Asaas) é apenas informativa."
+        )
+    )
+
     return {
         "ledger": {
             "liquido_acumulado": liquido,
@@ -45,10 +60,5 @@ def conciliar_financeiro_organizador(db: Session, usuario: Usuario) -> dict[str,
         "diferenca": diferenca,
         "diferenca_disponivel": diferenca_disponivel,
         "alerta": alerta,
-        "nota": (
-            "A conciliação principal compara o ledger esperado na subconta "
-            "(líquido acumulado − saques pagos) com o saldo Asaas. "
-            "Valores em carência de saque permanecem no saldo Asaas e não geram divergência. "
-            "A diferença disponível (saldo liberado para saque vs Asaas) é apenas informativa."
-        ),
+        "nota": nota,
     }

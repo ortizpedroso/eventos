@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { EventoCardVitrine } from "@/components/evento-card-vitrine";
 import { EventosGridSkeleton } from "@/components/eventos-grid-skeleton";
 import { apiFetch } from "@/lib/api";
+import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { eventosDestaqueHome } from "@/lib/eventos-publicos";
 import type { Evento } from "@/lib/types";
 
@@ -21,9 +22,9 @@ export function HomeEventosDestaque({ initialEventos = null }: Props) {
     let cancelled = false;
     void (async () => {
       try {
-        const data = await apiFetch<Evento[]>("/api/eventos?limit=12", { cache: "no-store" });
+        const data = await apiFetch<Evento[]>("/api/eventos?limit=24", { cache: "no-store" });
         if (cancelled) return;
-        setEventos(eventosDestaqueHome(data));
+        setEventos(eventosDestaqueHome(filtrarEventosVitrine(data)));
       } catch {
         if (!cancelled) setEventos((prev) => (prev === null ? [] : prev));
       }

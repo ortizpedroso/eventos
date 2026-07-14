@@ -45,7 +45,7 @@ def split_para_evento(
 
     Distribuição do valor base (preço do ingresso):
     - Organizador: líquido após taxa EventosBR (percentual + fixo por plano)
-    - Plataforma: taxa EventosBR → wallet `ASAAS_PLATFORM_WALLET_ID`
+    - Plataforma: taxa EventosBR permanece na conta emissora (plataforma) — fora do array split
     - Asaas: taxas de processamento/parcelamento ficam no gateway (fora do split)
 
     Acréscimo de parcelamento pago pelo comprador entra no `value` total da cobrança
@@ -62,10 +62,16 @@ def split_para_evento(
     org_wallet = (evento.asaas_wallet_id or "").strip()
     platform_wallet = (settings.ASAAS_PLATFORM_WALLET_ID or "").strip()
 
+    if org_wallet and platform_wallet and org_wallet.lower() == platform_wallet.lower():
+        logger.warning(
+            "Wallet do organizador igual à plataforma no evento %s — split omitido",
+            getattr(evento, "id", "?"),
+        )
+        return splits
+
+    # Asaas: não incluir wallet do emissor no split — taxa da plataforma fica na conta emissora.
     if org_wallet and liquido > 0:
         splits.append({"walletId": org_wallet, "fixedValue": liquido})
-    if platform_wallet and taxa > 0:
-        splits.append({"walletId": platform_wallet, "fixedValue": taxa})
     return splits
 
 

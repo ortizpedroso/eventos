@@ -197,8 +197,15 @@ def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         f"Após solicitar a transferência via Pix, a efetivação ocorre em até {prazo_h}h."
         if habilitado
         else (
-            "Configure e aguarde a aprovação da sua conta de repasses para solicitar transferências "
-            "diretamente por aqui, sem acessar outro sistema."
+            "Com conta Asaas vinculada, os repasses caem direto na sua conta Asaas via split. "
+            "Solicite saques no painel Asaas. Aqui você acompanha vendas e extrato."
+            if settings.permite_vinculo_wallet_organizador()
+            and organizador_repasse_aprovado(usuario)
+            and not organizador_tem_cliente_saque(usuario)
+            else (
+                "Configure e aguarde a aprovação da sua conta de repasses para solicitar transferências "
+                "diretamente por aqui, sem acessar outro sistema."
+            )
         )
     )
 

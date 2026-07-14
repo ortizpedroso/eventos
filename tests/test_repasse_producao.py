@@ -61,16 +61,43 @@ def test_wallet_manual_bloqueado_sem_flag():
         route_settings.payments_disabled = False
         route_settings.use_asaas = True
         route_settings.asaas_allow_manual_wallet = False
+        route_settings.permite_vinculo_wallet_organizador.return_value = False
         svc_settings.use_asaas = True
         svc_settings.asaas_allow_manual_wallet = False
+        svc_settings.permite_vinculo_wallet_organizador.return_value = False
         global_settings.asaas_allow_manual_wallet = False
         global_settings.use_asaas = True
+        global_settings.permite_vinculo_wallet_organizador.return_value = False
         r = client.put(
             "/api/organizador/asaas/wallet",
             headers={"Authorization": f"Bearer {token}"},
             json={"wallet_id": wallet},
         )
     assert r.status_code == 403
+
+
+def test_wallet_vinculo_linked_em_producao():
+    token = _registrar_org("linked")
+    wallet = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    with (
+        patch("app.routes.organizador.settings") as route_settings,
+        patch("app.services.organizador_asaas.settings") as svc_settings,
+    ):
+        route_settings.payments_disabled = False
+        route_settings.use_asaas = True
+        route_settings.asaas_allow_manual_wallet = False
+        route_settings.permite_vinculo_wallet_organizador.return_value = True
+        svc_settings.use_asaas = True
+        svc_settings.asaas_allow_manual_wallet = False
+        svc_settings.permite_vinculo_wallet_organizador.return_value = True
+        svc_settings.permite_subconta_baas.return_value = True
+        r = client.put(
+            "/api/organizador/asaas/wallet",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"wallet_id": wallet},
+        )
+    assert r.status_code == 200, r.text
+    assert r.json()["wallet_id"] == wallet
 
 
 def test_wallet_manual_admin_override():

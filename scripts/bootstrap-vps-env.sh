@@ -95,6 +95,7 @@ ASAAS_DISABLED=${ASAAS_DISABLED}
 ASAAS_PLATFORM_WALLET_ID=${ASAAS_PLATFORM_WALLET_ID}
 ASAAS_CREATE_SUBACCOUNT_ON_REGISTER=false
 ASAAS_ALLOW_MANUAL_WALLET=false
+ASAAS_ONBOARDING_MODE=linked
 
 SECRET_KEY=${SECRET_KEY}
 PLATFORM_ADMIN_API_KEY=${PLATFORM_ADMIN_API_KEY}
@@ -118,6 +119,11 @@ DEBUG=False
 EOF
 
 chmod 600 "$ENV_FILE" 2>/dev/null || true
+
+if [ -f .env.asaas-prod-backup ] && env_is_placeholder "$ASAAS_API_KEY"; then
+  echo "==> Backup Asaas encontrado — aplicando credenciais de produção..."
+  ./scripts/sync-asaas-prod-from-backup.sh || true
+fi
 
 echo ""
 echo "==> $ENV_FILE escrito (Asaas — sem Stripe)."

@@ -11,8 +11,8 @@ from app.models import Evento, Usuario
 from config.settings import settings
 
 MOTIVO_COMPRA_SEM_REPASSE = (
-    "O organizador ainda não configurou a conta de repasses. "
-    "As vendas serão liberadas após a conta ser aprovada em Financeiro."
+    "O organizador ainda não vinculou a conta de repasses. "
+    "As vendas serão liberadas após vincular a conta Asaas em Financeiro."
 )
 
 MOTIVO_COMPRA_REPASSE_PENDENTE = (
@@ -21,12 +21,12 @@ MOTIVO_COMPRA_REPASSE_PENDENTE = (
 )
 
 MOTIVO_CHECKOUT_SEM_REPASSE = (
-    "Este evento ainda não tem conta de repasse Asaas aprovada. "
-    "O organizador deve concluir a abertura da conta em Financeiro antes de vender ingressos."
+    "Este evento ainda não tem conta de repasse Asaas configurada. "
+    "O organizador deve vincular a conta em Financeiro antes de vender ingressos."
 )
 
 MOTIVO_PUBLICAR_SEM_REPASSE = (
-    "Para publicar um evento com ingressos pagos, crie e aguarde a aprovação da conta de repasses "
+    "Para publicar um evento com ingressos pagos, vincule sua conta Asaas "
     "em Organizador → Financeiro. O evento pode ficar pausado enquanto isso."
 )
 
@@ -34,10 +34,13 @@ STATUS_REPASSE_APROVADOS_BASE = frozenset({"approved"})
 
 
 def status_repasse_aprovados() -> frozenset[str]:
-    """Status que liberam publicação/venda. `manual` só quando wallet manual é permitido."""
+    """Status que liberam publicação/venda."""
+    aprovados = set(STATUS_REPASSE_APROVADOS_BASE)
+    if settings.permite_vinculo_wallet_organizador():
+        aprovados.add("linked")
     if settings.asaas_allow_manual_wallet:
-        return STATUS_REPASSE_APROVADOS_BASE | frozenset({"manual"})
-    return STATUS_REPASSE_APROVADOS_BASE
+        aprovados.add("manual")
+    return frozenset(aprovados)
 
 
 def repasse_status_aprovado(status: str | None) -> bool:

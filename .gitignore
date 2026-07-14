@@ -55,6 +55,12 @@ logs/
 # Backups Postgres locais
 backups/
 
+# Backups temporários Asaas (credenciais — nunca commitar)
+/.env.asaas-prod-backup
+.env.asaas-*-backup
+.env.backup-producao-*
+.env.asaas-sandbox-pending
+
 # Testing
 .pytest_cache/
 .coverage

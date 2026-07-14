@@ -65,7 +65,7 @@ export async function seedPublishedEventAsaas(): Promise<SeededEvent> {
   await api(
     "PUT",
     "/api/organizador/asaas/wallet",
-    { wallet_id: "e2e-org-wallet", sincronizar_eventos: true },
+    { wallet_id: "aaaa1111-eeee-2222-cccc-333344445566", sincronizar_eventos: true },
     orgToken,
   );
 
@@ -266,10 +266,11 @@ export async function seedPublicProducer(): Promise<{ slug: string; nome: string
   const suf = `${Date.now()}`;
   const senha = "senha12345";
   const orgEmail = `e2e_produtor_${suf}@test.com`;
+  const nome = `Produtor E2E ${suf}`;
 
   await api("POST", "/api/auth/registrar", {
     email: orgEmail,
-    nome: `Produtor E2E ${suf}`,
+    nome,
     senha,
     tipo: "organizador",
   });
@@ -279,12 +280,13 @@ export async function seedPublicProducer(): Promise<{ slug: string; nome: string
     senha,
   });
 
-  const perfil = await api<{ slug_publico: string; nome: string }>(
+  // PATCH /meu-perfil não devolve "nome" no corpo (só slug_publico) — usar o valor do cadastro.
+  const perfil = await api<{ slug_publico: string }>(
     "PATCH",
     "/api/produtor/meu-perfil",
     {
       bio: "Produtor de testes E2E",
-      social_instagram: "@eventosbr",
+      social_instagram: "https://instagram.com/eventosbr",
     },
     orgToken,
   );
@@ -306,7 +308,7 @@ export async function seedPublicProducer(): Promise<{ slug: string; nome: string
     orgToken,
   );
 
-  return { slug: perfil.slug_publico, nome: perfil.nome };
+  return { slug: perfil.slug_publico, nome };
 }
 
 /** Evento com parcelamento habilitado. */
@@ -388,7 +390,7 @@ export async function seedParcelamentoEventAsaas(): Promise<SeededEvent> {
   await api(
     "PUT",
     "/api/organizador/asaas/wallet",
-    { wallet_id: "e2e-org-wallet-parc", sincronizar_eventos: true },
+    { wallet_id: "bbbb2222-ffff-3333-dddd-444455556677", sincronizar_eventos: true },
     orgToken,
   );
 

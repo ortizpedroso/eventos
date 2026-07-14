@@ -48,7 +48,10 @@ export default defineConfig({
     ? {}
     : {
         webServer: {
-          command: process.env.CI ? "npm run start" : "npm run dev",
+          command:
+            process.env.CI || process.env.E2E_USE_START === "1"
+              ? "npm run start"
+              : "npm run dev",
           url: baseURL,
           reuseExistingServer: !process.env.CI,
           timeout: 180_000,

@@ -93,6 +93,13 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("accept", "application/json");
+  // Corpo string (ex. JSON.stringify) sem Content-Type explícito: o fetch do browser
+  // assume "text/plain;charset=UTF-8", e o FastAPI só faz parse como JSON quando o
+  // Content-Type é ausente ou application/json — caso contrário o Pydantic recebe os
+  // bytes crus e falha com "Input should be a valid dictionary or object...".
+  if (init.body !== undefined && init.body !== null && !headers.has("content-type")) {
+    headers.set("content-type", "application/json");
+  }
 
   const base = getBaseUrl();
   const url = `${base}${path}`;

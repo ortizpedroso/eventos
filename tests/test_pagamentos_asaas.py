@@ -352,8 +352,9 @@ def test_split_asaas_taxa_por_ingresso():
     taxa_esperada = round(2 * taxa_ingresso(50.0), 2)
     liquido_esperado = round(100.0 - taxa_esperada, 2)
     by_wallet = {x["walletId"]: x["fixedValue"] for x in splits}
-    assert by_wallet["wallet-platform"] == taxa_esperada
+    assert "wallet-platform" not in by_wallet
     assert by_wallet["wallet-org"] == liquido_esperado
+    assert len(splits) == 1
 
 
 def test_reembolso_parcial_asaas_multi_ingresso():
