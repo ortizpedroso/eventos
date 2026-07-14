@@ -21,6 +21,8 @@ COMPOSE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 API_KEY=""
 WALLET_ID=""
 WEBHOOK_TOKEN=""
+ONBOARDING_MODE=""
+ALLOW_MANUAL=""
 RELOAD=0
 
 usage() {

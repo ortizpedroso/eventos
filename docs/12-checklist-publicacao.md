@@ -89,20 +89,13 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 
 ### Testes sandbox Asaas (antes do go-live) 🧪
 
-| # | Passo | Comando |
-|---|-------|---------|
-| 1 | Guardar produção completa | `./scripts/backup-prod-env.sh` |
-| 1b | Validar backup | `./scripts/verify-prod-backup.sh` |
-| 2 | Preencher sandbox | `cp .env.asaas-sandbox-pending.example .env.asaas-sandbox-pending` |
-| 3 | Alternar para sandbox | `./scripts/switch-asaas-sandbox.sh --reload` |
-| 4 | Webhook no painel **sandbox** | `https://DOMINIO/api/webhooks/asaas` |
-| 5 | Validar API | `./scripts/test-asaas-sandbox.sh` |
-| 6 | Compra teste + vínculo wallet | Financeiro → Vincular conta Asaas |
-| 7 | Voltar produção | `./scripts/restore-asaas-prod-env.sh --reload` |
+Ver guia completo: **[14-teste-sandbox-asaas.md](./14-teste-sandbox-asaas.md)**
 
-**Se o `.env` perder credenciais:** `./scripts/sync-asaas-prod-from-backup.sh` (lê `.env.prod-backup`)
-
-Templates: `.env.prod-backup.example`, `.env.asaas-sandbox-pending.example`
+```bash
+bash scripts/setup-sandbox-pending.sh      # 1ª vez
+bash scripts/ir-sandbox-asaas.sh --reload  # backup + sandbox
+bash scripts/voltar-producao-asaas.sh --reload  # volta produção
+```
 
 ### GitHub — PR automático
 
