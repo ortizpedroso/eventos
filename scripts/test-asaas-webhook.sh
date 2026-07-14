@@ -46,7 +46,7 @@ HTTP_CODE="$(
     -X POST "$URL" \
     -H "Content-Type: application/json" \
     -H "asaas-access-token: $TOKEN" \
-    -d '{"event":"PAYMENT_RECEIVED","id":"evt_sandbox_ping","payment":{"id":"pay_sandbox_ping","status":"RECEIVED"}}' \
+    -d '{"event":"SANDBOX_PING","id":"evt_sandbox_ping_token_only"}' \
     || echo "000"
 )"
 
