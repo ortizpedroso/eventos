@@ -27,6 +27,7 @@ type RepasseStatus = {
   nota_wallet: string | null;
   anticipacao?: { credit_card_automatic_enabled?: boolean | null };
   onboarding_mode?: string;
+  asaas_environment?: string;
   permite_vinculo_wallet?: boolean;
   permite_subconta?: boolean;
   wallet_id?: string | null;
@@ -171,6 +172,12 @@ export function OrganizadorRepassesPainel() {
   const [mostrarVinculo, setMostrarVinculo] = useState(false);
   const [walletId, setWalletId] = useState("");
   const [apiKeyOrganizador, setApiKeyOrganizador] = useState("");
+  const [walletPreview, setWalletPreview] = useState<{
+    wallet_id: string;
+    account_name?: string | null;
+    account_email?: string | null;
+  } | null>(null);
+  const [buscandoWallet, setBuscandoWallet] = useState(false);
   const [modoReenvio, setModoReenvio] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -243,6 +250,40 @@ export function OrganizadorRepassesPainel() {
     }
   }, [searchParams, status?.pode_reenviar_subconta]);
 
+  async function buscarWalletPelaApiKey() {
+    const key = apiKeyOrganizador.trim();
+    if (!key) {
+      setError("Informe a chave API Asaas antes de buscar o walletId.");
+      return;
+    }
+    setBuscandoWallet(true);
+    setMsg(null);
+    setError(null);
+    setWalletPreview(null);
+    try {
+      const r = await apiFetch<{
+        wallet_id: string;
+        account_name?: string | null;
+        account_email?: string | null;
+      }>("/api/organizador/asaas/wallet/consultar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ api_key: key }),
+      });
+      setWalletId(r.wallet_id);
+      setWalletPreview(r);
+      setMsg(
+        r.account_name
+          ? `Wallet encontrado para a conta "${r.account_name}".`
+          : "Wallet encontrado. Confira o ID e confirme o vínculo.",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível consultar a conta Asaas.");
+    } finally {
+      setBuscandoWallet(false);
+    }
+  }
+
   async function vincularConta(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -260,6 +301,7 @@ export function OrganizadorRepassesPainel() {
       });
       setMsg(r.mensagem);
       setMostrarVinculo(false);
+      setWalletPreview(null);
       await carregar();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível vincular a conta Asaas.");
@@ -513,11 +555,67 @@ export function OrganizadorRepassesPainel() {
       {mostrarVinculo ? (
         <form onSubmit={vincularConta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5">
           <h3 className="text-sm font-semibold text-zinc-900">Vincular conta Asaas</h3>
+          {status?.asaas_environment === "sandbox" ? (
+            <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-950">
+              <strong>Ambiente de testes (sandbox).</strong> Crie uma{" "}
+              <strong>segunda conta</strong> em{" "}
+              <a
+                href="https://sandbox.asaas.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium underline"
+              >
+                sandbox.asaas.com
+              </a>{" "}
+              com outro e-mail. Não use o wallet da conta da plataforma — cada organizador precisa
+              da própria conta Asaas para receber o repasse via split.
+            </p>
+          ) : (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+              Use o walletId da <strong>sua conta Asaas de organizador</strong>, não o da
+              plataforma EventosBR. O repasse das vendas cairá nessa conta via split.
+            </p>
+          )}
           <ol className="list-decimal space-y-1 pl-5 text-xs text-zinc-600">
-            <li>Crie ou acesse sua conta no Asaas.</li>
-            <li>No painel Asaas, copie o <strong>walletId</strong> da sua conta.</li>
-            <li>Cole abaixo e confirme — os repasses das vendas cairão nessa conta via split.</li>
+            <li>Crie ou acesse sua conta no Asaas (diferente da conta da plataforma).</li>
+            <li>
+              No painel Asaas → Integrações → copie a <strong>chave API</strong> e clique em
+              &quot;Buscar wallet&quot;, ou copie o <strong>walletId</strong> manualmente.
+            </li>
+            <li>Confirme o vínculo — os repasses das vendas cairão nessa conta via split.</li>
           </ol>
+          <label className="grid gap-1 text-sm">
+            <span className="text-xs text-zinc-600">
+              Chave API Asaas (recomendado — busca o walletId automaticamente)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="password"
+                autoComplete="off"
+                className="min-w-0 flex-1 rounded-lg border px-3 py-2 font-mono text-sm"
+                placeholder="$aact_..."
+                value={apiKeyOrganizador}
+                onChange={(e) => {
+                  setApiKeyOrganizador(e.target.value);
+                  setWalletPreview(null);
+                }}
+              />
+              <button
+                type="button"
+                disabled={busy || buscandoWallet}
+                className="rounded-lg border border-emerald-700 bg-white px-3 py-2 text-sm font-medium text-emerald-900"
+                onClick={() => void buscarWalletPelaApiKey()}
+              >
+                {buscandoWallet ? "Buscando…" : "Buscar wallet"}
+              </button>
+            </div>
+          </label>
+          {walletPreview ? (
+            <p className="text-xs text-emerald-800">
+              Conta: {walletPreview.account_name || walletPreview.account_email || "—"} · wallet{" "}
+              <span className="font-mono">{walletPreview.wallet_id}</span>
+            </p>
+          ) : null}
           <label className="grid gap-1 text-sm">
             <span className="text-xs text-zinc-600">Wallet ID (UUID)</span>
             <input
@@ -528,24 +626,18 @@ export function OrganizadorRepassesPainel() {
               required
             />
           </label>
-          <label className="grid gap-1 text-sm">
-            <span className="text-xs text-zinc-600">
-              Chave API Asaas (opcional — valida que o wallet pertence à conta)
-            </span>
-            <input
-              type="password"
-              autoComplete="off"
-              className="rounded-lg border px-3 py-2 font-mono text-sm"
-              placeholder="$aact_..."
-              value={apiKeyOrganizador}
-              onChange={(e) => setApiKeyOrganizador(e.target.value)}
-            />
-          </label>
           <div className="flex gap-2">
             <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white">
               Confirmar vínculo
             </button>
-            <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setMostrarVinculo(false)}>
+            <button
+              type="button"
+              className="rounded-lg border px-4 py-2 text-sm"
+              onClick={() => {
+                setMostrarVinculo(false);
+                setWalletPreview(null);
+              }}
+            >
               Cancelar
             </button>
           </div>
