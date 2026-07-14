@@ -79,8 +79,8 @@ if [ -z "$WALLET_ID" ]; then
   exit 1
 fi
 
-echo "==> Backup da produção..."
-./scripts/backup-asaas-prod-env.sh
+echo "==> Backup da produção (completo)..."
+./scripts/backup-prod-env.sh
 
 set_env_var "PAYMENT_PROVIDER" "asaas" "$ENV_FILE"
 set_env_var "ASAAS_API_KEY" "$API_KEY" "$ENV_FILE"

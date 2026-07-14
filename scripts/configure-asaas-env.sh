@@ -88,8 +88,9 @@ set_env_var "ASAAS_ALLOW_MANUAL_WALLET" "$ALLOW_MANUAL" "$ENV_FILE"
 set_env_var "ASAAS_CREATE_SUBACCOUNT_ON_REGISTER" "false" "$ENV_FILE"
 
 if [ "$ENVIRONMENT" = "production" ]; then
-  echo "==> Gravando backup de produção..."
-  ./scripts/backup-asaas-prod-env.sh
+  echo "==> Gravando backup de produção (completo)..."
+  ./scripts/backup-prod-env.sh
+  ./scripts/verify-prod-backup.sh || true
 fi
 
 echo ""

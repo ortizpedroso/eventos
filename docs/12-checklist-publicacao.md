@@ -91,7 +91,8 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 
 | # | Passo | Comando |
 |---|-------|---------|
-| 1 | Guardar produção | `./scripts/backup-asaas-prod-env.sh` |
+| 1 | Guardar produção completa | `./scripts/backup-prod-env.sh` |
+| 1b | Validar backup | `./scripts/verify-prod-backup.sh` |
 | 2 | Preencher sandbox | `cp .env.asaas-sandbox-pending.example .env.asaas-sandbox-pending` |
 | 3 | Alternar para sandbox | `./scripts/switch-asaas-sandbox.sh --reload` |
 | 4 | Webhook no painel **sandbox** | `https://DOMINIO/api/webhooks/asaas` |
@@ -99,9 +100,13 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 | 6 | Compra teste + vínculo wallet | Financeiro → Vincular conta Asaas |
 | 7 | Voltar produção | `./scripts/restore-asaas-prod-env.sh --reload` |
 
-**Se o `.env` perder credenciais de produção:** `./scripts/sync-asaas-prod-from-backup.sh`
+**Se o `.env` perder credenciais:** `./scripts/sync-asaas-prod-from-backup.sh` (lê `.env.prod-backup`)
 
-Templates: `.env.asaas-prod-backup.example`, `.env.asaas-sandbox-pending.example`
+Templates: `.env.prod-backup.example`, `.env.asaas-sandbox-pending.example`
+
+### GitHub — PR automático
+
+Branches `cursor/*` disparam `.github/workflows/cursor-agent-pr.yml`, que abre/atualiza PR draft para `main` (CI roda em push e pull_request).
 
 ---
 

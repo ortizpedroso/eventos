@@ -55,7 +55,8 @@ logs/
 # Backups Postgres locais
 backups/
 
-# Backups temporários Asaas (credenciais — nunca commitar)
+# Backups temporários produção (credenciais — nunca commitar)
+/.env.prod-backup
 /.env.asaas-prod-backup
 .env.asaas-*-backup
 .env.backup-producao-*

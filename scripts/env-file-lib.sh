@@ -21,7 +21,7 @@ docker_env_escape() {
 
 env_is_placeholder() {
   case "${1:-}" in
-    ""|*GERE_*|*GERE_COM_*|*cole_aqui*|*changeme*|*placeholder*|*aact_prod_...*|*aact_hmlg_...*)
+    ""|*GERE_*|*GERE_COM_*|*cole_aqui*|*COLE_SUA_*|*changeme*|*placeholder*|*aact_prod_...*|*aact_hmlg_...*)
       return 0
       ;;
     *)

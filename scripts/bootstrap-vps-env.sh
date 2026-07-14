@@ -120,9 +120,12 @@ EOF
 
 chmod 600 "$ENV_FILE" 2>/dev/null || true
 
-if [ -f .env.asaas-prod-backup ] && env_is_placeholder "$ASAAS_API_KEY"; then
-  echo "==> Backup Asaas encontrado — aplicando credenciais de produção..."
-  ./scripts/sync-asaas-prod-from-backup.sh || true
+if [ -f .env.prod-backup ] || [ -f .env.asaas-prod-backup ]; then
+  asaas_key="$(env_get ASAAS_API_KEY .env 2>/dev/null || true)"
+  if env_is_placeholder "$asaas_key" || [ -z "$asaas_key" ]; then
+    echo "==> Backup produção encontrado — aplicando credenciais..."
+    ./scripts/sync-asaas-prod-from-backup.sh || true
+  fi
 fi
 
 echo ""

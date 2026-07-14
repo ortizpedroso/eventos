@@ -1,0 +1,85 @@
+name: Cursor Agent PR
+
+# Abre ou atualiza PR automaticamente quando um Cloud Agent envia branch cursor/*.
+# Resolve o erro "must be a collaborator" do token do agente ao criar PR via API externa.
+
+on:
+  push:
+    branches:
+      - "cursor/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: cursor-pr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  open-or-update-pr:
+    if: github.repository == 'ortizpedroso/eventos'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Criar ou atualizar PR para main
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const base = 'main';
+
+            if (branch === base || branch === 'master') {
+              core.info('Ignorando branch base.');
+              return;
+            }
+
+            const { data: existing } = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${branch}`,
+              state: 'open',
+              base,
+              per_page: 5,
+            });
+
+            const title = branch
+              .replace(/^cursor\//, '')
+              .replace(/-bf71$/, '')
+              .replace(/-/g, ' ')
+              .replace(/\b\w/g, (c) => c.toUpperCase());
+
+            const body = [
+              'PR aberto automaticamente pelo workflow **Cursor Agent PR**.',
+              '',
+              `- Branch: \`${branch}\``,
+              `- Commit: ${context.sha.slice(0, 7)}`,
+              `- Autor do push: @${context.actor}`,
+              '',
+              'Revise o CI na aba Checks antes de mergear.',
+            ].join('\n');
+
+            if (existing.length > 0) {
+              const pr = existing[0];
+              core.info(`PR já aberto: #${pr.number} — ${pr.html_url}`);
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body: `🔄 Atualização automática — novo push em \`${branch}\` (${context.sha.slice(0, 7)}).`,
+              });
+              return;
+            }
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner,
+              repo,
+              title: title || branch,
+              head: branch,
+              base,
+              draft: true,
+              body,
+            });
+
+            core.info(`PR criado: #${pr.number} — ${pr.html_url}`);

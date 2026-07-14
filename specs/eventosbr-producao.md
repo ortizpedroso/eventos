@@ -79,7 +79,8 @@ Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos
 
 Fluxo no VPS com credenciais de homologação Asaas:
 
-1. **Backup produção:** `./scripts/backup-asaas-prod-env.sh` → `.env.asaas-prod-backup` (gitignored)
+1. **Backup produção completo:** `./scripts/backup-prod-env.sh` → `.env.prod-backup` (gitignored)
+2. **Verificar backup:** `./scripts/verify-prod-backup.sh`
 2. **Credenciais sandbox:** copiar `.env.asaas-sandbox-pending.example` → `.env.asaas-sandbox-pending` e preencher `$aact_hmlg_...` + `walletId`
 3. **Alternar:** `./scripts/switch-asaas-sandbox.sh --reload` (backup automático da produção)
 4. **Webhook** no painel **sandbox** Asaas (mesma URL pública + mesmo `ASAAS_WEBHOOK_TOKEN`)
@@ -87,9 +88,9 @@ Fluxo no VPS com credenciais de homologação Asaas:
 6. **Teste manual:** organizador vincula `walletId` (modo `linked` + `ASAAS_ALLOW_MANUAL_WALLET=true` em sandbox)
 7. **Restaurar produção:** `./scripts/restore-asaas-prod-env.sh --reload`
 
-Se o `.env` for recriado sem credenciais: `./scripts/sync-asaas-prod-from-backup.sh` lê `.env.asaas-prod-backup`.
+Se o `.env` for recriado sem credenciais: `./scripts/sync-asaas-prod-from-backup.sh` lê `.env.prod-backup`.
 
-Templates versionados: `.env.asaas-prod-backup.example`, `.env.asaas-sandbox-pending.example`.
+Templates versionados: `.env.prod-backup.example`, `.env.asaas-sandbox-pending.example`.
 
 ---
 
@@ -202,7 +203,7 @@ Checks: `production_checks.py` → `GET /api/admin/setup`.
 | Conta | `conta-shell.tsx`, `conta/layout.tsx`, `auth/layout.tsx` |
 | Config | `config/settings.py`, `production_checks.py` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `scripts/deploy-vps.sh` |
-| Backup / sandbox Asaas | `backup-asaas-prod-env.sh`, `sync-asaas-prod-from-backup.sh`, `switch-asaas-sandbox.sh`, `restore-asaas-prod-env.sh`, `test-asaas-sandbox.sh` |
+| Backup / sandbox Asaas | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh`, `switch-asaas-sandbox.sh`, `test-asaas-sandbox.sh` |
 
 ---
 

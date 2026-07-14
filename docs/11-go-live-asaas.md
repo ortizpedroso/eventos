@@ -188,8 +188,11 @@ python3 scripts/seed-vitrine-profissional.py
 
 | Script | Função |
 |--------|--------|
-| `backup-asaas-prod-env.sh` | Grava `.env.asaas-prod-backup` (gitignored) |
-| `sync-asaas-prod-from-backup.sh` | Restaura produção do backup no `.env` (deploy/bootstrap) |
+| `backup-prod-env.sh` | Grava `.env.prod-backup` completo + subset Asaas |
+| `verify-prod-backup.sh` | Valida variáveis obrigatórias no backup |
+| `restore-prod-env.sh` | Restaura produção completa; `--reload` reinicia API |
+| `sync-asaas-prod-from-backup.sh` | Aplica backup no `.env` (deploy/bootstrap) |
+| `backup-asaas-prod-env.sh` | Atalho → `backup-prod-env.sh` |
 | `switch-asaas-sandbox.sh` | Backup + `ASAAS_ENVIRONMENT=sandbox` + chaves sandbox |
 | `restore-asaas-prod-env.sh` | Restaura produção a partir do backup; `--reload` reinicia a API |
 | `test-asaas-sandbox.sh` | Valida conectividade API sandbox (`GET /v3/myAccount`) |
