@@ -90,7 +90,11 @@ test.describe("Lista de interesse pré-venda", () => {
     const { slug } = await seedPreVendaEvent();
     const email = `interesse_e2e_${Date.now()}@test.com`;
 
-    await page.goto(`/eventos/${slug}`, { waitUntil: "domcontentloaded" });
+    // `networkidle` (não `domcontentloaded`): o formulário só fica interativo após a
+    // hidratação do React; clicar antes disso aciona o submit nativo do <form> (GET,
+    // recarrega a página) em vez do handler onSubmit — mesma convenção já usada para
+    // páginas com formulário em /auth (ver compra-checkout*.spec.ts).
+    await page.goto(`/eventos/${slug}`, { waitUntil: "networkidle" });
     await expect(page.getByTestId("lista-interesse-form")).toBeVisible({ timeout: 20_000 });
     await page.getByTestId("lista-interesse-email").fill(email);
     await page.getByTestId("lista-interesse-submit").click();
@@ -106,7 +110,7 @@ test.describe("Lista de espera (esgotado)", () => {
     const { slug } = await seedSoldOutWaitlistEvent();
     const email = `espera_e2e_${Date.now()}@test.com`;
 
-    await page.goto(`/eventos/${slug}`, { waitUntil: "domcontentloaded" });
+    await page.goto(`/eventos/${slug}`, { waitUntil: "networkidle" });
     await expect(page.getByTestId("lista-espera-form")).toBeVisible({ timeout: 20_000 });
     await page.getByTestId("lista-espera-email").fill(email);
     await page.getByTestId("lista-espera-submit").click();

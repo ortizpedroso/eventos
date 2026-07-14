@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ContaNav } from "@/components/conta-nav";
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
 import { ListaSkeleton } from "@/components/lista-skeleton";
 import { apiFetch } from "@/lib/api";
@@ -87,8 +86,6 @@ export function PagamentosClient() {
           ← Eventos
         </Link>
       </div>
-
-      <ContaNav />
 
       {pendentes.length > 0 ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 shadow-sm">

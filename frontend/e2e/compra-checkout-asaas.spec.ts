@@ -51,7 +51,7 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
 
     await page.getByTestId("checkout-continuar").click();
 
-    await expect(page.getByText(/Pagamento seguro/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Pagamento seguro/i).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Stripe/i)).not.toBeVisible();
 
     await expect(page.getByRole("button", { name: /Pagar .* com PIX/i })).toBeVisible({ timeout: 30_000 });
@@ -100,7 +100,7 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     }
     await page.getByTestId("checkout-continuar").click();
 
-    await expect(page.getByText(/Pagamento seguro/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Pagamento seguro/i).first()).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /cartão/i }).click();
     await expect(page.getByTestId("checkout-parcelas")).toBeVisible({ timeout: 15_000 });
     await page.getByLabel(/3x de/i).check();
@@ -153,7 +153,7 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     await page.getByRole("checkbox", { name: /li e aceito o termo/i }).check();
     await page.getByTestId("checkout-continuar").click();
 
-    await expect(page.getByText(/Pagamento seguro/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Pagamento seguro/i).first()).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /cartão/i }).click();
     await expect(page.getByTestId("checkout-parcelas")).toBeVisible({ timeout: 15_000 });
     await page.getByLabel(/3x de/i).check();

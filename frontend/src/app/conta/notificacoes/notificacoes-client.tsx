@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { ContaNav } from "@/components/conta-nav";
 import { ListaSkeleton } from "@/components/lista-skeleton";
 import { apiFetch } from "@/lib/api";
 import type { NotificacaoUsuario } from "@/lib/types";
@@ -40,9 +39,8 @@ export function NotificacoesClient() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <ContaNav />
-      <h1 className="mt-6 text-2xl font-bold text-zinc-900">Notificações</h1>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-zinc-900">Notificações</h1>
       <p className="mt-2 text-sm text-zinc-600">
         Avisos sobre compras, lista de espera e atualizações da sua conta.
       </p>

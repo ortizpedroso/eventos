@@ -16,6 +16,22 @@ export function formatCpfMask(digits: string): string {
   return `${a}.${b}.${c}-${v}`;
 }
 
+/** Máscara visual 000.000.000-00 ou 00.000.000/0000-00 conforme tamanho. */
+export function formatCpfCnpjMask(digits: string): string {
+  const d = onlyDigits(digits, 14);
+  if (d.length <= 11) return formatCpfMask(d);
+  const a = d.slice(0, 2);
+  const b = d.slice(2, 5);
+  const c = d.slice(5, 8);
+  const e = d.slice(8, 12);
+  const f = d.slice(12, 14);
+  if (d.length <= 2) return a;
+  if (d.length <= 5) return `${a}.${b}`;
+  if (d.length <= 8) return `${a}.${b}.${c}`;
+  if (d.length <= 12) return `${a}.${b}.${c}/${e}`;
+  return `${a}.${b}.${c}/${e}-${f}`;
+}
+
 /** Valida dígitos verificadores do CPF brasileiro. */
 export function isValidCpf(digits: string): boolean {
   const d = onlyDigits(digits, 11);

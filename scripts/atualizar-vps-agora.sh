@@ -57,6 +57,12 @@ echo ""
 echo "[1/9] .env..."
 if _needs_bootstrap; then
   ./scripts/bootstrap-vps-env.sh
+elif [ -f .env.prod-backup ] || [ -f .env.asaas-prod-backup ]; then
+  asaas_key="$(env_get ASAAS_API_KEY .env 2>/dev/null || true)"
+  if env_is_placeholder "$asaas_key" || [ -z "$asaas_key" ]; then
+    echo "  Restaurando produção a partir do backup..."
+    ./scripts/sync-asaas-prod-from-backup.sh || true
+  fi
 fi
 
 DOMAIN="$(env_get DOMAIN .env || echo eventosbr.app.br)"

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import Evento, Ingresso, Usuario, get_db
@@ -95,6 +97,11 @@ async def enviar_comunicado(
 class AsaasWalletRequest(BaseModel):
     wallet_id: str = Field(min_length=8, max_length=64)
     sincronizar_eventos: bool = True
+    api_key: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Opcional: chave API Asaas do organizador para validar que o walletId pertence à conta.",
+    )
 
 
 class AsaasSubcontaRequest(BaseModel):
@@ -107,6 +114,17 @@ class AsaasSubcontaRequest(BaseModel):
     bairro: str = Field(min_length=2, max_length=80)
     complemento: str | None = Field(default=None, max_length=80)
     company_type: str = Field(default="INDIVIDUAL", max_length=20)
+    data_nascimento: str | None = Field(default=None, max_length=10)
+
+    @field_validator("data_nascimento")
+    @classmethod
+    def validar_data_nascimento(cls, v: str | None) -> str | None:
+        if v is None or not str(v).strip():
+            return None
+        d = str(v).strip()
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d):
+            raise ValueError("data_nascimento deve estar no formato AAAA-MM-DD")
+        return d
 
 
 class AsaasAntecipacaoRequest(BaseModel):
@@ -152,12 +170,19 @@ async def asaas_definir_wallet(
     _require_organizador(usuario_atual)
     if settings.payments_disabled:
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
-    if not settings.asaas_allow_manual_wallet and not admin_override:
+    if not settings.use_asaas:
+        raise HTTPException(status_code=503, detail="Asaas não está ativo neste ambiente.")
+    pode_vincular = (
+        settings.permite_vinculo_wallet_organizador()
+        or settings.asaas_allow_manual_wallet
+        or admin_override
+    )
+    if not pode_vincular:
         raise HTTPException(
             status_code=403,
             detail=(
-                "Configuração manual de wallet desativada. "
-                "Crie sua conta de repasses em Financeiro para validação pelo Asaas."
+                "O vínculo de conta Asaas está desativado neste ambiente. "
+                "Entre em contato com o suporte da plataforma."
             ),
         )
     try:
@@ -167,6 +192,7 @@ async def asaas_definir_wallet(
             body.wallet_id,
             sincronizar_eventos=body.sincronizar_eventos,
             admin_override=admin_override,
+            api_key_organizador=body.api_key,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -194,6 +220,7 @@ async def asaas_criar_subconta(
             bairro=body.bairro,
             complemento=body.complemento,
             company_type=body.company_type,
+            data_nascimento=body.data_nascimento,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -222,6 +249,7 @@ async def asaas_reenviar_subconta(
             bairro=body.bairro,
             complemento=body.complemento,
             company_type=body.company_type,
+            data_nascimento=body.data_nascimento,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

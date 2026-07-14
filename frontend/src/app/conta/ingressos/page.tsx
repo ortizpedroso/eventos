@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { ContaNav } from "@/components/conta-nav";
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
 import { ListaSkeleton } from "@/components/lista-skeleton";
 import { apiFetch } from "@/lib/api";
@@ -76,8 +75,6 @@ export default function MeusIngressosPage() {
           ← Eventos
         </Link>
       </div>
-
-      <ContaNav />
 
       {error ? (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">

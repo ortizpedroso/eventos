@@ -2,10 +2,30 @@
 
 from __future__ import annotations
 
+import base64
+import io
 import uuid
 from typing import Any
 
 _MOCK_PAYMENTS: dict[str, dict[str, Any]] = {}
+
+
+def _mock_pix_qr_base64(payload: str) -> str:
+    """QR Code visualmente real (mesma lib usada nos ingressos) para telas de teste/demo."""
+    try:
+        import qrcode
+        from qrcode.constants import ERROR_CORRECT_M
+
+        qr = qrcode.QRCode(error_correction=ERROR_CORRECT_M, box_size=8, border=2)
+        qr.add_data(payload)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode("ascii")
+    except Exception:
+        # 1x1 PNG como último recurso — não deve ocorrer em dev com qrcode instalado.
+        return "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
 
 
 def _mock_enabled() -> bool:
@@ -31,9 +51,13 @@ def mock_criar_payment(payload: dict) -> dict[str, Any]:
         "externalReference": payload.get("externalReference"),
     }
     if billing == "PIX":
+        pix_payload = (
+            f"00020126580014br.gov.bcb.pix0136e2e-mock-{pid}5204000053039865405"
+            f"{payload.get('value', 0):.2f}5802BR5925EventosBR E2E Mock6009SAO PAULO62070503***6304ABCD"
+        )
         payment["pixTransaction"] = {
-            "encodedImage": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-            "payload": f"00020126580014br.gov.bcb.pix0136e2e-mock-{pid}5204000053039865405{payload.get('value', 0):.2f}5802BR5925EventosBR E2E Mock6009SAO PAULO62070503***6304ABCD",
+            "encodedImage": _mock_pix_qr_base64(pix_payload),
+            "payload": pix_payload,
             "expirationDate": "2099-12-31T23:59:59",
         }
     if billing == "UNDEFINED":
@@ -90,6 +114,12 @@ def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
             "bankAccountInfo": "APPROVED",
             "documentation": "APPROVED",
             "general": "APPROVED",
+        }
+    if method == "GET" and path == "/v3/myAccount":
+        return {
+            "id": "acc_e2e_mock",
+            "walletId": "wallet_e2e_mock",
+            "name": "Organizador E2E Mock",
         }
     if method == "POST" and path == "/v3/transfers":
         return mock_criar_transfer(json or {})
