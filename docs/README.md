@@ -24,6 +24,7 @@ Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + **A
 | [10 — Próximo patamar](./10-checklist-proximo-patamar.md) | Checklist completo: o que temos vs o que falta (produto, paridade, diferenciação) |
 | [11 — Go-live Asaas](./11-go-live-asaas.md) | Checklist operacional de deploy em produção |
 | [12 — Checklist publicação](./12-checklist-publicacao.md) | O que está pronto no código vs o que falta no VPS |
+| [13 — Automação GitHub](./13-github-automacao.md) | CI em `cursor/*`, PR automático e permissões |
 | **Spec produção** | [`specs/eventosbr-producao.md`](../specs/eventosbr-producao.md) — documento único `/build` e `/review` |
 
 ## Documentação interativa da API
