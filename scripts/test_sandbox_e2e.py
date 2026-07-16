@@ -74,7 +74,7 @@ def t1_organizador(uid, db):
     from app.models import Usuario
     from app.services.auth import hash_password
 
-    email = f"org_sb_{uid}@eventosbr.test"
+    email = f"org_sb_{uid}@sandbox-evtbr.com"
     u = Usuario(
         id=str(uuid.uuid4()),
         email=email,
@@ -119,7 +119,7 @@ def t3_customer(uid):
     sep("3/7 -- Customer Asaas sandbox")
     resp = asaas_call("POST", "/v3/customers", {
         "name": f"Comprador Teste {uid}",
-        "email": f"comprador_{uid}@sandbox.test",
+        "email": f"comprador_{uid}@sandbox-evtbr.com",
         "cpfCnpj": CPF_TEST,
         "notificationDisabled": True,
     })
@@ -154,7 +154,7 @@ def t4_cobranca_ingresso(uid, customer_id, evento_id, user_id, db):
         status="pendente",
         asaas_payment_id=pay_id,
         participante_nome="Comprador Teste",
-        participante_email=f"comprador_{uid}@sandbox.test",
+        participante_email=f"comprador_{uid}@sandbox-evtbr.com",
         data_compra=datetime.now(timezone.utc).replace(tzinfo=None),
         data_limite_cancelamento=(
             datetime.now(timezone.utc) + timedelta(days=10)
