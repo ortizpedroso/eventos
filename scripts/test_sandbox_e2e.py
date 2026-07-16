@@ -110,7 +110,7 @@ def t2_evento(uid, token, db):
         "preco_ingresso": 50.0,
         "publicado": False,
     }
-    data = assert_ok(api_call("POST", "/api/eventos", payload, token=token), "criar_evento")
+    data = assert_ok(api_call("POST", "/api/eventos/criar", payload, token=token), "criar_evento")
     ok(f"Evento criado: id={data['id']}")
     return data["id"], data.get("slug", "")
 
