@@ -92,6 +92,15 @@ echo ""
 echo "[4/5] Teste webhook..."
 ./scripts/test-asaas-webhook.sh || echo "AVISO: webhook falhou — veja painel Asaas (Ativo + fila + token)" >&2
 
+if env_get ASAAS_ORGANIZER_API_KEY .env 2>/dev/null | grep -q .; then
+  echo ""
+  echo "[4b] Teste automatizado compra + split (sandbox)..."
+  ./scripts/test-sandbox-compra-split.sh || echo "AVISO: teste compra/split falhou — veja ASAAS_ORGANIZER_API_KEY" >&2
+else
+  echo ""
+  echo "[4b] Teste compra/split omitido (defina ASAAS_ORGANIZER_API_KEY no .env ou $PENDING)"
+fi
+
 echo ""
 echo "[5/5] Checklist painel Asaas SANDBOX"
 echo "  [ ] Webhook ATIVO (toggle ligado)"

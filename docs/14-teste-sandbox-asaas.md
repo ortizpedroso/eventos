@@ -56,6 +56,15 @@ Isso faz:
 bash scripts/test-asaas-webhook.sh
 ```
 
+### Teste automatizado compra + split
+
+```bash
+# Requer ASAAS_ORGANIZER_API_KEY (conta sandbox secundária) no .env ou .env.asaas-sandbox-pending
+bash scripts/test-sandbox-compra-split.sh
+```
+
+Valida: organizador com wallet distinto, evento, PIX, split para o organizador, taxa na conta emissora, ingresso pago.
+
 ### Compra teste
 
 1. Organizador → Financeiro → **Vincular conta Asaas** (walletId de conta sandbox secundária)
