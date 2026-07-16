@@ -27,7 +27,7 @@ def asaas_call(method, path, body=None):
     c = get_asaas_client()
     if method == "GET":
         return c.get(path)
-    return c.post(path, body or {})
+    return c.post(path, json=body or {})
 
 
 def api_call(method, path, body=None, token=None):
