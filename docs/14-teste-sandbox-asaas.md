@@ -58,9 +58,14 @@ bash scripts/test-asaas-webhook.sh
 
 ### Compra teste
 
-1. Organizador → Financeiro → **Vincular conta Asaas** (walletId de conta sandbox secundária)
-2. Compra PIX/cartão em valor baixo
-3. Conferir Logs de Webhooks → HTTP 200
+1. Crie uma **segunda conta** em [sandbox.asaas.com](https://sandbox.asaas.com) (e-mail diferente da conta da plataforma).
+2. Organizador → Financeiro → **Vincular conta Asaas**:
+   - Cole a **chave API** da conta secundária e clique em **Buscar wallet**, ou
+   - Cole manualmente o **walletId** dessa conta (não use o `ASAAS_PLATFORM_WALLET_ID` do `.env`).
+3. Compra PIX/cartão em valor baixo
+4. Conferir Logs de Webhooks → HTTP 200
+
+**Erro comum:** *"Este walletId é o da conta da plataforma"* — você colou o wallet da conta EventosBR. Use o wallet de outra conta sandbox.
 
 ### Voltar para produção
 
