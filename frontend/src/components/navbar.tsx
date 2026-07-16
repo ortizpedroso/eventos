@@ -275,7 +275,7 @@ export function Navbar() {
                   className="absolute right-0 z-[60] mt-2 min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
                 >
                   <Link
-                    href="/conta/perfil"
+                    href={isOrganizador ? "/organizador/perfil" : "/conta/perfil"}
                     role="menuitem"
                     className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
                     onClick={() => setMenuOpen(false)}
