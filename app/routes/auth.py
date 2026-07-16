@@ -297,14 +297,14 @@ async def login(
             status_code=401,
             detail=f"Esta conta usa login com {prov}. Use o botão correspondente abaixo.",
         )
-    if not verify_password(credenciais.senha, usuario.senha_hash):
-        raise HTTPException(status_code=401, detail="Email ou senha incorretos")
-
     if not usuario.ativo:
         raise HTTPException(
             status_code=403,
             detail="Conta desativada. Entre em contato com o suporte da plataforma.",
         )
+
+    if not verify_password(credenciais.senha, usuario.senha_hash):
+        raise HTTPException(status_code=401, detail="Email ou senha incorretos")
 
     access_token = _issue_token(usuario)
     set_auth_cookie(response, access_token)

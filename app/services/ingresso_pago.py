@@ -72,7 +72,7 @@ def marcar_ingresso_pago(db: Session, ingresso: Ingresso, *, pago_em: datetime |
         )
         return False
 
-    if ingresso.status == "pendente":
+    if ingresso.status == "pendente" and (ingresso.participante_email or "").strip():
         from app.services.lista_espera import validar_espera_para_ingresso_pendente
 
         try:

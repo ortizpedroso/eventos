@@ -560,7 +560,7 @@ async def cancelar_ingresso(
             "idempotent": True,
         }
     
-    if datetime.now(timezone.utc).replace(tzinfo=None) > ingresso.data_limite_cancelamento:
+    if ingresso.data_limite_cancelamento is None or datetime.now(timezone.utc).replace(tzinfo=None) > ingresso.data_limite_cancelamento:
         raise HTTPException(status_code=400, detail="Prazo para cancelamento expirou")
 
     agora = datetime.now(timezone.utc).replace(tzinfo=None)

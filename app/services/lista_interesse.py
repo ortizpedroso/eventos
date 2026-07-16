@@ -82,7 +82,13 @@ def exportar_interesse_csv(db: Session, evento_id: str) -> str:
 
 def notificar_abertura_vendas(db: Session, evento: Evento) -> int:
     """Envia e-mail aos inscritos quando vendas abrem (publicação ou lote elegível)."""
+    from datetime import datetime, timezone
     from config.settings import settings
+
+    if getattr(evento, "notificacao_interesse_enviada_em", None) is not None:
+        return 0
+    evento.notificacao_interesse_enviada_em = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.flush()
 
     inscritos = (
         db.query(EventoListaInteresse)

@@ -340,6 +340,7 @@ def validar_token_espera(db: Session, evento: Evento, token: str | None) -> Even
             EventoListaEspera.token_compra == token.strip(),
             EventoListaEspera.status == "notificado",
         )
+        .with_for_update()
         .first()
     )
     if not entrada:

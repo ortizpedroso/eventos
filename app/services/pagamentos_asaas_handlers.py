@@ -402,6 +402,11 @@ def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
     )
     valor = float(getattr(ingresso, "valor_cobrado", None) or ingresso.valor or 0)
     try:
+        current = obter_cobranca(pay_id)
+        current_status = (current.get("status") or "").upper() if current else ""
+        from app.services.pagamento_asaas import status_eh_reembolsado
+        if status_eh_reembolsado(current_status):
+            return pay_id
         idem_key = f"refund_{pay_id}_{ingresso.id}"
         if outros_pagos > 0:
             result = reembolsar_cobranca(pay_id, valor=valor, idempotency_key=idem_key)

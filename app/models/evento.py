@@ -53,6 +53,9 @@ class Evento(Base):
     checkin_token = Column(String(64), nullable=True, unique=True, index=True)
     checkin_token_em = Column(DateTime, nullable=True)
 
+    # Notificação de interesse (idempotência)
+    notificacao_interesse_enviada_em = Column(DateTime, nullable=True)
+
     # Datas
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     data_atualizacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

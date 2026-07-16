@@ -383,7 +383,8 @@ def test_reembolso_parcial_asaas_multi_ingresso():
         db.add(ing2)
         db.commit()
         db.refresh(ing1)
-        with patch("app.services.pagamentos_asaas_handlers.reembolsar_cobranca") as mock_refund:
+        with patch("app.services.pagamentos_asaas_handlers.obter_cobranca") as mock_obter,              patch("app.services.pagamentos_asaas_handlers.reembolsar_cobranca") as mock_refund:
+            mock_obter.return_value = {"id": "pay_multi", "status": "RECEIVED"}
             mock_refund.return_value = {"id": "ref_partial"}
             ref = cancelar_com_reembolso_asaas(db, ing1)
         mock_refund.assert_called_once_with(

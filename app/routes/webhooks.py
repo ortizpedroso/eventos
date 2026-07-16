@@ -95,7 +95,7 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
                     payment=payment,
                     raise_on_gateway_error=True,
                 )
-        elif event_type == "PAYMENT_REFUNDED" and pay_id:
+        elif event_type in ("PAYMENT_REFUNDED", "PAYMENT_REFUND_IN_PROGRESS") and pay_id:
             from app.services.assinatura_organizador import processar_reembolso_assinatura_gateway
 
             if not (payment and processar_reembolso_assinatura_gateway(db, payment)):
@@ -189,11 +189,7 @@ async def asaas_transfer_auth(request: Request, db: Session = Depends(get_db)):
 @router.post("/mock-payment")
 async def mock_payment(ingresso_id: str, db: Session = Depends(get_db)):
     """(Apenas para Desenvolvimento) Simula a aprovação de um pagamento."""
-    if (
-        settings.ENVIRONMENT == "production"
-        or not settings.DEBUG
-        or settings.ENVIRONMENT != "development"
-    ):
+    if not (settings.ENVIRONMENT == "development" and settings.DEBUG):
         raise HTTPException(
             status_code=403, detail="Apenas permitido em ambiente de desenvolvimento"
         )
