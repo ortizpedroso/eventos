@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { PerfilClient } from "@/app/conta/perfil/perfil-client";
 
 export default function OrganizadorPerfilPage() {
-  redirect("/conta/perfil");
+  return <PerfilClient />;
 }

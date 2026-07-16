@@ -51,7 +51,7 @@ export function PerfilClient() {
   }, []);
 
   useEffect(() => {
-    const isPerfil = pathname === "/conta/perfil";
+    const isPerfil = pathname === "/conta/perfil" || pathname === "/organizador/perfil";
     if (isPerfil) {
       void carregarDoBanco();
     }
