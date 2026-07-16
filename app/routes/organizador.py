@@ -316,6 +316,44 @@ async def sincronizar_assinatura(
     return sincronizar_assinatura_pendente(db, usuario_atual)
 
 
+class PixChaveRequest(BaseModel):
+    pix_chave: str = Field(min_length=5, max_length=120)
+    pix_tipo: str | None = Field(default=None, max_length=20)
+
+
+@router.get("/pix")
+async def obter_pix_salvo(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+):
+    _require_organizador(usuario_atual)
+    return {
+        "pix_chave": getattr(usuario_atual, "pix_chave_salva", None),
+        "pix_tipo": getattr(usuario_atual, "pix_tipo_salvo", None),
+    }
+
+
+@router.put("/pix")
+async def salvar_pix(
+    body: PixChaveRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    _require_organizador(usuario_atual)
+    from app.services.saque_asaas import inferir_pix_tipo, normalizar_pix_chave, validar_pix_cadastro_repasse
+
+    tipo = inferir_pix_tipo(body.pix_chave, body.pix_tipo)
+    chave = normalizar_pix_chave(body.pix_chave, tipo)
+    try:
+        validar_pix_cadastro_repasse(usuario_atual, chave, tipo)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    usuario_atual.pix_chave_salva = chave
+    usuario_atual.pix_tipo_salvo = tipo
+    db.commit()
+    return {"ok": True, "pix_chave": chave, "pix_tipo": tipo}
+
+
 @router.post("/assinatura/pagar")
 async def pagar_assinatura(
     usuario_atual: Usuario = Depends(get_usuario_atual),
