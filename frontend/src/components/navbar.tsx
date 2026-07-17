@@ -117,7 +117,6 @@ export function Navbar() {
   }, [menuOpen]);
 
   const isOrganizador = loggedIn && userTipo === "organizador";
-  /** Enquanto /me carrega ou usuário é cliente: só Eventos, Pagamentos, Ingressos na barra */
   const navClienteOuCarregando = loggedIn && (userTipo === null || userTipo === "cliente");
 
   const mobileLink =
@@ -142,200 +141,185 @@ export function Navbar() {
     setMobileNavOpen(false);
   }
 
-  function PagamentosNavLink({
-    href,
-    className,
-    onClick,
-  }: {
-    href: string;
-    className: string;
-    onClick?: () => void;
-  }) {
-    return (
-      <Link href={href} className={`relative inline-flex items-center gap-1.5 ${className}`} onClick={onClick}>
-        {pagamentosLabel()}
-        {pendentesCount > 0 ? (
-          <span
-            className="absolute -right-2 -top-1 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
-            aria-label={`${pendentesCount} pagamento(s) pendente(s)`}
-          />
-        ) : null}
-      </Link>
-    );
-  }
-
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
-      {/* flex-col: menu móvel em linha própria; linha de cima sem flex-wrap para o ícone não “saltar” de linha */}
       <div className="mx-auto flex w-full max-w-7xl flex-col px-4 py-2 sm:px-6 lg:px-8">
         <div className="flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 sm:gap-4">
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-6 lg:gap-10">
             <EventosBRLogo className="shrink-0" />
 
-          <form onSubmit={submitBusca} className="hidden min-w-0 flex-1 max-w-xs lg:max-w-sm md:block" role="search">
-            <label htmlFor="nav-busca" className="sr-only">Buscar eventos</label>
-            <input
-              id="nav-busca"
-              type="search"
-              placeholder="Buscar eventos…"
-              value={buscaNav}
-              onChange={(e) => setBuscaNav(e.target.value)}
-              className="input w-full py-2 text-sm"
-            />
-          </form>
+            <form onSubmit={submitBusca} className="hidden min-w-0 flex-1 max-w-xs lg:max-w-sm md:block" role="search">
+              <label htmlFor="nav-busca" className="sr-only">Buscar eventos</label>
+              <input
+                id="nav-busca"
+                type="search"
+                placeholder="Buscar eventos…"
+                value={buscaNav}
+                onChange={(e) => setBuscaNav(e.target.value)}
+                className="input w-full py-2 text-sm"
+              />
+            </form>
 
-          <nav
-            className="hidden min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-zinc-600 md:flex lg:gap-x-6"
-            aria-label="Principal (ambiente de trabalho)"
-          >
-            {navClienteOuCarregando ? (
-              <>
-                <Link href="/eventos" className={navLinkClass("/eventos")}>
-                  Eventos
-                </Link>
-                <NavbarCategoriasMenu compact />
-                <PagamentosNavLink href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")} />
-                <Link href="/conta/ingressos" className={navLinkClass("/conta/ingressos")}>
-                  Ingressos
-                </Link>
-              </>
-            ) : isOrganizador ? (
-              <>
-                <Link href="/organizador/eventos" className={navLinkClass("/organizador")}>
-                  Painel
-                </Link>
-                <PagamentosNavLink href="/conta/pagamentos" className={navLinkClass("/conta/pagamentos")} />
-                <Link href="/conta/ingressos" className={navLinkClass("/conta/ingressos")}>
-                  Ingressos
-                </Link>
-                <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
-                  Funcionalidades
-                </Link>
-                <Link href="/planos" className={navLinkClass("/planos")}>
-                  Planos
-                </Link>
-                <Link href="/eventos" className={navLinkClass("/eventos")}>
-                  Eventos
-                </Link>
-                <NavbarCategoriasMenu compact />
-                <Link href="/sobre" className={navLinkClass("/sobre")}>
-                  Sobre
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
-                  Funcionalidades
-                </Link>
-                <Link href="/planos" className={navLinkClass("/planos")}>
-                  Planos
-                </Link>
-                <Link href="/eventos" className={navLinkClass("/eventos")}>
-                  Eventos
-                </Link>
-                <NavbarCategoriasMenu compact />
-                <Link href="/sobre" className={navLinkClass("/sobre")}>
-                  Sobre
-                </Link>
-              </>
-            )}
-          </nav>
-        </div>
+            <nav
+              className="hidden min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-zinc-600 md:flex lg:gap-x-6"
+              aria-label="Principal (ambiente de trabalho)"
+            >
+              {/* Logado como cliente ou carregando: apenas Eventos */}
+              {navClienteOuCarregando ? (
+                <>
+                  <Link href="/eventos" className={navLinkClass("/eventos")}>
+                    Eventos
+                  </Link>
+                  <NavbarCategoriasMenu compact />
+                </>
+              ) : isOrganizador ? (
+                /* Logado como organizador: sem Painel/Pagamentos/Ingressos no topo */
+                <>
+                  <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
+                    Funcionalidades
+                  </Link>
+                  <Link href="/planos" className={navLinkClass("/planos")}>
+                    Planos
+                  </Link>
+                  <Link href="/eventos" className={navLinkClass("/eventos")}>
+                    Eventos
+                  </Link>
+                  <NavbarCategoriasMenu compact />
+                  <Link href="/sobre" className={navLinkClass("/sobre")}>
+                    Sobre
+                  </Link>
+                </>
+              ) : (
+                /* Deslogado */
+                <>
+                  <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
+                    Funcionalidades
+                  </Link>
+                  <Link href="/planos" className={navLinkClass("/planos")}>
+                    Planos
+                  </Link>
+                  <Link href="/eventos" className={navLinkClass("/eventos")}>
+                    Eventos
+                  </Link>
+                  <NavbarCategoriasMenu compact />
+                  <Link href="/sobre" className={navLinkClass("/sobre")}>
+                    Sobre
+                  </Link>
+                </>
+              )}
+            </nav>
+          </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 md:hidden"
-            aria-expanded={mobileNavOpen}
-            aria-controls="nav-mobile-menu"
-            aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}
-            onClick={() => setMobileNavOpen((o) => !o)}
-          >
-            <IconMenu open={mobileNavOpen} />
-          </button>
-          {loggedIn ? (
-            <div className="relative" ref={menuRef}>
-              <button
-                type="button"
-                onClick={() => setMenuOpen((o) => !o)}
-                className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
-                aria-expanded={menuOpen}
-                aria-haspopup="menu"
-                aria-label="Abrir menu da conta"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
-                  <UserIcon className="h-5 w-5" />
-                </span>
-                <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
-              </button>
-
-              {menuOpen ? (
-                <div
-                  role="menu"
-                  className="absolute right-0 z-[60] mt-2 min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 md:hidden"
+              aria-expanded={mobileNavOpen}
+              aria-controls="nav-mobile-menu"
+              aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}
+              onClick={() => setMobileNavOpen((o) => !o)}
+            >
+              <IconMenu open={mobileNavOpen} />
+            </button>
+            {loggedIn ? (
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((o) => !o)}
+                  className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+                  aria-expanded={menuOpen}
+                  aria-haspopup="menu"
+                  aria-label="Abrir menu da conta"
                 >
-                  <Link
-                    href={isOrganizador ? "/organizador/perfil" : "/conta/perfil"}
-                    role="menuitem"
-                    className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                    onClick={() => setMenuOpen(false)}
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+                    <UserIcon className="h-5 w-5" />
+                  </span>
+                  <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
+                </button>
+
+                {menuOpen ? (
+                  <div
+                    role="menu"
+                    className="absolute right-0 z-[60] mt-2 min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
                   >
-                    Perfil
-                  </Link>
-                  <Link
-                    href="/conta/pagamentos"
-                    role="menuitem"
-                    className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Pagamentos
-                  </Link>
-                  <Link
-                    href="/conta/ingressos"
-                    role="menuitem"
-                    className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Ingressos
-                  </Link>
-                  <Link
-                    href="/conta/notificacoes"
-                    role="menuitem"
-                    className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Notificações
-                  </Link>
-                  <div className="my-1 border-t border-zinc-100" aria-hidden />
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                    onClick={logout}
-                  >
-                    Sair
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <Link
-              href="/auth"
-              className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
-            >
-              Login
-            </Link>
-          )}
-          {!loggedIn || userTipo !== "cliente" ? (
-            <Link
-              href={hrefCriarEvento}
-              className="btn-success shrink-0 whitespace-nowrap px-3 py-2 text-xs shadow-sm sm:px-4 sm:text-sm"
-            >
-              <span className="sm:hidden">Criar</span>
-              <span className="hidden sm:inline">Crie um evento</span>
-            </Link>
-          ) : null}
-        </div>
+                    {isOrganizador ? (
+                      <Link
+                        href="/organizador/eventos"
+                        role="menuitem"
+                        className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Painel
+                      </Link>
+                    ) : null}
+                    <Link
+                      href={isOrganizador ? "/organizador/perfil" : "/conta/perfil"}
+                      role="menuitem"
+                      className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Perfil
+                    </Link>
+                    <Link
+                      href="/conta/pagamentos"
+                      role="menuitem"
+                      className="relative block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      {pagamentosLabel()}
+                      {pendentesCount > 0 ? (
+                        <span
+                          className="absolute right-3 top-3 flex h-2 w-2 rounded-full bg-red-500"
+                          aria-label={`${pendentesCount} pagamento(s) pendente(s)`}
+                        />
+                      ) : null}
+                    </Link>
+                    <Link
+                      href="/conta/ingressos"
+                      role="menuitem"
+                      className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Ingressos
+                    </Link>
+                    <Link
+                      href="/conta/notificacoes"
+                      role="menuitem"
+                      className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Notificações
+                    </Link>
+                    <div className="my-1 border-t border-zinc-100" aria-hidden />
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                      onClick={logout}
+                    >
+                      Sair
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <Link
+                href="/auth"
+                className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+              >
+                Login
+              </Link>
+            )}
+            {!loggedIn || userTipo !== "cliente" ? (
+              <Link
+                href={hrefCriarEvento}
+                className="btn-success shrink-0 whitespace-nowrap px-3 py-2 text-xs shadow-sm sm:px-4 sm:text-sm"
+              >
+                <span className="sm:hidden">Criar</span>
+                <span className="hidden sm:inline">Crie um evento</span>
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         {mobileNavOpen ? (
@@ -360,28 +344,9 @@ export function Navbar() {
                   Eventos
                 </Link>
                 <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
-                <PagamentosNavLink
-                  href="/conta/pagamentos"
-                  className={mobileLink}
-                  onClick={() => setMobileNavOpen(false)}
-                />
-                <Link href="/conta/ingressos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Ingressos
-                </Link>
               </div>
             ) : isOrganizador ? (
               <div className="flex flex-col gap-0.5">
-                <Link href="/organizador/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Painel — Meus eventos
-                </Link>
-                <PagamentosNavLink
-                  href="/conta/pagamentos"
-                  className={mobileLink}
-                  onClick={() => setMobileNavOpen(false)}
-                />
-                <Link href="/conta/ingressos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Ingressos
-                </Link>
                 <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Funcionalidades
                 </Link>
