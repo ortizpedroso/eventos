@@ -1,5 +1,5 @@
-import MeusIngressosPage from "@/app/conta/ingressos/page";
+import { IngressosClient } from "@/app/conta/ingressos/ingressos-client";
 
 export default function OrganizadorIngressosPage() {
-  return <MeusIngressosPage />;
+  return <IngressosClient />;
 }
