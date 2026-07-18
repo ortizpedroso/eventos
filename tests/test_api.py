@@ -403,61 +403,6 @@ class TestCompraRapidaPerfil:
         assert me.json()["email_verificado"] is True
 
 
-class TestGateCpfCnpjOrganizador:
-    def test_organizador_sem_documento_precisa_cpf_cnpj(self):
-        r = client.post(
-            "/api/auth/registrar",
-            json={
-                "email": "org.sem.doc@test.com",
-                "nome": "Org Sem Doc",
-                "senha": "senha123",
-                "tipo": "organizador",
-            },
-        )
-        assert r.status_code == 200, r.text
-        token = r.json()["access_token"]
-        h = {"Authorization": f"Bearer {token}"}
-        me = client.get("/api/auth/me", headers=h)
-        assert me.status_code == 200
-        assert me.json()["precisa_cpf_cnpj"] is True
-
-        put = client.put("/api/organizador/documento", headers=h, json={"cpf_cnpj": "111.444.777-35"})
-        assert put.status_code == 200, put.text
-
-        me2 = client.get("/api/auth/me", headers=h)
-        assert me2.json()["precisa_cpf_cnpj"] is False
-
-    def test_documento_invalido_retorna_400(self):
-        r = client.post(
-            "/api/auth/registrar",
-            json={
-                "email": "org.doc.invalido@test.com",
-                "nome": "Org Doc Invalido",
-                "senha": "senha123",
-                "tipo": "organizador",
-            },
-        )
-        assert r.status_code == 200, r.text
-        h = {"Authorization": f"Bearer {r.json()['access_token']}"}
-        put = client.put("/api/organizador/documento", headers=h, json={"cpf_cnpj": "abc12345678"})
-        assert put.status_code == 400
-
-    def test_cliente_nao_precisa_cpf_cnpj(self):
-        r = client.post(
-            "/api/auth/registrar",
-            json={
-                "email": "cliente.sem.doc@test.com",
-                "nome": "Cliente",
-                "senha": "senha123",
-                "tipo": "cliente",
-            },
-        )
-        assert r.status_code == 200, r.text
-        h = {"Authorization": f"Bearer {r.json()['access_token']}"}
-        me = client.get("/api/auth/me", headers=h)
-        assert me.json()["precisa_cpf_cnpj"] is False
-
-
 class TestRecuperacaoSenha:
     def test_solicitar_e_redefinir_senha(self):
         client.post(

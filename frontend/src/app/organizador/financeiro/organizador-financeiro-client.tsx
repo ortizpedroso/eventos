@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { OrganizadorFinanceiroSimulador } from "@/components/organizador-financeiro-simulador";
 import { OrganizadorRepassesPainel } from "@/components/organizador-repasses-painel";
 import { apiFetch } from "@/lib/api";
+import { formatCpfCnpjMask, onlyDigits } from "@/lib/cpf";
 import { AVISO_LEGAL_TAXAS } from "@/lib/taxas-asaas-publicas";
 import type { PlanoTarifaId } from "@/lib/tarifas-plataforma";
 
@@ -251,11 +252,16 @@ export function OrganizadorFinanceiroClient() {
                 id="assinatura-cpf-cnpj"
                 type="text"
                 inputMode="numeric"
-                value={cpfCnpj}
-                onChange={(e) => setCpfCnpj(e.target.value)}
-                placeholder="Somente números"
+                value={formatCpfCnpjMask(cpfCnpj)}
+                onChange={(e) => setCpfCnpj(onlyDigits(e.target.value, 14))}
+                placeholder="000.000.000-00"
                 className="mt-1 w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm text-indigo-950"
               />
+              {cpfCnpj.length === 11 || cpfCnpj.length === 14 ? (
+                <p className="mt-1 text-xs text-indigo-700">
+                  {cpfCnpj.length === 11 ? "CPF identificado." : "CNPJ identificado."}
+                </p>
+              ) : null}
             </div>
           ) : null}
           <button

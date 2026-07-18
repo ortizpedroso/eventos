@@ -67,8 +67,6 @@ export type Usuario = {
   aceita_comunicacao_whatsapp?: boolean;
   telefone?: string | null;
   comunicacao_consentimento_em?: string | null;
-  /** Organizador sem CPF/CNPJ cadastrado (necessário para repasse e assinatura Asaas). */
-  precisa_cpf_cnpj?: boolean;
 };
 
 export type TokenResponse = {

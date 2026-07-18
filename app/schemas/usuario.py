@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, ConfigDict, Field, computed_field, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 from datetime import datetime
 from typing import Optional
 
@@ -71,15 +71,8 @@ class UsuarioResponse(BaseModel):
     aceita_comunicacao_whatsapp: bool = False
     telefone: str | None = None
     comunicacao_consentimento_em: datetime | None = None
-    asaas_repasse_cpf_cnpj: str | None = Field(default=None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True)
-
-    @computed_field
-    @property
-    def precisa_cpf_cnpj(self) -> bool:
-        """Organizador sem CPF/CNPJ cadastrado não pode gerar cobranças Asaas (repasse ou assinatura)."""
-        return self.tipo == "organizador" and not bool((self.asaas_repasse_cpf_cnpj or "").strip())
 
 
 class AtualizarPerfilRequest(BaseModel):
