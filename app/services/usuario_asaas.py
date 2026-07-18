@@ -79,6 +79,17 @@ def criar_asaas_para_novo_usuario(
     return customer_id, wallet_id, account_id
 
 
+def _sincronizar_documento_customer(customer_id: str, doc: str) -> None:
+    """Corrige cpfCnpj de um customer já criado (ex.: cadastrado antes da correção do truncamento)."""
+    client = get_asaas_client()
+    if not client.enabled:
+        return
+    try:
+        client.put(f"/v3/customers/{customer_id}", json={"cpfCnpj": doc})
+    except AsaasAPIError:
+        logger.warning("Não foi possível sincronizar CPF/CNPJ do customer %s", customer_id)
+
+
 def garantir_customer_asaas(
     db: Session,
     usuario: Usuario,
@@ -86,8 +97,11 @@ def garantir_customer_asaas(
     cpf: str | None = None,
     telefone: str | None = None,
 ) -> str:
-    """Garante asaas_customer_id; cria se ausente."""
+    """Garante asaas_customer_id; cria se ausente. Sincroniza documento se customer já existir."""
+    doc = re.sub(r"\D", "", cpf or "")
     if usuario.asaas_customer_id:
+        if len(doc) in (11, 14):
+            _sincronizar_documento_customer(usuario.asaas_customer_id, doc)
         return usuario.asaas_customer_id
     if settings.ASAAS_DISABLED or not settings.use_asaas:
         raise ValueError("Asaas indisponível")
