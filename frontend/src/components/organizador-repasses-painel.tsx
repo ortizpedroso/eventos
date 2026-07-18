@@ -180,6 +180,9 @@ export function OrganizadorRepassesPainel() {
   const [numero, setNumero] = useState("");
   const [bairro, setBairro] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
+  const [companyType, setCompanyType] = useState("INDIVIDUAL");
+  const [complemento, setComplemento] = useState("");
+  const [buscandoCep, setBuscandoCep] = useState(false);
 
   const [saqueValor, setSaqueValor] = useState(() => moedaBrlFromNumber(100));
   const [pixChave, setPixChave] = useState("");
@@ -268,6 +271,21 @@ export function OrganizadorRepassesPainel() {
     }
   }
 
+  async function buscarCep(cepVal: string) {
+    if (cepVal.length !== 8) return;
+    setBuscandoCep(true);
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${cepVal}/json/`);
+      const d = await r.json() as { erro?: boolean; logradouro?: string; bairro?: string };
+      if (!d.erro) {
+        if (d.logradouro) setEndereco(d.logradouro);
+        if (d.bairro) setBairro(d.bairro);
+      }
+    } catch { /* ignore */ } finally {
+      setBuscandoCep(false);
+    }
+  }
+
   async function criarSubconta(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -291,6 +309,8 @@ export function OrganizadorRepassesPainel() {
           endereco: endereco.trim(),
           numero: numero.trim(),
           bairro: bairro.trim(),
+          complemento: complemento.trim() || undefined,
+          company_type: onlyDigits(cpfCnpj, 14).length === 14 ? companyType : "INDIVIDUAL",
           data_nascimento:
             onlyDigits(cpfCnpj, 14).length === 11 ? dataNascimento.trim() || undefined : undefined,
         }),
@@ -562,24 +582,30 @@ export function OrganizadorRepassesPainel() {
               Sua conta anterior foi reprovada. Revise os dados e envie novamente para análise.
             </p>
           ) : null}
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="CPF ou CNPJ"
-            value={formatCpfCnpjMask(cpfCnpj)}
-            onChange={(e) => setCpfCnpj(onlyDigits(e.target.value, 14))}
-          />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="Telefone"
-            inputMode="tel"
-            value={formatTelefoneBrMask(telefone)}
-            onChange={(e) => setTelefone(onlyDigits(e.target.value, 11))}
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">CPF ou CNPJ <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="000.000.000-00 ou 00.000.000/0000-00"
+              value={formatCpfCnpjMask(cpfCnpj)}
+              onChange={(e) => setCpfCnpj(onlyDigits(e.target.value, 14))}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Telefone (WhatsApp) <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="(11) 9 0000-0000"
+              inputMode="tel"
+              value={formatTelefoneBrMask(telefone)}
+              onChange={(e) => setTelefone(onlyDigits(e.target.value, 11))}
+            />
+          </label>
           {onlyDigits(cpfCnpj, 14).length === 11 ? (
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-xs text-zinc-600">
-                Data de nascimento <span className="text-red-600">*</span>
-              </span>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-zinc-500">Data de nascimento <span className="text-red-500">*</span></span>
               <input
                 type="date"
                 required
@@ -589,37 +615,91 @@ export function OrganizadorRepassesPainel() {
               />
             </label>
           ) : (
-            <div />
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-zinc-500">Tipo de empresa <span className="text-red-500">*</span></span>
+              <select
+                required
+                className="rounded-lg border bg-white px-3 py-2 text-sm"
+                value={companyType}
+                onChange={(e) => setCompanyType(e.target.value)}
+              >
+                <option value="MEI">MEI — Microempreendedor Individual</option>
+                <option value="INDIVIDUAL">Autônomo / Profissional Liberal</option>
+                <option value="INDIVIDUAL_ENTERPRISE">Empresa Individual (EI)</option>
+                <option value="LIMITED">LTDA / S.A.</option>
+                <option value="ASSOCIATION">Associação / ONG</option>
+              </select>
+            </label>
           )}
-          <InputValorBrl value={renda} onChange={setRenda} className="rounded-lg" />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="CEP"
-            inputMode="numeric"
-            value={formatCepMask(cep)}
-            onChange={(e) => setCep(onlyDigits(e.target.value, 8))}
-          />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm sm:col-span-2"
-            placeholder="Endereço"
-            value={endereco}
-            onChange={(e) => setEndereco(e.target.value)}
-          />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="Número"
-            value={numero}
-            onChange={(e) => setNumero(e.target.value)}
-          />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="Bairro"
-            value={bairro}
-            onChange={(e) => setBairro(e.target.value)}
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">
+              {onlyDigits(cpfCnpj, 14).length === 14 ? "Faturamento mensal estimado" : "Renda mensal"}{" "}
+              <span className="text-red-500">*</span>
+            </span>
+            <InputValorBrl value={renda} onChange={setRenda} className="rounded-lg" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">CEP <span className="text-red-500">*</span></span>
+            <div className="relative">
+              <input
+                required
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                placeholder="00000-000"
+                inputMode="numeric"
+                value={formatCepMask(cep)}
+                onChange={(e) => {
+                  const v = onlyDigits(e.target.value, 8);
+                  setCep(v);
+                  void buscarCep(v);
+                }}
+              />
+              {buscandoCep ? (
+                <span className="absolute right-3 top-2.5 text-xs text-zinc-400">buscando...</span>
+              ) : null}
+            </div>
+          </label>
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-xs text-zinc-500">Endereço <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Rua, Av., Alameda..."
+              value={endereco}
+              onChange={(e) => setEndereco(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Número <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="123"
+              value={numero}
+              onChange={(e) => setNumero(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Complemento</span>
+            <input
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Apto, sala, bloco... (opcional)"
+              value={complemento}
+              onChange={(e) => setComplemento(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-xs text-zinc-500">Bairro <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Bairro"
+              value={bairro}
+              onChange={(e) => setBairro(e.target.value)}
+            />
+          </label>
           <div className="sm:col-span-2 flex gap-2">
-            <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white">
-              Confirmar
+            <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-60">
+              {busy ? "Enviando..." : modoReenvio ? "Reenviar dados" : "Criar conta de repasses"}
             </button>
             <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setMostrarSubconta(false)}>
               Cancelar
