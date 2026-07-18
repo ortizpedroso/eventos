@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -9,6 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.models import Usuario
 from app.services.tarifas_plataforma import MENSALIDADE_ASSINATURA_MENSAL
+
+logger = logging.getLogger(__name__)
 
 
 def status_assinatura(usuario: Usuario) -> dict:
@@ -110,26 +113,64 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
     if reutilizado:
         return reutilizado
 
+    customer_id_reutilizado = bool(usuario.asaas_customer_id)
     try:
         customer_id = garantir_customer_asaas(db, usuario)
     except AsaasAPIError as e:
+        logger.exception(
+            "Erro Asaas ao criar customer da assinatura (usuario=%s)", usuario.id
+        )
         raise ValueError("Não foi possível criar cadastro para cobrança. Tente novamente.") from e
 
     ref = f"assinatura:{usuario.id}"[:100]
     client = __import__("app.services.asaas_client", fromlist=["get_asaas_client"]).get_asaas_client()
-    payload = {
-        "customer": customer_id,
-        "billingType": "PIX",
-        "value": round(MENSALIDADE_ASSINATURA_MENSAL, 2),
-        "dueDate": (date.today() + timedelta(days=1)).isoformat(),
-        "description": "Assinatura EventosBR — mensal",
-        "externalReference": ref,
-    }
+
+    def _payload(cid: str) -> dict:
+        return {
+            "customer": cid,
+            "billingType": "PIX",
+            "value": round(MENSALIDADE_ASSINATURA_MENSAL, 2),
+            "dueDate": (date.today() + timedelta(days=1)).isoformat(),
+            "description": "Assinatura EventosBR — mensal",
+            "externalReference": ref,
+        }
+
     idem = f"assinatura_{usuario.id}_{uuid.uuid4().hex[:12]}"
     try:
-        payment = client.post("/v3/payments", json=payload, idempotency_key=idem)
+        payment = client.post("/v3/payments", json=_payload(customer_id), idempotency_key=idem)
     except AsaasAPIError as e:
-        raise ValueError("Não foi possível gerar cobrança da assinatura.") from e
+        logger.exception(
+            "Erro Asaas ao criar cobrança da assinatura (usuario=%s, customer_id=%s, status=%s)",
+            usuario.id,
+            customer_id,
+            e.status_code,
+        )
+        if not customer_id_reutilizado:
+            raise ValueError("Não foi possível gerar cobrança da assinatura.") from e
+
+        # Customer em cache pode estar obsoleto (ex.: rotação de chave/ambiente Asaas).
+        # Recria o customer uma única vez e tenta novamente antes de desistir.
+        usuario.asaas_customer_id = None
+        try:
+            customer_id = garantir_customer_asaas(db, usuario)
+        except AsaasAPIError:
+            logger.exception(
+                "Erro Asaas ao recriar customer da assinatura após falha (usuario=%s)", usuario.id
+            )
+            raise ValueError("Não foi possível gerar cobrança da assinatura.") from e
+
+        idem_retry = f"assinatura_{usuario.id}_{uuid.uuid4().hex[:12]}"
+        try:
+            payment = client.post("/v3/payments", json=_payload(customer_id), idempotency_key=idem_retry)
+        except AsaasAPIError as e2:
+            logger.exception(
+                "Erro Asaas ao criar cobrança da assinatura após recriar customer "
+                "(usuario=%s, customer_id=%s, status=%s)",
+                usuario.id,
+                customer_id,
+                e2.status_code,
+            )
+            raise ValueError("Não foi possível gerar cobrança da assinatura.") from e2
 
     if status_eh_pago(payment.get("status")):
         pay_id = (payment.get("id") or "").strip()
