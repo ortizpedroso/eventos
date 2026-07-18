@@ -360,6 +360,26 @@ async def salvar_pix(
     return {"ok": True, "pix_chave": chave, "pix_tipo": tipo}
 
 
+class DocumentoRequest(BaseModel):
+    cpf_cnpj: str = Field(min_length=11, max_length=20)
+
+
+@router.put("/documento")
+async def salvar_documento(
+    body: DocumentoRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Salva CPF/CNPJ do organizador (reaproveitado por repasse e assinatura Asaas)."""
+    _require_organizador(usuario_atual)
+    doc = re.sub(r"\D", "", body.cpf_cnpj)
+    if len(doc) not in (11, 14):
+        raise HTTPException(status_code=400, detail="Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.")
+    usuario_atual.asaas_repasse_cpf_cnpj = doc
+    db.commit()
+    return {"ok": True}
+
+
 class AssinaturaPagarRequest(BaseModel):
     cpf_cnpj: str | None = Field(default=None, max_length=20)
 
