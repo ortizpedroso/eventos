@@ -55,7 +55,7 @@ class AsaasClient:
         url = f"{self.base_url}{path}"
         headers = self._headers()
         if idempotency_key:
-            headers["Idempotency-Key"] = idempotency_key[:128]
+            headers["Idempotency-Key"] = idempotency_key[:48]
         try:
             with httpx.Client(timeout=60.0) as client:
                 resp = client.request(method, url, headers=headers, json=json, params=params)

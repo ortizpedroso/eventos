@@ -135,7 +135,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
             "externalReference": ref,
         }
 
-    idem = f"assinatura_{usuario.id}_{uuid.uuid4().hex[:12]}"
+    idem = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
     try:
         payment = client.post("/v3/payments", json=_payload(customer_id), idempotency_key=idem)
     except AsaasAPIError as e:
@@ -159,7 +159,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
             )
             raise ValueError("Não foi possível gerar cobrança da assinatura.") from e
 
-        idem_retry = f"assinatura_{usuario.id}_{uuid.uuid4().hex[:12]}"
+        idem_retry = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
         try:
             payment = client.post("/v3/payments", json=_payload(customer_id), idempotency_key=idem_retry)
         except AsaasAPIError as e2:
