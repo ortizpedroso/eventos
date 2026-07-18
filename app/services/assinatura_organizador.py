@@ -110,7 +110,11 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
     if reutilizado:
         return reutilizado
 
-    customer_id = garantir_customer_asaas(db, usuario)
+    try:
+        customer_id = garantir_customer_asaas(db, usuario)
+    except AsaasAPIError as e:
+        raise ValueError("Não foi possível criar cadastro para cobrança. Tente novamente.") from e
+
     ref = f"assinatura:{usuario.id}"[:100]
     client = __import__("app.services.asaas_client", fromlist=["get_asaas_client"]).get_asaas_client()
     payload = {
