@@ -132,7 +132,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
         logger.exception(
             "Erro Asaas ao criar customer da assinatura (usuario=%s)", usuario.id
         )
-        raise ValueError("Não foi possível criar cadastro para cobrança. Tente novamente.") from e
+        raise ValueError(f"Não foi possível criar cadastro para cobrança: {e}") from e
 
     ref = f"assinatura:{usuario.id}"[:100]
     client = __import__("app.services.asaas_client", fromlist=["get_asaas_client"]).get_asaas_client()
@@ -158,7 +158,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
             e.status_code,
         )
         if not customer_id_reutilizado:
-            raise ValueError("Não foi possível gerar cobrança da assinatura.") from e
+            raise ValueError(f"Não foi possível gerar cobrança da assinatura: {e}") from e
 
         # Customer em cache pode estar obsoleto (ex.: rotação de chave/ambiente Asaas).
         # Recria o customer uma única vez e tenta novamente antes de desistir.
@@ -169,7 +169,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
             logger.exception(
                 "Erro Asaas ao recriar customer da assinatura após falha (usuario=%s)", usuario.id
             )
-            raise ValueError("Não foi possível gerar cobrança da assinatura.") from e
+            raise ValueError(f"Não foi possível gerar cobrança da assinatura: {e}") from e
 
         idem_retry = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
         try:
@@ -182,7 +182,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
                 customer_id,
                 e2.status_code,
             )
-            raise ValueError("Não foi possível gerar cobrança da assinatura.") from e2
+            raise ValueError(f"Não foi possível gerar cobrança da assinatura: {e2}") from e2
 
     if status_eh_pago(payment.get("status")):
         pay_id = (payment.get("id") or "").strip()
