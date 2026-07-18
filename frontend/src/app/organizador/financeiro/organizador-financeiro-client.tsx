@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { OrganizadorFinanceiroSimulador } from "@/components/organizador-financeiro-simulador";
 import { OrganizadorRepassesPainel } from "@/components/organizador-repasses-painel";
@@ -35,8 +35,115 @@ type AssinaturaStatus = {
   taxa_efetiva: PlanoTarifaId;
 };
 
+type PixData = {
+  encoded_image?: string;
+  copia_cola?: string;
+  expiration_date?: string;
+};
+
 function fmtBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function PixCard({
+  pix,
+  onPago,
+}: {
+  pix: PixData;
+  onPago: () => void;
+}) {
+  const [copiado, setCopiado] = useState(false);
+  const [verificando, setVerificando] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const verificar = useCallback(async () => {
+    setVerificando(true);
+    try {
+      const r = await apiFetch<{ sincronizado: boolean; assinatura_ativa?: boolean }>(
+        "/api/organizador/assinatura/sincronizar",
+        { method: "POST" },
+      );
+      if (r.assinatura_ativa) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        onPago();
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setVerificando(false);
+    }
+  }, [onPago]);
+
+  useEffect(() => {
+    pollRef.current = setInterval(() => void verificar(), 10_000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [verificar]);
+
+  async function copiar() {
+    if (!pix.copia_cola) return;
+    try {
+      await navigator.clipboard.writeText(pix.copia_cola);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 3000);
+    } catch {
+      /* fallback: select text */
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5 space-y-4">
+      <div>
+        <h2 className="text-sm font-semibold text-indigo-950">Pague via PIX para ativar</h2>
+        <p className="mt-1 text-xs text-indigo-800">
+          Após o pagamento, a taxa reduzida é ativada automaticamente.
+          {pix.expiration_date ? ` Válido até ${new Date(pix.expiration_date).toLocaleString("pt-BR")}.` : ""}
+        </p>
+      </div>
+
+      {pix.encoded_image ? (
+        <div className="flex justify-center">
+          <img
+            src={`data:image/png;base64,${pix.encoded_image}`}
+            alt="QR Code PIX"
+            className="h-48 w-48 rounded-lg border border-indigo-200 bg-white p-2"
+          />
+        </div>
+      ) : null}
+
+      {pix.copia_cola ? (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-indigo-900">Código copia e cola:</p>
+          <div className="flex gap-2">
+            <input
+              readOnly
+              value={pix.copia_cola}
+              className="min-w-0 flex-1 rounded-lg border border-indigo-200 bg-white px-3 py-2 font-mono text-xs text-zinc-700"
+              onFocus={(e) => e.target.select()}
+            />
+            <button
+              type="button"
+              onClick={() => void copiar()}
+              className="shrink-0 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-xs font-medium text-indigo-800 transition hover:bg-indigo-50"
+            >
+              {copiado ? "Copiado ✓" : "Copiar"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        disabled={verificando}
+        onClick={() => void verificar()}
+        className="w-full rounded-lg bg-indigo-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+      >
+        {verificando ? "Verificando…" : "Já paguei — verificar"}
+      </button>
+      <p className="text-center text-xs text-indigo-700">Verificação automática a cada 10 segundos</p>
+    </section>
+  );
 }
 
 export function OrganizadorFinanceiroClient() {
@@ -46,6 +153,7 @@ export function OrganizadorFinanceiroClient() {
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busyAssinatura, setBusyAssinatura] = useState(false);
+  const [pixPendente, setPixPendente] = useState<PixData | null>(null);
 
   const carregar = useCallback(async () => {
     setError(null);
@@ -74,26 +182,32 @@ export function OrganizadorFinanceiroClient() {
     setMsg(null);
     setError(null);
     try {
-      const res = await apiFetch<{ ja_pago?: boolean; pix?: { copia_cola?: string } }>(
-        "/api/organizador/assinatura/pagar",
-        { method: "POST" },
-      );
+      const res = await apiFetch<{
+        ja_pago?: boolean;
+        pix?: PixData;
+      }>("/api/organizador/assinatura/pagar", { method: "POST" });
+
       if (res.ja_pago) {
         setMsg("Assinatura ativada com sucesso.");
         await carregar();
         return;
       }
-      if (res.pix?.copia_cola) {
-        await navigator.clipboard.writeText(res.pix.copia_cola);
-        setMsg("PIX da assinatura gerado — código copiado. Após o pagamento, a taxa reduzida é ativada automaticamente.");
+      if (res.pix) {
+        setPixPendente(res.pix);
       } else {
-        setMsg("Cobrança da assinatura gerada. Conclua o pagamento PIX para ativar a taxa reduzida.");
+        setMsg("Cobrança gerada. Entre em contato com o suporte caso não receba instruções de pagamento.");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível iniciar a assinatura.");
     } finally {
       setBusyAssinatura(false);
     }
+  }
+
+  function handlePagamentoConfirmado() {
+    setPixPendente(null);
+    setMsg("Assinatura ativada com sucesso! Taxa reduzida já está aplicada nas suas vendas.");
+    void carregar();
   }
 
   return (
@@ -110,7 +224,9 @@ export function OrganizadorFinanceiroClient() {
         <p className="mt-2 text-[11px] text-zinc-500">{AVISO_LEGAL_TAXAS}</p>
       </div>
 
-      {assinatura && !assinatura.assinatura_ativa ? (
+      {pixPendente ? (
+        <PixCard pix={pixPendente} onPago={handlePagamentoConfirmado} />
+      ) : assinatura && !assinatura.assinatura_ativa ? (
         <section className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5">
           <h2 className="text-sm font-semibold text-indigo-950">Plano com assinatura</h2>
           <p className="mt-1 text-sm text-indigo-900">
