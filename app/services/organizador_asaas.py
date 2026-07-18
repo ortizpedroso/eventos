@@ -336,6 +336,8 @@ def criar_subconta_organizador(
     numero: str,
     bairro: str,
     complemento: str | None = None,
+    cidade: str | None = None,
+    estado: str | None = None,
     company_type: str = "INDIVIDUAL",
     data_nascimento: str | None = None,
 ) -> dict[str, Any]:
@@ -381,6 +383,10 @@ def criar_subconta_organizador(
     }
     if complemento and complemento.strip():
         payload["complement"] = complemento.strip()[:80]
+    if cidade and cidade.strip():
+        payload["city"] = cidade.strip()[:80]
+    if estado and estado.strip():
+        payload["state"] = estado.strip()[:2].upper()
     if len(doc) == 11:
         payload["birthDate"] = (data_nascimento or "").strip()
 
@@ -552,6 +558,8 @@ def reenviar_subconta_organizador(
     numero: str,
     bairro: str,
     complemento: str | None = None,
+    cidade: str | None = None,
+    estado: str | None = None,
     company_type: str = "INDIVIDUAL",
     data_nascimento: str | None = None,
 ) -> dict[str, Any]:
@@ -569,6 +577,8 @@ def reenviar_subconta_organizador(
         numero=numero,
         bairro=bairro,
         complemento=complemento,
+        cidade=cidade,
+        estado=estado,
         company_type=company_type,
         data_nascimento=data_nascimento,
     )

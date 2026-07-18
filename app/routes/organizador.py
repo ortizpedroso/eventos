@@ -113,6 +113,8 @@ class AsaasSubcontaRequest(BaseModel):
     numero: str = Field(min_length=1, max_length=20)
     bairro: str = Field(min_length=2, max_length=80)
     complemento: str | None = Field(default=None, max_length=80)
+    cidade: str | None = Field(default=None, max_length=80)
+    estado: str | None = Field(default=None, max_length=2)
     company_type: str = Field(default="INDIVIDUAL", max_length=20)
     data_nascimento: str | None = Field(default=None, max_length=10)
 
@@ -219,6 +221,8 @@ async def asaas_criar_subconta(
             numero=body.numero,
             bairro=body.bairro,
             complemento=body.complemento,
+            cidade=body.cidade,
+            estado=body.estado,
             company_type=body.company_type,
             data_nascimento=body.data_nascimento,
         )
@@ -248,6 +252,8 @@ async def asaas_reenviar_subconta(
             numero=body.numero,
             bairro=body.bairro,
             complemento=body.complemento,
+            cidade=body.cidade,
+            estado=body.estado,
             company_type=body.company_type,
             data_nascimento=body.data_nascimento,
         )

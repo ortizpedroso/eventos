@@ -182,6 +182,8 @@ export function OrganizadorRepassesPainel() {
   const [dataNascimento, setDataNascimento] = useState("");
   const [companyType, setCompanyType] = useState("INDIVIDUAL");
   const [complemento, setComplemento] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
   const [buscandoCep, setBuscandoCep] = useState(false);
 
   const [saqueValor, setSaqueValor] = useState(() => moedaBrlFromNumber(100));
@@ -279,6 +281,7 @@ export function OrganizadorRepassesPainel() {
       const d = await r.json() as {
         erro?: boolean;
         logradouro?: string;
+        complemento?: string;
         bairro?: string;
         localidade?: string;
         uf?: string;
@@ -286,6 +289,9 @@ export function OrganizadorRepassesPainel() {
       if (!d.erro) {
         setEndereco(d.logradouro ?? "");
         setBairro(d.bairro ?? "");
+        setCidade(d.localidade ?? "");
+        setEstado(d.uf ?? "");
+        if (d.complemento) setComplemento(d.complemento);
       }
     } catch { /* ignore */ } finally {
       setBuscandoCep(false);
@@ -316,6 +322,8 @@ export function OrganizadorRepassesPainel() {
           numero: numero.trim(),
           bairro: bairro.trim(),
           complemento: complemento.trim() || undefined,
+          cidade: cidade.trim() || undefined,
+          estado: estado.trim() || undefined,
           company_type: onlyDigits(cpfCnpj, 14).length === 14 ? companyType : "INDIVIDUAL",
           data_nascimento:
             onlyDigits(cpfCnpj, 14).length === 11 ? dataNascimento.trim() || undefined : undefined,
@@ -699,6 +707,27 @@ export function OrganizadorRepassesPainel() {
               placeholder="Bairro"
               value={bairro}
               onChange={(e) => setBairro(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Cidade <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="São Paulo"
+              value={cidade}
+              onChange={(e) => setCidade(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Estado (UF) <span className="text-red-500">*</span></span>
+            <input
+              required
+              maxLength={2}
+              className="rounded-lg border px-3 py-2 text-sm uppercase"
+              placeholder="SP"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value.toUpperCase().slice(0, 2))}
             />
           </label>
           <div className="sm:col-span-2 flex gap-2">
