@@ -75,30 +75,21 @@ Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos
 - Conta/saques: modo BaaS apenas
 - Transfer-auth (BaaS): `https://DOMINIO/api/webhooks/asaas/transfer-auth`
 
-### 2.8 Testes sandbox (antes do go-live)
+### 2.8 Testes pré-go-live
 
-Fluxo no VPS com credenciais de homologação Asaas:
+Testes sandbox foram concluídos internamente. Os scripts de alternância sandbox foram removidos do repositório.
 
-1. **Backup produção completo:** `./scripts/backup-prod-env.sh` → `.env.prod-backup` (gitignored)
-2. **Verificar backup:** `./scripts/verify-prod-backup.sh`
-2. **Credenciais sandbox:** copiar `.env.asaas-sandbox-pending.example` → `.env.asaas-sandbox-pending` e preencher `$aact_hmlg_...` + `walletId`
-3. **Alternar:** `./scripts/switch-asaas-sandbox.sh --reload` (backup automático da produção)
-4. **Webhook** no painel **sandbox** Asaas (mesma URL pública + mesmo `ASAAS_WEBHOOK_TOKEN`)
-5. **Validar API:** `./scripts/test-asaas-sandbox.sh`
-6. **Teste manual:** organizador vincula `walletId` (modo `linked` + `ASAAS_ALLOW_MANUAL_WALLET=true` em sandbox)
-7. **Restaurar produção:** `./scripts/restore-asaas-prod-env.sh --reload`
-
-Se o `.env` for recriado sem credenciais: `./scripts/sync-asaas-prod-from-backup.sh` lê `.env.prod-backup`.
-
-Templates versionados: `.env.prod-backup.example`, `.env.asaas-sandbox-pending.example`.
-
+Para testar em novo ambiente:
+- Use `ASAAS_ENVIRONMENT=sandbox` com chave `$aact_hmlg_...` no `.env` local (não commitar).
+- Configure webhook sandbox no painel Asaas com mesma URL pública e `ASAAS_WEBHOOK_TOKEN`.
+- Use `scripts/test-asaas-connection.py` para validar conectividade.
 ---
 
 ## 3. UX — Área da conta
 
 - `ContaShell` em `/conta/*`: menu lateral **Perfil**, **Pagamentos**, **Ingressos**, **Notificações**.
 - Sem link “Painel” no menu da conta.
-- Dropdown do avatar: mesmas opções + Sair.
+- Dropdown do avatar: Painel (só organizador), Perfil, Sair.
 - `/organizador/perfil` → redirect `/conta/perfil`.
 - `auth/layout.tsx`: rodapé fixo no fim da viewport no login.
 - Máscaras: CPF/CNPJ, CEP, telefone nos formulários financeiro, checkout e repasse de ingresso.
@@ -185,7 +176,7 @@ Checks: `production_checks.py` → `GET /api/admin/setup`.
 
 - [ ] `.env` produção preenchido (ou `sync-asaas-prod-from-backup.sh` a partir de `.env.asaas-prod-backup`)
 - [ ] Webhook Asaas configurado no painel
-- [ ] Testes sandbox concluídos (`switch-asaas-sandbox.sh` → `test-asaas-sandbox.sh` → `restore-asaas-prod-env.sh`)
+- [x] Testes sandbox concluídos internamente
 - [ ] SMTP + SPF/DKIM
 - [ ] `alembic upgrade head`
 - [ ] Primeira venda real validada
@@ -203,7 +194,7 @@ Checks: `production_checks.py` → `GET /api/admin/setup`.
 | Conta | `conta-shell.tsx`, `conta/layout.tsx`, `auth/layout.tsx` |
 | Config | `config/settings.py`, `production_checks.py` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `scripts/deploy-vps.sh` |
-| Backup / sandbox Asaas | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh`, `switch-asaas-sandbox.sh`, `test-asaas-sandbox.sh` |
+| Backup produção Asaas | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-asaas-prod-env.sh`, `sync-asaas-prod-from-backup.sh` |
 
 ---
 

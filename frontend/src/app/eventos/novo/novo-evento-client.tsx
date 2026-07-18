@@ -471,6 +471,17 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
             <div className={wizardStep === 3 ? "space-y-0" : "hidden"} aria-hidden={wizardStep !== 3}>
             <EventoPublicarChecklist {...checklistProps} />
             <section className="mt-6 space-y-4">
+              {!eventoGratuito && !repasseAprovado ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-semibold text-amber-900">Conta de repasses não configurada</p>
+                  <p className="mt-0.5 text-sm text-amber-800">
+                    Para publicar um evento pago, configure sua conta de repasses antes.{" "}
+                    <Link href="/organizador/financeiro/conta-repasse" className="font-semibold underline underline-offset-2">
+                      Configurar em Financeiro →
+                    </Link>
+                  </p>
+                </div>
+              ) : null}
               <SectionTitle>Visibilidade</SectionTitle>
               <div className="rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-white p-4 ring-1 ring-emerald-200/80 sm:p-5">
                 <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-emerald-300 hover:bg-white">

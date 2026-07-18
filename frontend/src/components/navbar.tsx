@@ -9,7 +9,6 @@ import { EventosBRLogo } from "@/components/eventosbr-logo";
 import { fetchSession, logoutSession, peekSessionCache } from "@/lib/api";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
-import { contarPagamentosPendentes } from "@/lib/pagamentos-pendentes";
 
 function UserIcon({ className }: { className?: string }) {
   return (
@@ -54,7 +53,6 @@ export function Navbar() {
   const [userTipo, setUserTipo] = useState<string | null>(() => peekSessionCache()?.tipo ?? null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [pendentesCount, setPendentesCount] = useState(0);
   const [buscaNav, setBuscaNav] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -64,12 +62,6 @@ export function Navbar() {
       setLoggedIn(Boolean(u));
       setUserNome(u?.nome ?? null);
       setUserTipo(u?.tipo ?? null);
-      if (u) {
-        const n = await contarPagamentosPendentes();
-        setPendentesCount(n);
-      } else {
-        setPendentesCount(0);
-      }
     }
     const onSync = () => void syncSession();
     void syncSession();
@@ -127,11 +119,6 @@ export function Navbar() {
     return ativo
       ? "shrink-0 font-semibold text-emerald-900 underline-offset-2 hover:underline"
       : "shrink-0 transition-colors hover:text-zinc-900";
-  }
-
-  function pagamentosLabel() {
-    if (pendentesCount <= 0) return "Pagamentos";
-    return `Pagamentos (${pendentesCount})`;
   }
 
   function submitBusca(e: React.FormEvent) {
@@ -259,36 +246,6 @@ export function Navbar() {
                       onClick={() => setMenuOpen(false)}
                     >
                       Perfil
-                    </Link>
-                    <Link
-                      href="/conta/pagamentos"
-                      role="menuitem"
-                      className="relative block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      {pagamentosLabel()}
-                      {pendentesCount > 0 ? (
-                        <span
-                          className="absolute right-3 top-3 flex h-2 w-2 rounded-full bg-red-500"
-                          aria-label={`${pendentesCount} pagamento(s) pendente(s)`}
-                        />
-                      ) : null}
-                    </Link>
-                    <Link
-                      href="/conta/ingressos"
-                      role="menuitem"
-                      className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Ingressos
-                    </Link>
-                    <Link
-                      href="/conta/notificacoes"
-                      role="menuitem"
-                      className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Notificações
                     </Link>
                     <div className="my-1 border-t border-zinc-100" aria-hidden />
                     <button

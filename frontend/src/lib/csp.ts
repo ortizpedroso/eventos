@@ -8,7 +8,6 @@ export function buildContentSecurityPolicy(nonce: string, dev: boolean): string 
     "https://oauth2.googleapis.com",
     "https://www.googleapis.com",
     "https://api.asaas.com",
-    "https://api-sandbox.asaas.com",
   ]);
   const api = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (api && /^https?:\/\//i.test(api)) {

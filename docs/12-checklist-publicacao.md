@@ -89,13 +89,7 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 
 ### Testes sandbox Asaas (antes do go-live) 🧪
 
-Ver guia completo: **[14-teste-sandbox-asaas.md](./14-teste-sandbox-asaas.md)**
-
-```bash
-bash scripts/setup-sandbox-pending.sh      # 1ª vez
-bash scripts/ir-sandbox-asaas.sh --reload  # backup + sandbox
-bash scripts/voltar-producao-asaas.sh --reload  # volta produção
-```
+Testes sandbox foram concluídos internamente. Ver `docs/11-go-live-asaas.md` para instruções de ambiente manual.
 
 ### GitHub — PR automático
 
