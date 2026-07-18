@@ -477,7 +477,7 @@ export function OrganizadorRepassesPainel() {
               "Configure sua conta de recebimento para publicar eventos pagos e receber automaticamente."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {status.permite_vinculo_wallet !== false ? (
+            {status.permite_vinculo_wallet === true ? (
               <button
                 type="button"
                 className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
@@ -532,12 +532,10 @@ export function OrganizadorRepassesPainel() {
 
       {mostrarVinculo ? (
         <form onSubmit={vincularConta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5">
-          <h3 className="text-sm font-semibold text-zinc-900">Vincular conta de recebimento existente</h3>
-          <ol className="list-decimal space-y-1 pl-5 text-xs text-zinc-600">
-            <li>Acesse a plataforma onde sua conta de recebimento está cadastrada.</li>
-            <li>Copie o identificador único da sua conta de recebimento (formato UUID).</li>
-            <li>Cole abaixo e confirme — os repasses das vendas serão enviados automaticamente para essa conta.</li>
-          </ol>
+          <h3 className="text-sm font-semibold text-zinc-900">Vincular conta de recebimento</h3>
+          <p className="text-xs text-zinc-600">
+            Informe o identificador da sua conta de recebimento para que os repasses das vendas sejam enviados automaticamente.
+          </p>
           <label className="grid gap-1 text-sm">
             <span className="text-xs text-zinc-600">ID da conta de recebimento (UUID)</span>
             <input
