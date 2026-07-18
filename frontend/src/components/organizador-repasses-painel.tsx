@@ -276,10 +276,16 @@ export function OrganizadorRepassesPainel() {
     setBuscandoCep(true);
     try {
       const r = await fetch(`https://viacep.com.br/ws/${cepVal}/json/`);
-      const d = await r.json() as { erro?: boolean; logradouro?: string; bairro?: string };
+      const d = await r.json() as {
+        erro?: boolean;
+        logradouro?: string;
+        bairro?: string;
+        localidade?: string;
+        uf?: string;
+      };
       if (!d.erro) {
-        if (d.logradouro) setEndereco(d.logradouro);
-        if (d.bairro) setBairro(d.bairro);
+        setEndereco(d.logradouro ?? "");
+        setBairro(d.bairro ?? "");
       }
     } catch { /* ignore */ } finally {
       setBuscandoCep(false);
