@@ -33,6 +33,7 @@ type AssinaturaStatus = {
   valida_ate: string | null;
   mensalidade_reais: number;
   taxa_efetiva: PlanoTarifaId;
+  precisa_cpf_cnpj?: boolean;
 };
 
 type PixData = {
@@ -154,6 +155,7 @@ export function OrganizadorFinanceiroClient() {
   const [msg, setMsg] = useState<string | null>(null);
   const [busyAssinatura, setBusyAssinatura] = useState(false);
   const [pixPendente, setPixPendente] = useState<PixData | null>(null);
+  const [cpfCnpj, setCpfCnpj] = useState("");
 
   const carregar = useCallback(async () => {
     setError(null);
@@ -178,6 +180,11 @@ export function OrganizadorFinanceiroClient() {
   }, [carregar]);
 
   async function contratarAssinatura() {
+    const doc = cpfCnpj.replace(/\D/g, "");
+    if (assinatura?.precisa_cpf_cnpj && doc.length !== 11 && doc.length !== 14) {
+      setError("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.");
+      return;
+    }
     setBusyAssinatura(true);
     setMsg(null);
     setError(null);
@@ -185,7 +192,10 @@ export function OrganizadorFinanceiroClient() {
       const res = await apiFetch<{
         ja_pago?: boolean;
         pix?: PixData;
-      }>("/api/organizador/assinatura/pagar", { method: "POST" });
+      }>("/api/organizador/assinatura/pagar", {
+        method: "POST",
+        body: JSON.stringify(assinatura?.precisa_cpf_cnpj ? { cpf_cnpj: doc } : {}),
+      });
 
       if (res.ja_pago) {
         setMsg("Assinatura ativada com sucesso.");
@@ -232,6 +242,22 @@ export function OrganizadorFinanceiroClient() {
           <p className="mt-1 text-sm text-indigo-900">
             Taxa reduzida por ingresso + mensalidade de {fmtBRL(assinatura.mensalidade_reais)}.
           </p>
+          {assinatura.precisa_cpf_cnpj ? (
+            <div className="mt-3">
+              <label htmlFor="assinatura-cpf-cnpj" className="text-xs font-medium text-indigo-900">
+                CPF ou CNPJ (necessário para gerar a cobrança)
+              </label>
+              <input
+                id="assinatura-cpf-cnpj"
+                type="text"
+                inputMode="numeric"
+                value={cpfCnpj}
+                onChange={(e) => setCpfCnpj(e.target.value)}
+                placeholder="Somente números"
+                className="mt-1 w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm text-indigo-950"
+              />
+            </div>
+          ) : null}
           <button
             type="button"
             disabled={busyAssinatura}

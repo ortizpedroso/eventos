@@ -360,8 +360,13 @@ async def salvar_pix(
     return {"ok": True, "pix_chave": chave, "pix_tipo": tipo}
 
 
+class AssinaturaPagarRequest(BaseModel):
+    cpf_cnpj: str | None = Field(default=None, max_length=20)
+
+
 @router.post("/assinatura/pagar")
 async def pagar_assinatura(
+    body: AssinaturaPagarRequest | None = None,
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
 ):
@@ -370,6 +375,6 @@ async def pagar_assinatura(
     from app.services.assinatura_organizador import iniciar_cobranca_assinatura
 
     try:
-        return iniciar_cobranca_assinatura(db, usuario_atual)
+        return iniciar_cobranca_assinatura(db, usuario_atual, cpf_cnpj=body.cpf_cnpj if body else None)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

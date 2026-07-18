@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -27,6 +28,7 @@ def status_assinatura(usuario: Usuario) -> dict:
         "taxa_efetiva": "assinatura" if ativa else "padrao",
         "renovacao_pendente": bool(pendente),
         "renovacao_payment_id": pendente or None,
+        "precisa_cpf_cnpj": not bool((getattr(usuario, "asaas_repasse_cpf_cnpj", None) or "").strip()),
     }
 
 
@@ -95,7 +97,7 @@ def _cobranca_assinatura_pendente(db: Session, usuario: Usuario) -> dict | None:
     }
 
 
-def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
+def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str | None = None) -> dict:
     """Gera cobrança PIX da mensalidade (100% plataforma, sem split de ingresso)."""
     from datetime import date
 
@@ -113,9 +115,19 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
     if reutilizado:
         return reutilizado
 
+    # Asaas exige CPF/CNPJ do cliente para gerar cobrança; reaproveita o documento
+    # já cadastrado (conta de repasses) ou o informado agora nesta requisição.
+    doc = re.sub(r"\D", "", (getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
+    if len(doc) not in (11, 14):
+        doc = re.sub(r"\D", "", cpf_cnpj or "")
+        if len(doc) not in (11, 14):
+            raise ValueError("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido para gerar a cobrança.")
+        usuario.asaas_repasse_cpf_cnpj = doc
+        db.commit()
+
     customer_id_reutilizado = bool(usuario.asaas_customer_id)
     try:
-        customer_id = garantir_customer_asaas(db, usuario)
+        customer_id = garantir_customer_asaas(db, usuario, cpf=doc)
     except AsaasAPIError as e:
         logger.exception(
             "Erro Asaas ao criar customer da assinatura (usuario=%s)", usuario.id
@@ -152,7 +164,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
         # Recria o customer uma única vez e tenta novamente antes de desistir.
         usuario.asaas_customer_id = None
         try:
-            customer_id = garantir_customer_asaas(db, usuario)
+            customer_id = garantir_customer_asaas(db, usuario, cpf=doc)
         except AsaasAPIError:
             logger.exception(
                 "Erro Asaas ao recriar customer da assinatura após falha (usuario=%s)", usuario.id
