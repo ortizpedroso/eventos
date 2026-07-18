@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from app.models import Usuario
 from app.services.asaas_client import AsaasAPIError, get_asaas_client
-from app.utils.cpf import normalizar_cpf
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -36,11 +35,11 @@ def criar_asaas_para_novo_usuario(
     if not client.enabled:
         return None, None, None
 
-    cpf = normalizar_cpf(cpf_cnpj or "")
+    doc = re.sub(r"\D", "", cpf_cnpj or "")
     mobile = _digits(telefone, 11)
     payload: dict = {"name": nome[:100], "email": email[:255]}
-    if cpf and len(cpf) == 11:
-        payload["cpfCnpj"] = cpf
+    if len(doc) in (11, 14):
+        payload["cpfCnpj"] = doc
     if mobile:
         payload["mobilePhone"] = mobile
 
@@ -59,7 +58,7 @@ def criar_asaas_para_novo_usuario(
             sub_payload = {
                 "name": nome[:100],
                 "email": email[:255],
-                "cpfCnpj": cpf if cpf and len(cpf) == 11 else "24971563792",
+                "cpfCnpj": doc if len(doc) == 11 else "24971563792",
                 "mobilePhone": mobile or "47999999999",
                 "incomeValue": 5000,
                 "address": "Rua Exemplo",
