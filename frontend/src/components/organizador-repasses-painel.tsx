@@ -265,7 +265,7 @@ export function OrganizadorRepassesPainel() {
       setMostrarVinculo(false);
       await carregar();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível vincular a conta Asaas.");
+      setError(err instanceof Error ? err.message : "Não foi possível vincular a conta de recebimento.");
     } finally {
       setBusy(false);
     }
@@ -445,7 +445,7 @@ export function OrganizadorRepassesPainel() {
 
       {saldo?.saldo_asaas?.disponivel && saldo.saldo_asaas.balance != null ? (
         <p className="mt-3 text-xs text-zinc-600">
-          Saldo na conta de repasses (Asaas): <strong>{fmt(saldo.saldo_asaas.balance)}</strong>
+          Saldo disponível: <strong>{fmt(saldo.saldo_asaas.balance)}</strong>
         </p>
       ) : null}
 
@@ -474,7 +474,7 @@ export function OrganizadorRepassesPainel() {
           <p className="font-medium">Configure sua conta de repasses</p>
           <p className="mt-1">
             {status.nota_wallet ??
-              "É obrigatório para publicar eventos com ingressos pagos. Vincule sua conta Asaas para receber via split."}
+              "Configure sua conta de recebimento para publicar eventos pagos e receber automaticamente."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {status.permite_vinculo_wallet !== false ? (
@@ -483,7 +483,7 @@ export function OrganizadorRepassesPainel() {
                 className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
                 onClick={() => setMostrarVinculo(true)}
               >
-                Vincular conta Asaas
+                Vincular conta existente
               </button>
             ) : null}
             {status.permite_subconta ? (
@@ -492,7 +492,7 @@ export function OrganizadorRepassesPainel() {
                 className="rounded-lg border border-emerald-700 bg-white px-4 py-2 text-sm font-medium text-emerald-900"
                 onClick={() => setMostrarSubconta(true)}
               >
-                Criar subconta pela plataforma
+                Criar conta de recebimento
               </button>
             ) : null}
             {status.tem_subconta && !status.repasse_aprovado ? (
@@ -522,7 +522,7 @@ export function OrganizadorRepassesPainel() {
       {status?.repasse_aprovado ? (
         <p className="mt-4 text-sm text-emerald-800">
           {status.repasse_status === "linked"
-            ? "Conta Asaas vinculada — vendas ativas com split automático."
+            ? "Conta de recebimento ativa — vendas e repasses automáticos."
             : "Conta aprovada — vendas e saques ativos."}{" "}
           <Link href="/organizador/financeiro/conta-repasse" className="font-medium underline">
             Ver detalhes da conta
@@ -532,14 +532,14 @@ export function OrganizadorRepassesPainel() {
 
       {mostrarVinculo ? (
         <form onSubmit={vincularConta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5">
-          <h3 className="text-sm font-semibold text-zinc-900">Vincular conta Asaas</h3>
+          <h3 className="text-sm font-semibold text-zinc-900">Vincular conta de recebimento existente</h3>
           <ol className="list-decimal space-y-1 pl-5 text-xs text-zinc-600">
-            <li>Crie ou acesse sua conta no Asaas.</li>
-            <li>No painel Asaas, copie o <strong>walletId</strong> da sua conta.</li>
-            <li>Cole abaixo e confirme — os repasses das vendas cairão nessa conta via split.</li>
+            <li>Acesse a plataforma onde sua conta de recebimento está cadastrada.</li>
+            <li>Copie o identificador único da sua conta de recebimento (formato UUID).</li>
+            <li>Cole abaixo e confirme — os repasses das vendas serão enviados automaticamente para essa conta.</li>
           </ol>
           <label className="grid gap-1 text-sm">
-            <span className="text-xs text-zinc-600">Wallet ID (UUID)</span>
+            <span className="text-xs text-zinc-600">ID da conta de recebimento (UUID)</span>
             <input
               className="rounded-lg border px-3 py-2 font-mono text-sm"
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -550,13 +550,13 @@ export function OrganizadorRepassesPainel() {
           </label>
           <label className="grid gap-1 text-sm">
             <span className="text-xs text-zinc-600">
-              Chave API Asaas (opcional — valida que o wallet pertence à conta)
+              Chave de acesso (opcional — valida a titularidade da conta)
             </span>
             <input
               type="password"
               autoComplete="off"
               className="rounded-lg border px-3 py-2 font-mono text-sm"
-              placeholder="$aact_..."
+              placeholder="Chave de acesso..."
               value={apiKeyOrganizador}
               onChange={(e) => setApiKeyOrganizador(e.target.value)}
             />

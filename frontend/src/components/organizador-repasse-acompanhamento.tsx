@@ -152,7 +152,7 @@ export function OrganizadorRepasseAcompanhamento() {
             href="/organizador/financeiro?reenviar=1"
             className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-900"
           >
-            Reenviar dados ao Asaas
+            Reenviar dados para análise
           </Link>
         ) : null}
         {data.repasse_aprovado ? (

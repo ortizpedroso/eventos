@@ -1,5 +1,5 @@
 const selos = [
-  { label: "Pagamentos via Asaas", desc: "PIX e cartão com antifraude" },
+  { label: "Pagamentos 100% seguros", desc: "PIX e cartão com antifraude" },
   { label: "HTTPS em todo o site", desc: "Conexão sempre criptografada" },
   { label: "QR Code na entrada", desc: "Check-in rápido na portaria" },
 ] as const;
