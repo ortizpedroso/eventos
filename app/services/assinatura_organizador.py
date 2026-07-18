@@ -152,15 +152,16 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
         payment = client.post("/v3/payments", json=_payload(customer_id), idempotency_key=idem)
     except AsaasAPIError as e:
         logger.exception(
-            "Erro Asaas ao criar cobrança da assinatura (usuario=%s, customer_id=%s, status=%s)",
+            "Erro Asaas ao criar cobrança da assinatura (usuario=%s, customer_id=%s, "
+            "customer_reutilizado=%s, status=%s)",
             usuario.id,
             customer_id,
+            customer_id_reutilizado,
             e.status_code,
         )
-        if not customer_id_reutilizado:
-            raise ValueError(f"Não foi possível gerar cobrança da assinatura: {e}") from e
 
-        # Customer em cache pode estar obsoleto (ex.: rotação de chave/ambiente Asaas).
+        # O customer pode estar obsoleto/inválido para o gateway mesmo recém-criado
+        # (ex.: rotação de chave/ambiente Asaas, atraso de consistência da API).
         # Recria o customer uma única vez e tenta novamente antes de desistir.
         usuario.asaas_customer_id = None
         try:
@@ -169,7 +170,9 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
             logger.exception(
                 "Erro Asaas ao recriar customer da assinatura após falha (usuario=%s)", usuario.id
             )
-            raise ValueError(f"Não foi possível gerar cobrança da assinatura: {e}") from e
+            raise ValueError(
+                f"Não foi possível gerar cobrança da assinatura (falha ao recriar customer): {e}"
+            ) from e
 
         idem_retry = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
         try:
@@ -182,7 +185,9 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
                 customer_id,
                 e2.status_code,
             )
-            raise ValueError(f"Não foi possível gerar cobrança da assinatura: {e2}") from e2
+            raise ValueError(
+                f"Não foi possível gerar cobrança da assinatura (customer {customer_id}): {e2}"
+            ) from e2
 
     if status_eh_pago(payment.get("status")):
         pay_id = (payment.get("id") or "").strip()
