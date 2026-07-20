@@ -154,7 +154,7 @@ Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webh
 | `POSTGRES_PASSWORD` | Sim |
 | `ASAAS_ALLOW_MANUAL_WALLET` | `false` |
 
-Checks: `production_checks.py` → `GET /api/admin/setup`.
+Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida também: `ASAAS_ENVIRONMENT=production`, `ASAAS_ONBOARDING_MODE` válido, `ASAAS_ALLOW_MANUAL_WALLET=false`, senha Postgres (via `DATABASE_URL`) e `CORS_ORIGINS` só HTTPS.
 
 ---
 
