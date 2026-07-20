@@ -12,6 +12,11 @@ from app.deps.rate_limit import rate_limit_checkout
 from app.routes.auth import get_usuario_atual
 from app.services.cpf_limite import validar_limite_cpf_evento
 from app.services.cupom_desconto import centavos_com_cupom, resolver_cupom_evento
+from app.services.evento_repasse import (
+    MOTIVO_CHECKOUT_SEM_REPASSE,
+    garantir_wallet_repasse_evento,
+    organizador_pode_vender,
+)
 from app.services.ingresso_lotes import (
     motivo_lote_indisponivel,
     reservar_vaga_lote,
@@ -360,14 +365,14 @@ async def criar_pagamento(
         logger.warning("Pagamentos desativados: ingresso pago sem gateway evento %s", evento.id)
         return _ingressos_gratis("disabled")
 
-    if not (evento.asaas_wallet_id or "").strip():
+    if not garantir_wallet_repasse_evento(db, evento):
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Este evento ainda não tem conta de repasse Asaas. "
-                "O organizador deve configurar o walletId em Financeiro antes de vender ingressos."
-            ),
+            detail=MOTIVO_CHECKOUT_SEM_REPASSE,
         )
+    pode_vender, motivo_venda = organizador_pode_vender(db, evento)
+    if not pode_vender:
+        raise HTTPException(status_code=400, detail=motivo_venda or MOTIVO_CHECKOUT_SEM_REPASSE)
     if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
         raise HTTPException(
             status_code=503,
@@ -555,7 +560,7 @@ async def cancelar_ingresso(
             "idempotent": True,
         }
     
-    if datetime.now(timezone.utc).replace(tzinfo=None) > ingresso.data_limite_cancelamento:
+    if ingresso.data_limite_cancelamento is None or datetime.now(timezone.utc).replace(tzinfo=None) > ingresso.data_limite_cancelamento:
         raise HTTPException(status_code=400, detail="Prazo para cancelamento expirou")
 
     agora = datetime.now(timezone.utc).replace(tzinfo=None)

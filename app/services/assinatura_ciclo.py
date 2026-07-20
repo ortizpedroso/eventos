@@ -48,8 +48,9 @@ def _renovacao_ainda_pendente(db: Session, usuario: Usuario) -> bool:
         pay = obter_cobranca(pay_id)
         status = (pay.get("status") or "").upper()
         if status_eh_pago(status):
-            usuario.assinatura_renovacao_payment_id = None
-            db.commit()
+            from app.services.assinatura_organizador import processar_pagamento_assinatura_gateway
+
+            processar_pagamento_assinatura_gateway(db, pay)
             return False
         if status_eh_cancelado(status) or status == "OVERDUE":
             usuario.assinatura_renovacao_payment_id = None

@@ -108,7 +108,23 @@ def _registrar_cliente(suffix: str) -> str:
     return r.json()["access_token"]
 
 
-def _criar_evento(org_token: str) -> dict:
+def _forcar_publicado_evento(evento_id: str) -> None:
+    """Marca evento como publicado no banco usado pela API (setup de teste)."""
+    gen = app.dependency_overrides[get_db]()
+    db = next(gen)
+    try:
+        ev = db.query(Evento).filter(Evento.id == evento_id).first()
+        assert ev is not None, f"Evento {evento_id} não encontrado no banco de teste"
+        ev.publicado = True
+        db.commit()
+    finally:
+        try:
+            next(gen)
+        except StopIteration:
+            pass
+
+
+def _criar_evento(org_token: str, *, publicado: bool = True) -> dict:
     r = client.post(
         "/api/eventos/criar",
         headers={"Authorization": f"Bearer {org_token}"},
@@ -121,6 +137,7 @@ def _criar_evento(org_token: str) -> dict:
             "preco_ingresso": 50,
             "categoria": "Outros",
             "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
+            "publicado": publicado,
         },
     )
     assert r.status_code == 200, r.text
@@ -159,11 +176,18 @@ class TestPagamentosAsaas:
     def test_criar_sem_wallet_falha(self):
         org = _registrar_organizador("nowal", com_wallet=False)
         cli = _registrar_cliente("nowal")
-        ev = _criar_evento(org)
-        with patch("app.routes.pagamentos.settings") as route_settings:
+        ev = _criar_evento(org, publicado=False)
+        _forcar_publicado_evento(ev["id"])
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch("app.services.evento_repasse.settings") as repasse_settings,
+        ):
             route_settings.payments_disabled = False
             route_settings.use_asaas = True
             route_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            repasse_settings.use_asaas = True
+            repasse_settings.payments_disabled = False
+            repasse_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
             r = client.post(
                 "/api/pagamentos/criar",
                 headers={"Authorization": f"Bearer {cli}"},
@@ -174,7 +198,7 @@ class TestPagamentosAsaas:
                 },
             )
         assert r.status_code == 400
-        assert "repasse" in r.json()["detail"].lower()
+        assert "recebimento" in r.json()["detail"].lower()
 
     def test_webhook_asaas_marca_pago(self):
         org = _registrar_organizador("wh")
@@ -328,8 +352,9 @@ def test_split_asaas_taxa_por_ingresso():
     taxa_esperada = round(2 * taxa_ingresso(50.0), 2)
     liquido_esperado = round(100.0 - taxa_esperada, 2)
     by_wallet = {x["walletId"]: x["fixedValue"] for x in splits}
-    assert by_wallet["wallet-platform"] == taxa_esperada
+    assert "wallet-platform" not in by_wallet
     assert by_wallet["wallet-org"] == liquido_esperado
+    assert len(splits) == 1
 
 
 def test_reembolso_parcial_asaas_multi_ingresso():
@@ -358,7 +383,8 @@ def test_reembolso_parcial_asaas_multi_ingresso():
         db.add(ing2)
         db.commit()
         db.refresh(ing1)
-        with patch("app.services.pagamentos_asaas_handlers.reembolsar_cobranca") as mock_refund:
+        with patch("app.services.pagamentos_asaas_handlers.obter_cobranca") as mock_obter,              patch("app.services.pagamentos_asaas_handlers.reembolsar_cobranca") as mock_refund:
+            mock_obter.return_value = {"id": "pay_multi", "status": "RECEIVED"}
             mock_refund.return_value = {"id": "ref_partial"}
             ref = cancelar_com_reembolso_asaas(db, ing1)
         mock_refund.assert_called_once_with(
@@ -802,3 +828,49 @@ def test_split_cap_nao_excede_valor():
         splits = split_para_evento(ev, 1.0, quantidade=1)
     total = sum(x["fixedValue"] for x in splits)
     assert total <= 1.0
+
+
+def test_criar_asaas_para_novo_usuario_envia_cnpj_completo():
+    """CNPJ (14 dígitos) não pode ser truncado como se fosse CPF."""
+    from app.services.usuario_asaas import criar_asaas_para_novo_usuario
+
+    fake_client = MagicMock()
+    fake_client.enabled = True
+    fake_client.post.return_value = {"id": "cus_cnpj"}
+
+    with (
+        patch("app.services.usuario_asaas.get_asaas_client", return_value=fake_client),
+        patch("app.services.usuario_asaas.settings") as s,
+    ):
+        s.ASAAS_DISABLED = False
+        s.use_asaas = True
+        s.ASAAS_CREATE_SUBACCOUNT_ON_REGISTER = False
+        customer_id, wallet, account = criar_asaas_para_novo_usuario(
+            email="pj@exemplo.com",
+            nome="Empresa Exemplo",
+            tipo="organizador",
+            cpf_cnpj="46.634.095/0001-02",
+        )
+
+    assert customer_id == "cus_cnpj"
+    payload = fake_client.post.call_args.kwargs["json"]
+    assert payload["cpfCnpj"] == "46634095000102"
+
+
+def test_garantir_customer_asaas_sincroniza_documento_de_customer_existente():
+    """Customer criado antes da correção (com CNPJ truncado) deve ter o documento corrigido via PUT."""
+    from app.services.usuario_asaas import garantir_customer_asaas
+
+    usuario = MagicMock()
+    usuario.asaas_customer_id = "cus_existente"
+
+    fake_client = MagicMock()
+    fake_client.enabled = True
+
+    with patch("app.services.usuario_asaas.get_asaas_client", return_value=fake_client):
+        customer_id = garantir_customer_asaas(MagicMock(), usuario, cpf="46.634.095/0001-02")
+
+    assert customer_id == "cus_existente"
+    fake_client.put.assert_called_once_with(
+        "/v3/customers/cus_existente", json={"cpfCnpj": "46634095000102"}
+    )

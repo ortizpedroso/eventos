@@ -18,6 +18,9 @@ class FinanceiroSaque(Base):
     pix_chave = Column(String(120), nullable=False)
     pix_tipo = Column(String(20), nullable=False, default="EVP")
     status = Column(String(20), nullable=False, default="pendente")
+    asaas_transfer_id = Column(String(64), nullable=True, index=True)
+    previsao_liquidacao_em = Column(DateTime, nullable=True)
+    processado_em = Column(DateTime, nullable=True)
     observacao = Column(Text, nullable=True)
     criado_em = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     atualizado_em = Column(

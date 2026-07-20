@@ -1,0 +1,118 @@
+name: Cursor Agent PR
+
+# Abre ou atualiza PR automaticamente quando um Cloud Agent envia branch cursor/*.
+#
+# PRÉ-REQUISITO (uma vez no GitHub):
+#   Settings → Actions → General → Workflow permissions
+#   → "Read and write permissions"
+#   → marcar "Allow GitHub Actions to create and approve pull requests"
+
+on:
+  push:
+    branches:
+      - "cursor/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: cursor-pr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  open-or-update-pr:
+    if: github.repository == 'ortizpedroso/eventos'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Criar ou atualizar PR para main
+        id: pr
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const base = 'main';
+            const compareUrl = `https://github.com/${owner}/${repo}/compare/${base}...${branch}?expand=1`;
+
+            if (branch === base || branch === 'master') {
+              core.info('Ignorando branch base.');
+              return { created: false, compareUrl };
+            }
+
+            const { data: existing } = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${branch}`,
+              state: 'open',
+              base,
+              per_page: 5,
+            });
+
+            const title = branch
+              .replace(/^cursor\//, '')
+              .replace(/-bf71$/, '')
+              .replace(/-/g, ' ')
+              .replace(/\b\w/g, (c) => c.toUpperCase());
+
+            const body = [
+              'PR aberto automaticamente pelo workflow **Cursor Agent PR**.',
+              '',
+              `- Branch: \`${branch}\``,
+              `- Commit: ${context.sha.slice(0, 7)}`,
+              `- Autor do push: @${context.actor}`,
+              '',
+              'Revise o CI na aba Checks antes de mergear.',
+            ].join('\n');
+
+            if (existing.length > 0) {
+              const pr = existing[0];
+              core.info(`PR já aberto: #${pr.number} — ${pr.html_url}`);
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body: `🔄 Atualização automática — novo push em \`${branch}\` (${context.sha.slice(0, 7)}).`,
+              });
+              return { created: false, updated: true, url: pr.html_url, compareUrl };
+            }
+
+            try {
+              const { data: pr } = await github.rest.pulls.create({
+                owner,
+                repo,
+                title: title || branch,
+                head: branch,
+                base,
+                draft: true,
+                body,
+              });
+              core.info(`PR criado: #${pr.number} — ${pr.html_url}`);
+              return { created: true, url: pr.html_url, compareUrl };
+            } catch (error) {
+              core.warning(`Não foi possível criar PR: ${error.message}`);
+              core.warning('Habilite em Settings → Actions → Workflow permissions:');
+              core.warning('"Allow GitHub Actions to create and approve pull requests"');
+              return { created: false, error: error.message, compareUrl };
+            }
+
+      - name: Resumo (link compare / PR)
+        if: always()
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          COMPARE="https://github.com/${{ github.repository }}/compare/main...${BRANCH}?expand=1"
+          {
+            echo "## Cursor Agent — atualização GitHub"
+            echo ""
+            echo "- Branch: \`${BRANCH}\`"
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+            if [ "${{ steps.pr.outcome }}" = "success" ]; then
+              echo "- Workflow PR: concluído (ver PR ou link abaixo)"
+            else
+              echo "- Workflow PR: **falhou** — habilite permissão de PR em Actions (ver docs/13-github-automacao.md)"
+            fi
+            echo ""
+            echo "**Abrir PR manualmente:** [Compare → main...${BRANCH}](${COMPARE})"
+          } >> "$GITHUB_STEP_SUMMARY"

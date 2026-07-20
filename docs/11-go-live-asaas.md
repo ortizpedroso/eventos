@@ -2,7 +2,7 @@
 
 Checklist operacional para publicar o EventosBR com **Asaas** como provedor de pagamento.
 
-**Última atualização:** 17/06/2026
+**Última atualização:** 20/07/2026
 
 ---
 
@@ -12,7 +12,7 @@ Cada **pull request** dispara o CI (`.github/workflows/ci.yml`):
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` — 122+ testes da API |
+| `api` | `pytest` — 208 testes da API |
 | `web` | `npm run build` do frontend |
 | `e2e` | Playwright smoke (páginas principais) |
 | `e2e-compra` | Stack Docker + compra com mock Asaas |
@@ -75,12 +75,17 @@ nano .env
 
 A API executa `alembic upgrade head` automaticamente no arranque.
 
-Migrações obrigatórias (head atual: `20260618_000024`):
+Migrações obrigatórias (head atual: `20260717_000035`):
 - `20260617_000020` — colunas `asaas_*` em usuários, eventos, ingressos
 - `20260617_000021` — subconta e antecipação do organizador
 - `20260618_000022` — `stripe_events` → `webhook_events`
 - `20260618_000023` — remove colunas Stripe; backfill wallet; refs legadas
 - `20260618_000024` — cifra `asaas_subaccount_api_key` (não rotacione `SECRET_KEY` após go-live sem re-cifrar)
+- `20260624_000031` — status de repasse (`asaas_repasse_status`, detalhes)
+- `20260625_000032` — `pago_em`, campos saque Asaas (`asaas_transfer_id`)
+- `20260626_000033` — `asaas_repasse_cpf_cnpj`, `estornado_em`
+- `20260716_000034` — `notificacao_interesse_enviada_em`
+- `20260717_000035` — chave Pix salva no perfil
 
 ---
 
@@ -90,9 +95,110 @@ Migrações obrigatórias (head atual: `20260618_000024`):
 
 No painel Asaas → Integrações → Webhooks:
 - Token = valor de `ASAAS_WEBHOOK_TOKEN` no `.env`
-- Eventos: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_REFUNDED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED`
+- Eventos pagamento: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_REFUNDED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED`, `PAYMENT_CHARGEBACK_*`
+- Eventos conta: `ACCOUNT_STATUS_GENERAL_APPROVAL_*`, `ACCOUNT_STATUS_COMMERCIAL_INFO_*`, `ACCOUNT_STATUS_DOCUMENT_*`, `ACCOUNT_STATUS_BANK_ACCOUNT_INFO_*`
+- Transferências (saques): `TRANSFER_CREATED`, `TRANSFER_PENDING`, `TRANSFER_IN_BANK_PROCESSING`, `TRANSFER_DONE`, `TRANSFER_FAILED`, `TRANSFER_CANCELLED`
+
+Subcontas criadas pela plataforma recebem webhooks automaticamente no `POST /v3/accounts` quando `FRONTEND_PUBLIC_URL` e `ASAAS_WEBHOOK_TOKEN` estão configurados.
 
 Referência: `./scripts/asaas-webhook-setup.sh SEU_DOMINIO.com.br`
+
+---
+
+## 3.1 Transferências sem token SMS (BaaS white-label)
+
+Para saques automatizados via API **sem aprovação manual/SMS** no painel Asaas, combine **duas** camadas (recomendado pelo Asaas):
+
+### A) IP fixo na whitelist (conta raiz BaaS)
+
+1. Alinhar com o **gerente de contas Asaas** o modelo BaaS e liberação de subcontas.
+2. Configurar **NAT/egress IP fixo** no VPS (Hostinger ou cloud).
+3. Painel Asaas → **Integrações → Mecanismos de segurança** → **Lista de IPs autorizados**:
+   - Adicionar o IP público de saída da API.
+   - Em **Evento crítico em requisições de saque**: **Desabilitado** para esse IP (processamento automático).
+4. Subcontas **herdam** a configuração da conta raiz.
+
+Documentação: [IP Whitelisting](https://docs.asaas.com/docs/ip-whitelisting)
+
+### B) Webhook de autorização de saque (obrigatório se desabilitar evento crítico)
+
+**URL:** `https://SEU_DOMINIO/api/webhooks/asaas/transfer-auth`
+
+Painel Asaas → **Integrações → Mecanismos de segurança** → **Autorização de saque via Webhook**:
+
+| Campo | Valor |
+|-------|--------|
+| URL | `https://SEU_DOMINIO/api/webhooks/asaas/transfer-auth` |
+| Token | Mesmo `ASAAS_WEBHOOK_TOKEN` do `.env` (header `asaas-access-token`) |
+| E-mail de erro | E-mail ops da plataforma |
+
+Fluxo:
+
+1. Organizador solicita saque → API grava `FinanceiroSaque` e chama `POST /v3/transfers`.
+2. ~5s depois o Asaas envia POST com `type: TRANSFER` e objeto `transfer`.
+3. A API valida `id` / `externalReference` e valor contra o saque e responde `{"status": "APPROVED"}` ou `REFUSED`.
+4. Se falhar 3 vezes ou não responder, o Asaas **cancela** a transferência.
+
+Documentação: [Validação de saques via webhook](https://docs.asaas.com/docs/mechanism-for-validating-withdrawals-via-webhooks)
+
+Script de referência: `./scripts/asaas-transfer-auth-setup.sh SEU_DOMINIO.com.br`
+
+---
+
+## 3.3 Modo de repasse (conta vinculada)
+
+Por padrão (`ASAAS_ONBOARDING_MODE=baas`), o organizador cria **subconta BaaS** via API. O split envia o líquido ao organizador; a taxa EventosBR permanece na conta emissora.
+
+Para vincular conta Asaas própria: `ASAAS_ONBOARDING_MODE=linked` ou `both`.
+
+---
+
+## 3.2 Testes sandbox no VPS (produção com credenciais de homologação)
+
+Para validar PIX/cartão real no ambiente `eventosbr.app.br` **sem** perder as credenciais de produção:
+
+### Fluxo recomendado
+
+```bash
+cd /opt/eventosbr
+
+# 1. Deploy da branch em teste (ou main após merge do PR)
+./scripts/atualizar-vps-branch.sh cursor/ux-seo-melhorias-v2-bf71
+# — ou, após merge: ./scripts/atualizar-vps-agora.sh
+
+# 2. Guardar credenciais de produção
+./scripts/backup-asaas-prod-env.sh
+
+# 3. Configurar sandbox manualmente
+# Defina ASAAS_ENVIRONMENT=sandbox e a chave $aact_hmlg_... no .env local (não commitar)
+
+# 4. Webhook no painel Asaas SANDBOX (não o de produção)
+./scripts/asaas-webhook-setup.sh eventosbr.app.br
+
+# 5. Vitrine profissional (opcional)
+python3 scripts/seed-vitrine-profissional.py
+
+# 6. Testes manuais: compra PIX/cartão em valor baixo, confirmação de ingresso
+
+# 7. Restaurar produção
+./scripts/restore-asaas-prod-env.sh --reload
+```
+
+### Scripts
+
+| Script | Função |
+|--------|--------|
+| `backup-prod-env.sh` | Grava `.env.prod-backup` completo + subset Asaas |
+| `verify-prod-backup.sh` | Valida variáveis obrigatórias no backup |
+| `restore-prod-env.sh` | Restaura produção completa; `--reload` reinicia API |
+| `sync-asaas-prod-from-backup.sh` | Aplica backup no `.env` (deploy/bootstrap) |
+| `backup-asaas-prod-env.sh` | Atalho → `backup-prod-env.sh` |
+| `restore-asaas-prod-env.sh` | Restaura produção a partir do backup; `--reload` reinicia a API |
+| `atualizar-vps-branch.sh` | Deploy de branch específica (sem reset para main) |
+
+**Importante:** o webhook de sandbox e o de produção são contas separadas no Asaas. Configure o webhook na conta **sandbox** com a mesma URL pública (`https://SEU_DOMINIO/api/webhooks/asaas`) e o mesmo `ASAAS_WEBHOOK_TOKEN` do `.env`.
+
+**Nota BaaS sandbox:** para subcontas via `POST /v3/accounts`, use conta Asaas PJ (CNPJ) com BaaS habilitado em Sandbox → Configurações. Contas PF retornam HTTP 403.
 
 ---
 
@@ -100,10 +206,15 @@ Referência: `./scripts/asaas-webhook-setup.sh SEU_DOMINIO.com.br`
 
 Antes de vender ingressos pagos, cada organizador deve:
 1. Aceder **Organizador → Financeiro**
-2. Informar o `walletId` da conta Asaas **ou** criar subconta pela plataforma
-3. Confirmar badge «Repasses configurados»
+2. **Criar conta de repasses** (subconta Asaas — dados validados pelo Asaas)
+3. Aguardar aprovação em `/organizador/financeiro/conta-repasse`
+4. Confirmar status **Conta aprovada**
 
-Sem `walletId`, o checkout retorna erro (proteção de split).
+Em produção, colar `walletId` manualmente está desativado (`ASAAS_ALLOW_MANUAL_WALLET=false`).
+
+Sem repasse aprovado, publicação de eventos pagos e checkout retornam erro.
+
+Organizadores sacam via **Financeiro → Solicitar transferência Pix** (carência 48h após confirmação de cada venda). Não é necessário acessar o painel Asaas.
 
 ---
 
@@ -116,6 +227,7 @@ Sem `walletId`, o checkout retorna erro (proteção de split).
 Manual:
 - `curl -fsS https://SEU_DOMINIO/health`
 - `curl -fsS https://SEU_DOMINIO/ready`
+- `bash scripts/test-sandbox-compra-split.sh` (mock split — dentro do Docker)
 - `/admin/dashboard` → aba **Produção** (todos os checks verdes)
 - Compra teste: PIX ou cartão em valor baixo
 - E-mail de ingresso recebido

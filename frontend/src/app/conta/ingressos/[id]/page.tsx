@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-import { ContaNav } from "@/components/conta-nav";
 import { apiFetch, getApiBaseUrl } from "@/lib/api";
+import { formatCpfMask, onlyDigits } from "@/lib/cpf";
+import { formatTelefoneBrMask } from "@/lib/telefone-br";
 import { labelStatusIngresso } from "@/lib/ingresso-status";
 import type { IngressoListItem } from "@/lib/types";
 
@@ -25,22 +26,6 @@ const REPASSE_EMPTY: RepasseForm = {
   telefone: "",
   data_nascimento: "",
 };
-
-function formatarCpf(v: string): string {
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
-
-function formatarTelefone(v: string): string {
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-}
 
 function escHtml(value: string): string {
   return value
@@ -326,7 +311,6 @@ export default function IngressoDetalhePage() {
         <Link href="/conta/ingressos" className="text-sm text-zinc-600 hover:underline">
           ← Meus ingressos
         </Link>
-        <ContaNav />
         <p className="text-sm text-zinc-600">Carregando ingresso…</p>
       </div>
     );
@@ -338,7 +322,6 @@ export default function IngressoDetalhePage() {
         <Link href="/conta/ingressos" className="text-sm text-zinc-600 hover:underline">
           ← Meus ingressos
         </Link>
-        <ContaNav />
         <p className="text-sm text-zinc-600">Ingresso não encontrado.</p>
       </div>
     );
@@ -351,7 +334,6 @@ export default function IngressoDetalhePage() {
           ← Meus ingressos
         </Link>
       </div>
-      <ContaNav />
       <h1 className="text-2xl font-semibold text-zinc-900">Seu ingresso</h1>
       {(ingresso?.status === "pago" || ingresso?.status === "usado") && (
         <a
@@ -563,9 +545,9 @@ export default function IngressoDetalhePage() {
                       <input
                         type="text"
                         required
-                        value={repasseForm.cpf}
+                        value={formatCpfMask(repasseForm.cpf)}
                         onChange={(e) =>
-                          setRepasseForm((f) => ({ ...f, cpf: formatarCpf(e.target.value) }))
+                          setRepasseForm((f) => ({ ...f, cpf: onlyDigits(e.target.value, 11) }))
                         }
                         placeholder="000.000.000-00"
                         inputMode="numeric"
@@ -592,11 +574,11 @@ export default function IngressoDetalhePage() {
                       <input
                         type="tel"
                         required
-                        value={repasseForm.telefone}
+                        value={formatTelefoneBrMask(repasseForm.telefone)}
                         onChange={(e) =>
                           setRepasseForm((f) => ({
                             ...f,
-                            telefone: formatarTelefone(e.target.value),
+                            telefone: onlyDigits(e.target.value, 11),
                           }))
                         }
                         placeholder="(00) 00000-0000"

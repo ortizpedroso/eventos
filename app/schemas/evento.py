@@ -71,7 +71,7 @@ class CriarEventoRequest(BaseModel):
     categoria: str = Field(default="Outros", min_length=1, max_length=80)
     mensagem_confirmacao: Optional[str] = Field(default=None, max_length=2000)
     # False = pausado (não aparece na listagem pública; só o organizador vê com login).
-    publicado: bool = True
+    publicado: bool = False
     limite_ingressos_por_cpf: int | None = Field(default=None, ge=1, le=50)
     ingresso_lotes: list[IngressoLoteWrite] | None = None
     urgencia_modo: str = Field(default="desligado", pattern="^(desligado|exato|faixa)$")
@@ -121,7 +121,9 @@ class CriarEventoRequest(BaseModel):
 
 
 class AtualizarEventoRequest(CriarEventoRequest):
-    """Mesmos campos da criação; o slug da URL não é alterado na atualização."""
+    """Mesmos campos da criação; omitir `publicado` mantém o valor atual."""
+
+    publicado: bool | None = None
 
 
 class EventoResponse(BaseModel):
@@ -177,6 +179,8 @@ def montar_evento_response(
     )
     from app.services.urgencia import calcular_urgencia
     from app.services.lista_espera import janela_exclusiva_espera_ativa
+    from app.services.evento_repasse import organizador_pode_vender
+    from config.settings import settings
 
     lotes_orm = sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id))
     if ocupacao_por_lote is None:
@@ -207,6 +211,14 @@ def montar_evento_response(
         None if compra_disponivel else motivo_lote_indisponivel(db, evento, ocupacao_por_lote=ocupacao_por_lote)
     )
 
+    if compra_disponivel and settings.use_asaas and not settings.payments_disabled:
+        pode_vender, motivo_repasse = organizador_pode_vender(db, evento)
+        if not pode_vender:
+            compra_disponivel = False
+            preco_compra = None
+            lote_compra_id = None
+            motivo_compra_indisponivel = motivo_repasse
+
     restantes: int | None = None
     if cur is not None and cur.quantidade_maxima is not None:
         restantes = max(0, cur.quantidade_maxima - ocupacao_por_lote.get(cur.id, 0))
@@ -222,7 +234,7 @@ def montar_evento_response(
         "slug": evento.slug,
         "organizador_id": evento.organizador_id,
         "nome": evento.nome,
-        "descricao": evento.descricao,
+        "descricao": evento.descricao or "",
         "data_inicio": evento.data_inicio,
         "data_fim": evento.data_fim,
         "local": evento.local,

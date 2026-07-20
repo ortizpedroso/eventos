@@ -53,14 +53,14 @@ Checklist da auditoria de **segurança** e **experiência do usuário** (cliente
 
 - [x] Alembic `20260616_000019` — colunas de verificação de e-mail e `checkin_token_em`.
 - [x] **Correção Postgres** — `email_verificado = false` (antes `0` quebrava o upgrade).
-- [x] **Validado localmente** — `alembic upgrade head` → `20260616_000019 (head)` em Postgres.
-- [ ] **Rodar em produção/VPS** — `./scripts/migrate-db.sh` (após merge do PR #3).
+- [x] **Validado localmente** — `alembic upgrade head` → `20260626_000033 (head)` em Postgres.
+- [ ] **Rodar em produção/VPS** — `./scripts/migrate-db.sh` ou deploy (`alembic upgrade head` no arranque).
 
 ---
 
 ## UX — cliente — implementado ✅
 
-- [x] Link **Painel** na navegação da conta (`conta-nav.tsx`) para organizadores.
+- [x] Menu lateral da conta (`conta-shell.tsx`) com Perfil, Pagamentos, Ingressos e Notificações; **Painel** do organizador em `navbar.tsx` (`/organizador/eventos`).
 - [x] Itens **Pagamentos** e **Ingressos** na navbar global para organizador (`navbar.tsx`).
 - [x] Botão **Ver QR Code** na lista de ingressos (`conta/ingressos/page.tsx`).
 - [x] CTA **Mostrar QR na entrada** no detalhe do ingresso (`conta/ingressos/[id]/page.tsx`).

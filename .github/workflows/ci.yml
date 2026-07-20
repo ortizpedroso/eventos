@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, "cursor/**"]
   pull_request:
 
 jobs:
@@ -59,12 +59,15 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
           NEXT_PUBLIC_PAYMENT_PROVIDER: asaas
+      - name: Remover repositórios apt não usados (evita flake do runner)
+        run: sudo grep -rl "packages.microsoft.com" /etc/apt/sources.list.d/ 2>/dev/null | xargs -r sudo rm -f; sudo apt-get update -qq || true
       - name: Instalar browsers Playwright
         run: npx playwright install chromium --with-deps
       - name: Testes E2E smoke
         run: npm run test:e2e
         env:
           CI: true
+          PLAYWRIGHT_SKIP_API_CHECK: "1"
 
   prod-compose:
     runs-on: ubuntu-latest
@@ -91,6 +94,8 @@ jobs:
       - name: npm ci
         working-directory: frontend
         run: npm ci
+      - name: Remover repositórios apt não usados (evita flake do runner)
+        run: sudo grep -rl "packages.microsoft.com" /etc/apt/sources.list.d/ 2>/dev/null | xargs -r sudo rm -f; sudo apt-get update -qq || true
       - name: Instalar browsers Playwright
         working-directory: frontend
         run: npx playwright install chromium --with-deps
@@ -129,6 +134,8 @@ jobs:
       - name: npm ci
         working-directory: frontend
         run: npm ci
+      - name: Remover repositórios apt não usados (evita flake do runner)
+        run: sudo grep -rl "packages.microsoft.com" /etc/apt/sources.list.d/ 2>/dev/null | xargs -r sudo rm -f; sudo apt-get update -qq || true
       - name: Instalar browsers Playwright
         working-directory: frontend
         run: npx playwright install chromium --with-deps

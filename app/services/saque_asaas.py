@@ -1,0 +1,274 @@
+"""Transferências (saques) via API Asaas na subconta do organizador."""
+
+from __future__ import annotations
+
+import logging
+import re
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from sqlalchemy.orm import Session
+
+from app.models import FinanceiroSaque, Usuario
+from app.services.asaas_client import AsaasAPIError, AsaasClient
+from config.settings import settings
+
+logger = logging.getLogger(__name__)
+
+_STATUS_TRANSFER_PAGO = frozenset({"DONE", "BANK_PROCESSING_DONE"})
+_STATUS_TRANSFER_REJEITADO = frozenset({"FAILED", "CANCELLED", "BLOCKED"})
+_STATUS_TRANSFER_PROCESSANDO = frozenset(
+    {
+        "PENDING",
+        "BANK_PROCESSING",
+        "AWAITING_APPROVAL",
+        "SCHEDULED",
+        "CREATED",
+    }
+)
+
+
+def inferir_pix_tipo(pix_chave: str, pix_tipo: str | None = None) -> str:
+    explicito = (pix_tipo or "").strip().upper()
+    if explicito in ("CPF", "CNPJ", "EMAIL", "PHONE", "EVP"):
+        return explicito
+    chave = (pix_chave or "").strip()
+    if "@" in chave:
+        return "EMAIL"
+    digits = re.sub(r"\D", "", chave)
+    if len(digits) == 14:
+        return "CNPJ"
+    if len(digits) == 11:
+        if chave.strip().startswith("+") or digits[2] in "89":
+            return "PHONE"
+        return "CPF"
+    if len(digits) in (10, 11) and not chave.isalpha():
+        return "PHONE"
+    return "EVP"
+
+
+def normalizar_pix_chave(pix_chave: str, pix_tipo: str) -> str:
+    chave = (pix_chave or "").strip()
+    tipo = (pix_tipo or "EVP").upper()
+    if tipo in ("CPF", "CNPJ", "PHONE"):
+        return re.sub(r"\D", "", chave)
+    return chave
+
+
+def criar_transferencia_pix(
+    client: AsaasClient,
+    *,
+    valor: float,
+    pix_chave: str,
+    pix_tipo: str,
+    external_reference: str,
+    descricao: str = "Saque EventosBR",
+) -> dict[str, Any]:
+    tipo = inferir_pix_tipo(pix_chave, pix_tipo)
+    chave = normalizar_pix_chave(pix_chave, tipo)
+    payload: dict[str, Any] = {
+        "value": round(float(valor), 2),
+        "pixAddressKey": chave,
+        "pixAddressKeyType": tipo,
+        "description": descricao[:140],
+        "externalReference": external_reference[:100],
+    }
+    return client.post("/v3/transfers", json=payload, idempotency_key=f"saque_{external_reference}")
+
+
+def _normalizar_status_transferencia(status: str | None, event_type: str = "") -> str:
+    """Normaliza status Asaas ou event_type (ex.: TRANSFER_DONE → DONE)."""
+    s = (status or "").strip().upper()
+    if not s:
+        s = (event_type or "").strip().upper()
+    if s.startswith("TRANSFER_"):
+        s = s.removeprefix("TRANSFER_")
+    return s
+
+
+def mapear_status_transferencia(status_asaas: str | None, *, event_type: str = "") -> str:
+    s = _normalizar_status_transferencia(status_asaas, event_type)
+    if s in _STATUS_TRANSFER_PAGO:
+        return "pago"
+    if s in _STATUS_TRANSFER_REJEITADO:
+        return "rejeitado"
+    if s in _STATUS_TRANSFER_PROCESSANDO:
+        return "processando"
+    if s:
+        return "processando"
+    return "pendente"
+
+
+def previsao_liquidacao_saque(criado_em: datetime) -> datetime:
+    horas = max(1, int(settings.FINANCEIRO_PRAZO_TRANSFERENCIA_HORAS))
+    return criado_em + timedelta(hours=horas)
+
+
+def _buscar_saque_por_transferencia(
+    db: Session,
+    transfer: dict[str, Any],
+    *,
+    for_update: bool = False,
+) -> FinanceiroSaque | None:
+    transfer_id = str(transfer.get("id") or "").strip()
+    external_ref = str(transfer.get("externalReference") or "").strip()
+    if not transfer_id and not external_ref:
+        return None
+
+    q = db.query(FinanceiroSaque)
+    if for_update:
+        q = q.with_for_update()
+    if transfer_id:
+        saque = q.filter(FinanceiroSaque.asaas_transfer_id == transfer_id).first()
+        if saque:
+            return saque
+    if external_ref:
+        return q.filter(FinanceiroSaque.id == external_ref).first()
+    return None
+
+
+def autorizar_saque_transferencia(
+    db: Session,
+    transfer: dict[str, Any],
+) -> dict[str, str]:
+    """Valida transferência recebida no webhook de autorização Asaas (BaaS / sem SMS)."""
+    saque = _buscar_saque_por_transferencia(db, transfer, for_update=True)
+    if not saque:
+        logger.warning(
+            "Autorização saque: transferência %s não encontrada",
+            transfer.get("id") or transfer.get("externalReference"),
+        )
+        return {
+            "status": "REFUSED",
+            "refuseReason": "Transferência não encontrada no EventosBR.",
+        }
+
+    if saque.status in ("cancelado", "rejeitado"):
+        return {
+            "status": "REFUSED",
+            "refuseReason": f"Saque {saque.id} não está elegível (status {saque.status}).",
+        }
+
+    valor_asaas = round(float(transfer.get("value") or transfer.get("netValue") or 0), 2)
+    valor_saque = round(float(saque.valor), 2)
+    if abs(valor_asaas - valor_saque) > 0.009:
+        logger.warning(
+            "Autorização saque %s: valor Asaas %.2f != %.2f",
+            saque.id,
+            valor_asaas,
+            valor_saque,
+        )
+        return {
+            "status": "REFUSED",
+            "refuseReason": "Valor da transferência não confere com o saque solicitado.",
+        }
+
+    transfer_id = str(transfer.get("id") or "").strip()
+    if transfer_id and not saque.asaas_transfer_id:
+        saque.asaas_transfer_id = transfer_id
+        saque.atualizado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.add(saque)
+
+    logger.info("Autorização saque %s aprovada (transfer %s)", saque.id, transfer_id or "—")
+    return {"status": "APPROVED"}
+
+
+def aplicar_webhook_transferencia(
+    db: Session,
+    transfer: dict[str, Any],
+    *,
+    event_type: str = "",
+) -> FinanceiroSaque | None:
+    saque = _buscar_saque_por_transferencia(db, transfer, for_update=True)
+    if not saque:
+        return None
+
+    transfer_id = str(transfer.get("id") or "").strip()
+
+    status_asaas = _normalizar_status_transferencia(transfer.get("status"), event_type)
+    novo = mapear_status_transferencia(status_asaas)
+    agora = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    if transfer_id and not saque.asaas_transfer_id:
+        saque.asaas_transfer_id = transfer_id
+
+    if novo == "pago" and saque.status != "pago":
+        saque.status = "pago"
+        saque.processado_em = agora
+        if transfer.get("effectiveDate"):
+            try:
+                saque.processado_em = datetime.fromisoformat(str(transfer["effectiveDate"]).replace("Z", "+00:00")).replace(
+                    tzinfo=None
+                )
+            except (TypeError, ValueError):
+                pass
+    elif novo == "rejeitado" and saque.status not in ("pago", "cancelado"):
+        saque.status = "rejeitado"
+        fail = transfer.get("failReason") or transfer.get("failDescription")
+        if fail:
+            saque.observacao = str(fail)[:500]
+    elif novo == "processando" and saque.status == "pendente":
+        saque.status = "processando"
+
+    saque.atualizado_em = agora
+    db.add(saque)
+    return saque
+
+
+def organizador_tem_cliente_saque(usuario: Usuario) -> bool:
+    from app.services.organizador_asaas import _client_subconta
+
+    return _client_subconta(usuario) is not None
+
+
+def consultar_saldo_subconta(usuario: Usuario) -> dict[str, Any]:
+    """Saldo real na subconta Asaas (GET /v3/finance/balance)."""
+    from app.services.organizador_asaas import _client_subconta
+
+    client = _client_subconta(usuario)
+    if not client:
+        return {"disponivel": False, "motivo": "Conta de repasses não configurada."}
+    try:
+        data = client.get("/v3/finance/balance")
+    except AsaasAPIError as e:
+        logger.warning("Falha ao consultar saldo Asaas do organizador %s: %s", usuario.id, e)
+        return {"disponivel": False, "motivo": "Não foi possível consultar saldo na conta de repasses."}
+    balance = round(float(data.get("balance") or 0), 2)
+    return {
+        "disponivel": True,
+        "balance": balance,
+        "consultado_em": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+    }
+
+
+def validar_pix_cadastro_repasse(usuario: Usuario, pix_chave: str, pix_tipo: str) -> None:
+    """Exige CPF/CNPJ Pix igual ao cadastro da subconta quando aplicável."""
+    doc = re.sub(r"\D", "", (getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
+    if not doc:
+        return
+    tipo = inferir_pix_tipo(pix_chave, pix_tipo)
+    chave = normalizar_pix_chave(pix_chave, tipo)
+    if tipo == "CPF" and len(doc) == 11 and chave != doc:
+        raise ValueError("A chave Pix CPF deve ser a mesma do cadastro da conta de repasses.")
+    if tipo == "CNPJ" and len(doc) == 14 and chave != doc:
+        raise ValueError("A chave Pix CNPJ deve ser a mesma do cadastro da conta de repasses.")
+
+
+def comprovante_saque(saque: FinanceiroSaque, usuario: Usuario) -> dict[str, Any]:
+    return {
+        "id": saque.id,
+        "organizador_nome": usuario.nome,
+        "organizador_email": usuario.email,
+        "valor": float(saque.valor),
+        "status": saque.status,
+        "pix_chave": saque.pix_chave,
+        "pix_tipo": saque.pix_tipo,
+        "asaas_transfer_id": saque.asaas_transfer_id,
+        "solicitado_em": saque.criado_em.isoformat() if saque.criado_em else None,
+        "previsao_liquidacao_em": (
+            saque.previsao_liquidacao_em.isoformat() if saque.previsao_liquidacao_em else None
+        ),
+        "processado_em": saque.processado_em.isoformat() if saque.processado_em else None,
+        "observacao": saque.observacao,
+        "titulo": "Comprovante de transferência EventosBR",
+    }

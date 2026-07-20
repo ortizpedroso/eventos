@@ -95,9 +95,10 @@ def _enforce_memory(key: str, max_hits: int, window_sec: int) -> None:
 
 def _enforce_redis(r, redis_key: str, max_hits: int, window_sec: int) -> None:
     try:
-        n = int(r.incr(redis_key))
-        if n == 1:
-            r.expire(redis_key, window_sec)
+        pipe = r.pipeline()
+        pipe.incr(redis_key)
+        pipe.expire(redis_key, window_sec, nx=True)
+        n = int(pipe.execute()[0])
         if n > max_hits:
             r.decr(redis_key)
             logger.warning("Rate limit excedido (Redis): %s", redis_key)

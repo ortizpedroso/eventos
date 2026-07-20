@@ -286,34 +286,34 @@ export default function DocumentacaoPage() {
 
             <Section id="api-interativa" title="API interativa (OpenAPI)">
               <p>
-                Com a API em execução (por exemplo <code className="rounded bg-zinc-100 px-1">http://localhost:8000</code>):
+                Em produção, <code className="rounded bg-zinc-100 px-1">/docs</code> e{" "}
+                <code className="rounded bg-zinc-100 px-1">/redoc</code> ficam desligados por segurança
+                (só ativos com <code className="rounded bg-zinc-100 px-1">ENVIRONMENT=development</code>).
+                Para consultar as rotas sem rodar a API localmente, use a referência estática abaixo,
+                gerada a partir do esquema OpenAPI real do backend:
               </p>
+              <p>
+                <Link
+                  href="/documentacao/api"
+                  className="font-medium text-emerald-800 underline-offset-2 hover:underline"
+                >
+                  → Ver referência da API (/documentacao/api)
+                </Link>
+              </p>
+              <p className="font-medium text-zinc-900">Em desenvolvimento local</p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>
                   <strong className="text-zinc-900">Swagger UI</strong>:{" "}
-                  <a
-                    href="http://localhost:8000/docs"
-                    className="font-medium text-emerald-800 underline-offset-2 hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    /docs
-                  </a>
+                  <code className="rounded bg-zinc-100 px-1">http://localhost:8000/docs</code>
                 </li>
                 <li>
                   <strong className="text-zinc-900">ReDoc</strong>:{" "}
-                  <a
-                    href="http://localhost:8000/redoc"
-                    className="font-medium text-emerald-800 underline-offset-2 hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    /redoc
-                  </a>
+                  <code className="rounded bg-zinc-100 px-1">http://localhost:8000/redoc</code>
                 </li>
               </ul>
               <p className="text-zinc-600">
-                Os links acima assumem a API local na porta 8000; ajuste o host se usar outro ambiente.
+                Regenerar a referência estática após mudar rotas:{" "}
+                <code className="rounded bg-zinc-100 px-1">python3 scripts/export-openapi.py</code>.
               </p>
             </Section>
           </article>

@@ -328,6 +328,8 @@ class TestEventos:
                 "imagem_url": None,
                 "preco_ingresso": 10,
                 "categoria": "Outros",
+                "publicado": True,
+                "ingresso_lotes": [{"nome": "Geral", "preco": 10, "ordem": 1, "ativo": True}],
             }
         )
         

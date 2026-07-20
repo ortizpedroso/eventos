@@ -1,19 +1,29 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
-import { useLayoutEffect } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useLayoutEffect } from "react";
 
-/** Garante que cada navegação começa no topo (evita rodapé/título cortado sob o navbar). */
+function resetScroll() {
+  if (typeof window === "undefined") return;
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
+/** Garante que cada navegação começa no topo (evita rodapé visível no meio da tela). */
 export function ScrollToTop() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  }, [pathname, searchParams]);
+    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    resetScroll();
+  }, [pathname]);
+
+  useEffect(() => {
+    resetScroll();
+  }, [pathname]);
 
   return null;
 }

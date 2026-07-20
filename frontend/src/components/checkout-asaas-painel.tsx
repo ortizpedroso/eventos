@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import { validarDadosCartao } from "@/lib/cartao-validacao";
 import { mapCheckoutError } from "@/lib/checkout-errors";
+import { formatCepMask } from "@/lib/cep";
 import { formatCpfMask, onlyDigits } from "@/lib/cpf";
 import {
   AVISO_LEGAL_TAXAS,
@@ -110,18 +111,27 @@ export function CheckoutAsaasPainel({
     return () => window.clearInterval(id);
   }, [reservadoAte]);
 
+  // Mantém a referência mais recente sem incluir `onSuccess` nas deps do polling:
+  // o pai (comprar-ingresso.tsx) recria esse callback a cada re-render (ex.: contador
+  // de reserva atualizando a cada segundo), o que reiniciava o setInterval de 4s antes
+  // de ele disparar — o status de pagamento nunca era consultado.
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
   useEffect(() => {
     if (!pix && !invoiceUrl && !aguardandoConfirmacao) return;
     const id = window.setInterval(async () => {
       try {
         const st = await apiFetch<{ pago?: boolean }>(`/api/pagamentos/asaas/status/${ingressoId}`);
-        if (st.pago) onSuccess();
+        if (st.pago) onSuccessRef.current();
       } catch {
         /* polling */
       }
     }, 4000);
     return () => window.clearInterval(id);
-  }, [pix, invoiceUrl, aguardandoConfirmacao, ingressoId, onSuccess]);
+  }, [pix, invoiceUrl, aguardandoConfirmacao, ingressoId]);
 
   async function iniciar(e: FormEvent) {
     e.preventDefault();
@@ -307,7 +317,7 @@ export function CheckoutAsaasPainel({
           className={`flex-1 rounded-lg border px-2 py-2 text-sm ${metodo === "invoice" ? "border-indigo-600 bg-indigo-50" : ""}`}
           onClick={() => setMetodo("invoice")}
         >
-          Fatura
+          Boleto
         </button>
       </div>
 
@@ -406,7 +416,7 @@ export function CheckoutAsaasPainel({
             <input
               className="rounded border px-3 py-2 text-sm"
               placeholder="CEP"
-              value={cardCep}
+              value={formatCepMask(cardCep)}
               onChange={(e) => setCardCep(onlyDigits(e.target.value, 8))}
             />
             <input

@@ -11,6 +11,16 @@ Descrição da arquitetura, módulos backend, modelos de dados, frontend Next.js
 
 No site (Next.js), a mesma informação está resumida na página pública **`/documentacao`**.
 
+## 🖥️ VPS em produção (`eventosbr.app.br`)
+
+Código oficial: branch **`main`** (Asaas — sem Stripe). Um único comando no servidor:
+
+```bash
+cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh
+```
+
+O script atualiza o Git, preenche o `.env` automaticamente, sincroniza a senha do Postgres e sobe API + web + Caddy. Não é preciso colar senhas manualmente.
+
 ## 🚀 Características
 
 - ✅ Autenticação com JWT
@@ -291,7 +301,7 @@ MIT License
 
 ## 👥 Autores
 
-- Seu Nome aqui
+- Ortiz Pedroso
 
 ## 📞 Suporte
 

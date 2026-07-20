@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+import re
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
@@ -9,17 +12,23 @@ from sqlalchemy.orm import Session
 from app.models import Usuario
 from app.services.tarifas_plataforma import MENSALIDADE_ASSINATURA_MENSAL
 
+logger = logging.getLogger(__name__)
+
 
 def status_assinatura(usuario: Usuario) -> dict:
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
     valida_ate = getattr(usuario, "assinatura_valida_ate", None)
     ativa = bool(valida_ate and valida_ate >= agora)
+    pendente = (getattr(usuario, "assinatura_renovacao_payment_id", None) or "").strip()
     return {
         "plano_solicitado": (getattr(usuario, "plano_tarifa", None) or "padrao").strip().lower(),
         "assinatura_ativa": ativa,
         "valida_ate": valida_ate.isoformat() if valida_ate else None,
         "mensalidade_reais": MENSALIDADE_ASSINATURA_MENSAL,
         "taxa_efetiva": "assinatura" if ativa else "padrao",
+        "renovacao_pendente": bool(pendente),
+        "renovacao_payment_id": pendente or None,
+        "precisa_cpf_cnpj": not bool((getattr(usuario, "asaas_repasse_cpf_cnpj", None) or "").strip()),
     }
 
 
@@ -45,15 +54,52 @@ def cancelar_assinatura(db: Session, usuario: Usuario) -> Usuario:
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
     usuario.plano_tarifa = "padrao"
     usuario.assinatura_valida_ate = None
+    usuario.assinatura_renovacao_payment_id = None
     usuario.data_atualizacao = agora
     db.commit()
     db.refresh(usuario)
     return usuario
 
 
-def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
+def _cobranca_assinatura_pendente(db: Session, usuario: Usuario) -> dict | None:
+    """Reutiliza PIX pendente válido em vez de criar cobrança duplicada."""
+    from app.services.asaas_client import AsaasAPIError
+    from app.services.pagamento_asaas import (
+        obter_cobranca,
+        resposta_checkout_asaas,
+        status_eh_cancelado,
+        status_eh_pago,
+    )
+
+    pay_id = (getattr(usuario, "assinatura_renovacao_payment_id", None) or "").strip()
+    if not pay_id:
+        return None
+    try:
+        payment = obter_cobranca(pay_id)
+    except AsaasAPIError:
+        usuario.assinatura_renovacao_payment_id = None
+        db.commit()
+        return None
+
+    status = (payment.get("status") or "").upper()
+    if status_eh_pago(status):
+        processar_pagamento_assinatura_gateway(db, payment)
+        return {"ja_pago": True, "payment_id": pay_id}
+    if status_eh_cancelado(status) or status == "OVERDUE":
+        usuario.assinatura_renovacao_payment_id = None
+        db.commit()
+        return None
+
+    return {
+        "payment_id": pay_id,
+        "reutilizado": True,
+        **resposta_checkout_asaas(payment),
+    }
+
+
+def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str | None = None) -> dict:
     """Gera cobrança PIX da mensalidade (100% plataforma, sem split de ingresso)."""
-    from datetime import date, timedelta
+    from datetime import date
 
     from app.services.asaas_client import AsaasAPIError
     from app.services.pagamento_asaas import resposta_checkout_asaas, status_eh_pago
@@ -65,28 +111,92 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
     if not settings.use_asaas:
         raise ValueError("Pagamentos indisponíveis neste ambiente.")
 
-    customer_id = garantir_customer_asaas(db, usuario)
+    reutilizado = _cobranca_assinatura_pendente(db, usuario)
+    if reutilizado:
+        return reutilizado
+
+    # Asaas exige CPF/CNPJ do cliente para gerar cobrança; reaproveita o documento
+    # já cadastrado (conta de repasses) ou o informado agora nesta requisição.
+    doc = re.sub(r"\D", "", (getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
+    if len(doc) not in (11, 14):
+        doc = re.sub(r"\D", "", cpf_cnpj or "")
+        if len(doc) not in (11, 14):
+            raise ValueError("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido para gerar a cobrança.")
+        usuario.asaas_repasse_cpf_cnpj = doc
+        db.commit()
+
+    customer_id_reutilizado = bool(usuario.asaas_customer_id)
+    try:
+        customer_id = garantir_customer_asaas(db, usuario, cpf=doc)
+    except AsaasAPIError as e:
+        logger.exception(
+            "Erro Asaas ao criar customer da assinatura (usuario=%s)", usuario.id
+        )
+        raise ValueError(f"Não foi possível criar cadastro para cobrança: {e}") from e
+
     ref = f"assinatura:{usuario.id}"[:100]
     client = __import__("app.services.asaas_client", fromlist=["get_asaas_client"]).get_asaas_client()
-    payload = {
-        "customer": customer_id,
-        "billingType": "PIX",
-        "value": round(MENSALIDADE_ASSINATURA_MENSAL, 2),
-        "dueDate": (date.today() + timedelta(days=1)).isoformat(),
-        "description": "Assinatura EventosBR — mensal",
-        "externalReference": ref,
-    }
+
+    def _payload(cid: str) -> dict:
+        return {
+            "customer": cid,
+            "billingType": "PIX",
+            "value": round(MENSALIDADE_ASSINATURA_MENSAL, 2),
+            "dueDate": (date.today() + timedelta(days=1)).isoformat(),
+            "description": "Assinatura EventosBR — mensal",
+            "externalReference": ref,
+        }
+
+    idem = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
     try:
-        payment = client.post("/v3/payments", json=payload, idempotency_key=f"assinatura_{usuario.id}")
+        payment = client.post("/v3/payments", json=_payload(customer_id), idempotency_key=idem)
     except AsaasAPIError as e:
-        raise ValueError("Não foi possível gerar cobrança da assinatura.") from e
+        logger.exception(
+            "Erro Asaas ao criar cobrança da assinatura (usuario=%s, customer_id=%s, "
+            "customer_reutilizado=%s, status=%s)",
+            usuario.id,
+            customer_id,
+            customer_id_reutilizado,
+            e.status_code,
+        )
+
+        # O customer pode estar obsoleto/inválido para o gateway mesmo recém-criado
+        # (ex.: rotação de chave/ambiente Asaas, atraso de consistência da API).
+        # Recria o customer uma única vez e tenta novamente antes de desistir.
+        usuario.asaas_customer_id = None
+        try:
+            customer_id = garantir_customer_asaas(db, usuario, cpf=doc)
+        except AsaasAPIError:
+            logger.exception(
+                "Erro Asaas ao recriar customer da assinatura após falha (usuario=%s)", usuario.id
+            )
+            raise ValueError(
+                f"Não foi possível gerar cobrança da assinatura (falha ao recriar customer): {e}"
+            ) from e
+
+        idem_retry = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
+        try:
+            payment = client.post("/v3/payments", json=_payload(customer_id), idempotency_key=idem_retry)
+        except AsaasAPIError as e2:
+            logger.exception(
+                "Erro Asaas ao criar cobrança da assinatura após recriar customer "
+                "(usuario=%s, customer_id=%s, status=%s)",
+                usuario.id,
+                customer_id,
+                e2.status_code,
+            )
+            raise ValueError(
+                f"Não foi possível gerar cobrança da assinatura (customer {customer_id}): {e2}"
+            ) from e2
 
     if status_eh_pago(payment.get("status")):
-        if (getattr(usuario, "assinatura_ultimo_payment_id", None) or "").strip() == (payment.get("id") or ""):
-            return {"ja_pago": True, "payment_id": payment.get("id")}
-        usuario.assinatura_ultimo_payment_id = payment.get("id")
+        pay_id = (payment.get("id") or "").strip()
+        if (getattr(usuario, "assinatura_ultimo_payment_id", None) or "").strip() == pay_id:
+            return {"ja_pago": True, "payment_id": pay_id}
+        usuario.assinatura_ultimo_payment_id = pay_id
+        usuario.assinatura_renovacao_payment_id = None
         renovar_assinatura_meses(db, usuario)
-        return {"ja_pago": True, "payment_id": payment.get("id")}
+        return {"ja_pago": True, "payment_id": pay_id}
 
     pay_id = (payment.get("id") or "").strip()
     if pay_id:
@@ -96,6 +206,25 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario) -> dict:
     return {
         "payment_id": payment.get("id"),
         **resposta_checkout_asaas(payment),
+    }
+
+
+def sincronizar_assinatura_pendente(db: Session, usuario: Usuario) -> dict:
+    """Poll manual/automático: ativa assinatura se PIX pendente foi pago."""
+    pay_id = (getattr(usuario, "assinatura_renovacao_payment_id", None) or "").strip()
+    if not pay_id:
+        return {"sincronizado": False, "motivo": "Nenhuma renovação pendente."}
+    from app.services.asaas_client import AsaasAPIError
+    from app.services.pagamento_asaas import obter_cobranca
+
+    try:
+        payment = obter_cobranca(pay_id)
+    except AsaasAPIError:
+        return {"sincronizado": False, "motivo": "Não foi possível consultar o pagamento."}
+    ok = processar_pagamento_assinatura_gateway(db, payment)
+    return {
+        "sincronizado": ok,
+        "assinatura_ativa": status_assinatura(usuario)["assinatura_ativa"],
     }
 
 

@@ -7,7 +7,7 @@ export SECRET_KEY="${SECRET_KEY:-test-secret-key-with-at-least-32-chars-here}"
 export ENVIRONMENT="${ENVIRONMENT:-development}"
 export DATABASE_URL="${DATABASE_URL:-sqlite:///./eventos_smoke.db}"
 
-ALEMBIC_HEAD="20260618_000024"
+ALEMBIC_HEAD="20260626_000033"
 
 echo "==> 1/4 pytest (suite completa)"
 python3 -m pytest tests/ -q

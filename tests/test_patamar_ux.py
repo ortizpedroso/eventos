@@ -254,6 +254,8 @@ def test_cancelar_saque_libera_saldo():
         org = _criar_org(db)
         org.asaas_wallet_id = f"wallet_{uuid.uuid4().hex[:8]}"
         ev = _criar_evento(db, org.id, nome="Saque Teste")
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        pago_em = agora - timedelta(hours=72)
         ing = Ingresso(
             evento_id=ev.id,
             usuario_id=org.id,
@@ -263,6 +265,8 @@ def test_cancelar_saque_libera_saldo():
             taxa_plataforma_aplicada=7.0,
             plano_tarifa_venda="padrao",
             asaas_payment_id=f"pay_{uuid.uuid4().hex[:8]}",
+            pago_em=pago_em,
+            data_compra=pago_em,
         )
         db.add(ing)
         agora = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -2015,7 +2019,10 @@ def test_evento_pausado_nao_aparece_vitrine():
     ev_id = criar.json()["id"]
     assert criar.json().get("publicado") is False
     lista = test_api.client.get("/api/eventos")
-    assert all(e["slug"] != slug for e in lista.json())
+    assert lista.status_code == 200, lista.text
+    eventos = lista.json()
+    assert isinstance(eventos, list)
+    assert all(e["slug"] != slug for e in eventos)
     pub = anon.get(f"/api/eventos/{slug}")
     assert pub.status_code == 404
     org_view = test_api.client.get(

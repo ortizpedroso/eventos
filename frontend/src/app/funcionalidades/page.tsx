@@ -141,8 +141,8 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/organizador.png"
-        alt="Painel do organizador EventosBR"
+        src="/marketing/organizador.webp"
+        alt="Captura de tela do painel Meus eventos do organizador na EventosBR, com lista de eventos e status de publicação"
         width={800}
         height={500}
         className="h-full min-h-[320px] w-full rounded-2xl object-cover ring-1 ring-emerald-700/40 lg:min-h-[400px]"
@@ -161,8 +161,8 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/checkout.png"
-        alt="Checkout seguro com pagamento online"
+        src="/marketing/checkout.webp"
+        alt="Captura de tela do checkout EventosBR mostrando pagamento PIX com QR Code e código copia e cola"
         width={800}
         height={500}
         className="h-full min-h-[320px] w-full rounded-2xl object-cover shadow-xl ring-1 ring-emerald-200 lg:min-h-[400px]"
@@ -181,8 +181,8 @@ const destaques = [
     visual: (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/marketing/portaria.png"
-        alt="Check-in na portaria com QR Code"
+        src="/marketing/portaria.webp"
+        alt="Captura de tela da validação de ingressos na portaria EventosBR com leitura de QR Code"
         width={800}
         height={500}
         className="h-full min-h-[320px] w-full rounded-2xl object-cover ring-1 ring-violet-800/40 lg:min-h-[400px]"

@@ -1,26 +1,32 @@
 #!/usr/bin/env bash
-# Atualiza a aplicacao no VPS (git pull + rebuild + migrate via entrypoint da API).
-# Uso no servidor: bash ./scripts/deploy-vps.sh
+# Atualiza a aplicação no VPS (git pull main + sync Postgres + rebuild + migrate na API).
 #
-# IMPORTANTE: alteracoes no GitHub NAO entram sozinhas no VPS — rode este script apos cada push.
+# Uso no servidor:
+#   cd /opt/eventosbr && ./scripts/deploy-vps.sh
 #
-# Pre-requisitos: .env configurado, docker compose v2, dominio apontando para o VPS.
+# IMPORTANTE: use sempre a branch main (Asaas). Não use branches antigas com Stripe.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/env-file-lib.sh
+source "$ROOT/scripts/env-file-lib.sh"
 
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 
 if [ ! -f .env ]; then
-  echo "ERRO: crie .env a partir de .env.production.example" >&2
-  exit 1
+  echo "==> .env ausente — bootstrap automático"
+  ./scripts/bootstrap-vps-env.sh
+elif [ -x ./scripts/bootstrap-vps-env.sh ] && [ -x ./scripts/validate-env-production.sh ]; then
+  if ! ./scripts/validate-env-production.sh 2>/dev/null; then
+    echo ""
+    echo "==> .env incompleto — bootstrap automático"
+    ./scripts/bootstrap-vps-env.sh
+  fi
 fi
 
-# shellcheck disable=SC1091
-source .env 2>/dev/null || true
-DOMAIN="${DOMAIN:-eventosbr.app.br}"
+DOMAIN="$(env_get DOMAIN .env || echo eventosbr.app.br)"
 
 echo "==> Commit ANTES do pull"
 git log -1 --oneline 2>/dev/null || echo "(sem git)"
@@ -28,36 +34,59 @@ git log -1 --oneline 2>/dev/null || echo "(sem git)"
 echo ""
 echo "==> git fetch + pull origin main"
 git fetch origin main
-git checkout main 2>/dev/null || true
+git checkout -B main origin/main 2>/dev/null || git checkout main
 git pull origin main
 
 echo ""
-echo "==> Commit DEPOIS do pull (deve ser 3f8e9ec ou mais recente)"
+echo "==> Commit DEPOIS do pull"
 git log -1 --oneline
 
+export GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
+
+if [ -x ./scripts/validate-env-production.sh ]; then
+  echo ""
+  ./scripts/validate-env-production.sh
+fi
+
 echo ""
-echo "==> Rebuild frontend (web) — pode levar 5-10 min"
-docker compose -f "$COMPOSE_FILE" build --no-cache web
+echo "==> Infra base (db + redis)"
+docker compose -f "$COMPOSE_FILE" up -d db redis
+
+if [ -x ./scripts/sync-postgres-password-vps.sh ]; then
+  echo ""
+  ./scripts/sync-postgres-password-vps.sh
+fi
+
+echo ""
+echo "==> Build e subida da stack"
 docker compose -f "$COMPOSE_FILE" up -d --build
 
 echo ""
-echo "==> Aguardando web..."
-sleep 15
+echo "==> Aguardando API healthy (até 3 min)..."
+for _ in $(seq 1 36); do
+  status="$(docker compose -f "$COMPOSE_FILE" ps api --format '{{.Health}}' 2>/dev/null || true)"
+  if [ "$status" = "healthy" ]; then
+    echo "  OK  API healthy"
+    break
+  fi
+  if [ "$_" -eq 36 ]; then
+    echo "  AVISO  API ainda não healthy — veja: docker compose -f $COMPOSE_FILE logs api --tail=80" >&2
+  fi
+  sleep 5
+done
+
+echo ""
 docker compose -f "$COMPOSE_FILE" ps
 
 echo ""
-echo "==> Verificação rápida do site"
-HTML="$(curl -fsS --max-time 20 "https://${DOMAIN}/" 2>/dev/null || true)"
-if echo "$HTML" | grep -q 'href="/organizador/novo"'; then
-  echo "  OK  Site atualizado (links /organizador/novo)"
-elif echo "$HTML" | grep -q 'auth?next'; then
-  echo "  AVISO  Site ainda mostra links antigos (/auth?next) — tente:"
-  echo "         docker compose -f $COMPOSE_FILE build --no-cache web"
-  echo "         docker compose -f $COMPOSE_FILE up -d --force-recreate web"
+if curl -fsS --max-time 15 "https://${DOMAIN}/ready" >/dev/null 2>&1; then
+  echo "==> Site OK: https://${DOMAIN}/ready"
+elif curl -fsS --max-time 10 "http://127.0.0.1:8000/ready" >/dev/null 2>&1; then
+  echo "==> API OK internamente; confira Caddy/DNS para https://${DOMAIN}"
 else
-  echo "  INFO  Não foi possível verificar automaticamente"
+  echo "==> Verifique logs: docker compose -f $COMPOSE_FILE logs api web --tail=60"
 fi
 
 echo ""
 echo "Painel: https://${DOMAIN}/admin/dashboard"
-echo "Health: curl -sS https://${DOMAIN}/health"
+echo "Asaas:  ./scripts/configure-asaas-env.sh && ./scripts/verify-production.sh"

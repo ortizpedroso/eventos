@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -59,7 +60,7 @@ def _pay_id_reembolsavel(pay_id: str) -> bool:
     return bool(pay_id) and not pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:"))
 
 
-def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
+def marcar_ingresso_pago(db: Session, ingresso: Ingresso, *, pago_em: datetime | None = None) -> bool:
     """Marca como pago (sem commit). Retorna True se o status mudou."""
     if ingresso.status == "pago":
         return False
@@ -71,7 +72,7 @@ def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
         )
         return False
 
-    if ingresso.status == "pendente":
+    if ingresso.status == "pendente" and (ingresso.participante_email or "").strip():
         from app.services.lista_espera import validar_espera_para_ingresso_pendente
 
         try:
@@ -85,6 +86,10 @@ def marcar_ingresso_pago(db: Session, ingresso: Ingresso) -> bool:
 
     ingresso.status = "pago"
     ingresso.reservado_ate = None
+    if pago_em is not None:
+        ingresso.pago_em = pago_em.replace(tzinfo=None) if pago_em.tzinfo else pago_em
+    elif not getattr(ingresso, "pago_em", None):
+        ingresso.pago_em = datetime.now(timezone.utc).replace(tzinfo=None)
     _garantir_ledger_ingresso(db, ingresso)
     registrar_uso_cupom(db, getattr(ingresso, "cupom_id", None))
     email = (ingresso.participante_email or "").strip()
@@ -241,7 +246,7 @@ def processar_cobranca_confirmada_gateway(
     if not status_eh_pago(payment.get("status")):
         return []
 
-    marcados = marcar_ingressos_pi_pagos(db, pay_id)
+    marcados = marcar_ingressos_pi_pagos(db, pay_id, payment=payment)
     exigir_fulfillment_pagamento(
         db,
         pay_id,
@@ -252,11 +257,26 @@ def processar_cobranca_confirmada_gateway(
     return marcados
 
 
-def marcar_ingressos_pi_pagos(db: Session, payment_ref: str) -> list[str]:
+def _extrair_data_pagamento(payment: dict) -> datetime | None:
+    for key in ("paymentDate", "confirmedDate", "clientPaymentDate", "creditDate"):
+        raw = payment.get(key)
+        if not raw:
+            continue
+        try:
+            if isinstance(raw, datetime):
+                return raw.replace(tzinfo=None) if raw.tzinfo else raw
+            return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).replace(tzinfo=None)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def marcar_ingressos_pi_pagos(db: Session, payment_ref: str, *, payment: dict | None = None) -> list[str]:
     """Marca todos os ingressos pendentes de um pagamento externo como pagos."""
+    pago_em = _extrair_data_pagamento(payment or {})
     alterados: list[str] = []
     for ingresso in _ingressos_por_ref(db, payment_ref):
-        if marcar_ingresso_pago(db, ingresso):
+        if marcar_ingresso_pago(db, ingresso, pago_em=pago_em):
             alterados.append(ingresso.id)
     return alterados
 
@@ -272,11 +292,11 @@ def cancelar_ingressos_pi_pendentes(db: Session, payment_ref: str) -> int:
 
 
 def cancelar_ingressos_reembolsados(db: Session, payment_ref: str) -> int:
-    """Cancela ingressos pagos ou pendentes após reembolso/cancelamento no gateway."""
+    """Cancela ingressos pagos, usados ou pendentes após reembolso/cancelamento no gateway."""
     return _cancelar_ingressos_por_ref(
         db,
         payment_ref,
-        status_permitidos=("pendente", "pago"),
+        status_permitidos=("pendente", "pago", "usado"),
         liberar_espera=True,
     )
 
@@ -293,8 +313,11 @@ def _cancelar_ingressos_por_ref(
     for ingresso in _ingressos_por_ref(db, payment_ref):
         if ingresso.status not in status_permitidos:
             continue
+        era_pago = ingresso.status in ("pago", "usado") or getattr(ingresso, "liquido_repassado", None)
         ingresso.status = "cancelado"
         ingresso.reservado_ate = None
+        if era_pago:
+            ingresso.estornado_em = datetime.now(timezone.utc).replace(tzinfo=None)
         n += 1
         if liberar_espera:
             from app.services.lista_espera import expirar_espera_reserva_nao_concluida

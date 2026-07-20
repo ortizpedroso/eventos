@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+.env.vps.generated
 
 # Python
 __pycache__/
@@ -53,6 +54,14 @@ logs/
 
 # Backups Postgres locais
 backups/
+
+# Backups temporários produção (credenciais — nunca commitar)
+/.env.prod-backup
+/.env.asaas-prod-backup
+.env.asaas-*-backup
+.env.backup-producao-*
+.env.asaas-sandbox-pending
+.asaas-sandbox-active
 
 # Testing
 .pytest_cache/

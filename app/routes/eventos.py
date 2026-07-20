@@ -22,6 +22,7 @@ from app.services.evento_portaria import (
     regenerar_checkin_token,
     url_portaria,
 )
+from app.services.evento_vitrine import evento_parece_teste
 from app.utils.evento_cidade import resolver_cidade
 from app.utils.public_errors import LISTA_EVENTOS_CLIENTE
 
@@ -93,6 +94,12 @@ async def criar_evento(
     else:
         criar_lotes_iniciais(db, novo_evento, float(evento_data.preco_ingresso))
 
+    from app.services.evento_repasse import validar_publicacao_evento_pago
+    from app.services.organizador_asaas import atualizar_status_repasse_organizador
+
+    usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
+    validar_publicacao_evento_pago(db, usuario_atual, novo_evento, evento_data.publicado)
+
     db.commit()
     db.refresh(novo_evento)
 
@@ -145,7 +152,8 @@ async def atualizar_evento(
     evento.preco_ingresso = body.preco_ingresso
     evento.categoria = body.categoria.strip() or "Outros"
     evento.mensagem_confirmacao = body.mensagem_confirmacao
-    evento.publicado = body.publicado
+    if body.publicado is not None:
+        evento.publicado = body.publicado
     if "limite_ingressos_por_cpf" in body.model_fields_set:
         evento.limite_ingressos_por_cpf = body.limite_ingressos_por_cpf
 
@@ -183,6 +191,13 @@ async def atualizar_evento(
             raise HTTPException(status_code=400, detail=str(e)) from e
 
     sincronizar_preco_ingresso_evento(db, evento)
+
+    from app.services.evento_repasse import validar_publicacao_evento_pago
+    from app.services.organizador_asaas import atualizar_status_repasse_organizador
+
+    usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
+    if body.publicado is not None:
+        validar_publicacao_evento_pago(db, usuario_atual, evento, body.publicado)
 
     db.commit()
     db.refresh(evento)
@@ -299,6 +314,11 @@ async def listar_eventos(
             .limit(limit)
             .all()
         )
+        eventos = [
+            e
+            for e in eventos
+            if not evento_parece_teste(nome=e.nome, local=e.local, slug=e.slug or "")
+        ]
         return _montar_lista_eventos(db, eventos)
     except Exception:
         logger.exception("Erro inesperado ao listar eventos públicos")

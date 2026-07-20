@@ -1,25 +1,50 @@
 # 05 — Pagamentos, lotes de ingressos e webhooks Asaas
 
+**Spec de produção:** [specs/eventosbr-producao.md](../specs/eventosbr-producao.md)
+
 ## Modos de operação na API
 
 | Flag | Efeito |
 |------|--------|
 | **`ASAAS_DISABLED=true`** | Não chama a API Asaas no registo/compra; `POST /criar` pode marcar ingresso como **pago** imediatamente com referência fake (`disabled_...`) — apenas `development`/`test` |
 | **`ASAAS_E2E_MOCK=true`** | Respostas mock da API Asaas (E2E Playwright) |
+| **`ASAAS_ALLOW_MANUAL_WALLET=false`** | Bloqueia `PUT /organizador/asaas/wallet` (padrão em produção) |
 
-**Produção:** `ASAAS_DISABLED` deve estar **desligado**; `ASAAS_WEBHOOK_TOKEN` obrigatório; `ASAAS_PLATFORM_WALLET_ID` para split da taxa.
+**Produção:** `ASAAS_DISABLED` desligado; `ASAAS_WEBHOOK_TOKEN` obrigatório; `ASAAS_PLATFORM_WALLET_ID` para split da taxa; subconta Asaas obrigatória para vender.
+
+## Split do valor da venda
+
+| Destino | Recebe |
+|---------|--------|
+| Organizador | Preço base − taxa EventosBR (via `split` → wallet da subconta) |
+| Plataforma | Taxa % + fixa do plano → `ASAAS_PLATFORM_WALLET_ID` |
+| Asaas | Taxas de processamento — **fora do split** (gateway) |
+
+Implementação: `app/services/pagamento_asaas.py` → `split_para_evento()`.
+
+## Conta de repasse (pré-requisito para eventos pagos)
+
+1. Organizador cria subconta em **Financeiro** (`POST /api/organizador/asaas/subconta`).
+2. Dados validados pelo Asaas (`GET /v3/myAccount/status` + webhooks `ACCOUNT_STATUS_*`).
+3. Acompanhamento em `/organizador/financeiro/conta-repasse`.
+4. Com status **approved**, pode publicar e vender.
+
+**Bloqueios:** `validar_publicacao_evento_pago()`, `organizador_pode_vender()`, `compra_disponivel` na API pública.
+
+**Reprovada:** `POST /api/organizador/asaas/subconta/reenviar` após status `rejected`.
 
 ## Fluxo `POST /api/pagamentos/criar`
 
 1. **Autenticação** obrigatória (comprador logado).
 2. Validação de **evento** existente e **`publicado=true`**.
-3. Validação de **participante**: se nome+email de terceiro, exige CPF (válido) e telefone BR (DDD+número); caso contrário usa dados do utilizador.
-4. **`resolver_lote_compra(db, evento)`** (`app/services/ingresso_lotes.py`): percorre lotes por `ordem`, aplica `ativo`, datas `vendas_inicio`/`vendas_fim`, e capacidade (`quantidade_maxima` vs contagens `pendente`+`pago`).
-5. **`valor_centavos`** do pedido tem de coincidir com o preço do lote — evita manipulação de preço no cliente.
-6. Criação de **`Ingresso`** com `lote_id`, `valor`, `status=pendente`, `reservado_ate` (35 min).
-7. Resposta com `aguardando_cobranca: true` — o front chama **`POST /api/pagamentos/asaas/cobranca`** (PIX, cartão ou fatura).
+3. **`organizador_pode_vender()`** — repasse aprovado + wallet configurado.
+4. Validação de **participante**: se nome+email de terceiro, exige CPF (válido) e telefone BR (DDD+número); caso contrário usa dados do utilizador.
+5. **`resolver_lote_compra(db, evento)`** (`app/services/ingresso_lotes.py`): percorre lotes por `ordem`, aplica `ativo`, datas `vendas_inicio`/`vendas_fim`, e capacidade (`quantidade_maxima` vs contagens `pendente`+`pago`).
+6. **`valor_centavos`** do pedido tem de coincidir com o preço do lote — evita manipulação de preço no cliente.
+7. Criação de **`Ingresso`** com `lote_id`, `valor`, `status=pendente`, `reservado_ate` (35 min).
+8. Resposta com `aguardando_cobranca: true` — o front chama **`POST /api/pagamentos/asaas/cobranca`** (PIX, cartão ou fatura).
 
-**Pré-requisitos:** `evento.asaas_wallet_id` (organizador) e `ASAAS_PLATFORM_WALLET_ID` (plataforma).
+**Pré-requisitos:** repasse **approved**, `evento.asaas_wallet_id`, `ASAAS_PLATFORM_WALLET_ID`.
 
 **Dev local:** `ASAAS_DISABLED=true` ou `POST /api/webhooks/mock-payment?ingresso_id=...` (apenas `DEBUG` + `development`).
 
@@ -33,11 +58,23 @@
 
 - Header **`asaas-access-token`** = `ASAAS_WEBHOOK_TOKEN` no `.env` (fail-closed em produção).
 - **Idempotência**: se `event["id"]` já existe em **`webhook_events`**, retorna sucesso idempotente.
+
+**Pagamentos:**
+
 - **`PAYMENT_RECEIVED` / `PAYMENT_CONFIRMED`**: marca ingressos pendentes como `pago`.
 - **`PAYMENT_REFUNDED`**: cancela ingressos pagos/pendentes ligados à cobrança.
+- **`PAYMENT_CHARGEBACK_*`**: cancela ingressos (chargeback).
 - **`PAYMENT_DELETED` / `PAYMENT_OVERDUE`**: cancela reservas pendentes.
 
+**Conta de repasse:**
+
+- **`ACCOUNT_STATUS_*`**: atualiza `asaas_repasse_status` do organizador (aprovação KYC).
+
 Configuração: painel Asaas → Integrações → Webhooks → `https://SEU_DOMINIO/api/webhooks/asaas`. Ver [11-go-live-asaas.md](./11-go-live-asaas.md).
+
+## Worker de sync de repasse
+
+- `repasse_status_sync` — a cada 10 min, poll status de subcontas pendentes (backup ao webhook).
 
 ## Cancelamento e reembolso `POST /api/pagamentos/cancelar`
 
@@ -63,4 +100,5 @@ Configuração: painel Asaas → Integrações → Webhooks → `https://SEU_DOM
 ## Segurança e compliance
 
 - Dados de cartão enviados **diretamente ao Asaas** (PCI no processador).
-- Split de repasse: organizador (`asaas_wallet_id`) + plataforma (`ASAAS_PLATFORM_WALLET_ID`).
+- Split de repasse: organizador (subconta) + plataforma (`ASAAS_PLATFORM_WALLET_ID`).
+- Wallet manual bloqueada em produção (`ASAAS_ALLOW_MANUAL_WALLET=false`).

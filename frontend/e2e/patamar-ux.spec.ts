@@ -8,6 +8,39 @@ import {
 } from "./helpers/api-setup";
 
 test.describe("Patamar UX — vitrine e navbar", () => {
+  test("rodapé permanece no fim ao navegar para login", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+
+    const footer = page.locator("body > footer");
+    await page.getByRole("link", { name: "Login" }).click();
+    await expect(page).toHaveURL(/\/auth/);
+
+    const viewportHeight = 800;
+    const assertFooterNearBottom = async () => {
+      const box = await footer.boundingBox();
+      expect(box).toBeTruthy();
+      if (box) {
+        // Rodapé colado ao fundo da viewport (flex layout) — não no meio da tela
+        expect(box.y + box.height).toBeGreaterThan(viewportHeight * 0.85);
+        expect(box.y).toBeGreaterThan(viewportHeight * 0.45);
+      }
+    };
+
+    // Checagem imediata pós-navegação (antes da hidratação estabilizar)
+    await assertFooterNearBottom();
+    await assertFooterNearBottom();
+    // Aguarda estabilização pós-hidratação / checagem de sessão
+    await expect
+      .poll(async () => {
+        const box = await footer.boundingBox();
+        return box ? box.y + box.height : 0;
+      })
+      .toBeGreaterThan(viewportHeight * 0.85);
+    await assertFooterNearBottom();
+  });
+
   test("busca na navbar redireciona para vitrine com q", async ({ page }) => {
     await page.goto("/");
     const input = page.getByRole("search").getByRole("textbox").first();
@@ -28,9 +61,12 @@ test.describe("Patamar UX — vitrine e navbar", () => {
   });
 
   test("seletor de intervalo de datas na vitrine", async ({ page }) => {
-    await page.goto("/eventos");
+    // `networkidle`: inputs controlados só respondem após hidratação do React
+    // (mesma convenção dos formulários em /auth e lista de interesse).
+    await page.goto("/eventos", { waitUntil: "networkidle" });
     await page.getByTestId("filtro-data-de").fill("2026-12-01");
     await page.getByTestId("filtro-data-ate").fill("2026-12-31");
+    await expect(page.getByTestId("filtro-data-de")).toHaveValue("2026-12-01");
     await page.getByTestId("filtro-data-aplicar").click();
     await expect(page).toHaveURL(/de=/);
     await expect(page).toHaveURL(/ate=/);
@@ -59,7 +95,11 @@ test.describe("Lista de interesse pré-venda", () => {
     const { slug } = await seedPreVendaEvent();
     const email = `interesse_e2e_${Date.now()}@test.com`;
 
-    await page.goto(`/eventos/${slug}`, { waitUntil: "domcontentloaded" });
+    // `networkidle` (não `domcontentloaded`): o formulário só fica interativo após a
+    // hidratação do React; clicar antes disso aciona o submit nativo do <form> (GET,
+    // recarrega a página) em vez do handler onSubmit — mesma convenção já usada para
+    // páginas com formulário em /auth (ver compra-checkout*.spec.ts).
+    await page.goto(`/eventos/${slug}`, { waitUntil: "networkidle" });
     await expect(page.getByTestId("lista-interesse-form")).toBeVisible({ timeout: 20_000 });
     await page.getByTestId("lista-interesse-email").fill(email);
     await page.getByTestId("lista-interesse-submit").click();
@@ -75,7 +115,7 @@ test.describe("Lista de espera (esgotado)", () => {
     const { slug } = await seedSoldOutWaitlistEvent();
     const email = `espera_e2e_${Date.now()}@test.com`;
 
-    await page.goto(`/eventos/${slug}`, { waitUntil: "domcontentloaded" });
+    await page.goto(`/eventos/${slug}`, { waitUntil: "networkidle" });
     await expect(page.getByTestId("lista-espera-form")).toBeVisible({ timeout: 20_000 });
     await page.getByTestId("lista-espera-email").fill(email);
     await page.getByTestId("lista-espera-submit").click();

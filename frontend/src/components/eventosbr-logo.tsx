@@ -28,19 +28,19 @@ export function EventosBRLogo({ className = "", showWordmark = true, variant = "
       href="/"
       scroll
       onClick={onClick}
-      className={`inline-flex items-center gap-2 ${className}`}
       aria-label="EventosBR — início"
+      className={`inline-flex items-center gap-2 ${className}`}
     >
       <Image
         src={src}
-        alt=""
-        width={120}
-        height={32}
+        alt="EventosBR"
+        width={152}
+        height={36}
         className="h-8 w-auto"
         priority
         unoptimized={src.startsWith("http")}
       />
-      {!showWordmark ? <span className="sr-only">EventosBR</span> : null}
+      {!showWordmark ? <span className="sr-only">EventosBR — início</span> : null}
     </Link>
   );
 }

@@ -1,5 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" fill="none" role="img" aria-label="EventosBR">
-  <rect x="2" y="4" width="24" height="24" rx="6" fill="#047857"/>
-  <path d="M10 20V12h4.2c2.1 0 3.4 1.1 3.4 2.8 0 1.2-.7 2.1-1.8 2.5L18 20h-2.2l-1.8-2.4H12.2V20H10zm2.2-4.2h1.9c.9 0 1.4-.4 1.4-1.1s-.5-1.1-1.4-1.1h-1.9v2.2z" fill="#fff"/>
-  <text x="34" y="22" font-family="system-ui,sans-serif" font-size="18" font-weight="800" fill="#18181b">EventosBR</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 36" fill="none" role="img" aria-label="EventosBR">
+  <defs>
+    <!-- Diagonal gradient: emerald-500 → emerald-900 -->
+    <linearGradient id="g" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#064e3b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon: green gradient rounded square -->
+  <rect width="36" height="36" rx="9" fill="url(#g)"/>
+
+  <!-- Ticket body with right-side notch (stub cutout) -->
+  <!-- Path: full rectangle with a concave arc on the right side at mid-height -->
+  <path fill="white" fill-opacity="0.93"
+    d="M11 8 Q9 8 9 10 L9 26 Q9 28 11 28 L25 28 Q27 28 27 26
+       L27 21.5 A3.5 3.5 0 0 0 27 14.5 L27 10 Q27 8 25 8 Z"/>
+
+  <!-- 5-pointed star centered at (17.5, 18), outer r=4.5, inner r=1.9 -->
+  <path fill="#065f46"
+    d="M17.5 13.5 L18.6 16.5 L21.8 16.6 L19.3 18.6 L20.2 21.6
+       L17.5 19.9 L14.8 21.6 L15.7 18.6 L13.2 16.6 L16.4 16.5 Z"/>
+
+  <!-- Wordmark: "Eventos" in near-black + "BR" in emerald-500 -->
+  <text x="44" y="24"
+    font-family="system-ui,-apple-system,sans-serif"
+    font-size="18" font-weight="800"
+    fill="#18181b">Eventos</text>
+  <text x="119" y="24"
+    font-family="system-ui,-apple-system,sans-serif"
+    font-size="18" font-weight="800"
+    fill="#10b981">BR</text>
 </svg>

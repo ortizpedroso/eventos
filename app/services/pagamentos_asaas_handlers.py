@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
+from app.services.evento_repasse import MOTIVO_CHECKOUT_SEM_REPASSE, garantir_wallet_repasse_evento, organizador_pode_vender
 from app.services.asaas_client import AsaasAPIError
 from app.services.ingresso_pago import (
     ingressos_lote_pendente,
@@ -130,11 +131,14 @@ def iniciar_cobranca_asaas(
     if not evento:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
 
-    if not (evento.asaas_wallet_id or "").strip():
+    if not garantir_wallet_repasse_evento(db, evento):
         raise HTTPException(
             status_code=400,
-            detail="Organizador ainda não configurou conta para repasses.",
+            detail=MOTIVO_CHECKOUT_SEM_REPASSE,
         )
+    pode_vender, motivo_venda = organizador_pode_vender(db, evento)
+    if not pode_vender:
+        raise HTTPException(status_code=400, detail=motivo_venda or MOTIVO_CHECKOUT_SEM_REPASSE)
     if not (settings.ASAAS_PLATFORM_WALLET_ID or "").strip():
         raise HTTPException(
             status_code=503,
@@ -398,6 +402,11 @@ def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
     )
     valor = float(getattr(ingresso, "valor_cobrado", None) or ingresso.valor or 0)
     try:
+        current = obter_cobranca(pay_id)
+        current_status = (current.get("status") or "").upper() if current else ""
+        from app.services.pagamento_asaas import status_eh_reembolsado
+        if status_eh_reembolsado(current_status):
+            return pay_id
         idem_key = f"refund_{pay_id}_{ingresso.id}"
         if outros_pagos > 0:
             result = reembolsar_cobranca(pay_id, valor=valor, idempotency_key=idem_key)
