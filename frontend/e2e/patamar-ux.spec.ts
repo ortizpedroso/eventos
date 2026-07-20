@@ -4,6 +4,7 @@ import {
   seedPreVendaEvent,
   seedPublicProducer,
   seedSoldOutWaitlistEvent,
+  seedOrganizerSession,
   waitForApiReady,
 } from "./helpers/api-setup";
 
@@ -22,7 +23,7 @@ test.describe("Patamar UX — vitrine e navbar", () => {
       const box = await footer.boundingBox();
       expect(box).toBeTruthy();
       if (box) {
-        // Rodapé colado ao fundo da viewport (flex layout) — não no meio da tela
+        // Rodapé colado ao fundo da viewport (grid layout) — não no meio da tela
         expect(box.y + box.height).toBeGreaterThan(viewportHeight * 0.85);
         expect(box.y).toBeGreaterThan(viewportHeight * 0.45);
       }
@@ -120,6 +121,51 @@ test.describe("Lista de espera (esgotado)", () => {
     await page.getByTestId("lista-espera-email").fill(email);
     await page.getByTestId("lista-espera-submit").click();
     await expect(page.getByText(/fila|posição|inscrição/i)).toBeVisible({ timeout: 15_000 });
+  });
+});
+
+test.describe("Organizador — perfil no painel", () => {
+  test.beforeAll(async () => {
+    await waitForApiReady();
+  });
+
+  test("perfil mantém menu Painel e abas horizontais", async ({ page, context }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const { token } = await seedOrganizerSession();
+    await context.addCookies([
+      {
+        name: "eventosbr_session",
+        value: token,
+        domain: "127.0.0.1",
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("eventosbr_tour_v1", "1");
+    });
+
+    await page.goto("/organizador/eventos", { waitUntil: "domcontentloaded" });
+    const painelNav = page.getByRole("navigation", { name: "Navegação do organizador" });
+    await expect(painelNav.getByRole("link", { name: "Meus eventos" })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await painelNav.getByRole("link", { name: "Perfil" }).click();
+    await expect(page).toHaveURL(/\/organizador\/perfil/);
+    await expect(page).not.toHaveURL(/\/conta\//);
+
+    await expect(painelNav.getByRole("link", { name: "Meus eventos" })).toBeVisible();
+    await expect(page.getByText("Minha conta")).not.toBeVisible();
+
+    await page.getByRole("button", { name: "Pagamentos" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: /pagamentos/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(painelNav.getByRole("link", { name: "Financeiro" })).toBeVisible();
+    await expect(page.getByText("Minha conta")).not.toBeVisible();
   });
 });
 

@@ -47,7 +47,7 @@ export function ContaBanners() {
 
   if (!semSenha && !emailPendente) return null;
 
-  const perfilHref = "/conta/perfil";
+  const perfilHref = pathname.startsWith("/organizador") ? "/organizador/perfil" : "/conta/perfil";
 
   return (
     <div className="mb-4 space-y-3">

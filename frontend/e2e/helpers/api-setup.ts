@@ -442,6 +442,23 @@ export async function apiLogin(email: string, senha: string): Promise<string> {
   return access_token;
 }
 
+/** Organizador novo com token de sessão (para e2e sem formulário de login). */
+export async function seedOrganizerSession(): Promise<{ email: string; senha: string; token: string }> {
+  const suf = `${Date.now()}`;
+  const senha = "senha12345";
+  const email = `e2e_perfil_org_${suf}@test.com`;
+
+  await api("POST", "/api/auth/registrar", {
+    email,
+    nome: "Org Perfil E2E",
+    senha,
+    tipo: "organizador",
+  });
+
+  const token = await apiLogin(email, senha);
+  return { email, senha, token };
+}
+
 export async function simularWebhookAsaasPago(paymentId: string, ingressoId: string): Promise<void> {
   const token = process.env.ASAAS_WEBHOOK_TOKEN ?? "e2e-webhook-token";
   const res = await fetch(`${API}/api/webhooks/asaas`, {

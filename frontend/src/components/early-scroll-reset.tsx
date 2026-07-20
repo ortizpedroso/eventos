@@ -29,9 +29,9 @@ export function EarlyScrollReset({ nonce }: { nonce?: string }) {
 
   const shellCss = `
 html, body { min-height: 100dvh; }
-body { display: flex; flex-direction: column; }
-body > main#conteudo-principal { flex: 1 1 auto; min-height: 0; }
-body > footer { flex-shrink: 0; margin-top: auto; }
+body { display: grid; grid-template-rows: auto 1fr auto; min-height: 100dvh; }
+body > main#conteudo-principal { min-height: 0; }
+body > footer { align-self: end; }
 `.trim();
 
   return (
