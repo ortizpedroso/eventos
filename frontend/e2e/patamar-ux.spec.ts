@@ -154,6 +154,60 @@ test.describe("Navegação — scroll e logo", () => {
   });
 });
 
+test.describe("Menu direito (organizador) — sidebar e rodapé estáveis", () => {
+  test("Perfil/Pagamentos/Ingressos/Notificações no dropdown não trocam a barra lateral nem colapsam o rodapé", async ({
+    page,
+    request,
+  }) => {
+    test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");
+    await waitForApiReady(90_000);
+
+    const suf = Date.now();
+    const email = `e2e_navbar_org_${suf}@test.com`;
+    const senha = "senha12345";
+    const apiBase = (process.env.PLAYWRIGHT_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+    const reg = await request.post(`${apiBase}/api/auth/registrar`, {
+      data: { email, nome: "Org Navbar E2E", senha, tipo: "organizador" },
+    });
+    expect(reg.ok()).toBeTruthy();
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/auth?login=1", { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("form[data-auth-ready=true]", { timeout: 20_000 });
+    await page.locator("#email").fill(email);
+    await page.locator("#senha").fill(senha);
+    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+    await page.waitForURL((url) => !url.pathname.startsWith("/auth"), { timeout: 30_000 });
+
+    await page.goto("/organizador/eventos", { waitUntil: "domcontentloaded" });
+    const sidebarNav = page.getByRole("navigation", { name: "Navegação do organizador" });
+    const footer = page.locator("footer");
+    const viewportHeight = 800;
+    await expect(sidebarNav).toBeVisible();
+
+    async function clicarItemDropdown(nome: string, urlParte: string) {
+      await page.getByRole("button", { name: "Abrir menu da conta" }).click();
+      await page.getByRole("menuitem", { name: nome, exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(urlParte));
+      // Barra lateral do organizador nunca deve sumir/ser trocada por outra
+      await expect(sidebarNav).toBeVisible();
+      // Rodapé não pode "piscar" saltando para o meio da tela durante a navegação
+      for (let i = 0; i < 6; i++) {
+        const box = await footer.boundingBox();
+        if (box) {
+          expect(box.y).toBeGreaterThan(viewportHeight * 0.3);
+        }
+        await page.waitForTimeout(80);
+      }
+    }
+
+    await clicarItemDropdown("Perfil", "/organizador/perfil$");
+    await clicarItemDropdown("Pagamentos", "/organizador/perfil/pagamentos");
+    await clicarItemDropdown("Ingressos", "/organizador/perfil/ingressos");
+    await clicarItemDropdown("Notificações", "/organizador/perfil/notificacoes");
+  });
+});
+
 test.describe("Perfil público do produtor", () => {
   test("renderiza página /produtor/{slug}", async ({ page }) => {
     test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");

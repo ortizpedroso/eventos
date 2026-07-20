@@ -121,7 +121,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
             </nav>
           </div>
         </aside>
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="min-h-[60vh] min-w-0 flex-1">{children}</div>
       </div>
 
       <nav
