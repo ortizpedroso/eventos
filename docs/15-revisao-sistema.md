@@ -11,7 +11,7 @@
 | CI `main` | Corrigido (asserts de mensagens + suite verde) |
 | Pagamentos Asaas + split | OK |
 | Onboarding padrão | `baas` (subconta); `linked` via `.env` |
-| Rodapé | Layout grid `auto 1fr auto` + auth min-height |
+| Rodapé | Flex shell + CSS crítico + EarlyScrollReset |
 
 ## Correções deste ciclo
 
@@ -20,6 +20,7 @@
 - Wallet organizador: `POST /api/organizador/asaas/wallet/consultar` + botão “Buscar ID” no Financeiro
 - Spec/docs: padrão `ASAAS_ONBOARDING_MODE=baas`
 - Teste E2E mock: fluxo compra + split (`test_compra_split_fluxo_mock.py`)
+- Script VPS: `bash scripts/test-sandbox-compra-split.sh` (pytest dentro do Docker — não use `python3 -m pytest` na raiz do servidor)
 
 ## Pendências operacionais (VPS)
 
