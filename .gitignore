@@ -4,6 +4,11 @@
 .env.*.local
 .env.vps.generated
 
+# Local tooling / scratch
+.claude/
+.tokensave/
+*.db.stale-*
+
 # Python
 __pycache__/
 *.py[cod]

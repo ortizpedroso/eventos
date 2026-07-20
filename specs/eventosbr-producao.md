@@ -1,7 +1,7 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.0  
-**Data:** 2026-07-11  
+**Versão:** 1.1  
+**Data:** 2026-07-20  
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
@@ -39,8 +39,8 @@ Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos
 
 | Modo | Padrão | Onboarding | Saques |
 |------|--------|------------|--------|
-| `linked` | Sim | Vincular `walletId` da conta Asaas própria | No painel Asaas do organizador |
-| `baas` | Não | Subconta via `POST /v3/accounts` | White-label na plataforma (Pix) |
+| `baas` | **Sim** | Subconta via `POST /v3/accounts` | White-label na plataforma (Pix) |
+| `linked` | Não | Vincular `walletId` da conta Asaas própria | No painel Asaas do organizador |
 | `both` | Não | Ambos disponíveis | Conforme tipo ativo |
 
 ### 2.3 Modo linked (produção)
@@ -77,12 +77,21 @@ Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos
 
 ### 2.8 Testes pré-go-live
 
-Testes sandbox foram concluídos internamente. Os scripts de alternância sandbox foram removidos do repositório.
+Testes sandbox reais foram concluídos internamente. Os scripts de alternância sandbox foram removidos do repositório (commit `9149828`).
 
-Para testar em novo ambiente:
-- Use `ASAAS_ENVIRONMENT=sandbox` com chave `$aact_hmlg_...` no `.env` local (não commitar).
-- Configure webhook sandbox no painel Asaas com mesma URL pública e `ASAAS_WEBHOOK_TOKEN`.
-- Use `scripts/test-asaas-connection.py` para validar conectividade.
+**Teste automatizado mock (CI e VPS):**
+
+```bash
+# Local
+python3 -m pytest tests/test_compra_split_fluxo_mock.py -v
+
+# VPS (pytest dentro do container — não use python3 na raiz do servidor)
+bash scripts/test-sandbox-compra-split.sh
+```
+
+Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do organizador (não da plataforma).
+
+Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webhook no painel.
 ---
 
 ## 3. UX — Área da conta
@@ -90,8 +99,8 @@ Para testar em novo ambiente:
 - `ContaShell` em `/conta/*`: menu lateral **Perfil**, **Pagamentos**, **Ingressos**, **Notificações**.
 - Sem link “Painel” no menu da conta.
 - Dropdown do avatar: Painel (só organizador), Perfil, Sair.
-- `/organizador/perfil` → redirect `/conta/perfil`.
-- `auth/layout.tsx`: rodapé fixo no fim da viewport no login.
+- `/organizador/perfil` (e subrotas) → redirect 308 para `/conta/*` (`next.config.ts`); navbar e painel apontam para `/conta/perfil`.
+- `auth/layout.tsx` + `layout.tsx`: rodapé fixo no fim da viewport (flex shell, CSS crítico `eventosbr-shell-layout`, `EarlyScrollReset` no `<head>`).
 - Máscaras: CPF/CNPJ, CEP, telefone nos formulários financeiro, checkout e repasse de ingresso.
 
 ---
@@ -136,7 +145,7 @@ Para testar em novo ambiente:
 | `ASAAS_PLATFORM_WALLET_ID` | Sim |
 | `ASAAS_WEBHOOK_TOKEN` | Sim |
 | `ASAAS_ENVIRONMENT` | `production` |
-| `ASAAS_ONBOARDING_MODE` | `linked` (padrão) |
+| `ASAAS_ONBOARDING_MODE` | `baas` (padrão) ou `linked` / `both` |
 | `SECRET_KEY` | Sim (≥ 32 chars) |
 | `EMAIL_USER` / `EMAIL_PASSWORD` | Sim |
 | `PLATFORM_ADMIN_API_KEY` | Sim |
@@ -145,7 +154,7 @@ Para testar em novo ambiente:
 | `POSTGRES_PASSWORD` | Sim |
 | `ASAAS_ALLOW_MANUAL_WALLET` | `false` |
 
-Checks: `production_checks.py` → `GET /api/admin/setup`.
+Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida também: `ASAAS_ENVIRONMENT=production`, `ASAAS_ONBOARDING_MODE` válido, `ASAAS_ALLOW_MANUAL_WALLET=false`, senha Postgres (via `DATABASE_URL`) e `CORS_ORIGINS` só HTTPS.
 
 ---
 
@@ -168,18 +177,20 @@ Checks: `production_checks.py` → `GET /api/admin/setup`.
 
 ### Qualidade
 
-- [x] `pytest` verde
+- [x] `pytest` verde (208 testes em `main`; branch go-live inclui mock split)
 - [x] `npm run build` verde
 - [x] CI (api, web, e2e)
+- [x] Teste mock compra + split: `scripts/test-sandbox-compra-split.sh`
 
 ### Operação (usuário no VPS)
 
-- [ ] `.env` produção preenchido (ou `sync-asaas-prod-from-backup.sh` a partir de `.env.asaas-prod-backup`)
-- [ ] Webhook Asaas configurado no painel
-- [x] Testes sandbox concluídos internamente
-- [ ] SMTP + SPF/DKIM
-- [ ] `alembic upgrade head`
-- [ ] Primeira venda real validada
+- [x] `.env` produção preenchido (validado em `eventosbr.app.br` — jul/2026)
+- [ ] Webhook Asaas configurado e testado com evento real (`PAYMENT_RECEIVED`)
+- [x] Testes mock split no VPS (`test-sandbox-compra-split.sh` — 2 passed)
+- [ ] SMTP + SPF/DKIM validados (envio real de ingresso)
+- [x] `alembic upgrade head` (migração `20260717_000035` no deploy)
+- [ ] Primeira venda real validada (PIX ou cartão + e-mail recebido)
+- [ ] Merge PR #39 (`cursor/fix-footer-flash-bf71`) na `main` e VPS em `main` oficial
 
 ---
 
@@ -193,7 +204,8 @@ Checks: `production_checks.py` → `GET /api/admin/setup`.
 | UI financeiro | `organizador-repasses-painel.tsx` |
 | Conta | `conta-shell.tsx`, `conta/layout.tsx`, `auth/layout.tsx` |
 | Config | `config/settings.py`, `production_checks.py` |
-| Go-live ops | `docs/11-go-live-asaas.md`, `scripts/deploy-vps.sh` |
+| Go-live ops | `docs/11-go-live-asaas.md`, `scripts/atualizar-vps-agora.sh`, `scripts/verify-production.sh` |
+| Teste split mock | `tests/test_compra_split_fluxo_mock.py`, `scripts/test-sandbox-compra-split.sh` |
 | Backup produção Asaas | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-asaas-prod-env.sh`, `sync-asaas-prod-from-backup.sh` |
 
 ---

@@ -171,6 +171,12 @@ export function OrganizadorRepassesPainel() {
   const [mostrarVinculo, setMostrarVinculo] = useState(false);
   const [walletId, setWalletId] = useState("");
   const [apiKeyOrganizador, setApiKeyOrganizador] = useState("");
+  const [walletPreview, setWalletPreview] = useState<{
+    wallet_id: string;
+    account_name?: string | null;
+    account_email?: string | null;
+  } | null>(null);
+  const [buscandoWallet, setBuscandoWallet] = useState(false);
   const [modoReenvio, setModoReenvio] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -248,6 +254,40 @@ export function OrganizadorRepassesPainel() {
     }
   }, [searchParams, status?.pode_reenviar_subconta]);
 
+  async function buscarWalletPelaApiKey() {
+    const key = apiKeyOrganizador.trim();
+    if (!key) {
+      setError("Informe a chave de acesso antes de buscar o ID da conta.");
+      return;
+    }
+    setBuscandoWallet(true);
+    setMsg(null);
+    setError(null);
+    setWalletPreview(null);
+    try {
+      const r = await apiFetch<{
+        wallet_id: string;
+        account_name?: string | null;
+        account_email?: string | null;
+      }>("/api/organizador/asaas/wallet/consultar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ api_key: key }),
+      });
+      setWalletId(r.wallet_id);
+      setWalletPreview(r);
+      setMsg(
+        r.account_name
+          ? `Conta encontrada: ${r.account_name}. Confira o ID e confirme o vínculo.`
+          : "ID da conta encontrado. Confira e confirme o vínculo.",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível consultar a conta.");
+    } finally {
+      setBuscandoWallet(false);
+    }
+  }
+
   async function vincularConta(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -265,6 +305,7 @@ export function OrganizadorRepassesPainel() {
       });
       setMsg(r.mensagem);
       setMostrarVinculo(false);
+      setWalletPreview(null);
       await carregar();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível vincular a conta de recebimento.");
@@ -547,9 +588,42 @@ export function OrganizadorRepassesPainel() {
       {mostrarVinculo ? (
         <form onSubmit={vincularConta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5">
           <h3 className="text-sm font-semibold text-zinc-900">Vincular conta de recebimento</h3>
-          <p className="text-xs text-zinc-600">
-            Informe o identificador da sua conta de recebimento para que os repasses das vendas sejam enviados automaticamente.
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+            Use a conta de recebimento do <strong>organizador</strong>, não a conta da plataforma
+            EventosBR. Cada organizador precisa da própria conta para receber repasses via split.
           </p>
+          <label className="grid gap-1 text-sm">
+            <span className="text-xs text-zinc-600">
+              Chave de acesso (recomendado — busca o ID automaticamente)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="password"
+                autoComplete="off"
+                className="min-w-0 flex-1 rounded-lg border px-3 py-2 font-mono text-sm"
+                placeholder="Chave de acesso..."
+                value={apiKeyOrganizador}
+                onChange={(e) => {
+                  setApiKeyOrganizador(e.target.value);
+                  setWalletPreview(null);
+                }}
+              />
+              <button
+                type="button"
+                disabled={busy || buscandoWallet}
+                className="rounded-lg border border-emerald-700 bg-white px-3 py-2 text-sm font-medium text-emerald-900"
+                onClick={() => void buscarWalletPelaApiKey()}
+              >
+                {buscandoWallet ? "Buscando…" : "Buscar ID"}
+              </button>
+            </div>
+          </label>
+          {walletPreview ? (
+            <p className="text-xs text-emerald-800">
+              {walletPreview.account_name || walletPreview.account_email || "Conta"} · ID{" "}
+              <span className="font-mono">{walletPreview.wallet_id}</span>
+            </p>
+          ) : null}
           <label className="grid gap-1 text-sm">
             <span className="text-xs text-zinc-600">ID da conta de recebimento (UUID)</span>
             <input
@@ -560,24 +634,18 @@ export function OrganizadorRepassesPainel() {
               required
             />
           </label>
-          <label className="grid gap-1 text-sm">
-            <span className="text-xs text-zinc-600">
-              Chave de acesso (opcional — valida a titularidade da conta)
-            </span>
-            <input
-              type="password"
-              autoComplete="off"
-              className="rounded-lg border px-3 py-2 font-mono text-sm"
-              placeholder="Chave de acesso..."
-              value={apiKeyOrganizador}
-              onChange={(e) => setApiKeyOrganizador(e.target.value)}
-            />
-          </label>
           <div className="flex gap-2">
             <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white">
               Confirmar vínculo
             </button>
-            <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setMostrarVinculo(false)}>
+            <button
+              type="button"
+              className="rounded-lg border px-4 py-2 text-sm"
+              onClick={() => {
+                setMostrarVinculo(false);
+                setWalletPreview(null);
+              }}
+            >
               Cancelar
             </button>
           </div>

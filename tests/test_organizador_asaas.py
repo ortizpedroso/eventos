@@ -78,6 +78,47 @@ class TestOrganizadorAsaas:
         finally:
             settings.ASAAS_PLATFORM_WALLET_ID = old
 
+    def test_consultar_wallet_rejeita_conta_plataforma(self):
+        from app.services.organizador_asaas import consultar_wallet_organizador_por_api_key
+        from config.settings import settings
+
+        platform_wallet = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        old = settings.ASAAS_PLATFORM_WALLET_ID
+        settings.ASAAS_PLATFORM_WALLET_ID = platform_wallet
+        try:
+            with patch("app.services.organizador_asaas.AsaasClient") as mock_client_cls:
+                mock_client = MagicMock()
+                mock_client.enabled = True
+                mock_client.get.return_value = {"walletId": platform_wallet, "name": "Plataforma"}
+                mock_client_cls.return_value = mock_client
+                with pytest.raises(ValueError, match="plataforma"):
+                    consultar_wallet_organizador_por_api_key("org_api_key_test")
+        finally:
+            settings.ASAAS_PLATFORM_WALLET_ID = old
+
+    def test_consultar_wallet_via_api_key(self):
+        token = _registrar_organizador("wal_cons")
+        wallet = str(uuid.uuid4())
+        with (
+            patch("app.routes.organizador.settings") as route_settings,
+            patch("app.services.organizador_asaas.AsaasClient") as mock_client_cls,
+        ):
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            route_settings.permite_vinculo_wallet_organizador.return_value = True
+            route_settings.asaas_allow_manual_wallet = False
+            mock_client = MagicMock()
+            mock_client.enabled = True
+            mock_client.get.return_value = {"walletId": wallet, "name": "Org Teste"}
+            mock_client_cls.return_value = mock_client
+            r = client.post(
+                "/api/organizador/asaas/wallet/consultar",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"api_key": "org_api_key_test"},
+            )
+        assert r.status_code == 200, r.text
+        assert r.json()["wallet_id"] == wallet
+
     def test_definir_wallet_valida_api_key(self):
         token = _registrar_organizador("wal_api")
         wallet = str(uuid.uuid4())

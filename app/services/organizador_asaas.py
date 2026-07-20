@@ -130,6 +130,73 @@ def _client_subconta(usuario: Usuario) -> AsaasClient | None:
     return AsaasClient(api_key=key)
 
 
+def _resolver_wallet_conta_asaas(client: AsaasClient) -> str:
+    """Obtém walletId da conta via /v3/myAccount ou fallback GET /v3/wallets/."""
+    try:
+        account = client.get("/v3/myAccount")
+    except AsaasAPIError:
+        account = {}
+    if isinstance(account, dict):
+        wallet = str(account.get("walletId") or "").strip()
+        if wallet:
+            return wallet
+    try:
+        wallets = client.get("/v3/wallets/")
+        if isinstance(wallets, dict):
+            items = wallets.get("data") or []
+            if items and isinstance(items[0], dict):
+                return str(items[0].get("id") or "").strip()
+    except AsaasAPIError:
+        pass
+    return ""
+
+
+def _rejeitar_wallet_plataforma(wallet_id: str, *, contexto: str = "walletId") -> None:
+    platform = (settings.ASAAS_PLATFORM_WALLET_ID or "").strip()
+    if platform and wallet_id.lower() == platform.lower():
+        if contexto == "api_key":
+            raise ValueError(
+                "Esta chave API pertence à conta da plataforma. "
+                "Crie uma conta Asaas separada para o organizador e use a chave API dessa conta."
+            )
+        raise ValueError(
+            "Este walletId é o da conta da plataforma. "
+            "Informe o walletId da sua conta Asaas de organizador."
+        )
+
+
+def consultar_wallet_organizador_por_api_key(api_key: str) -> dict[str, Any]:
+    """Consulta walletId da conta Asaas do organizador a partir da chave API."""
+    key = (api_key or "").strip()
+    if not key:
+        raise ValueError("Informe a chave API Asaas.")
+    org_client = AsaasClient(api_key=key)
+    if not org_client.enabled:
+        raise ValueError("Chave API Asaas inválida ou vazia.")
+    try:
+        account = org_client.get("/v3/myAccount")
+    except AsaasAPIError as e:
+        raise ValueError(str(e) or "Não foi possível consultar a conta Asaas.") from e
+    wallet = _resolver_wallet_conta_asaas(org_client)
+    if not wallet:
+        raise ValueError(
+            "Não foi possível obter o walletId desta conta Asaas. "
+            "Verifique a chave API no painel Asaas."
+        )
+    _rejeitar_wallet_plataforma(wallet, contexto="api_key")
+    name = ""
+    email = ""
+    if isinstance(account, dict):
+        name = (account.get("name") or account.get("company") or "").strip()
+        email = (account.get("email") or "").strip()
+    return {
+        "wallet_id": wallet,
+        "account_name": name or None,
+        "account_email": email or None,
+        "asaas_environment": settings.asaas_env(),
+    }
+
+
 def validar_wallet_repasse(
     wallet_id: str,
     *,
@@ -139,12 +206,7 @@ def validar_wallet_repasse(
     wid = (wallet_id or "").strip()
     if not _WALLET_RE.match(wid):
         raise ValueError("Identificador de conta inválido. Verifique os dados e tente novamente.")
-    platform = (settings.ASAAS_PLATFORM_WALLET_ID or "").strip()
-    if platform and wid.lower() == platform.lower():
-        raise ValueError(
-            "Este walletId é o da conta da plataforma. "
-            "Informe o identificador da conta de recebimento."
-        )
+    _rejeitar_wallet_plataforma(wid)
     verificado_api = False
     key = (api_key_organizador or "").strip()
     if key:
@@ -152,10 +214,12 @@ def validar_wallet_repasse(
         if not org_client.enabled:
             raise ValueError("Chave de acesso inválida ou vazia.")
         try:
-            account = org_client.get("/v3/myAccount")
+            org_client.get("/v3/myAccount")
         except AsaasAPIError as e:
             raise ValueError(str(e) or "Não foi possível validar a conta de recebimento.") from e
-        acc_wallet = str((account or {}).get("walletId") or "").strip()
+        acc_wallet = _resolver_wallet_conta_asaas(org_client)
+        if acc_wallet:
+            _rejeitar_wallet_plataforma(acc_wallet, contexto="api_key")
         if acc_wallet and acc_wallet.lower() != wid.lower():
             raise ValueError(
                 "O walletId não corresponde à chave API informada. "
@@ -231,6 +295,7 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "eventos_sem_wallet": eventos_sem_wallet,
         "anticipacao": anticipacao,
         "onboarding_mode": settings.asaas_onboarding_mode,
+        "asaas_environment": settings.asaas_env(),
         "permite_vinculo_wallet": settings.permite_vinculo_wallet_organizador(),
         "permite_subconta": settings.permite_subconta_baas(),
         "nota_wallet": (

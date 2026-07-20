@@ -2,7 +2,7 @@
 
 Checklist operacional para publicar o EventosBR com **Asaas** como provedor de pagamento.
 
-**Última atualização:** 17/06/2026
+**Última atualização:** 20/07/2026
 
 ---
 
@@ -12,7 +12,7 @@ Cada **pull request** dispara o CI (`.github/workflows/ci.yml`):
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` — 122+ testes da API |
+| `api` | `pytest` — 208 testes da API |
 | `web` | `npm run build` do frontend |
 | `e2e` | Playwright smoke (páginas principais) |
 | `e2e-compra` | Stack Docker + compra com mock Asaas |
@@ -75,7 +75,7 @@ nano .env
 
 A API executa `alembic upgrade head` automaticamente no arranque.
 
-Migrações obrigatórias (head atual: `20260626_000033`):
+Migrações obrigatórias (head atual: `20260717_000035`):
 - `20260617_000020` — colunas `asaas_*` em usuários, eventos, ingressos
 - `20260617_000021` — subconta e antecipação do organizador
 - `20260618_000022` — `stripe_events` → `webhook_events`
@@ -84,6 +84,8 @@ Migrações obrigatórias (head atual: `20260626_000033`):
 - `20260624_000031` — status de repasse (`asaas_repasse_status`, detalhes)
 - `20260625_000032` — `pago_em`, campos saque Asaas (`asaas_transfer_id`)
 - `20260626_000033` — `asaas_repasse_cpf_cnpj`, `estornado_em`
+- `20260716_000034` — `notificacao_interesse_enviada_em`
+- `20260717_000035` — chave Pix salva no perfil
 
 ---
 
@@ -145,9 +147,9 @@ Script de referência: `./scripts/asaas-transfer-auth-setup.sh SEU_DOMINIO.com.b
 
 ## 3.3 Modo de repasse (conta vinculada)
 
-Por padrão (`ASAAS_ONBOARDING_MODE=linked`), o organizador **vincula a própria conta Asaas** informando o `walletId` em Organizador → Financeiro. O split envia apenas o líquido do organizador; a taxa EventosBR permanece na conta emissora (plataforma).
+Por padrão (`ASAAS_ONBOARDING_MODE=baas`), o organizador cria **subconta BaaS** via API. O split envia o líquido ao organizador; a taxa EventosBR permanece na conta emissora.
 
-Para reativar subcontas BaaS via API: `ASAAS_ONBOARDING_MODE=baas` ou `both`.
+Para vincular conta Asaas própria: `ASAAS_ONBOARDING_MODE=linked` ou `both`.
 
 ---
 
@@ -225,6 +227,7 @@ Organizadores sacam via **Financeiro → Solicitar transferência Pix** (carênc
 Manual:
 - `curl -fsS https://SEU_DOMINIO/health`
 - `curl -fsS https://SEU_DOMINIO/ready`
+- `bash scripts/test-sandbox-compra-split.sh` (mock split — dentro do Docker)
 - `/admin/dashboard` → aba **Produção** (todos os checks verdes)
 - Compra teste: PIX ou cartão em valor baixo
 - E-mail de ingresso recebido
