@@ -8,6 +8,17 @@ import uuid
 from typing import Any
 
 _MOCK_PAYMENTS: dict[str, dict[str, Any]] = {}
+_MOCK_PAYMENT_CREATE_PAYLOADS: dict[str, dict[str, Any]] = {}
+
+
+def mock_payment_create_payload(payment_id: str) -> dict[str, Any] | None:
+    """Payload enviado ao POST /v3/payments (inclui split) — para testes."""
+    return _MOCK_PAYMENT_CREATE_PAYLOADS.get(payment_id)
+
+
+def mock_reset() -> None:
+    _MOCK_PAYMENTS.clear()
+    _MOCK_PAYMENT_CREATE_PAYLOADS.clear()
 
 
 def _mock_pix_qr_base64(payload: str) -> str:
@@ -62,7 +73,9 @@ def mock_criar_payment(payload: dict) -> dict[str, Any]:
         }
     if billing == "UNDEFINED":
         payment["invoiceUrl"] = "https://sandbox.asaas.com/i/e2e-mock-invoice"
+    payment["split"] = list(payload.get("split") or [])
     _MOCK_PAYMENTS[pid] = payment
+    _MOCK_PAYMENT_CREATE_PAYLOADS[pid] = dict(payload)
     return payment
 
 

@@ -3,6 +3,7 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 
 import { BuildMarker } from "@/components/build-marker";
+import { EarlyScrollReset } from "@/components/early-scroll-reset";
 import { Navbar } from "@/components/navbar";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
@@ -25,14 +26,27 @@ export default async function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-dvh flex-col" suppressHydrationWarning nonce={nonce}>
+      <head>
+        <EarlyScrollReset nonce={nonce} />
+      </head>
+      <body
+        className="flex min-h-dvh flex-col antialiased"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minHeight: "100dvh",
+        }}
+        suppressHydrationWarning
+        nonce={nonce}
+      >
         <SkipToContent />
         <BuildMarker />
         <ScrollToTop />
         <Navbar />
         <main
           id="conteudo-principal"
-          className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6 sm:px-6 lg:px-8"
+          className="mx-auto flex w-full min-h-0 flex-1 flex-col px-4 py-6 sm:px-6 lg:px-8 max-w-7xl"
+          style={{ flex: "1 1 auto", minHeight: 0 }}
         >
           {children}
         </main>
