@@ -11,7 +11,7 @@ import { OrganizadorTour } from "@/components/organizador-tour";
 const navDesktop = [
   { href: "/organizador/eventos", label: "Meus eventos", tour: "org-eventos" },
   { href: "/organizador/novo", label: "Criar novo evento", tour: "org-novo" },
-  { href: "/organizador/perfil", label: "Perfil", tour: "org-perfil" },
+  { href: "/conta/perfil", label: "Perfil", tour: "org-perfil" },
   { href: "/organizador/relatorios", label: "Relatórios", tour: "org-relatorios" },
   { href: "/organizador/comunicados", label: "Comunicados", tour: "org-comunicados" },
   { href: "/organizador/checkin", label: "Check-in", tour: "org-checkin" },
@@ -26,7 +26,7 @@ const navMobilePrincipal = [
 ] as const;
 
 const navMobileMais = [
-  { href: "/organizador/perfil", label: "Perfil" },
+  { href: "/conta/perfil", label: "Perfil" },
   { href: "/organizador/comunicados", label: "Comunicados" },
   { href: "/organizador/financeiro", label: "Financeiro" },
 ] as const;

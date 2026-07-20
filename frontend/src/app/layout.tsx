@@ -27,7 +27,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <EarlyScrollReset />
+        <EarlyScrollReset nonce={nonce} />
       </head>
       <body
         className="flex min-h-dvh flex-col antialiased"

@@ -99,7 +99,7 @@ Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webh
 - `ContaShell` em `/conta/*`: menu lateral **Perfil**, **Pagamentos**, **Ingressos**, **Notificações**.
 - Sem link “Painel” no menu da conta.
 - Dropdown do avatar: Painel (só organizador), Perfil, Sair.
-- `/organizador/perfil` → redirect `/conta/perfil`.
+- `/organizador/perfil` (e subrotas) → redirect 308 para `/conta/*` (`next.config.ts`); navbar e painel apontam para `/conta/perfil`.
 - `auth/layout.tsx` + `layout.tsx`: rodapé fixo no fim da viewport (flex shell, CSS crítico `eventosbr-shell-layout`, `EarlyScrollReset` no `<head>`).
 - Máscaras: CPF/CNPJ, CEP, telefone nos formulários financeiro, checkout e repasse de ingresso.
 

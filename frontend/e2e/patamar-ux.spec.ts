@@ -61,9 +61,12 @@ test.describe("Patamar UX — vitrine e navbar", () => {
   });
 
   test("seletor de intervalo de datas na vitrine", async ({ page }) => {
-    await page.goto("/eventos");
+    // `networkidle`: inputs controlados só respondem após hidratação do React
+    // (mesma convenção dos formulários em /auth e lista de interesse).
+    await page.goto("/eventos", { waitUntil: "networkidle" });
     await page.getByTestId("filtro-data-de").fill("2026-12-01");
     await page.getByTestId("filtro-data-ate").fill("2026-12-31");
+    await expect(page.getByTestId("filtro-data-de")).toHaveValue("2026-12-01");
     await page.getByTestId("filtro-data-aplicar").click();
     await expect(page).toHaveURL(/de=/);
     await expect(page).toHaveURL(/ate=/);

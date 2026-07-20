@@ -317,7 +317,7 @@ export function CheckoutAsaasPainel({
           className={`flex-1 rounded-lg border px-2 py-2 text-sm ${metodo === "invoice" ? "border-indigo-600 bg-indigo-50" : ""}`}
           onClick={() => setMetodo("invoice")}
         >
-          Fatura
+          Boleto
         </button>
       </div>
 

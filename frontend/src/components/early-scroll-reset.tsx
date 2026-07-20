@@ -1,5 +1,5 @@
 /** Reseta scroll e fixa shell do site antes da hidratação (evita flash do rodapé). */
-export function EarlyScrollReset() {
+export function EarlyScrollReset({ nonce }: { nonce?: string }) {
   const script = `
 (function () {
   if (typeof window === "undefined") return;
@@ -36,9 +36,12 @@ body > footer { flex-shrink: 0; margin-top: auto; }
 
   return (
     <>
-      <style id="eventosbr-shell-layout">{shellCss}</style>
+      <style id="eventosbr-shell-layout" nonce={nonce}>
+        {shellCss}
+      </style>
       <script
         id="eventosbr-early-scroll-reset"
+        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: script }}
       />
     </>
