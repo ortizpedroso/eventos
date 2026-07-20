@@ -50,27 +50,6 @@ const nextConfig: NextConfig = {
         destination: "/eventos/:slug/editar",
         permanent: true,
       },
-      // Conta unificada (spec §3): organizador usa /conta/*
-      {
-        source: "/organizador/perfil",
-        destination: "/conta/perfil",
-        permanent: true,
-      },
-      {
-        source: "/organizador/perfil/pagamentos",
-        destination: "/conta/pagamentos",
-        permanent: true,
-      },
-      {
-        source: "/organizador/perfil/ingressos",
-        destination: "/conta/ingressos",
-        permanent: true,
-      },
-      {
-        source: "/organizador/perfil/notificacoes",
-        destination: "/conta/notificacoes",
-        permanent: true,
-      },
     ];
   },
   async rewrites() {
