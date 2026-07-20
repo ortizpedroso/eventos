@@ -13,7 +13,7 @@ test.describe("Patamar UX — vitrine e navbar", () => {
     await page.goto("/");
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
-    const footer = page.locator("footer");
+    const footer = page.locator("body > footer");
     await page.getByRole("link", { name: "Login" }).click();
     await expect(page).toHaveURL(/\/auth/);
 
@@ -28,6 +28,8 @@ test.describe("Patamar UX — vitrine e navbar", () => {
       }
     };
 
+    // Checagem imediata pós-navegação (antes da hidratação estabilizar)
+    await assertFooterNearBottom();
     await assertFooterNearBottom();
     // Aguarda estabilização pós-hidratação / checagem de sessão
     await expect

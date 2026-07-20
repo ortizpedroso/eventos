@@ -16,7 +16,7 @@
 ## Correções deste ciclo
 
 - CI: testes alinhados às mensagens “conta de recebimento”
-- Rodapé: grid no `body`, `shrink-0` no footer, scroll restoration manual, skeleton em `/auth`
+- Rodapé: `flex` no `body`, CSS crítico em `globals.css`, `EarlyScrollReset` no `<head>`, scroll restoration manual, skeleton flexível em `/auth`
 - Wallet organizador: `POST /api/organizador/asaas/wallet/consultar` + botão “Buscar ID” no Financeiro
 - Spec/docs: padrão `ASAAS_ONBOARDING_MODE=baas`
 - Teste E2E mock: fluxo compra + split (`test_compra_split_fluxo_mock.py`)
