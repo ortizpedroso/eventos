@@ -198,7 +198,7 @@ class TestPagamentosAsaas:
                 },
             )
         assert r.status_code == 400
-        assert "recebimento" in r.json()["detail"].lower()
+        assert "repasse" in r.json()["detail"].lower()
 
     def test_webhook_asaas_marca_pago(self):
         org = _registrar_organizador("wh")

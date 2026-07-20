@@ -15,9 +15,6 @@ export function ScrollToTop() {
   const pathname = usePathname();
 
   useLayoutEffect(() => {
-    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
-      window.history.scrollRestoration = "manual";
-    }
     resetScroll();
   }, [pathname]);
 

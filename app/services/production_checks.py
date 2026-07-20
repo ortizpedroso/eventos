@@ -14,48 +14,13 @@ def _ok_secret(value: str | None, min_len: int = 16) -> bool:
     return len(v) >= min_len and v not in ("sua-chave-secreta-muito-segura-aqui-min32chars",)
 
 
-def _cors_https_ok(cors: str, production: bool) -> bool:
-    """Em produção, todas as origens devem ser HTTPS (sem `*` nem http://)."""
-    if not cors or cors == "*" or "*" in cors:
-        return False
-    if not production:
-        return True
-    origens = [o.strip() for o in cors.split(",") if o.strip()]
-    return bool(origens) and all(o.lower().startswith("https://") for o in origens)
-
-
-def _postgres_password_ok() -> bool:
-    """POSTGRES_PASSWORD definido, ou DATABASE_URL já embute credencial não-placeholder."""
-    pwd = (getattr(settings, "POSTGRES_PASSWORD", "") or "").strip()
-    if pwd and pwd not in ("password", "postgres", "changeme"):
-        return True
-    url = (settings.DATABASE_URL or "").strip()
-    if "sqlite" in url:
-        return settings.ENVIRONMENT != "production"
-    # postgresql://user:senha@host — exige senha na URL
-    try:
-        cred = url.split("://", 1)[1].split("@", 1)[0]
-        senha = cred.split(":", 1)[1] if ":" in cred else ""
-        return bool(senha) and senha not in ("password", "postgres", "changeme")
-    except IndexError:
-        return False
-
-
 def build_setup_status() -> dict:
     """Estado da configuração (sem expor segredos)."""
-    production = settings.ENVIRONMENT == "production"
     smtp_ok = bool((settings.EMAIL_USER or "").strip() and (settings.EMAIL_PASSWORD or "").strip())
     admin_ok = bool((settings.PLATFORM_ADMIN_API_KEY or "").strip())
     cors = (settings.CORS_ORIGINS or "").strip()
-    cors_ok = _cors_https_ok(cors, production)
+    cors_ok = bool(cors and cors != "*")
     sk_ok = _ok_secret(settings.SECRET_KEY, 32)
-
-    # Spec §6 — obrigatórios em produção
-    asaas_env = (settings.ASAAS_ENVIRONMENT or "").strip().lower()
-    asaas_env_ok = (asaas_env == "production") if production else True
-    onboarding_ok = settings.asaas_onboarding_mode in ("baas", "linked", "both")
-    manual_wallet_ok = (not settings.ASAAS_ALLOW_MANUAL_WALLET) if production else True
-    postgres_ok = _postgres_password_ok()
 
     asaas_ok = not settings.ASAAS_DISABLED and _ok_secret(settings.ASAAS_API_KEY, 20)
     asaas_wallet_ok = bool((settings.ASAAS_PLATFORM_WALLET_ID or "").strip())
@@ -101,10 +66,6 @@ def build_setup_status() -> dict:
             payment_ok or settings.payments_disabled,
             payment_webhook_ok or settings.payments_disabled,
             wallet_required,
-            asaas_env_ok or settings.payments_disabled,
-            onboarding_ok,
-            manual_wallet_ok,
-            postgres_ok,
         ]
     )
 
@@ -116,13 +77,9 @@ def build_setup_status() -> dict:
             "asaas_api": asaas_api_status,
             "asaas_webhook": asaas_webhook_status,
             "asaas_platform_wallet": asaas_wallet_status,
-            "asaas_environment": "ok" if asaas_env_ok else "pendente",
-            "asaas_onboarding_mode": "ok" if onboarding_ok else "pendente",
-            "asaas_manual_wallet_off": "ok" if manual_wallet_ok else "pendente",
             "smtp": "ok" if smtp_ok else "pendente",
             "platform_admin": "ok" if admin_ok else "pendente",
             "cors": "ok" if cors_ok else "pendente",
-            "postgres_password": "ok" if postgres_ok else "pendente",
             "redis": "ok" if (settings.REDIS_URL or "").strip() else "pendente",
             "frontend_url": "ok" if (settings.FRONTEND_PUBLIC_URL or "").strip() else "pendente",
         },

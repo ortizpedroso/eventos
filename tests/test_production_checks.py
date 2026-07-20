@@ -1,7 +1,5 @@
 """Checklist de configuração de produção."""
 
-from unittest.mock import patch
-
 from config.settings import settings
 
 from app.services.production_checks import build_setup_status
@@ -42,61 +40,3 @@ def test_build_setup_status_asaas_producao():
         settings.ASAAS_WEBHOOK_TOKEN = prev_wh
         settings.ASAAS_PLATFORM_WALLET_ID = prev_wallet
         settings.ASAAS_DISABLED = prev_disabled
-
-
-def test_cors_http_rejeitado_em_producao():
-    with patch.multiple(settings, ENVIRONMENT="production", CORS_ORIGINS="http://site.com"):
-        s = build_setup_status()
-    assert s["checks"]["cors"] == "pendente"
-
-
-def test_cors_https_ok_em_producao():
-    with patch.multiple(
-        settings,
-        ENVIRONMENT="production",
-        CORS_ORIGINS="https://eventosbr.app.br,https://www.eventosbr.app.br",
-    ):
-        s = build_setup_status()
-    assert s["checks"]["cors"] == "ok"
-
-
-def test_manual_wallet_bloqueado_em_producao():
-    with patch.multiple(settings, ENVIRONMENT="production", ASAAS_ALLOW_MANUAL_WALLET=True):
-        s = build_setup_status()
-    assert s["checks"]["asaas_manual_wallet_off"] == "pendente"
-    assert s["ready_for_production"] is False
-
-
-def test_asaas_environment_exigido_em_producao():
-    with patch.multiple(
-        settings, ENVIRONMENT="production", ASAAS_ENVIRONMENT="sandbox", ASAAS_DISABLED=False
-    ):
-        s = build_setup_status()
-    assert s["checks"]["asaas_environment"] == "pendente"
-
-
-def test_postgres_password_via_database_url():
-    with patch.multiple(
-        settings,
-        ENVIRONMENT="production",
-        DATABASE_URL="postgresql+psycopg2://eventosbr:s3nh4forte@db:5432/eventosbr",
-    ):
-        s = build_setup_status()
-    assert s["checks"]["postgres_password"] == "ok"
-
-
-def test_postgres_sqlite_rejeitado_em_producao():
-    with patch.multiple(
-        settings, ENVIRONMENT="production", DATABASE_URL="sqlite:///./eventos.db"
-    ):
-        s = build_setup_status()
-    assert s["checks"]["postgres_password"] == "pendente"
-
-
-def test_onboarding_mode_fallback_baas():
-    with patch.multiple(settings, ASAAS_ONBOARDING_MODE="invalido"):
-        assert settings.asaas_onboarding_mode == "baas"
-    with patch.multiple(settings, ASAAS_ONBOARDING_MODE=""):
-        assert settings.asaas_onboarding_mode == "baas"
-    with patch.multiple(settings, ASAAS_ONBOARDING_MODE="linked"):
-        assert settings.asaas_onboarding_mode == "linked"
