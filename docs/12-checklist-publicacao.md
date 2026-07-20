@@ -23,7 +23,7 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 ### Pagamentos e repasse
 
 - [x] Split Asaas: só wallet do organizador; taxa na conta emissora
-- [x] Modo `linked` padrão (`ASAAS_ONBOARDING_MODE=linked`)
+- [x] Modo `baas` padrão (`ASAAS_ONBOARDING_MODE=baas`); `linked` disponível via `.env`
 - [x] Vínculo de wallet: `PUT /api/organizador/asaas/wallet`
 - [x] Validação wallet (UUID, ≠ plataforma, API key opcional)
 - [x] Bloqueio de venda/publicação sem repasse aprovado

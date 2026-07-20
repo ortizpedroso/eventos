@@ -34,7 +34,7 @@ export function SiteFooter() {
   ].filter((s): s is { href: string; label: string; Icon: typeof IconInstagram } => Boolean(s.href));
 
   return (
-    <footer className="relative mt-auto border-t border-emerald-500/20 bg-zinc-950 text-zinc-400">
+    <footer className="relative shrink-0 border-t border-emerald-500/20 bg-zinc-950 text-zinc-400">
       <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 pt-14 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-4">

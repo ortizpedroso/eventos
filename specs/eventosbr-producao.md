@@ -39,8 +39,8 @@ Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos
 
 | Modo | Padrão | Onboarding | Saques |
 |------|--------|------------|--------|
-| `linked` | Sim | Vincular `walletId` da conta Asaas própria | No painel Asaas do organizador |
-| `baas` | Não | Subconta via `POST /v3/accounts` | White-label na plataforma (Pix) |
+| `baas` | **Sim** | Subconta via `POST /v3/accounts` | White-label na plataforma (Pix) |
+| `linked` | Não | Vincular `walletId` da conta Asaas própria | No painel Asaas do organizador |
 | `both` | Não | Ambos disponíveis | Conforme tipo ativo |
 
 ### 2.3 Modo linked (produção)
@@ -136,7 +136,7 @@ Para testar em novo ambiente:
 | `ASAAS_PLATFORM_WALLET_ID` | Sim |
 | `ASAAS_WEBHOOK_TOKEN` | Sim |
 | `ASAAS_ENVIRONMENT` | `production` |
-| `ASAAS_ONBOARDING_MODE` | `linked` (padrão) |
+| `ASAAS_ONBOARDING_MODE` | `baas` (padrão) ou `linked` / `both` |
 | `SECRET_KEY` | Sim (≥ 32 chars) |
 | `EMAIL_USER` / `EMAIL_PASSWORD` | Sim |
 | `PLATFORM_ADMIN_API_KEY` | Sim |

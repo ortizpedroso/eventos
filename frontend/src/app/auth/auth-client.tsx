@@ -241,8 +241,21 @@ export default function AuthClient({
 
   const formularioDesabilitado = loading || aguardandoRedirect;
 
+  if (!sessaoVerificada) {
+    return (
+      <div className="mx-auto w-full max-w-md min-h-[28rem]" aria-busy aria-label="Verificando sessão">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-8 animate-pulse">
+          <div className="mb-6 h-8 w-3/4 rounded bg-zinc-200" />
+          <div className="h-10 w-full rounded bg-zinc-200" />
+          <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
+          <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto w-full max-w-md">
+    <div className="mx-auto w-full max-w-md min-h-[28rem]">
       {sessaoExpirada ? (
         <div
           className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"

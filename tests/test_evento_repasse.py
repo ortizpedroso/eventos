@@ -153,7 +153,7 @@ class TestEventoRepasse:
                 body = montar_evento_response(db, ev)
             assert body.compra_disponivel is False
             assert body.motivo_compra_indisponivel
-            assert "repasses" in body.motivo_compra_indisponivel.lower()
+            assert "recebimento" in body.motivo_compra_indisponivel.lower()
         finally:
             db.close()
 

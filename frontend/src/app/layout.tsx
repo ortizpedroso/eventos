@@ -25,14 +25,18 @@ export default async function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-dvh flex-col" suppressHydrationWarning nonce={nonce}>
+      <body
+        className="grid min-h-dvh grid-rows-[auto_1fr_auto] antialiased"
+        suppressHydrationWarning
+        nonce={nonce}
+      >
         <SkipToContent />
         <BuildMarker />
         <ScrollToTop />
         <Navbar />
         <main
           id="conteudo-principal"
-          className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6 sm:px-6 lg:px-8"
+          className="mx-auto flex w-full min-h-0 max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8"
         >
           {children}
         </main>
