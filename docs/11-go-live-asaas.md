@@ -167,10 +167,8 @@ cd /opt/eventosbr
 # 2. Guardar credenciais de produção
 ./scripts/backup-asaas-prod-env.sh
 
-# 3. Alternar para sandbox (interativo ou via arquivo pendente)
-cp .env.asaas-sandbox-pending.example .env.asaas-sandbox-pending
-nano .env.asaas-sandbox-pending   # preencher $aact_hmlg_... e walletId sandbox
-./scripts/switch-asaas-sandbox.sh --reload
+# 3. Configurar sandbox manualmente
+# Defina ASAAS_ENVIRONMENT=sandbox e a chave $aact_hmlg_... no .env local (não commitar)
 
 # 4. Webhook no painel Asaas SANDBOX (não o de produção)
 ./scripts/asaas-webhook-setup.sh eventosbr.app.br
@@ -193,16 +191,12 @@ python3 scripts/seed-vitrine-profissional.py
 | `restore-prod-env.sh` | Restaura produção completa; `--reload` reinicia API |
 | `sync-asaas-prod-from-backup.sh` | Aplica backup no `.env` (deploy/bootstrap) |
 | `backup-asaas-prod-env.sh` | Atalho → `backup-prod-env.sh` |
-| `switch-asaas-sandbox.sh` | Backup + `ASAAS_ENVIRONMENT=sandbox` + chaves sandbox |
 | `restore-asaas-prod-env.sh` | Restaura produção a partir do backup; `--reload` reinicia a API |
-| `test-asaas-sandbox.sh` | Valida conectividade API sandbox (`GET /v3/myAccount`) |
 | `atualizar-vps-branch.sh` | Deploy de branch específica (sem reset para main) |
 
 **Importante:** o webhook de sandbox e o de produção são contas separadas no Asaas. Configure o webhook na conta **sandbox** com a mesma URL pública (`https://SEU_DOMINIO/api/webhooks/asaas`) e o mesmo `ASAAS_WEBHOOK_TOKEN` do `.env`.
 
-**Conta raiz sandbox (API key):** para criar subcontas via `POST /v3/accounts` (BaaS), a conta Asaas que gera a chave `$aact_hmlg_...` precisa ser **Pessoa Jurídica (CNPJ)**. Contas PF (CPF) retornam HTTP 403 com a mensagem *"Contas de pessoa física não podem criar subcontas"*. Crie uma conta sandbox PJ em https://sandbox.asaas.com, habilite BaaS em **Minha conta → Configurações → Sandbox**, e use a nova API key + `walletId` da plataforma em `.env.asaas-sandbox-pending`.
-
-**Workaround sandbox (sem subconta API):** com `ASAAS_ALLOW_MANUAL_WALLET=true` no `.env` (apenas testes), defina o `walletId` do organizador via `PUT /api/organizador/asaas/wallet` usando o wallet de uma segunda conta sandbox criada manualmente.
+**Nota BaaS sandbox:** para subcontas via `POST /v3/accounts`, use conta Asaas PJ (CNPJ) com BaaS habilitado em Sandbox → Configurações. Contas PF retornam HTTP 403.
 
 ---
 

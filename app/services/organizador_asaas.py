@@ -138,28 +138,28 @@ def validar_wallet_repasse(
     """Valida walletId antes de vincular conta (formato, ≠ plataforma, opcional API key)."""
     wid = (wallet_id or "").strip()
     if not _WALLET_RE.match(wid):
-        raise ValueError("walletId inválido. Cole o identificador completo da conta Asaas.")
+        raise ValueError("Identificador de conta inválido. Verifique os dados e tente novamente.")
     platform = (settings.ASAAS_PLATFORM_WALLET_ID or "").strip()
     if platform and wid.lower() == platform.lower():
         raise ValueError(
             "Este walletId é o da conta da plataforma. "
-            "Informe o walletId da sua conta Asaas de organizador."
+            "Informe o identificador da conta de recebimento."
         )
     verificado_api = False
     key = (api_key_organizador or "").strip()
     if key:
         org_client = AsaasClient(api_key=key)
         if not org_client.enabled:
-            raise ValueError("Chave API Asaas do organizador inválida ou vazia.")
+            raise ValueError("Chave de acesso inválida ou vazia.")
         try:
             account = org_client.get("/v3/myAccount")
         except AsaasAPIError as e:
-            raise ValueError(str(e) or "Não foi possível validar a conta Asaas.") from e
+            raise ValueError(str(e) or "Não foi possível validar a conta de recebimento.") from e
         acc_wallet = str((account or {}).get("walletId") or "").strip()
         if acc_wallet and acc_wallet.lower() != wid.lower():
             raise ValueError(
                 "O walletId não corresponde à chave API informada. "
-                "Use o walletId da mesma conta Asaas da chave API."
+                "O identificador deve pertencer à mesma conta da chave de acesso."
             )
         verificado_api = True
     return {"wallet_id": wid, "verificado_api": verificado_api}
@@ -234,10 +234,10 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "permite_vinculo_wallet": settings.permite_vinculo_wallet_organizador(),
         "permite_subconta": settings.permite_subconta_baas(),
         "nota_wallet": (
-            "Vincule sua conta Asaas em Financeiro para publicar eventos pagos e receber vendas via split."
+            "Configure sua conta de recebimento em Financeiro para publicar eventos pagos e receber automaticamente."
             if not wallet
             else (
-                "Sua conta de repasses está em análise. Acompanhe o andamento em Financeiro."
+                "Sua conta de recebimento está em análise. Acompanhe o andamento em Financeiro."
                 if status_repasse in ("pending", "awaiting_approval")
                 else None
             )
@@ -336,6 +336,8 @@ def criar_subconta_organizador(
     numero: str,
     bairro: str,
     complemento: str | None = None,
+    cidade: str | None = None,
+    estado: str | None = None,
     company_type: str = "INDIVIDUAL",
     data_nascimento: str | None = None,
 ) -> dict[str, Any]:
@@ -343,8 +345,8 @@ def criar_subconta_organizador(
         raise ValueError("Apenas organizadores podem criar subconta.")
     if not settings.permite_subconta_baas():
         raise ValueError(
-            "A criação de subconta pela plataforma está desativada. "
-            "Vincule sua conta Asaas informando o walletId em Financeiro."
+            "A criação de conta de recebimento pela plataforma está desativada. "
+            "Configure sua conta de recebimento em Financeiro."
         )
     if (usuario.asaas_account_id or "").strip():
         raise ValueError("Você já possui subconta Asaas vinculada.")
@@ -381,6 +383,10 @@ def criar_subconta_organizador(
     }
     if complemento and complemento.strip():
         payload["complement"] = complemento.strip()[:80]
+    if cidade and cidade.strip():
+        payload["city"] = cidade.strip()[:80]
+    if estado and estado.strip():
+        payload["state"] = estado.strip()[:2].upper()
     if len(doc) == 11:
         payload["birthDate"] = (data_nascimento or "").strip()
 
@@ -552,6 +558,8 @@ def reenviar_subconta_organizador(
     numero: str,
     bairro: str,
     complemento: str | None = None,
+    cidade: str | None = None,
+    estado: str | None = None,
     company_type: str = "INDIVIDUAL",
     data_nascimento: str | None = None,
 ) -> dict[str, Any]:
@@ -569,6 +577,8 @@ def reenviar_subconta_organizador(
         numero=numero,
         bairro=bairro,
         complemento=complemento,
+        cidade=cidade,
+        estado=estado,
         company_type=company_type,
         data_nascimento=data_nascimento,
     )
@@ -668,6 +678,6 @@ def simular_antecipacao(
         "taxa_antecipacao_mes_pct": _TAXA_ANTECIPACAO_CARTAO_MES * 100,
         "nota": (
             "Estimativa ilustrativa (cartão ~1,25% a.m.). "
-            "Valores reais dependem do Asaas e análise de crédito."
+            "Valores reais dependem da análise de crédito."
         ),
     }

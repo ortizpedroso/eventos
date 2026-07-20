@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from app.models import Usuario
 from app.services.asaas_client import AsaasAPIError, get_asaas_client
-from app.utils.cpf import normalizar_cpf
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -36,11 +35,11 @@ def criar_asaas_para_novo_usuario(
     if not client.enabled:
         return None, None, None
 
-    cpf = normalizar_cpf(cpf_cnpj or "")
+    doc = re.sub(r"\D", "", cpf_cnpj or "")
     mobile = _digits(telefone, 11)
     payload: dict = {"name": nome[:100], "email": email[:255]}
-    if cpf and len(cpf) == 11:
-        payload["cpfCnpj"] = cpf
+    if len(doc) in (11, 14):
+        payload["cpfCnpj"] = doc
     if mobile:
         payload["mobilePhone"] = mobile
 
@@ -59,7 +58,7 @@ def criar_asaas_para_novo_usuario(
             sub_payload = {
                 "name": nome[:100],
                 "email": email[:255],
-                "cpfCnpj": cpf if cpf and len(cpf) == 11 else "24971563792",
+                "cpfCnpj": doc if len(doc) == 11 else "24971563792",
                 "mobilePhone": mobile or "47999999999",
                 "incomeValue": 5000,
                 "address": "Rua Exemplo",
@@ -80,6 +79,17 @@ def criar_asaas_para_novo_usuario(
     return customer_id, wallet_id, account_id
 
 
+def _sincronizar_documento_customer(customer_id: str, doc: str) -> None:
+    """Corrige cpfCnpj de um customer já criado (ex.: cadastrado antes da correção do truncamento)."""
+    client = get_asaas_client()
+    if not client.enabled:
+        return
+    try:
+        client.put(f"/v3/customers/{customer_id}", json={"cpfCnpj": doc})
+    except AsaasAPIError:
+        logger.warning("Não foi possível sincronizar CPF/CNPJ do customer %s", customer_id)
+
+
 def garantir_customer_asaas(
     db: Session,
     usuario: Usuario,
@@ -87,8 +97,11 @@ def garantir_customer_asaas(
     cpf: str | None = None,
     telefone: str | None = None,
 ) -> str:
-    """Garante asaas_customer_id; cria se ausente."""
+    """Garante asaas_customer_id; cria se ausente. Sincroniza documento se customer já existir."""
+    doc = re.sub(r"\D", "", cpf or "")
     if usuario.asaas_customer_id:
+        if len(doc) in (11, 14):
+            _sincronizar_documento_customer(usuario.asaas_customer_id, doc)
         return usuario.asaas_customer_id
     if settings.ASAAS_DISABLED or not settings.use_asaas:
         raise ValueError("Asaas indisponível")

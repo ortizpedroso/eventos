@@ -94,7 +94,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:pb-8 lg:flex-row lg:gap-10 lg:px-8 lg:py-12 pb-24">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 md:pb-8 lg:flex-row lg:gap-10 lg:px-8 lg:py-12 pb-24">
         <aside className="hidden shrink-0 lg:block lg:w-56">
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50/90 to-white p-3 shadow-sm ring-1 ring-emerald-200/80 lg:sticky lg:top-24">
             <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-emerald-800">

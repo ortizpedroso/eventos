@@ -11,8 +11,8 @@ from app.models import Evento, Usuario
 from config.settings import settings
 
 MOTIVO_COMPRA_SEM_REPASSE = (
-    "O organizador ainda não vinculou a conta de repasses. "
-    "As vendas serão liberadas após vincular a conta Asaas em Financeiro."
+    "O organizador ainda não configurou a conta de recebimento. "
+    "As vendas serão liberadas assim que a conta for ativada."
 )
 
 MOTIVO_COMPRA_REPASSE_PENDENTE = (
@@ -21,12 +21,12 @@ MOTIVO_COMPRA_REPASSE_PENDENTE = (
 )
 
 MOTIVO_CHECKOUT_SEM_REPASSE = (
-    "Este evento ainda não tem conta de repasse Asaas configurada. "
-    "O organizador deve vincular a conta em Financeiro antes de vender ingressos."
+    "Este evento ainda não tem conta de recebimento configurada. "
+    "O organizador deve ativar a conta em Financeiro antes de vender ingressos."
 )
 
 MOTIVO_PUBLICAR_SEM_REPASSE = (
-    "Para publicar um evento com ingressos pagos, vincule sua conta Asaas "
+    "Para publicar um evento com ingressos pagos, configure sua conta de recebimento "
     "em Organizador → Financeiro. O evento pode ficar pausado enquanto isso."
 )
 

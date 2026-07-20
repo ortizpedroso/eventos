@@ -180,6 +180,11 @@ export function OrganizadorRepassesPainel() {
   const [numero, setNumero] = useState("");
   const [bairro, setBairro] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
+  const [companyType, setCompanyType] = useState("INDIVIDUAL");
+  const [complemento, setComplemento] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
+  const [buscandoCep, setBuscandoCep] = useState(false);
 
   const [saqueValor, setSaqueValor] = useState(() => moedaBrlFromNumber(100));
   const [pixChave, setPixChave] = useState("");
@@ -262,9 +267,34 @@ export function OrganizadorRepassesPainel() {
       setMostrarVinculo(false);
       await carregar();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível vincular a conta Asaas.");
+      setError(err instanceof Error ? err.message : "Não foi possível vincular a conta de recebimento.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function buscarCep(cepVal: string) {
+    if (cepVal.length !== 8) return;
+    setBuscandoCep(true);
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${cepVal}/json/`);
+      const d = await r.json() as {
+        erro?: boolean;
+        logradouro?: string;
+        complemento?: string;
+        bairro?: string;
+        localidade?: string;
+        uf?: string;
+      };
+      if (!d.erro) {
+        setEndereco(d.logradouro ?? "");
+        setBairro(d.bairro ?? "");
+        setCidade(d.localidade ?? "");
+        setEstado(d.uf ?? "");
+        if (d.complemento) setComplemento(d.complemento);
+      }
+    } catch { /* ignore */ } finally {
+      setBuscandoCep(false);
     }
   }
 
@@ -291,6 +321,10 @@ export function OrganizadorRepassesPainel() {
           endereco: endereco.trim(),
           numero: numero.trim(),
           bairro: bairro.trim(),
+          complemento: complemento.trim() || undefined,
+          cidade: cidade.trim() || undefined,
+          estado: estado.trim() || undefined,
+          company_type: onlyDigits(cpfCnpj, 14).length === 14 ? companyType : "INDIVIDUAL",
           data_nascimento:
             onlyDigits(cpfCnpj, 14).length === 11 ? dataNascimento.trim() || undefined : undefined,
         }),
@@ -425,7 +459,7 @@ export function OrganizadorRepassesPainel() {
 
       {saldo?.saldo_asaas?.disponivel && saldo.saldo_asaas.balance != null ? (
         <p className="mt-3 text-xs text-zinc-600">
-          Saldo na conta de repasses (Asaas): <strong>{fmt(saldo.saldo_asaas.balance)}</strong>
+          Saldo disponível: <strong>{fmt(saldo.saldo_asaas.balance)}</strong>
         </p>
       ) : null}
 
@@ -454,16 +488,16 @@ export function OrganizadorRepassesPainel() {
           <p className="font-medium">Configure sua conta de repasses</p>
           <p className="mt-1">
             {status.nota_wallet ??
-              "É obrigatório para publicar eventos com ingressos pagos. Vincule sua conta Asaas para receber via split."}
+              "Configure sua conta de recebimento para publicar eventos pagos e receber automaticamente."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {status.permite_vinculo_wallet !== false ? (
+            {status.permite_vinculo_wallet === true ? (
               <button
                 type="button"
                 className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
                 onClick={() => setMostrarVinculo(true)}
               >
-                Vincular conta Asaas
+                Vincular conta existente
               </button>
             ) : null}
             {status.permite_subconta ? (
@@ -472,7 +506,7 @@ export function OrganizadorRepassesPainel() {
                 className="rounded-lg border border-emerald-700 bg-white px-4 py-2 text-sm font-medium text-emerald-900"
                 onClick={() => setMostrarSubconta(true)}
               >
-                Criar subconta pela plataforma
+                Criar conta de recebimento
               </button>
             ) : null}
             {status.tem_subconta && !status.repasse_aprovado ? (
@@ -502,7 +536,7 @@ export function OrganizadorRepassesPainel() {
       {status?.repasse_aprovado ? (
         <p className="mt-4 text-sm text-emerald-800">
           {status.repasse_status === "linked"
-            ? "Conta Asaas vinculada — vendas ativas com split automático."
+            ? "Conta de recebimento ativa — vendas e repasses automáticos."
             : "Conta aprovada — vendas e saques ativos."}{" "}
           <Link href="/organizador/financeiro/conta-repasse" className="font-medium underline">
             Ver detalhes da conta
@@ -512,14 +546,12 @@ export function OrganizadorRepassesPainel() {
 
       {mostrarVinculo ? (
         <form onSubmit={vincularConta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5">
-          <h3 className="text-sm font-semibold text-zinc-900">Vincular conta Asaas</h3>
-          <ol className="list-decimal space-y-1 pl-5 text-xs text-zinc-600">
-            <li>Crie ou acesse sua conta no Asaas.</li>
-            <li>No painel Asaas, copie o <strong>walletId</strong> da sua conta.</li>
-            <li>Cole abaixo e confirme — os repasses das vendas cairão nessa conta via split.</li>
-          </ol>
+          <h3 className="text-sm font-semibold text-zinc-900">Vincular conta de recebimento</h3>
+          <p className="text-xs text-zinc-600">
+            Informe o identificador da sua conta de recebimento para que os repasses das vendas sejam enviados automaticamente.
+          </p>
           <label className="grid gap-1 text-sm">
-            <span className="text-xs text-zinc-600">Wallet ID (UUID)</span>
+            <span className="text-xs text-zinc-600">ID da conta de recebimento (UUID)</span>
             <input
               className="rounded-lg border px-3 py-2 font-mono text-sm"
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -530,13 +562,13 @@ export function OrganizadorRepassesPainel() {
           </label>
           <label className="grid gap-1 text-sm">
             <span className="text-xs text-zinc-600">
-              Chave API Asaas (opcional — valida que o wallet pertence à conta)
+              Chave de acesso (opcional — valida a titularidade da conta)
             </span>
             <input
               type="password"
               autoComplete="off"
               className="rounded-lg border px-3 py-2 font-mono text-sm"
-              placeholder="$aact_..."
+              placeholder="Chave de acesso..."
               value={apiKeyOrganizador}
               onChange={(e) => setApiKeyOrganizador(e.target.value)}
             />
@@ -562,24 +594,30 @@ export function OrganizadorRepassesPainel() {
               Sua conta anterior foi reprovada. Revise os dados e envie novamente para análise.
             </p>
           ) : null}
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="CPF ou CNPJ"
-            value={formatCpfCnpjMask(cpfCnpj)}
-            onChange={(e) => setCpfCnpj(onlyDigits(e.target.value, 14))}
-          />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="Telefone"
-            inputMode="tel"
-            value={formatTelefoneBrMask(telefone)}
-            onChange={(e) => setTelefone(onlyDigits(e.target.value, 11))}
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">CPF ou CNPJ <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="000.000.000-00 ou 00.000.000/0000-00"
+              value={formatCpfCnpjMask(cpfCnpj)}
+              onChange={(e) => setCpfCnpj(onlyDigits(e.target.value, 14))}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Telefone (WhatsApp) <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="(11) 9 0000-0000"
+              inputMode="tel"
+              value={formatTelefoneBrMask(telefone)}
+              onChange={(e) => setTelefone(onlyDigits(e.target.value, 11))}
+            />
+          </label>
           {onlyDigits(cpfCnpj, 14).length === 11 ? (
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-xs text-zinc-600">
-                Data de nascimento <span className="text-red-600">*</span>
-              </span>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-zinc-500">Data de nascimento <span className="text-red-500">*</span></span>
               <input
                 type="date"
                 required
@@ -589,37 +627,112 @@ export function OrganizadorRepassesPainel() {
               />
             </label>
           ) : (
-            <div />
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-zinc-500">Tipo de empresa <span className="text-red-500">*</span></span>
+              <select
+                required
+                className="rounded-lg border bg-white px-3 py-2 text-sm"
+                value={companyType}
+                onChange={(e) => setCompanyType(e.target.value)}
+              >
+                <option value="MEI">MEI — Microempreendedor Individual</option>
+                <option value="INDIVIDUAL">Autônomo / Profissional Liberal</option>
+                <option value="INDIVIDUAL_ENTERPRISE">Empresa Individual (EI)</option>
+                <option value="LIMITED">LTDA / S.A.</option>
+                <option value="ASSOCIATION">Associação / ONG</option>
+              </select>
+            </label>
           )}
-          <InputValorBrl value={renda} onChange={setRenda} className="rounded-lg" />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="CEP"
-            inputMode="numeric"
-            value={formatCepMask(cep)}
-            onChange={(e) => setCep(onlyDigits(e.target.value, 8))}
-          />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm sm:col-span-2"
-            placeholder="Endereço"
-            value={endereco}
-            onChange={(e) => setEndereco(e.target.value)}
-          />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="Número"
-            value={numero}
-            onChange={(e) => setNumero(e.target.value)}
-          />
-          <input
-            className="rounded-lg border px-3 py-2 text-sm"
-            placeholder="Bairro"
-            value={bairro}
-            onChange={(e) => setBairro(e.target.value)}
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">
+              {onlyDigits(cpfCnpj, 14).length === 14 ? "Faturamento mensal estimado" : "Renda mensal"}{" "}
+              <span className="text-red-500">*</span>
+            </span>
+            <InputValorBrl value={renda} onChange={setRenda} className="rounded-lg" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">CEP <span className="text-red-500">*</span></span>
+            <div className="relative">
+              <input
+                required
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                placeholder="00000-000"
+                inputMode="numeric"
+                value={formatCepMask(cep)}
+                onChange={(e) => {
+                  const v = onlyDigits(e.target.value, 8);
+                  setCep(v);
+                  void buscarCep(v);
+                }}
+              />
+              {buscandoCep ? (
+                <span className="absolute right-3 top-2.5 text-xs text-zinc-400">buscando...</span>
+              ) : null}
+            </div>
+          </label>
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-xs text-zinc-500">Endereço <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Rua, Av., Alameda..."
+              value={endereco}
+              onChange={(e) => setEndereco(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Número <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="123"
+              value={numero}
+              onChange={(e) => setNumero(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Complemento</span>
+            <input
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Apto, sala, bloco... (opcional)"
+              value={complemento}
+              onChange={(e) => setComplemento(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-xs text-zinc-500">Bairro <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Bairro"
+              value={bairro}
+              onChange={(e) => setBairro(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Cidade <span className="text-red-500">*</span></span>
+            <input
+              required
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="São Paulo"
+              value={cidade}
+              onChange={(e) => setCidade(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-zinc-500">Estado (UF) <span className="text-red-500">*</span></span>
+            <input
+              required
+              maxLength={2}
+              className="rounded-lg border px-3 py-2 text-sm uppercase"
+              placeholder="SP"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value.toUpperCase().slice(0, 2))}
+            />
+          </label>
           <div className="sm:col-span-2 flex gap-2">
-            <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white">
-              Confirmar
+            <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-60">
+              {busy ? "Enviando..." : modoReenvio ? "Reenviar dados" : "Criar conta de repasses"}
             </button>
             <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setMostrarSubconta(false)}>
               Cancelar

@@ -1,19 +1,28 @@
 #!/usr/bin/env bash
-# Wrapper: teste compra + split no sandbox Asaas (API local no VPS).
+# Teste compra + split (mock Asaas) — rode no VPS dentro do container da API.
+#
+# Não use `python3 -m pytest` na raiz do servidor: pytest está na imagem Docker.
+#
+# Uso:
+#   cd /opt/eventosbr
+#   bash scripts/test-sandbox-compra-split.sh
+#
+# Opções repassadas ao pytest, ex.:
+#   bash scripts/test-sandbox-compra-split.sh -k split
+
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-if [[ -f .env ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env
-  set +a
+COMPOSE="${COMPOSE_FILE:-docker-compose.prod.yml}"
+TEST_FILE="tests/test_compra_split_fluxo_mock.py"
+
+if ! docker compose -f "$COMPOSE" ps api --status running 2>/dev/null | grep -q running; then
+  echo "==> API não está rodando — executando pytest em container temporário..."
+  exec docker compose -f "$COMPOSE" run --rm --no-deps api \
+    python3 -m pytest "$TEST_FILE" -v "$@"
 fi
-if [[ -f .env.asaas-sandbox-pending ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env.asaas-sandbox-pending
-  set +a
-fi
-export EVENTOSBR_API_URL="${EVENTOSBR_API_URL:-http://127.0.0.1:8000}"
-exec python3 "$ROOT/scripts/test-sandbox-compra-split.py" "$@"
+
+echo "==> Rodando pytest no container api ($TEST_FILE)..."
+exec docker compose -f "$COMPOSE" exec -T api \
+  python3 -m pytest "$TEST_FILE" -v "$@"

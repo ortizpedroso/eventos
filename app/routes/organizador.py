@@ -113,6 +113,8 @@ class AsaasSubcontaRequest(BaseModel):
     numero: str = Field(min_length=1, max_length=20)
     bairro: str = Field(min_length=2, max_length=80)
     complemento: str | None = Field(default=None, max_length=80)
+    cidade: str | None = Field(default=None, max_length=80)
+    estado: str | None = Field(default=None, max_length=2)
     company_type: str = Field(default="INDIVIDUAL", max_length=20)
     data_nascimento: str | None = Field(default=None, max_length=10)
 
@@ -219,6 +221,8 @@ async def asaas_criar_subconta(
             numero=body.numero,
             bairro=body.bairro,
             complemento=body.complemento,
+            cidade=body.cidade,
+            estado=body.estado,
             company_type=body.company_type,
             data_nascimento=body.data_nascimento,
         )
@@ -248,6 +252,8 @@ async def asaas_reenviar_subconta(
             numero=body.numero,
             bairro=body.bairro,
             complemento=body.complemento,
+            cidade=body.cidade,
+            estado=body.estado,
             company_type=body.company_type,
             data_nascimento=body.data_nascimento,
         )
@@ -316,8 +322,51 @@ async def sincronizar_assinatura(
     return sincronizar_assinatura_pendente(db, usuario_atual)
 
 
+class PixChaveRequest(BaseModel):
+    pix_chave: str = Field(min_length=5, max_length=120)
+    pix_tipo: str | None = Field(default=None, max_length=20)
+
+
+@router.get("/pix")
+async def obter_pix_salvo(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+):
+    _require_organizador(usuario_atual)
+    return {
+        "pix_chave": getattr(usuario_atual, "pix_chave_salva", None),
+        "pix_tipo": getattr(usuario_atual, "pix_tipo_salvo", None),
+    }
+
+
+@router.put("/pix")
+async def salvar_pix(
+    body: PixChaveRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    _require_organizador(usuario_atual)
+    from app.services.saque_asaas import inferir_pix_tipo, normalizar_pix_chave, validar_pix_cadastro_repasse
+
+    tipo = inferir_pix_tipo(body.pix_chave, body.pix_tipo)
+    chave = normalizar_pix_chave(body.pix_chave, tipo)
+    try:
+        validar_pix_cadastro_repasse(usuario_atual, chave, tipo)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    usuario_atual.pix_chave_salva = chave
+    usuario_atual.pix_tipo_salvo = tipo
+    db.commit()
+    return {"ok": True, "pix_chave": chave, "pix_tipo": tipo}
+
+
+class AssinaturaPagarRequest(BaseModel):
+    cpf_cnpj: str | None = Field(default=None, max_length=20)
+
+
 @router.post("/assinatura/pagar")
 async def pagar_assinatura(
+    body: AssinaturaPagarRequest | None = None,
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
 ):
@@ -326,6 +375,6 @@ async def pagar_assinatura(
     from app.services.assinatura_organizador import iniciar_cobranca_assinatura
 
     try:
-        return iniciar_cobranca_assinatura(db, usuario_atual)
+        return iniciar_cobranca_assinatura(db, usuario_atual, cpf_cnpj=body.cpf_cnpj if body else None)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

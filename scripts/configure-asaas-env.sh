@@ -106,7 +106,7 @@ echo "  1. ./scripts/deploy-vps.sh"
 echo "  2. Webhook Asaas → https://${DOMAIN}/api/webhooks/asaas"
 echo "     Use o valor de ASAAS_WEBHOOK_TOKEN definido em $ENV_FILE"
 if [ "$ENVIRONMENT" = "sandbox" ]; then
-  echo "  3. ./scripts/test-asaas-sandbox.sh"
+  echo "  3. python3 scripts/test-asaas-connection.py"
 else
   echo "  3. ./scripts/verify-production.sh"
 fi

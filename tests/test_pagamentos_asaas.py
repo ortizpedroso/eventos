@@ -828,3 +828,49 @@ def test_split_cap_nao_excede_valor():
         splits = split_para_evento(ev, 1.0, quantidade=1)
     total = sum(x["fixedValue"] for x in splits)
     assert total <= 1.0
+
+
+def test_criar_asaas_para_novo_usuario_envia_cnpj_completo():
+    """CNPJ (14 dígitos) não pode ser truncado como se fosse CPF."""
+    from app.services.usuario_asaas import criar_asaas_para_novo_usuario
+
+    fake_client = MagicMock()
+    fake_client.enabled = True
+    fake_client.post.return_value = {"id": "cus_cnpj"}
+
+    with (
+        patch("app.services.usuario_asaas.get_asaas_client", return_value=fake_client),
+        patch("app.services.usuario_asaas.settings") as s,
+    ):
+        s.ASAAS_DISABLED = False
+        s.use_asaas = True
+        s.ASAAS_CREATE_SUBACCOUNT_ON_REGISTER = False
+        customer_id, wallet, account = criar_asaas_para_novo_usuario(
+            email="pj@exemplo.com",
+            nome="Empresa Exemplo",
+            tipo="organizador",
+            cpf_cnpj="46.634.095/0001-02",
+        )
+
+    assert customer_id == "cus_cnpj"
+    payload = fake_client.post.call_args.kwargs["json"]
+    assert payload["cpfCnpj"] == "46634095000102"
+
+
+def test_garantir_customer_asaas_sincroniza_documento_de_customer_existente():
+    """Customer criado antes da correção (com CNPJ truncado) deve ter o documento corrigido via PUT."""
+    from app.services.usuario_asaas import garantir_customer_asaas
+
+    usuario = MagicMock()
+    usuario.asaas_customer_id = "cus_existente"
+
+    fake_client = MagicMock()
+    fake_client.enabled = True
+
+    with patch("app.services.usuario_asaas.get_asaas_client", return_value=fake_client):
+        customer_id = garantir_customer_asaas(MagicMock(), usuario, cpf="46.634.095/0001-02")
+
+    assert customer_id == "cus_existente"
+    fake_client.put.assert_called_once_with(
+        "/v3/customers/cus_existente", json={"cpfCnpj": "46634095000102"}
+    )

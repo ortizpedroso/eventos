@@ -40,8 +40,9 @@ def _parse_data_opcional(valor: str | None) -> datetime | None:
 
 class SaqueRequest(BaseModel):
     valor: float = Field(gt=0, le=1_000_000)
-    pix_chave: str = Field(min_length=5, max_length=120)
-    pix_tipo: str = Field(default="EVP", max_length=20)
+    pix_chave: str | None = Field(default=None, min_length=5, max_length=120)
+    pix_tipo: str | None = Field(default=None, max_length=20)
+    salvar_pix: bool = Field(default=True)
 
 
 @router.get("/saldo")
@@ -50,7 +51,10 @@ async def financeiro_saldo(
     db: Session = Depends(get_db),
 ):
     _require_organizador(usuario_atual)
-    return calcular_saldo_organizador(db, usuario_atual)
+    saldo = calcular_saldo_organizador(db, usuario_atual)
+    saldo["pix_chave_salva"] = getattr(usuario_atual, "pix_chave_salva", None)
+    saldo["pix_tipo_salvo"] = getattr(usuario_atual, "pix_tipo_salvo", None)
+    return saldo
 
 
 @router.get("/extrato")
@@ -121,22 +125,42 @@ async def financeiro_solicitar_saque(
     db: Session = Depends(get_db),
 ):
     _require_organizador(usuario_atual)
+
+    pix_chave = body.pix_chave or getattr(usuario_atual, "pix_chave_salva", None)
+    pix_tipo = body.pix_tipo or getattr(usuario_atual, "pix_tipo_salvo", None) or "EVP"
+    if not pix_chave:
+        raise HTTPException(
+            status_code=400,
+            detail="Informe a chave Pix ou cadastre uma chave padrão em /organizador/pix.",
+        )
+
     try:
         saque = solicitar_saque(
             db,
             usuario_atual,
             valor=body.valor,
-            pix_chave=body.pix_chave,
-            pix_tipo=body.pix_tipo,
+            pix_chave=pix_chave,
+            pix_tipo=pix_tipo,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+    if body.pix_chave and body.salvar_pix:
+        from app.services.saque_asaas import inferir_pix_tipo, normalizar_pix_chave
+        tipo_norm = inferir_pix_tipo(body.pix_chave, body.pix_tipo)
+        chave_norm = normalizar_pix_chave(body.pix_chave, tipo_norm)
+        usuario_atual.pix_chave_salva = chave_norm
+        usuario_atual.pix_tipo_salvo = tipo_norm
+        db.commit()
+
     prazo = calcular_saldo_organizador(db, usuario_atual).get("prazo_transferencia_horas", 48)
     return {
         "ok": True,
         "id": saque.id,
         "valor": float(saque.valor),
         "status": saque.status,
+        "pix_chave": pix_chave,
+        "pix_tipo": pix_tipo,
         "previsao_liquidacao_em": (
             saque.previsao_liquidacao_em.isoformat() if saque.previsao_liquidacao_em else None
         ),

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Colar walletId manualmente (bypass subconta/KYC). Desligado em produção por padrão.
     ASAAS_ALLOW_MANUAL_WALLET: bool = False
     # linked = organizador vincula conta Asaas própria (walletId); baas = subconta via API; both = os dois
-    ASAAS_ONBOARDING_MODE: str = "linked"
+    ASAAS_ONBOARDING_MODE: str = "baas"
     # Horas de carência após confirmação do pagamento antes de liberar valor para saque.
     FINANCEIRO_CARENCIA_SAQUE_HORAS: int = 48
     # Prazo máximo informado ao organizador para conclusão da transferência após solicitação.
