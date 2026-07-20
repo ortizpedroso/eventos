@@ -59,7 +59,7 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 
 ### Qualidade
 
-- [x] `pytest` — 200 testes
+- [x] `pytest` — 204+ testes (incl. fluxo compra/split mock)
 - [x] `npm run build` — OK
 - [x] CI — `.github/workflows/ci.yml` (api, web, e2e)
 
