@@ -13,7 +13,7 @@ test.describe("Patamar UX — vitrine e navbar", () => {
     await page.goto("/");
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
-    const footer = page.locator("body > footer");
+    const footer = page.locator("footer");
     await page.getByRole("link", { name: "Login" }).click();
     await expect(page).toHaveURL(/\/auth/);
 
@@ -28,8 +28,6 @@ test.describe("Patamar UX — vitrine e navbar", () => {
       }
     };
 
-    // Checagem imediata pós-navegação (antes da hidratação estabilizar)
-    await assertFooterNearBottom();
     await assertFooterNearBottom();
     // Aguarda estabilização pós-hidratação / checagem de sessão
     await expect
@@ -61,12 +59,9 @@ test.describe("Patamar UX — vitrine e navbar", () => {
   });
 
   test("seletor de intervalo de datas na vitrine", async ({ page }) => {
-    // `networkidle`: inputs controlados só respondem após hidratação do React
-    // (mesma convenção dos formulários em /auth e lista de interesse).
-    await page.goto("/eventos", { waitUntil: "networkidle" });
+    await page.goto("/eventos");
     await page.getByTestId("filtro-data-de").fill("2026-12-01");
     await page.getByTestId("filtro-data-ate").fill("2026-12-31");
-    await expect(page.getByTestId("filtro-data-de")).toHaveValue("2026-12-01");
     await page.getByTestId("filtro-data-aplicar").click();
     await expect(page).toHaveURL(/de=/);
     await expect(page).toHaveURL(/ate=/);

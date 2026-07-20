@@ -17,7 +17,6 @@ from app.services.organizador_asaas import (
     acompanhamento_repasse_organizador,
     atualizar_antecipacao_cartao,
     atualizar_status_repasse_organizador,
-    consultar_wallet_organizador_por_api_key,
     criar_subconta_organizador,
     definir_wallet_organizador,
     reenviar_subconta_organizador,
@@ -103,10 +102,6 @@ class AsaasWalletRequest(BaseModel):
         max_length=512,
         description="Opcional: chave API Asaas do organizador para validar que o walletId pertence à conta.",
     )
-
-
-class AsaasWalletConsultaRequest(BaseModel):
-    api_key: str = Field(min_length=8, max_length=512)
 
 
 class AsaasSubcontaRequest(BaseModel):
@@ -201,27 +196,6 @@ async def asaas_definir_wallet(
             admin_override=admin_override,
             api_key_organizador=body.api_key,
         )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-
-@router.post("/asaas/wallet/consultar")
-async def asaas_consultar_wallet(
-    body: AsaasWalletConsultaRequest,
-    usuario_atual: Usuario = Depends(get_usuario_atual),
-):
-    _require_organizador(usuario_atual)
-    if settings.payments_disabled:
-        raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
-    if not settings.use_asaas:
-        raise HTTPException(status_code=503, detail="Asaas não está ativo neste ambiente.")
-    if not settings.permite_vinculo_wallet_organizador() and not settings.asaas_allow_manual_wallet:
-        raise HTTPException(
-            status_code=403,
-            detail="O vínculo de conta Asaas está desativado neste ambiente.",
-        )
-    try:
-        return consultar_wallet_organizador_por_api_key(body.api_key)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

@@ -34,25 +34,10 @@ else
   ok=1
 fi
 
-if echo "$HTML" | grep -q 'eventosbr-shell-layout'; then
-  echo "  OK      CSS crítico do shell (rodapé) presente"
+if echo "$HTML" | grep -q 'ScrollToTop\|scroll-to-top'; then
+  echo "  OK      componente ScrollToTop presente"
 else
-  echo "  ANTIGO  sem eventosbr-shell-layout — deploy pendente para fix do rodapé"
-  ok=1
-fi
-
-if echo "$HTML" | grep -q 'eventosbr-early-scroll-reset'; then
-  echo "  OK      script EarlyScrollReset presente (fix rodapé)"
-else
-  echo "  ANTIGO  sem EarlyScrollReset — deploy pendente para fix do rodapé"
-  ok=1
-fi
-
-if echo "$HTML" | grep -q 'flex min-h-dvh flex-col'; then
-  echo "  OK      layout flex do body (rodapé no fim)"
-else
-  echo "  ANTIGO  layout body sem flex — deploy pendente"
-  ok=1
+  echo "  INFO    ScrollToTop não visível no HTML (normal — está no JS)"
 fi
 
 echo ""

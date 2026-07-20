@@ -121,9 +121,9 @@ class Settings(BaseSettings):
 
     @property
     def asaas_onboarding_mode(self) -> str:
-        mode = (self.ASAAS_ONBOARDING_MODE or "baas").strip().lower()
+        mode = (self.ASAAS_ONBOARDING_MODE or "linked").strip().lower()
         if mode not in ("linked", "baas", "both"):
-            return "baas"
+            return "linked"
         return mode
 
     def permite_vinculo_wallet_organizador(self) -> bool:

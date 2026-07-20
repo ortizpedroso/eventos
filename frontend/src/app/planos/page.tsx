@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
-import { PlanosSimuladorComprador } from "@/components/planos-simulador-comprador";
 import { PlanosSimuladorLucro } from "@/components/planos-simulador-lucro";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
@@ -35,12 +34,6 @@ export default function PlanosPage() {
       <div className="mx-auto mt-16 max-w-6xl sm:mt-20">
         <ScrollReveal>
           <PlanosSimuladorLucro />
-        </ScrollReveal>
-      </div>
-
-      <div className="mx-auto mt-12 max-w-3xl sm:mt-16">
-        <ScrollReveal>
-          <PlanosSimuladorComprador />
         </ScrollReveal>
       </div>
 

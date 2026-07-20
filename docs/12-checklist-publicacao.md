@@ -1,6 +1,6 @@
 # 12 — Checklist de publicação EventosBR
 
-**Atualizado:** 2026-07-20  
+**Atualizado:** 2026-07-12  
 **Spec de referência:** [`specs/eventosbr-producao.md`](../specs/eventosbr-producao.md)
 
 Use este documento para saber o que **já está no código** e o que **ainda depende de você** (VPS, Asaas, DNS, etc.).
@@ -23,7 +23,7 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 ### Pagamentos e repasse
 
 - [x] Split Asaas: só wallet do organizador; taxa na conta emissora
-- [x] Modo `baas` padrão (`ASAAS_ONBOARDING_MODE=baas`); `linked` disponível via `.env`
+- [x] Modo `linked` padrão (`ASAAS_ONBOARDING_MODE=linked`)
 - [x] Vínculo de wallet: `PUT /api/organizador/asaas/wallet`
 - [x] Validação wallet (UUID, ≠ plataforma, API key opcional)
 - [x] Bloqueio de venda/publicação sem repasse aprovado
@@ -47,7 +47,7 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 
 - [x] `ContaShell` lateral em `/conta/*`
 - [x] Dropdown conta: Perfil, Pagamentos, Ingressos, Notificações
-- [x] Rodapé login corrigido (`layout.tsx` flex + `EarlyScrollReset` + `auth/layout.tsx`)
+- [x] Rodapé login corrigido (`auth/layout.tsx`)
 - [x] Máscaras CPF/CNPJ, CEP, telefone
 - [x] Imagens marketing em `/funcionalidades` (`public/marketing/*.webp`)
 
@@ -59,8 +59,7 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 
 ### Qualidade
 
-- [x] `pytest` — 208 testes
-- [x] Teste mock split VPS: `bash scripts/test-sandbox-compra-split.sh`
+- [x] `pytest` — 200 testes
 - [x] `npm run build` — OK
 - [x] CI — `.github/workflows/ci.yml` (api, web, e2e)
 
@@ -68,25 +67,23 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 
 ## 2. Operação — você precisa fazer no VPS 🔧
 
-| # | Item | Como validar | Status VPS (jul/2026) |
-|---|------|--------------|------------------------|
-| 1 | Preencher `.env` produção | `cp .env.production.example .env` + secrets | ✅ OK |
-| 2 | `ASAAS_API_KEY` produção (`$aact_prod_...`) | Painel Asaas → Integrações | ✅ OK |
-| 3 | `ASAAS_PLATFORM_WALLET_ID` | Minha conta → wallet da plataforma | ✅ OK |
-| 4 | `ASAAS_WEBHOOK_TOKEN` forte | Gerar com `./scripts/generate-secrets.sh` | ✅ OK |
-| 5 | `ASAAS_ONBOARDING_MODE=baas` | Padrão no código; confirmar no `.env` | 🔧 Confirmar |
-| 6 | `ASAAS_ENVIRONMENT=production` | Não usar homologação em go-live | 🔧 Confirmar |
-| 7 | Webhook no painel Asaas | `POST https://DOMINIO/api/webhooks/asaas` + token | 🔧 Configurar + testar evento real |
-| 8 | SMTP + SPF/DKIM | `scripts/test-smtp.py` + DNS do domínio | 🔧 Enviar e-mail real |
-| 9 | `SECRET_KEY`, `POSTGRES_PASSWORD`, `PLATFORM_ADMIN_API_KEY` | ≥ 32 chars / senhas fortes | ✅ OK |
-| 10 | `CORS_ORIGINS` HTTPS (sem `*`) | URLs do site | ✅ OK |
-| 11 | `FRONTEND_PUBLIC_URL` | URL pública (`https://eventosbr.app.br`) | ✅ OK |
-| 12 | Deploy | `bash scripts/atualizar-vps-agora.sh` | ✅ Site no ar |
-| 13 | Migração DB | `alembic upgrade head` (automático no deploy) | ✅ `20260717_000035` |
-| 14 | Organizador vincula wallet / subconta BaaS | Financeiro → conta de repasses | 🔧 Por organizador |
-| 15 | Primeira venda real | PIX ou cartão + webhook + ingresso pago | 🔧 Pendente |
-| 16 | Teste mock split | `bash scripts/test-sandbox-compra-split.sh` | ✅ 2 passed |
-| 17 | Fix rodapé em produção | `curl -s https://DOMINIO/auth \| grep eventosbr-shell-layout` | ✅ (branch feature; merge PR #39) |
+| # | Item | Como validar |
+|---|------|--------------|
+| 1 | Preencher `.env` produção | `cp .env.production.example .env` + secrets |
+| 2 | `ASAAS_API_KEY` produção (`$aact_prod_...`) | Painel Asaas → Integrações |
+| 3 | `ASAAS_PLATFORM_WALLET_ID` | Minha conta → wallet da plataforma |
+| 4 | `ASAAS_WEBHOOK_TOKEN` forte | Gerar com `./scripts/generate-secrets.sh` |
+| 5 | `ASAAS_ONBOARDING_MODE=linked` | Padrão no código; confirmar no `.env` |
+| 6 | `ASAAS_ENVIRONMENT=production` | Não usar homologação em go-live |
+| 7 | Webhook no painel Asaas | `POST https://DOMINIO/api/webhooks/asaas` + token |
+| 8 | SMTP + SPF/DKIM | `scripts/test-smtp.py` + DNS do domínio |
+| 9 | `SECRET_KEY`, `POSTGRES_PASSWORD`, `PLATFORM_ADMIN_API_KEY` | ≥ 32 chars / senhas fortes |
+| 10 | `CORS_ORIGINS` HTTPS (sem `*`) | URLs do site |
+| 11 | `FRONTEND_PUBLIC_URL` | URL pública (`https://eventosbr.app.br`) |
+| 12 | Deploy | `./scripts/deploy-vps.sh` ou `atualizar-vps-agora.sh` |
+| 13 | Migração DB | `alembic upgrade head` (automático no deploy) |
+| 14 | Organizador vincula wallet | Financeiro → Vincular conta Asaas |
+| 15 | Primeira venda real | PIX ou cartão + webhook + ingresso pago |
 
 **Scripts úteis:** `docs/11-go-live-asaas.md`, `scripts/go-live-anexo-b.sh`, `scripts/verify-production.sh`
 
@@ -150,8 +147,7 @@ python3 scripts/generate_marketing_png.py
 | Categoria | Status |
 |-----------|--------|
 | **Código** | ✅ Completo para go-live |
-| **Testes** | ✅ 208 pytest + build Next.js + mock split VPS |
-| **VPS / Asaas / DNS / SMTP** | 🟡 Infra OK; falta 1ª venda real + webhook testado + SMTP DNS |
-| **Git** | 🟡 PR #39 pendente merge na `main` |
+| **Testes** | ✅ 200 pytest + build Next.js |
+| **VPS / Asaas / DNS / SMTP** | 🔧 Pendente (ação sua) |
 | **Melhorias UX/SEO** | ⏳ Opcionais pós-lançamento |
 | **Funcionalidades avançadas** | 🚫 Próximos patamares |
