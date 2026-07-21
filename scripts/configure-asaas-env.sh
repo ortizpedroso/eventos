@@ -30,7 +30,7 @@ ONBOARDING_MODE="linked"
 ALLOW_MANUAL="false"
 
 usage() {
-  echo "Uso: $0 [--api-key KEY] [--platform-wallet ID] [--webhook-token TOKEN] [--env sandbox|production]"
+  echo "Uso: $0 [--api-key KEY] [--platform-wallet ID] [--webhook-token TOKEN]"
   exit 1
 }
 
@@ -39,11 +39,12 @@ while [ $# -gt 0 ]; do
     --api-key) API_KEY="$2"; shift 2 ;;
     --platform-wallet) PLATFORM_WALLET="$2"; shift 2 ;;
     --webhook-token) WEBHOOK_TOKEN="$2"; shift 2 ;;
-    --env) ENVIRONMENT="$2"; shift 2 ;;
     -h|--help) usage ;;
     *) echo "Opção desconhecida: $1" >&2; usage ;;
   esac
 done
+
+ENVIRONMENT="production"
 
 if [ ! -f "$ENV_FILE" ]; then
   if [ -f "$EXAMPLE" ]; then
@@ -70,11 +71,6 @@ if [ -z "$WEBHOOK_TOKEN" ]; then
     WEBHOOK_TOKEN="$(openssl rand -hex 24 2>/dev/null || head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
     echo "Token de webhook gerado e gravado em $ENV_FILE (não exibido por segurança)."
   fi
-fi
-
-if [ "$ENVIRONMENT" = "sandbox" ]; then
-  ONBOARDING_MODE="linked"
-  ALLOW_MANUAL="true"
 fi
 
 set_env_var "PAYMENT_PROVIDER" "asaas" "$ENV_FILE"
@@ -105,11 +101,7 @@ echo "Próximos passos:"
 echo "  1. ./scripts/deploy-vps.sh"
 echo "  2. Webhook Asaas → https://${DOMAIN}/api/webhooks/asaas"
 echo "     Use o valor de ASAAS_WEBHOOK_TOKEN definido em $ENV_FILE"
-if [ "$ENVIRONMENT" = "sandbox" ]; then
-  echo "  3. python3 scripts/test-asaas-connection.py"
-else
-  echo "  3. ./scripts/verify-production.sh"
-fi
+echo "  3. ./scripts/verify-production.sh"
 echo "  4. Organizadores: Financeiro → walletId"
 echo ""
 echo "Referência: ./scripts/asaas-webhook-setup.sh ${DOMAIN}"

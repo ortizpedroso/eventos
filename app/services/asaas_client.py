@@ -61,7 +61,7 @@ class AsaasClient:
                 resp = client.request(method, url, headers=headers, json=json, params=params)
         except httpx.HTTPError as e:
             logger.exception("Falha de rede Asaas %s %s", method, path)
-            raise AsaasAPIError("Falha de comunicação com Asaas") from e
+            raise AsaasAPIError("Falha de comunicação com o processador de pagamentos") from e
 
         if resp.status_code >= 400:
             try:

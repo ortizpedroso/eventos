@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploy no VPS a partir de uma branch específica (ex.: PR antes do merge em main).
-# Não faz reset para main — útil para testes sandbox com código da feature branch.
+# Não faz reset para main — útil para deploy de branch de feature antes do merge.
 #
 # Uso:
 #   cd /opt/eventosbr

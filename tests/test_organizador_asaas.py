@@ -202,7 +202,7 @@ class TestOrganizadorAsaas:
             json={"credit_card_automatic_enabled": True},
         )
         assert r.status_code == 400
-        assert "subconta" in r.json()["detail"].lower()
+        assert "repasses" in r.json()["detail"].lower()
 
     def test_criar_subconta_exige_data_nascimento_cpf(self):
         token = _registrar_organizador("sub_birth")

@@ -93,6 +93,27 @@ def test_postgres_sqlite_rejeitado_em_producao():
     assert s["checks"]["postgres_password"] == "pendente"
 
 
+def test_frontend_url_obrigatorio_em_producao():
+    with patch.multiple(
+        settings,
+        ENVIRONMENT="production",
+        FRONTEND_PUBLIC_URL="",
+        SECRET_KEY="x" * 32,
+        PLATFORM_ADMIN_API_KEY="admin-key",
+        EMAIL_USER="a@b.com",
+        EMAIL_PASSWORD="secret",
+        ASAAS_API_KEY="$aact_prod_test_key_with_enough_length",
+        ASAAS_WEBHOOK_TOKEN="webhook_token_forte",
+        ASAAS_PLATFORM_WALLET_ID="wallet-plataforma-id",
+        ASAAS_DISABLED=False,
+        CORS_ORIGINS="https://eventosbr.app.br",
+        DATABASE_URL="postgresql+psycopg2://eventosbr:s3nh4forte@db:5432/eventosbr",
+    ):
+        s = build_setup_status()
+    assert s["checks"]["frontend_url"] == "pendente"
+    assert s["ready_for_production"] is False
+
+
 def test_onboarding_mode_fallback_baas():
     with patch.multiple(settings, ASAAS_ONBOARDING_MODE="invalido"):
         assert settings.asaas_onboarding_mode == "baas"

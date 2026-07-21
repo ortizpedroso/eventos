@@ -37,7 +37,7 @@
 - UX P1–P10 (vitrine, checkout, planos, portaria, SEO, conta, wizard)
 - Segurança: CSP, rate limit, verificação e-mail, production_checks
 - Wallet organizador: consultar por API key + botão “Buscar ID”
-- Teste mock: `tests/test_compra_split_fluxo_mock.py` + `scripts/test-sandbox-compra-split.sh`
+- Teste mock: `tests/test_compra_split_fluxo_mock.py` + `scripts/test-compra-split-mock.sh`
 
 ---
 
@@ -78,7 +78,7 @@ cd /opt/eventosbr
 bash scripts/atualizar-vps-agora.sh
 
 # Teste split mock (não use python3 na raiz)
-bash scripts/test-sandbox-compra-split.sh
+bash scripts/test-compra-split-mock.sh
 
 # Verificar produção
 bash scripts/verify-production.sh

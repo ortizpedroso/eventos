@@ -92,12 +92,15 @@ def build_setup_status() -> dict:
     )
     wallet_required = asaas_wallet_ok or settings.ASAAS_DISABLED
 
+    frontend_url_ok = bool((settings.FRONTEND_PUBLIC_URL or "").strip())
+
     ready = all(
         [
             sk_ok,
             cors_ok,
             admin_ok,
             smtp_ok,
+            frontend_url_ok,
             payment_ok or settings.payments_disabled,
             payment_webhook_ok or settings.payments_disabled,
             wallet_required,

@@ -86,7 +86,7 @@ Testes sandbox reais foram concluídos internamente. Os scripts de alternância 
 python3 -m pytest tests/test_compra_split_fluxo_mock.py -v
 
 # VPS (pytest dentro do container — não use python3 na raiz do servidor)
-bash scripts/test-sandbox-compra-split.sh
+bash scripts/test-compra-split-mock.sh
 ```
 
 Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do organizador (não da plataforma).
@@ -179,13 +179,13 @@ Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida 
 - [x] `pytest` verde (208 testes em `main`; branch go-live inclui mock split)
 - [x] `npm run build` verde
 - [x] CI (api, web, e2e)
-- [x] Teste mock compra + split: `scripts/test-sandbox-compra-split.sh`
+- [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 
 ### Operação (usuário no VPS)
 
 - [x] `.env` produção preenchido (validado em `eventosbr.app.br` — jul/2026)
 - [ ] Webhook Asaas configurado e testado com evento real (`PAYMENT_RECEIVED`)
-- [x] Testes mock split no VPS (`test-sandbox-compra-split.sh` — 2 passed)
+- [x] Testes mock split no VPS (`test-compra-split-mock.sh` — 2 passed)
 - [ ] SMTP + SPF/DKIM validados (envio real de ingresso)
 - [x] `alembic upgrade head` (migração `20260717_000035` no deploy)
 - [ ] Primeira venda real validada (PIX ou cartão + e-mail recebido)
@@ -204,7 +204,7 @@ Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida 
 | Conta | `conta-shell.tsx`, `conta/layout.tsx`, `auth/layout.tsx` |
 | Config | `config/settings.py`, `production_checks.py` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `scripts/atualizar-vps-agora.sh`, `scripts/verify-production.sh` |
-| Teste split mock | `tests/test_compra_split_fluxo_mock.py`, `scripts/test-sandbox-compra-split.sh` |
+| Teste split mock | `tests/test_compra_split_fluxo_mock.py`, `scripts/test-compra-split-mock.sh` |
 | Backup produção Asaas | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-asaas-prod-env.sh`, `sync-asaas-prod-from-backup.sh` |
 
 ---
