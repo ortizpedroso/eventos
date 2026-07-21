@@ -58,7 +58,7 @@ if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "204" ]; then
 fi
 
 if [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
-  echo "❌ Token rejeitado — confira ASAAS_WEBHOOK_TOKEN no .env e no painel Asaas SANDBOX." >&2
+  echo "❌ Token rejeitado — confira ASAAS_WEBHOOK_TOKEN no .env e no painel do processador de pagamentos." >&2
 elif [ "$HTTP_CODE" = "405" ] || [ "$HTTP_CODE" = "404" ]; then
   echo "❌ URL incorreta ou API fora do ar." >&2
 else

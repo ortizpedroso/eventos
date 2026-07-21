@@ -519,7 +519,7 @@ export function OrganizadorRepassesPainel() {
           <p className="mt-1 text-xs text-zinc-600">
             {anticipacao
               ? "Ativa — vendas no cartão podem ser antecipadas automaticamente pela conta de repasses."
-              : "Desativada — recebimentos de cartão seguem o prazo padrão do gateway."}
+              : "Desativada — recebimentos de cartão seguem o prazo padrão de liquidação."}
           </p>
         </div>
       ) : null}

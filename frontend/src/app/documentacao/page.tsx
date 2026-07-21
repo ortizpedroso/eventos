@@ -48,7 +48,7 @@ export default function DocumentacaoPage() {
           </h1>
           <p className="mt-4 text-base text-zinc-600">
             Visão técnica do EventosBR: API em FastAPI, interface em Next.js, PostgreSQL (ou SQLite em
-            desenvolvimento), Redis na infraestrutura Docker e pagamentos via gateway integrado. O repositório inclui também
+            desenvolvimento), Redis na infraestrutura Docker e pagamentos integrados. O repositório inclui também
             ficheiros Markdown em <code className="rounded bg-zinc-200/80 px-1.5 py-0.5 text-xs">docs/</code> no
             código-fonte.
           </p>
@@ -88,7 +88,7 @@ export default function DocumentacaoPage() {
                 (página pública por <strong className="text-zinc-900">slug</strong>), definirem{" "}
                 <strong className="text-zinc-900">lotes de ingressos</strong> (preço, ordem, capacidade, datas de
                 venda) e a participantes comprarem com <strong className="text-zinc-900">PIX ou cartão</strong> via
-                gateway de pagamentos integrado. Há fluxo de cancelamento com reembolso e relatórios para o organizador.
+                processador de pagamentos integrado. Há fluxo de cancelamento com reembolso e relatórios para o organizador.
               </p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>
@@ -144,8 +144,8 @@ export default function DocumentacaoPage() {
               <ul className="list-disc space-y-1 pl-5">
                 <li>
                   <code className="rounded bg-zinc-100 px-1">/api/auth</code> — registo, login,{" "}
-                  <code className="rounded bg-zinc-100 px-1">/me</code> (GET/PATCH); organizadores configuram{" "}
-                  <code className="rounded bg-zinc-100 px-1">asaas_wallet_id</code> para receber repasses via split.
+                  <code className="rounded bg-zinc-100 px-1">/me</code> (GET/PATCH); organizadores configuram a
+                  conta de recebimentos (<code className="rounded bg-zinc-100 px-1">wallet_id</code>) para repasses via split.
                 </li>
                 <li>
                   <code className="rounded bg-zinc-100 px-1">/api/eventos</code> — criar (organizador), atualizar por{" "}
@@ -165,7 +165,7 @@ export default function DocumentacaoPage() {
                   <code className="rounded bg-zinc-100 px-1">/organizador/participantes?formato=csv</code>).
                 </li>
                 <li>
-                  <code className="rounded bg-zinc-100 px-1">/api/webhooks</code> — gateway de pagamentos (<code className="rounded bg-zinc-100 px-1">POST /asaas</code>) e mock de pagamento só em desenvolvimento.
+                  <code className="rounded bg-zinc-100 px-1">/api/webhooks</code> — notificações do processador de pagamentos e mock só em desenvolvimento.
                 </li>
               </ul>
               <p>
@@ -229,24 +229,22 @@ export default function DocumentacaoPage() {
                 <strong className="text-zinc-900">lote atual</strong> por ordem, atividade, datas e capacidade; o
                 campo <code className="rounded bg-zinc-100 px-1">valor_centavos</code> tem de coincidir exatamente com
                 o preço desse lote. Cria-se um registo <code className="rounded bg-zinc-100 px-1">Ingresso</code> em{" "}
-                <code className="rounded bg-zinc-100 px-1">pendente</code> com reserva de 35 minutos. O front chama{" "}
-                <code className="rounded bg-zinc-100 px-1">POST /api/pagamentos/asaas/cobranca</code> (PIX, cartão ou fatura).
-                Requer <code className="rounded bg-zinc-100 px-1">asaas_wallet_id</code> do organizador e split da plataforma.
+                <code className="rounded bg-zinc-100 px-1">pendente</code> com reserva de 35 minutos. O front inicia a cobrança
+                (PIX, cartão ou fatura) via API de pagamentos. Requer conta de recebimentos do organizador e split da plataforma.
               </p>
               <p>
-                Com <code className="rounded bg-zinc-100 px-1">ASAAS_DISABLED</code> na API, o fluxo pode concluir a
+                Com pagamentos desativados na API (<code className="rounded bg-zinc-100 px-1">ASAAS_DISABLED=true</code>), o fluxo pode concluir a
                 compra sem cobrança real (apenas para desenvolvimento controlado).
               </p>
               <p>
                 Cancelamento: <code className="rounded bg-zinc-100 px-1">POST /api/pagamentos/cancelar</code> com
-                ingresso pago dentro do prazo; reembolso via API do gateway de pagamentos.
+                ingresso pago dentro do prazo; reembolso automático pelo processador de pagamentos.
               </p>
             </Section>
 
-            <Section id="webhooks" title="Webhooks do gateway de pagamentos">
+            <Section id="webhooks" title="Webhooks de pagamento">
               <p>
-                <code className="rounded bg-zinc-100 px-1">POST /api/webhooks/asaas</code> valida o header{" "}
-                <code className="rounded bg-zinc-100 px-1">asaas-access-token</code>. Eventos
+                O endpoint de webhook valida um token de acesso no header da requisição. Eventos
                 duplicados são ignorados graças à tabela <code className="rounded bg-zinc-100 px-1">webhook_events</code>.
               </p>
               <ul className="list-disc space-y-1 pl-5">
@@ -269,7 +267,7 @@ export default function DocumentacaoPage() {
               <p>
                 Variáveis principais na raiz: <code className="rounded bg-zinc-100 px-1">DATABASE_URL</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">SECRET_KEY</code> (obrigatória fora de development), chaves
-                do gateway de pagamentos (<code className="rounded bg-zinc-100 px-1">ASAAS_*</code>), <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
+                do processador de pagamentos (<code className="rounded bg-zinc-100 px-1">ASAAS_*</code> no servidor — não exposto ao utilizador), <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">ENVIRONMENT</code>, <code className="rounded bg-zinc-100 px-1">DEBUG</code>.
               </p>
               <p>

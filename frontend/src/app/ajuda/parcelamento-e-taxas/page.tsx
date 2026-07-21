@@ -13,7 +13,7 @@ export default function AjudaParcelamentoTaxasPage() {
       <p>
         A taxa EventosBR é <strong>fixa por ingresso</strong> ({rotuloTaxa(TARIFA_PADRAO)} no plano padrão) — igual
         para PIX, cartão à vista ou parcelado. O processador de pagamento fica embutido; você não vê taxas separadas
-        de gateway no checkout.
+        de processamento no checkout.
       </p>
       <h2>Parcelamento</h2>
       <p>
