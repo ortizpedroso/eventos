@@ -104,7 +104,7 @@ def garantir_customer_asaas(
             _sincronizar_documento_customer(usuario.asaas_customer_id, doc)
         return usuario.asaas_customer_id
     if settings.ASAAS_DISABLED or not settings.use_asaas:
-        raise ValueError("Asaas indisponível")
+        raise ValueError("Pagamentos indisponíveis")
 
     cid, wallet, acc = criar_asaas_para_novo_usuario(
         email=usuario.email,
@@ -114,7 +114,7 @@ def garantir_customer_asaas(
         telefone=telefone or usuario.telefone,
     )
     if not cid:
-        raise ValueError("Não foi possível criar cliente Asaas")
+        raise ValueError("Não foi possível criar cliente de pagamento")
     usuario.asaas_customer_id = cid
     if wallet and not usuario.asaas_wallet_id:
         usuario.asaas_wallet_id = wallet

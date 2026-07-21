@@ -653,7 +653,7 @@ async def asaas_iniciar_cobranca(
 ):
     """Gera cobrança Asaas (PIX, cartão ou fatura) para ingresso reservado."""
     if not settings.use_asaas:
-        raise HTTPException(status_code=400, detail="Provedor Asaas não está ativo.")
+        raise HTTPException(status_code=400, detail="Pagamentos não estão ativos.")
     from app.deps.rate_limit import client_ip_from_request
 
     if body.metodo == "card":
@@ -669,5 +669,5 @@ async def asaas_status_cobranca(
 ):
     """Consulta status da cobrança Asaas (polling PIX)."""
     if not settings.use_asaas:
-        raise HTTPException(status_code=400, detail="Provedor Asaas não está ativo.")
+        raise HTTPException(status_code=400, detail="Pagamentos não estão ativos.")
     return status_cobranca_asaas(db, ingresso_id, usuario_atual)

@@ -178,7 +178,7 @@ async def asaas_definir_wallet(
     if settings.payments_disabled:
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
     if not settings.use_asaas:
-        raise HTTPException(status_code=503, detail="Asaas não está ativo neste ambiente.")
+        raise HTTPException(status_code=503, detail="Pagamentos não estão ativos neste ambiente.")
     pode_vincular = (
         settings.permite_vinculo_wallet_organizador()
         or settings.asaas_allow_manual_wallet
@@ -188,7 +188,7 @@ async def asaas_definir_wallet(
         raise HTTPException(
             status_code=403,
             detail=(
-                "O vínculo de conta Asaas está desativado neste ambiente. "
+                "O vínculo de conta de recebimento está desativado neste ambiente. "
                 "Entre em contato com o suporte da plataforma."
             ),
         )
@@ -214,11 +214,11 @@ async def asaas_consultar_wallet(
     if settings.payments_disabled:
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
     if not settings.use_asaas:
-        raise HTTPException(status_code=503, detail="Asaas não está ativo neste ambiente.")
+        raise HTTPException(status_code=503, detail="Pagamentos não estão ativos neste ambiente.")
     if not settings.permite_vinculo_wallet_organizador() and not settings.asaas_allow_manual_wallet:
         raise HTTPException(
             status_code=403,
-            detail="O vínculo de conta Asaas está desativado neste ambiente.",
+            detail="O vínculo de conta de recebimento está desativado neste ambiente.",
         )
     try:
         return consultar_wallet_organizador_por_api_key(body.api_key)

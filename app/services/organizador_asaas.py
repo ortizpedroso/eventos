@@ -156,32 +156,32 @@ def _rejeitar_wallet_plataforma(wallet_id: str, *, contexto: str = "walletId") -
     if platform and wallet_id.lower() == platform.lower():
         if contexto == "api_key":
             raise ValueError(
-                "Esta chave API pertence à conta da plataforma. "
-                "Crie uma conta Asaas separada para o organizador e use a chave API dessa conta."
+                "Esta chave de acesso pertence à conta da plataforma. "
+                "Crie uma conta de recebimento separada para o organizador e use a chave dessa conta."
             )
         raise ValueError(
-            "Este walletId é o da conta da plataforma. "
-            "Informe o walletId da sua conta Asaas de organizador."
+            "Este identificador é o da conta da plataforma. "
+            "Informe o identificador da sua conta de recebimento como organizador."
         )
 
 
 def consultar_wallet_organizador_por_api_key(api_key: str) -> dict[str, Any]:
-    """Consulta walletId da conta Asaas do organizador a partir da chave API."""
+    """Consulta walletId da conta de recebimento do organizador a partir da chave de acesso."""
     key = (api_key or "").strip()
     if not key:
-        raise ValueError("Informe a chave API Asaas.")
+        raise ValueError("Informe a chave de acesso da sua conta de recebimento.")
     org_client = AsaasClient(api_key=key)
     if not org_client.enabled:
-        raise ValueError("Chave API Asaas inválida ou vazia.")
+        raise ValueError("Chave de acesso inválida ou vazia.")
     try:
         account = org_client.get("/v3/myAccount")
     except AsaasAPIError as e:
-        raise ValueError(str(e) or "Não foi possível consultar a conta Asaas.") from e
+        raise ValueError(str(e) or "Não foi possível consultar a conta de recebimento.") from e
     wallet = _resolver_wallet_conta_asaas(org_client)
     if not wallet:
         raise ValueError(
-            "Não foi possível obter o walletId desta conta Asaas. "
-            "Verifique a chave API no painel Asaas."
+            "Não foi possível obter o identificador desta conta de recebimento. "
+            "Verifique a chave de acesso informada."
         )
     _rejeitar_wallet_plataforma(wallet, contexto="api_key")
     name = ""
@@ -349,7 +349,7 @@ def definir_wallet_organizador(
     validacao = validar_wallet_repasse(wallet_id, api_key_organizador=api_key_organizador)
     wid = validacao["wallet_id"]
     if not settings.use_asaas:
-        raise ValueError("Asaas não está ativo neste ambiente.")
+        raise ValueError("Pagamentos não estão ativos neste ambiente.")
     pode_vincular = (
         settings.permite_vinculo_wallet_organizador()
         or settings.asaas_allow_manual_wallet
@@ -357,7 +357,7 @@ def definir_wallet_organizador(
     )
     if not pode_vincular:
         raise ValueError(
-            "O vínculo manual de conta Asaas está desativado neste ambiente. "
+            "O vínculo manual de conta de recebimento está desativado neste ambiente. "
             "Entre em contato com o suporte da plataforma."
         )
     if (usuario.asaas_account_id or "").strip() and settings.permite_subconta_baas():
@@ -385,7 +385,7 @@ def definir_wallet_organizador(
         "wallet_id": wid,
         "eventos_atualizados": atualizados,
         "verificado_api": validacao.get("verificado_api", False),
-        "mensagem": "Conta Asaas vinculada. Novas vendas usarão split para esta carteira.",
+        "mensagem": "Conta de recebimento vinculada. Novas vendas usarão split para esta carteira.",
     }
 
 
@@ -414,9 +414,9 @@ def criar_subconta_organizador(
             "Configure sua conta de recebimento em Financeiro."
         )
     if (usuario.asaas_account_id or "").strip():
-        raise ValueError("Você já possui subconta Asaas vinculada.")
+        raise ValueError("Você já possui subconta de recebimento vinculada.")
     if not settings.use_asaas:
-        raise ValueError("Asaas não está ativo neste ambiente.")
+        raise ValueError("Pagamentos não estão ativos neste ambiente.")
 
     doc = _digits(cpf_cnpj, 14)
     if len(doc) not in (11, 14):
@@ -465,7 +465,7 @@ def criar_subconta_organizador(
     try:
         sub = client.post("/v3/accounts", json=payload)
     except AsaasAPIError as e:
-        raise ValueError(str(e) or "Não foi possível criar subconta no Asaas.") from e
+        raise ValueError(str(e) or "Não foi possível criar a subconta de recebimento.") from e
 
     account_id = sub.get("id")
     wallet_id = sub.get("walletId")
@@ -509,7 +509,7 @@ def criar_subconta_organizador(
         "mensagem": (
             "Conta de repasses criada e aprovada. Você já pode publicar eventos pagos."
             if aprovado
-            else "Dados enviados ao Asaas. Acompanhe a aprovação da sua conta de repasses."
+            else "Dados enviados. Acompanhe a aprovação da sua conta de repasses."
         ),
     }
 
@@ -522,7 +522,7 @@ def limpar_subconta_rejeitada(db: Session, usuario: Usuario) -> None:
     """Remove vínculo local de subconta reprovada para permitir novo envio ao Asaas."""
     if not pode_reenviar_subconta(usuario):
         raise ValueError(
-            "Reenvio disponível apenas quando a conta de repasses foi reprovada pelo Asaas."
+            "Reenvio disponível apenas quando a conta de repasses foi reprovada."
         )
     usuario.asaas_account_id = None
     usuario.asaas_wallet_id = None
@@ -659,7 +659,7 @@ def atualizar_antecipacao_cartao(
     if not sub_client or not sub_client.enabled:
         raise ValueError(
             "Antecipação automática exige subconta criada pela plataforma. "
-            "Configure no painel Asaas ou crie subconta aqui."
+            "Configure sua conta de recebimento ou crie subconta aqui."
         )
     try:
         cfg = sub_client.put(
@@ -726,7 +726,7 @@ def simular_antecipacao(
                     "valor_bruto": valor,
                     "taxa_plataforma": taxa_plataforma,
                     "simulacao": sim,
-                    "nota": "Simulação oficial Asaas com base em uma cobrança recente.",
+                    "nota": "Simulação oficial com base em uma cobrança recente.",
                 }
         except AsaasAPIError as e:
             logger.info("Simulação Asaas indisponível (%s), usando estimativa.", e)
