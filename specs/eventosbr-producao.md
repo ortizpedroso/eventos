@@ -96,10 +96,9 @@ Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webh
 
 ## 3. UX — Área da conta
 
-- `ContaShell` em `/conta/*`: menu lateral **Perfil**, **Pagamentos**, **Ingressos**, **Notificações**.
-- Sem link “Painel” no menu da conta.
-- Dropdown do avatar: Painel (só organizador), Perfil, Sair.
-- `/organizador/perfil` (e subrotas) → redirect 308 para `/conta/*` (`next.config.ts`); navbar e painel apontam para `/conta/perfil`.
+- `ContaShell` em `/conta/*`: menu lateral **Perfil**, **Pagamentos**, **Ingressos**, **Notificações** (cliente).
+- Dropdown do avatar: Painel (só organizador), Perfil, Pagamentos, Ingressos, Notificações, Sair.
+- Organizador logado: dropdown aponta para `/organizador/perfil` (e subrotas `pagamentos`/`ingressos`/`notificacoes`), que renderizam os mesmos clients de `/conta/*` dentro do `OrganizadorShell` — evita trocar a barra lateral do organizador ao navegar pelo menu da conta.
 - `auth/layout.tsx` + `layout.tsx`: rodapé fixo no fim da viewport (flex shell, CSS crítico `eventosbr-shell-layout`, `EarlyScrollReset` no `<head>`).
 - Máscaras: CPF/CNPJ, CEP, telefone nos formulários financeiro, checkout e repasse de ingresso.
 
