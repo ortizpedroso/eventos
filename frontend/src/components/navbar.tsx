@@ -247,30 +247,34 @@ export function Navbar() {
                     >
                       Perfil
                     </Link>
-                    <Link
-                      href={isOrganizador ? "/organizador/perfil/pagamentos" : "/conta/pagamentos"}
-                      role="menuitem"
-                      className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Pagamentos
-                    </Link>
-                    <Link
-                      href={isOrganizador ? "/organizador/perfil/ingressos" : "/conta/ingressos"}
-                      role="menuitem"
-                      className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Ingressos
-                    </Link>
-                    <Link
-                      href={isOrganizador ? "/organizador/perfil/notificacoes" : "/conta/notificacoes"}
-                      role="menuitem"
-                      className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Notificações
-                    </Link>
+                    {!isOrganizador ? (
+                      <>
+                        <Link
+                          href="/conta/pagamentos"
+                          role="menuitem"
+                          className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Pagamentos
+                        </Link>
+                        <Link
+                          href="/conta/ingressos"
+                          role="menuitem"
+                          className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Ingressos
+                        </Link>
+                        <Link
+                          href="/conta/notificacoes"
+                          role="menuitem"
+                          className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Notificações
+                        </Link>
+                      </>
+                    ) : null}
                     <div className="my-1 border-t border-zinc-100" aria-hidden />
                     <button
                       type="button"
