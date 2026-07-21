@@ -9,6 +9,7 @@ import {
   type PlanoTarifaId,
   detalharTaxaIngresso,
   formatBrl,
+  formatPercentual,
   parseQuantidadeInput,
   parseValorMonetarioInput,
 } from "@/lib/tarifas-plataforma";
@@ -37,6 +38,8 @@ export function OrganizadorFinanceiroSimulador({ planoTarifa = "padrao" }: Props
     const liquidoAbsorvendo = Math.max(0, liquidoRepasse - acrescimo);
     return {
       bruto: round2(precoNum * qtd),
+      taxaPercentual: round2(det.taxaPercentualValor * qtd),
+      taxaFixa: round2(det.taxaFixa * qtd),
       taxa: round2(det.taxaTotal * qtd),
       liquido: round2(liquidoRepasse * qtd),
       liquidoAbsorvendo: round2(liquidoAbsorvendo * qtd),
@@ -87,11 +90,19 @@ export function OrganizadorFinanceiroSimulador({ planoTarifa = "padrao" }: Props
             <span className="font-medium">{formatBrl(sim.bruto)}</span>
           </li>
           <li className="flex justify-between gap-2 text-amber-900">
-            <span>Taxa EventosBR</span>
+            <span>Taxa {formatPercentual(tarifa.percentual)} do valor</span>
+            <span>− {formatBrl(sim.taxaPercentual)}</span>
+          </li>
+          <li className="flex justify-between gap-2 text-amber-900">
+            <span>Taxa fixa {formatBrl(tarifa.fixoPorIngresso)} por ingresso × {qtd}</span>
+            <span>− {formatBrl(sim.taxaFixa)}</span>
+          </li>
+          <li className="flex justify-between gap-2 border-t border-zinc-100 pt-1.5 text-xs text-zinc-500">
+            <span>Total de taxas</span>
             <span>− {formatBrl(sim.taxa)}</span>
           </li>
           <li className="flex justify-between gap-2 font-semibold text-emerald-800">
-            <span>Você recebe (repassar parcelamento)</span>
+            <span>Valor líquido a receber (repassar parcelamento)</span>
             <span>{formatBrl(sim.liquido)}</span>
           </li>
           {sim.acrescimoUnit > 0 ? (
