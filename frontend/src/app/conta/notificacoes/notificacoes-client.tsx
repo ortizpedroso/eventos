@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { ListaSkeleton } from "@/components/lista-skeleton";
+import { PerfilTabs } from "@/components/perfil-tabs";
 import { apiFetch } from "@/lib/api";
 import type { NotificacaoUsuario } from "@/lib/types";
 
 export function NotificacoesClient() {
+  const pathname = usePathname();
   const [items, setItems] = useState<NotificacaoUsuario[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +47,8 @@ export function NotificacoesClient() {
       <p className="mt-2 text-sm text-zinc-600">
         Avisos sobre compras, lista de espera e atualizações da sua conta.
       </p>
+
+      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
 
       {error ? (
         <p className="mt-6 text-sm text-red-600" role="alert">

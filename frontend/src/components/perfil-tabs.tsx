@@ -15,7 +15,7 @@ export function PerfilTabs({ base }: { base: string }) {
 
   return (
     <nav
-      className="mb-6 flex flex-wrap justify-end gap-1 border-b border-zinc-200 pb-0"
+      className="mt-3 mb-6 flex flex-wrap justify-start gap-1 border-b border-zinc-200 pb-0"
       aria-label="Seções do perfil"
     >
       {TABS.map(({ slug, label }) => {

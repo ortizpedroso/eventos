@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Usuario
 from app.services.tarifas_plataforma import MENSALIDADE_ASSINATURA_MENSAL
+from app.utils.cpf import documento_valido
 
 logger = logging.getLogger(__name__)
 
@@ -118,10 +119,10 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
     # Asaas exige CPF/CNPJ do cliente para gerar cobrança; reaproveita o documento
     # já cadastrado (conta de repasses) ou o informado agora nesta requisição.
     doc = re.sub(r"\D", "", (getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
-    if len(doc) not in (11, 14):
+    if not documento_valido(doc):
         doc = re.sub(r"\D", "", cpf_cnpj or "")
-        if len(doc) not in (11, 14):
-            raise ValueError("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido para gerar a cobrança.")
+        if not documento_valido(doc):
+            raise ValueError("Informe um CPF ou CNPJ válido para gerar a cobrança.")
         usuario.asaas_repasse_cpf_cnpj = doc
         db.commit()
 

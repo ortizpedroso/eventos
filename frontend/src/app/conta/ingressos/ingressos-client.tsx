@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
 import { ListaSkeleton } from "@/components/lista-skeleton";
+import { PerfilTabs } from "@/components/perfil-tabs";
 import { apiFetch } from "@/lib/api";
 import { classeBadgeStatus, labelStatusIngresso } from "@/lib/ingresso-status";
 import type { IngressoListItem } from "@/lib/types";
@@ -43,6 +45,7 @@ function PendenteBadge({ reservadoAte }: { reservadoAte: string }) {
 }
 
 export function IngressosClient() {
+  const pathname = usePathname();
   const [items, setItems] = useState<IngressoListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +78,8 @@ export function IngressosClient() {
           ← Eventos
         </Link>
       </div>
+
+      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
 
       {error ? (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
