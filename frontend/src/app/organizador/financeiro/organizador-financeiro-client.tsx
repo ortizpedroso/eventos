@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { OrganizadorFinanceiroSimulador } from "@/components/organizador-financeiro-simulador";
 import { OrganizadorRepassesPainel } from "@/components/organizador-repasses-painel";
 import { apiFetch } from "@/lib/api";
-import { formatCpfCnpjMask, onlyDigits } from "@/lib/cpf";
+import { formatCpfCnpjMask, isValidCpfCnpj, onlyDigits } from "@/lib/cpf";
 import { AVISO_LEGAL_TAXAS } from "@/lib/taxas-asaas-publicas";
 import type { PlanoTarifaId } from "@/lib/tarifas-plataforma";
 
@@ -182,8 +182,8 @@ export function OrganizadorFinanceiroClient() {
 
   async function contratarAssinatura() {
     const doc = cpfCnpj.replace(/\D/g, "");
-    if (assinatura?.precisa_cpf_cnpj && doc.length !== 11 && doc.length !== 14) {
-      setError("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.");
+    if (assinatura?.precisa_cpf_cnpj && !isValidCpfCnpj(doc)) {
+      setError("Informe um CPF ou CNPJ válido.");
       return;
     }
     setBusyAssinatura(true);
@@ -258,15 +258,21 @@ export function OrganizadorFinanceiroClient() {
                 className="mt-1 w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm text-indigo-950"
               />
               {cpfCnpj.length === 11 || cpfCnpj.length === 14 ? (
-                <p className="mt-1 text-xs text-indigo-700">
-                  {cpfCnpj.length === 11 ? "CPF identificado." : "CNPJ identificado."}
-                </p>
+                isValidCpfCnpj(cpfCnpj) ? (
+                  <p className="mt-1 text-xs text-indigo-700">
+                    {cpfCnpj.length === 11 ? "CPF válido." : "CNPJ válido."}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-red-700">
+                    {cpfCnpj.length === 11 ? "CPF inválido." : "CNPJ inválido."}
+                  </p>
+                )
               ) : null}
             </div>
           ) : null}
           <button
             type="button"
-            disabled={busyAssinatura}
+            disabled={busyAssinatura || Boolean(assinatura.precisa_cpf_cnpj && !isValidCpfCnpj(cpfCnpj))}
             className="mt-3 rounded-lg bg-indigo-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             onClick={() => void contratarAssinatura()}
           >

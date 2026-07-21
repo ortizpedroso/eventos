@@ -52,3 +52,32 @@ export function isValidCpf(digits: string): boolean {
   const dv2 = calc(d.slice(0, 10), w2);
   return dv2 === parseInt(d[10]!, 10);
 }
+
+/** Valida dígitos verificadores do CNPJ brasileiro. */
+export function isValidCnpj(digits: string): boolean {
+  const d = onlyDigits(digits, 14);
+  if (d.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(d)) return false;
+
+  const calc = (base: string, weights: number[]): number => {
+    let s = 0;
+    for (let i = 0; i < base.length; i++) s += parseInt(base[i]!, 10) * weights[i]!;
+    const r = s % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const dv1 = calc(d.slice(0, 12), w1);
+  if (dv1 !== parseInt(d[12]!, 10)) return false;
+  const dv2 = calc(d.slice(0, 13), w2);
+  return dv2 === parseInt(d[13]!, 10);
+}
+
+/** Valida CPF (11 dígitos) ou CNPJ (14 dígitos) conforme o tamanho. */
+export function isValidCpfCnpj(digits: string): boolean {
+  const d = onlyDigits(digits, 14);
+  if (d.length === 11) return isValidCpf(d);
+  if (d.length === 14) return isValidCnpj(d);
+  return false;
+}

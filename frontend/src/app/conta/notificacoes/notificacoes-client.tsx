@@ -44,11 +44,12 @@ export function NotificacoesClient() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-zinc-900">Notificações</h1>
+
+      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
+
       <p className="mt-2 text-sm text-zinc-600">
         Avisos sobre compras, lista de espera e atualizações da sua conta.
       </p>
-
-      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
 
       {error ? (
         <p className="mt-6 text-sm text-red-600" role="alert">

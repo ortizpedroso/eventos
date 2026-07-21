@@ -29,7 +29,9 @@ def status_assinatura(usuario: Usuario) -> dict:
         "taxa_efetiva": "assinatura" if ativa else "padrao",
         "renovacao_pendente": bool(pendente),
         "renovacao_payment_id": pendente or None,
-        "precisa_cpf_cnpj": not bool((getattr(usuario, "asaas_repasse_cpf_cnpj", None) or "").strip()),
+        "precisa_cpf_cnpj": not documento_valido(
+            re.sub(r"\D", "", getattr(usuario, "asaas_repasse_cpf_cnpj", None) or "")
+        ),
     }
 
 
