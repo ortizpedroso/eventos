@@ -83,6 +83,10 @@ class AsaasClient:
                 msg = str(body.get("message") or "").strip()
                 if msg:
                     desc = msg
+            logger.warning(
+                "Asaas HTTP %s em %s %s — corpo bruto: %s",
+                resp.status_code, method, path, body,
+            )
             raise AsaasAPIError(
                 desc or f"Asaas HTTP {resp.status_code}",
                 status_code=resp.status_code,
