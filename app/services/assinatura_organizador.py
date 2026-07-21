@@ -64,12 +64,40 @@ def cancelar_assinatura(db: Session, usuario: Usuario) -> Usuario:
     return usuario
 
 
+def _resposta_assinatura(payment: dict) -> dict:
+    """Resposta da cobrança da assinatura (PIX-only), sem expor o gateway ao usuário."""
+    from app.services.pagamento_asaas import extrair_pix, obter_pix_qrcode
+    from app.services.asaas_client import AsaasAPIError
+
+    pix = extrair_pix(payment)
+    pay_id = (payment.get("id") or "").strip()
+    if not pix and pay_id:
+        try:
+            qr = obter_pix_qrcode(pay_id)
+        except AsaasAPIError:
+            logger.warning("Não foi possível obter QR Code PIX da assinatura (payment=%s)", pay_id)
+        else:
+            if qr.get("encodedImage") or qr.get("payload"):
+                pix = {
+                    "encoded_image": qr.get("encodedImage"),
+                    "copia_cola": qr.get("payload"),
+                    "expiration_date": qr.get("expirationDate"),
+                }
+
+    out: dict = {
+        "payment_id": payment.get("id"),
+        "status": payment.get("status"),
+    }
+    if pix:
+        out["pix"] = pix
+    return out
+
+
 def _cobranca_assinatura_pendente(db: Session, usuario: Usuario) -> dict | None:
     """Reutiliza PIX pendente válido em vez de criar cobrança duplicada."""
     from app.services.asaas_client import AsaasAPIError
     from app.services.pagamento_asaas import (
         obter_cobranca,
-        resposta_checkout_asaas,
         status_eh_cancelado,
         status_eh_pago,
     )
@@ -96,7 +124,7 @@ def _cobranca_assinatura_pendente(db: Session, usuario: Usuario) -> dict | None:
     return {
         "payment_id": pay_id,
         "reutilizado": True,
-        **resposta_checkout_asaas(payment),
+        **_resposta_assinatura(payment),
     }
 
 
@@ -105,8 +133,9 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
     from datetime import date
 
     from app.services.asaas_client import AsaasAPIError
-    from app.services.pagamento_asaas import resposta_checkout_asaas, status_eh_pago
+    from app.services.pagamento_asaas import status_eh_pago
     from app.services.usuario_asaas import garantir_customer_asaas
+    from app.utils.public_errors import PAGAMENTO_CLIENTE
     from config.settings import settings
 
     if usuario.tipo != "organizador":
@@ -135,7 +164,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
         logger.exception(
             "Erro Asaas ao criar customer da assinatura (usuario=%s)", usuario.id
         )
-        raise ValueError(f"Não foi possível criar cadastro para cobrança: {e}") from e
+        raise ValueError(PAGAMENTO_CLIENTE) from e
 
     ref = f"assinatura:{usuario.id}"[:100]
     client = __import__("app.services.asaas_client", fromlist=["get_asaas_client"]).get_asaas_client()
@@ -173,9 +202,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
             logger.exception(
                 "Erro Asaas ao recriar customer da assinatura após falha (usuario=%s)", usuario.id
             )
-            raise ValueError(
-                f"Não foi possível gerar cobrança da assinatura (falha ao recriar customer): {e_recriar}"
-            ) from e_recriar
+            raise ValueError(PAGAMENTO_CLIENTE) from e_recriar
 
         idem_retry = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
         try:
@@ -188,9 +215,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
                 customer_id,
                 e2.status_code,
             )
-            raise ValueError(
-                f"Não foi possível gerar cobrança da assinatura (customer {customer_id}): {e2}"
-            ) from e2
+            raise ValueError(PAGAMENTO_CLIENTE) from e2
 
     if status_eh_pago(payment.get("status")):
         pay_id = (payment.get("id") or "").strip()
@@ -206,10 +231,7 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
         usuario.assinatura_renovacao_payment_id = pay_id
         db.commit()
 
-    return {
-        "payment_id": payment.get("id"),
-        **resposta_checkout_asaas(payment),
-    }
+    return _resposta_assinatura(payment)
 
 
 def sincronizar_assinatura_pendente(db: Session, usuario: Usuario) -> dict:

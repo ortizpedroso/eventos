@@ -129,6 +129,11 @@ def obter_cobranca(payment_id: str) -> dict[str, Any]:
     return get_asaas_client().get(f"/v3/payments/{payment_id}")
 
 
+def obter_pix_qrcode(payment_id: str) -> dict[str, Any]:
+    """QR Code PIX pode não vir embutido na criação da cobrança; busca à parte."""
+    return get_asaas_client().get(f"/v3/payments/{payment_id}/pixQrCode")
+
+
 def cancelar_cobranca_pendente(payment_id: str) -> None:
     try:
         get_asaas_client().delete(f"/v3/payments/{payment_id}")

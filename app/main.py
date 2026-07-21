@@ -83,7 +83,7 @@ _docs_on = settings.ENVIRONMENT == "development"
 app = FastAPI(
     title="EventosBR API",
     description=(
-        "API da EventosBR: eventos, ingressos, pagamentos PIX/cartão via Asaas, "
+        "API da EventosBR: eventos, ingressos, pagamentos PIX/cartão, "
         "repasse a organizadores e reembolsos automáticos."
     ),
     version="1.0.0",

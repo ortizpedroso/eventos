@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 export const metadata: Metadata = {
   title: "Documentação do sistema | EventosBR",
   description:
-    "Arquitetura, API FastAPI, frontend Next.js, base de dados, pagamentos Asaas, lotes de ingressos e operação — EventosBR.",
+    "Arquitetura, API FastAPI, frontend Next.js, base de dados, pagamentos, lotes de ingressos e operação — EventosBR.",
 };
 
 const toc = [
@@ -48,7 +48,7 @@ export default function DocumentacaoPage() {
           </h1>
           <p className="mt-4 text-base text-zinc-600">
             Visão técnica do EventosBR: API em FastAPI, interface em Next.js, PostgreSQL (ou SQLite em
-            desenvolvimento), Redis na infraestrutura Docker e pagamentos com Asaas. O repositório inclui também
+            desenvolvimento), Redis na infraestrutura Docker e pagamentos via gateway integrado. O repositório inclui também
             ficheiros Markdown em <code className="rounded bg-zinc-200/80 px-1.5 py-0.5 text-xs">docs/</code> no
             código-fonte.
           </p>
@@ -87,8 +87,8 @@ export default function DocumentacaoPage() {
                 A <strong className="text-zinc-900">EventosBR</strong> permite a organizadores criarem eventos
                 (página pública por <strong className="text-zinc-900">slug</strong>), definirem{" "}
                 <strong className="text-zinc-900">lotes de ingressos</strong> (preço, ordem, capacidade, datas de
-                venda) e a participantes comprarem com <strong className="text-zinc-900">PIX ou cartão</strong> via Asaas.
-                Há fluxo de cancelamento com reembolso e relatórios para o organizador.
+                venda) e a participantes comprarem com <strong className="text-zinc-900">PIX ou cartão</strong> via
+                gateway de pagamentos integrado. Há fluxo de cancelamento com reembolso e relatórios para o organizador.
               </p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>
@@ -165,7 +165,7 @@ export default function DocumentacaoPage() {
                   <code className="rounded bg-zinc-100 px-1">/organizador/participantes?formato=csv</code>).
                 </li>
                 <li>
-                  <code className="rounded bg-zinc-100 px-1">/api/webhooks</code> — Asaas (<code className="rounded bg-zinc-100 px-1">POST /asaas</code>) e mock de pagamento só em desenvolvimento.
+                  <code className="rounded bg-zinc-100 px-1">/api/webhooks</code> — gateway de pagamentos (<code className="rounded bg-zinc-100 px-1">POST /asaas</code>) e mock de pagamento só em desenvolvimento.
                 </li>
               </ul>
               <p>
@@ -239,11 +239,11 @@ export default function DocumentacaoPage() {
               </p>
               <p>
                 Cancelamento: <code className="rounded bg-zinc-100 px-1">POST /api/pagamentos/cancelar</code> com
-                ingresso pago dentro do prazo; reembolso via API Asaas.
+                ingresso pago dentro do prazo; reembolso via API do gateway de pagamentos.
               </p>
             </Section>
 
-            <Section id="webhooks" title="Webhooks Asaas">
+            <Section id="webhooks" title="Webhooks do gateway de pagamentos">
               <p>
                 <code className="rounded bg-zinc-100 px-1">POST /api/webhooks/asaas</code> valida o header{" "}
                 <code className="rounded bg-zinc-100 px-1">asaas-access-token</code>. Eventos
@@ -269,7 +269,7 @@ export default function DocumentacaoPage() {
               <p>
                 Variáveis principais na raiz: <code className="rounded bg-zinc-100 px-1">DATABASE_URL</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">SECRET_KEY</code> (obrigatória fora de development), chaves
-                Asaas (<code className="rounded bg-zinc-100 px-1">ASAAS_*</code>), <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
+                do gateway de pagamentos (<code className="rounded bg-zinc-100 px-1">ASAAS_*</code>), <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">ENVIRONMENT</code>, <code className="rounded bg-zinc-100 px-1">DEBUG</code>.
               </p>
               <p>

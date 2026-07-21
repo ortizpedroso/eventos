@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Referência da API",
   description:
-    "Referência das rotas da API EventosBR (OpenAPI), geradas a partir do backend FastAPI: autenticação, eventos, ingressos, pagamentos Asaas e mais.",
+    "Referência das rotas da API EventosBR (OpenAPI), geradas a partir do backend FastAPI: autenticação, eventos, ingressos, pagamentos e mais.",
 };
 
 type OpenApiOperation = {
@@ -66,7 +66,7 @@ export default async function ApiReferenciaPage() {
       </h1>
       <p className="mt-4 text-base text-zinc-700">
         {spec?.info?.description ||
-          "API da EventosBR: eventos, ingressos, pagamentos PIX/cartão via Asaas, repasse a organizadores e reembolsos automáticos."}
+          "API da EventosBR: eventos, ingressos, pagamentos PIX/cartão, repasse a organizadores e reembolsos automáticos."}
       </p>
       <p className="mt-2 text-sm text-zinc-500">
         Versão {spec?.info?.version || "1.0.0"} · Esquema completo em{" "}
