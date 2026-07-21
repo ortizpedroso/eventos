@@ -327,6 +327,165 @@ class TestPagamentosAsaas:
         assert cob.status_code == 200, cob.text
         assert cob.json().get("pix")
 
+    def test_cobranca_pix_reusa_qrcode_dentro_de_10min(self):
+        org = _registrar_organizador("pixreuse")
+        cli = _registrar_cliente("pixreuse")
+        ev = _criar_evento(org)
+
+        with patch("app.routes.pagamentos.settings") as route_settings:
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            route_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            criar = client.post(
+                "/api/pagamentos/criar",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={
+                    "evento_id": ev["id"],
+                    "valor_centavos": 5000,
+                    "participante_nome": "Pix",
+                    "participante_email": "pixreuse@test.com",
+                    "participante_cpf": "52998224725",
+                    "participante_telefone": "11987654321",
+                    "termo_compra_aceito": True,
+                },
+            )
+        iid = criar.json()["ingresso_id"]
+        mock_payment = {
+            "id": "pay_pix_reuse",
+            "status": "PENDING",
+            "billingType": "PIX",
+            "pixTransaction": {"encodedImage": "abc", "payload": "00020126"},
+        }
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch("app.services.pagamentos_asaas_handlers.settings") as svc_settings,
+            patch("app.services.pagamentos_asaas_handlers.garantir_customer_asaas", return_value="cus_x"),
+            patch("app.services.pagamentos_asaas_handlers.criar_cobranca_asaas", return_value=mock_payment),
+        ):
+            route_settings.use_asaas = True
+            svc_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            cob = client.post(
+                "/api/pagamentos/asaas/cobranca",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={"ingresso_id": iid, "metodo": "pix"},
+            )
+        assert cob.status_code == 200, cob.text
+
+        # Segunda chamada minutos depois (< 10min): deve reusar o mesmo QR, sem criar nova cobrança.
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch("app.services.pagamentos_asaas_handlers.settings") as svc_settings,
+            patch("app.services.pagamentos_asaas_handlers.obter_cobranca", return_value=mock_payment),
+            patch("app.services.pagamentos_asaas_handlers.criar_cobranca_asaas") as criar_mock,
+            patch("app.services.pagamentos_asaas_handlers.cancelar_cobranca_pendente") as cancel_mock,
+        ):
+            route_settings.use_asaas = True
+            svc_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            cob2 = client.post(
+                "/api/pagamentos/asaas/cobranca",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={"ingresso_id": iid, "metodo": "pix"},
+            )
+        assert cob2.status_code == 200, cob2.text
+        assert cob2.json().get("payment_id") == "pay_pix_reuse"
+        criar_mock.assert_not_called()
+        cancel_mock.assert_not_called()
+
+    def test_cobranca_pix_gera_novo_qrcode_apos_10min(self):
+        from datetime import datetime, timedelta, timezone
+        from tests import test_api as ta
+
+        org = _registrar_organizador("pixnovo")
+        cli = _registrar_cliente("pixnovo")
+        ev = _criar_evento(org)
+
+        with patch("app.routes.pagamentos.settings") as route_settings:
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            route_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            criar = client.post(
+                "/api/pagamentos/criar",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={
+                    "evento_id": ev["id"],
+                    "valor_centavos": 5000,
+                    "participante_nome": "Pix",
+                    "participante_email": "pixnovo@test.com",
+                    "participante_cpf": "52998224725",
+                    "participante_telefone": "11987654321",
+                    "termo_compra_aceito": True,
+                },
+            )
+        iid = criar.json()["ingresso_id"]
+        mock_payment_antigo = {
+            "id": "pay_pix_antigo",
+            "status": "PENDING",
+            "billingType": "PIX",
+            "pixTransaction": {"encodedImage": "abc", "payload": "00020126"},
+        }
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch("app.services.pagamentos_asaas_handlers.settings") as svc_settings,
+            patch("app.services.pagamentos_asaas_handlers.garantir_customer_asaas", return_value="cus_x"),
+            patch("app.services.pagamentos_asaas_handlers.criar_cobranca_asaas", return_value=mock_payment_antigo),
+        ):
+            route_settings.use_asaas = True
+            svc_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            cob = client.post(
+                "/api/pagamentos/asaas/cobranca",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={"ingresso_id": iid, "metodo": "pix"},
+            )
+        assert cob.status_code == 200, cob.text
+
+        db = ta.TestingSessionLocal()
+        try:
+            ing = db.query(Ingresso).filter(Ingresso.id == iid).first()
+            assert ing.asaas_payment_criado_em is not None
+            ing.asaas_payment_criado_em = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=11)
+            db.commit()
+        finally:
+            db.close()
+
+        mock_payment_novo = {
+            "id": "pay_pix_novo",
+            "status": "PENDING",
+            "billingType": "PIX",
+            "pixTransaction": {"encodedImage": "xyz", "payload": "00020999"},
+        }
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch("app.services.pagamentos_asaas_handlers.settings") as svc_settings,
+            patch(
+                "app.services.pagamentos_asaas_handlers.obter_cobranca",
+                return_value=mock_payment_antigo,
+            ),
+            patch("app.services.pagamentos_asaas_handlers.cancelar_cobranca_pendente") as cancel_mock,
+            patch("app.services.pagamentos_asaas_handlers.garantir_customer_asaas", return_value="cus_x"),
+            patch(
+                "app.services.pagamentos_asaas_handlers.criar_cobranca_asaas",
+                return_value=mock_payment_novo,
+            ) as criar_mock,
+        ):
+            route_settings.use_asaas = True
+            svc_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            cob2 = client.post(
+                "/api/pagamentos/asaas/cobranca",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={"ingresso_id": iid, "metodo": "pix"},
+            )
+        assert cob2.status_code == 200, cob2.text
+        assert cob2.json().get("payment_id") == "pay_pix_novo"
+        cancel_mock.assert_called_once_with("pay_pix_antigo")
+        criar_mock.assert_called_once()
+
+        db = ta.TestingSessionLocal()
+        try:
+            ing = db.query(Ingresso).filter(Ingresso.id == iid).first()
+            assert ing.asaas_payment_id == "pay_pix_novo"
+        finally:
+            db.close()
+
 
 def test_webhook_asaas_rejeita_sem_token_producao():
     with patch("app.routes.webhooks.settings") as s:

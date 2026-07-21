@@ -19,6 +19,8 @@ class Ingresso(Base):
 
     # Pagamento externo (Asaas)
     asaas_payment_id = Column(String, index=True)
+    # Quando a cobrança/QR PIX atual foi gerada — usado para expirar e regenerar o QR após 10min.
+    asaas_payment_criado_em = Column(DateTime, nullable=True)
 
     valor = Column(Float)
     status = Column(String, default="pendente")  # pendente, pago, cancelado, usado

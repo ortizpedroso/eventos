@@ -33,6 +33,8 @@ type Props = {
 
 type Metodo = "pix" | "card" | "invoice";
 
+const PIX_QR_VALIDADE_MS = 10 * 60 * 1000;
+
 function formatCountdown(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(total / 60);
@@ -62,6 +64,8 @@ export function CheckoutAsaasPainel({
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
   const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
   const [countdown, setCountdown] = useState<string | null>(null);
+  const [pixExpiraEm, setPixExpiraEm] = useState<number | null>(null);
+  const [pixCountdown, setPixCountdown] = useState<string | null>(null);
 
   const [cardNome, setCardNome] = useState(participanteNome);
   const [cardNumero, setCardNumero] = useState("");
@@ -110,6 +114,26 @@ export function CheckoutAsaasPainel({
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, [reservadoAte]);
+
+  useEffect(() => {
+    if (!pixExpiraEm) {
+      setPixCountdown(null);
+      return;
+    }
+    const tick = () => setPixCountdown(formatCountdown(pixExpiraEm - Date.now()));
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [pixExpiraEm]);
+
+  const regenerandoRef = useRef(false);
+  useEffect(() => {
+    if (!pixExpiraEm || Date.now() < pixExpiraEm || regenerandoRef.current) return;
+    regenerandoRef.current = true;
+    void gerarNovoQrCode().finally(() => {
+      regenerandoRef.current = false;
+    });
+  }, [pixCountdown]);
 
   // Mantém a referência mais recente sem incluir `onSuccess` nas deps do polling:
   // o pai (comprar-ingresso.tsx) recria esse callback a cada re-render (ex.: contador
@@ -186,7 +210,10 @@ export function CheckoutAsaasPainel({
         onSuccess();
         return;
       }
-      if (res.pix) setPix(res.pix);
+      if (res.pix) {
+        setPix(res.pix);
+        setPixExpiraEm(Date.now() + PIX_QR_VALIDADE_MS);
+      }
       if (res.invoice_url) {
         setInvoiceUrl(res.invoice_url);
         window.open(res.invoice_url, "_blank", "noopener,noreferrer");
@@ -208,6 +235,7 @@ export function CheckoutAsaasPainel({
 
   async function gerarNovoQrCode() {
     setPix(null);
+    setPixExpiraEm(null);
     setAguardandoConfirmacao(false);
     await criarCobranca();
   }
@@ -241,6 +269,9 @@ export function CheckoutAsaasPainel({
           <p className="text-xs text-zinc-600">Escaneie o QR Code no app do seu banco para pagar.</p>
         )}
         <p className="text-xs text-zinc-500">Aguardando confirmação do pagamento…</p>
+        {pixCountdown && pixCountdown !== "0:00" ? (
+          <p className="text-xs text-zinc-400">Este QR Code será renovado automaticamente em {pixCountdown}</p>
+        ) : null}
         {msg && <p className="text-sm text-red-600">{msg}</p>}
         <button
           type="button"

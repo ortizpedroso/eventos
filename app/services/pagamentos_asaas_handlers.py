@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from fastapi import HTTPException
@@ -39,6 +39,14 @@ from app.utils.public_errors import PAGAMENTO_CLIENTE, REEMBOLSO_CLIENTE
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
+
+# Tempo em que o mesmo QR Code PIX é reexibido antes de gerar um novo.
+QR_PIX_VALIDADE = timedelta(minutes=10)
+
+
+def _pix_ainda_valido(ingresso: Ingresso, agora: datetime) -> bool:
+    criado_em = ingresso.asaas_payment_criado_em
+    return bool(criado_em) and (agora - criado_em) < QR_PIX_VALIDADE
 
 
 class AsaasCobrancaRequest(BaseModel):
@@ -164,7 +172,12 @@ def iniciar_cobranca_asaas(
                         "Aguarde alguns instantes ou contate o suporte."
                     ),
                 )
-            if body.metodo == "pix" and existing.get("billingType") == "PIX":
+            agora = datetime.now(timezone.utc).replace(tzinfo=None)
+            if (
+                body.metodo == "pix"
+                and existing.get("billingType") == "PIX"
+                and _pix_ainda_valido(ingresso, agora)
+            ):
                 return resposta_checkout_asaas(existing) | {
                     "ingresso_id": ingresso.id,
                     "reservado_ate": ingresso.reservado_ate.isoformat() + "Z" if ingresso.reservado_ate else None,
@@ -175,10 +188,11 @@ def iniciar_cobranca_asaas(
                 logger.warning("Falha ao cancelar cobrança Asaas %s: %s", pay_id, e)
                 raise HTTPException(
                     status_code=503,
-                    detail="Não foi possível alterar o método de pagamento. Tente novamente em instantes.",
+                    detail="Não foi possível gerar uma nova cobrança. Tente novamente em instantes.",
                 ) from e
             for ing in lote:
                 ing.asaas_payment_id = None
+                ing.asaas_payment_criado_em = None
             db.flush()
         except AsaasAPIError as e:
             logger.warning("Cobrança Asaas anterior %s: %s", pay_id, e)
@@ -253,6 +267,12 @@ def iniciar_cobranca_asaas(
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e)) from e
 
+    agora = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Bucket de 10min: retries dentro da mesma janela reusam a cobrança (evita duplicar
+    # no double-click), mas cada janela nova gera uma cobrança/QR genuinamente novo.
+    bucket = int(agora.timestamp() // QR_PIX_VALIDADE.total_seconds())
+    idem_key = f"cob_{ingresso.id.replace('-', '')[:16]}_{bucket}"
+
     try:
         payment = criar_cobranca_asaas(
             customer_id=customer_id,
@@ -268,7 +288,7 @@ def iniciar_cobranca_asaas(
             remote_ip=body.remote_ip,
             installment_count=installment_count,
             quantidade=len(lote),
-            idempotency_key=f"cobranca_{ingresso.id}",
+            idempotency_key=idem_key,
             desconto_organizador=desconto_organizador,
         )
     except AsaasAPIError as e:
@@ -283,6 +303,7 @@ def iniciar_cobranca_asaas(
     share = round(valor_cobranca / n_lote, 2)
     for idx, ing in enumerate(lote):
         ing.asaas_payment_id = pid
+        ing.asaas_payment_criado_em = agora
         if idx == n_lote - 1:
             ing.valor_cobrado = round(valor_cobranca - share * (n_lote - 1), 2)
         else:
