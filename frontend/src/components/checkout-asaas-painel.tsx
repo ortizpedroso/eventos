@@ -133,8 +133,7 @@ export function CheckoutAsaasPainel({
     return () => window.clearInterval(id);
   }, [pix, invoiceUrl, aguardandoConfirmacao, ingressoId]);
 
-  async function iniciar(e: FormEvent) {
-    e.preventDefault();
+  async function criarCobranca() {
     setBusy(true);
     setMsg(null);
     try {
@@ -202,6 +201,17 @@ export function CheckoutAsaasPainel({
     }
   }
 
+  async function iniciar(e: FormEvent) {
+    e.preventDefault();
+    await criarCobranca();
+  }
+
+  async function gerarNovoQrCode() {
+    setPix(null);
+    setAguardandoConfirmacao(false);
+    await criarCobranca();
+  }
+
   if (pix?.copia_cola || pix?.encoded_image) {
     const qrSrc = pix.encoded_image
       ? pix.encoded_image.startsWith("data:")
@@ -231,6 +241,15 @@ export function CheckoutAsaasPainel({
           <p className="text-xs text-zinc-600">Escaneie o QR Code no app do seu banco para pagar.</p>
         )}
         <p className="text-xs text-zinc-500">Aguardando confirmação do pagamento…</p>
+        {msg && <p className="text-sm text-red-600">{msg}</p>}
+        <button
+          type="button"
+          disabled={busy || countdown === "0:00"}
+          onClick={() => void gerarNovoQrCode()}
+          className="w-full rounded-lg border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-700 disabled:opacity-60"
+        >
+          {busy ? "Gerando novo QR Code…" : "Ainda não paguei — gerar novo QR Code"}
+        </button>
       </div>
     );
   }

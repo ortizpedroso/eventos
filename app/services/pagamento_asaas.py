@@ -196,6 +196,21 @@ def resposta_checkout_asaas(payment: dict[str, Any]) -> dict[str, Any]:
         "pix_disponivel": payment.get("billingType") == "PIX",
     }
     pix = extrair_pix(payment)
+    pay_id = (payment.get("id") or "").strip()
+    # GET /v3/payments/{id} não embute o QR Code PIX (só a criação ou o endpoint
+    # dedicado retornam encodedImage/payload) — busca à parte ao reexibir cobrança existente.
+    if not pix and pay_id and payment.get("billingType") == "PIX":
+        try:
+            qr = obter_pix_qrcode(pay_id)
+        except AsaasAPIError:
+            logger.warning("Não foi possível obter QR Code PIX da cobrança (payment=%s)", pay_id)
+        else:
+            if qr.get("encodedImage") or qr.get("payload"):
+                pix = {
+                    "encoded_image": qr.get("encodedImage"),
+                    "copia_cola": qr.get("payload"),
+                    "expiration_date": qr.get("expirationDate"),
+                }
     if pix:
         out["pix"] = pix
     return out
