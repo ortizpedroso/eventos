@@ -166,13 +166,13 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
         usuario.asaas_customer_id = None
         try:
             customer_id = garantir_customer_asaas(db, usuario, cpf=doc)
-        except AsaasAPIError:
+        except AsaasAPIError as e_recriar:
             logger.exception(
                 "Erro Asaas ao recriar customer da assinatura após falha (usuario=%s)", usuario.id
             )
             raise ValueError(
-                f"Não foi possível gerar cobrança da assinatura (falha ao recriar customer): {e}"
-            ) from e
+                f"Não foi possível gerar cobrança da assinatura (falha ao recriar customer): {e_recriar}"
+            ) from e_recriar
 
         idem_retry = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
         try:

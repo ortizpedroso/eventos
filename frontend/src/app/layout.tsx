@@ -48,7 +48,7 @@ export default async function RootLayout({
           className="mx-auto flex w-full min-h-0 flex-1 flex-col px-4 py-6 sm:px-6 lg:px-8 max-w-7xl"
           style={{ flex: "1 1 auto", minHeight: 0 }}
         >
-          {children}
+          <div className="flex min-h-[60vh] flex-1 flex-col">{children}</div>
         </main>
 
         <SiteFooter />
