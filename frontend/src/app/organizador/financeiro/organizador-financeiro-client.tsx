@@ -154,6 +154,7 @@ export function OrganizadorFinanceiroClient() {
   const [planoTarifa, setPlanoTarifa] = useState<PlanoTarifaId>("padrao");
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
   const [busyAssinatura, setBusyAssinatura] = useState(false);
   const [pixPendente, setPixPendente] = useState<PixData | null>(null);
   const [cpfCnpj, setCpfCnpj] = useState("");
@@ -188,11 +189,13 @@ export function OrganizadorFinanceiroClient() {
     }
     setBusyAssinatura(true);
     setMsg(null);
+    setInvoiceUrl(null);
     setError(null);
     try {
       const res = await apiFetch<{
         ja_pago?: boolean;
         pix?: PixData;
+        invoice_url?: string | null;
       }>("/api/organizador/assinatura/pagar", {
         method: "POST",
         body: JSON.stringify(assinatura?.precisa_cpf_cnpj ? { cpf_cnpj: doc } : {}),
@@ -205,6 +208,9 @@ export function OrganizadorFinanceiroClient() {
       }
       if (res.pix) {
         setPixPendente(res.pix);
+      } else if (res.invoice_url) {
+        setInvoiceUrl(res.invoice_url);
+        setMsg("Cobrança gerada. Use o link abaixo para pagar via PIX.");
       } else {
         setMsg("Cobrança gerada. Entre em contato com o suporte caso não receba instruções de pagamento.");
       }
@@ -294,12 +300,23 @@ export function OrganizadorFinanceiroClient() {
         </p>
       ) : null}
 
+      {msg ? (
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          {msg}
+          {invoiceUrl ? (
+            <>
+              {" "}
+              <a href={invoiceUrl} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+                Abrir cobrança
+              </a>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+
       <OrganizadorRepassesPainel />
       <OrganizadorFinanceiroSimulador planoTarifa={planoTarifa} />
 
-      {msg ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">{msg}</p>
-      ) : null}
       {error ? (
         <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
           {error}
