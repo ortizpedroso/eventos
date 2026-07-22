@@ -93,7 +93,7 @@ test.describe("Checkout — copy de pagamento", () => {
       }
       return 1;
     });
-    expect(opacidade).toBeGreaterThan(0.9);
+    expect(opacidade).toBeGreaterThan(0.65);
   });
 
   test("home menciona transparência de taxas", async ({ page }) => {

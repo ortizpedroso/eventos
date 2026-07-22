@@ -35,7 +35,7 @@ type Props = {
 export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
   return (
     <div className={`grid grid-cols-1 gap-6 text-left lg:grid-cols-3 lg:gap-8 ${compact ? "mt-8" : "mt-12"}`}>
-      <div className="h-full rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+      <div className="card-interactive h-full rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
         <h3 className="text-xl font-semibold text-zinc-900">Eventos gratuitos</h3>
         <p className="mt-2 text-sm text-zinc-500">Comunidades, meetups e encontros sem cobrança.</p>
         <div className="mt-6 flex items-baseline gap-x-1">
@@ -56,7 +56,7 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         ) : null}
       </div>
 
-      <div className="h-full rounded-2xl border border-emerald-600 bg-white p-8 shadow-md ring-1 ring-emerald-600">
+      <div className="card-interactive h-full rounded-2xl border border-emerald-600 bg-white p-8 shadow-md ring-1 ring-emerald-600">
         <h3 className="text-xl font-semibold text-emerald-700">Eventos pagos</h3>
         <p className="mt-2 text-sm text-zinc-500">Shows, festas e produções profissionais.</p>
         <div className="mt-6 flex flex-wrap items-baseline gap-x-1">
@@ -81,7 +81,7 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         ) : null}
       </div>
 
-      <div className="h-full rounded-2xl border border-emerald-800 bg-gradient-to-b from-emerald-50/80 to-white p-8 shadow-md ring-2 ring-emerald-800">
+      <div className="card-interactive h-full rounded-2xl border border-emerald-800 bg-gradient-to-b from-emerald-50/80 to-white p-8 shadow-md ring-2 ring-emerald-800">
         <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Mais lucro</p>
         <h3 className="mt-1 text-xl font-semibold text-emerald-900">Assinatura mensal</h3>
         <div className="mt-6 space-y-2">

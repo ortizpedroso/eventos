@@ -20,7 +20,7 @@ export function EventoCardVitrine({ evento: e }: Props) {
     <Link
       href={`/eventos/${e.slug}`}
       prefetch
-      className="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:border-emerald-600 hover:shadow-md hover:ring-1 hover:ring-emerald-600"
+      className="card-interactive flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm hover:border-emerald-600 hover:ring-1 hover:ring-emerald-600"
     >
       {thumbSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
