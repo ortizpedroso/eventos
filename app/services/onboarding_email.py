@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from urllib.parse import quote
 
 from app.models import Usuario
 from app.services.notificacao_email import enqueue_email_simples
@@ -21,7 +22,7 @@ def _financeiro_url() -> str:
 def _conta_repasse_url(tracking_id: str | None = None) -> str:
     base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
     if tracking_id:
-        return f"{base}/organizador/financeiro/conta-repasse?tracking={esc(tracking_id)}"
+        return f"{base}/organizador/financeiro/conta-repasse?tracking={quote(tracking_id, safe='')}"
     return f"{base}/organizador/financeiro/conta-repasse"
 
 
@@ -106,6 +107,8 @@ def enviar_email_assinatura_contratada(usuario: Usuario) -> bool:
 
 
 def enviar_email_assinatura_falhou(usuario: Usuario, *, motivos: list[str]) -> bool:
+    if (getattr(usuario, "assinatura_tracker_status", None) or "").strip() == "PAYMENT_FAILED":
+        return False
     destino = (usuario.email or "").strip()
     if not destino:
         return False
