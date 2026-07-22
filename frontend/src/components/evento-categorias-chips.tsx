@@ -61,7 +61,7 @@ export function EventoCategoriasChips({
             : "bg-zinc-50 text-zinc-700 ring-zinc-200/70 hover:bg-zinc-100";
 
         const base =
-          "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2";
+          "card-interactive inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2";
 
         if (onSelecionar) {
           return (

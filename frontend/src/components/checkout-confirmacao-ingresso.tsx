@@ -99,7 +99,7 @@ export function CheckoutConfirmacaoIngresso({
 
   return (
     <div className="space-y-4 text-center">
-      <p className="text-3xl" aria-hidden>
+      <p className="checkout-check-pop" aria-hidden>
         ✓
       </p>
       <h2 className="text-lg font-semibold text-emerald-900" data-testid="checkout-confirmacao">
@@ -123,7 +123,7 @@ export function CheckoutConfirmacaoIngresso({
       ) : null}
 
       {qrUrl ? (
-        <div className="mx-auto inline-block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="checkout-qr-fade mx-auto inline-block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrUrl} alt="QR Code do ingresso" width={240} height={240} className="mx-auto" />
           {codigoCheckin ? (
