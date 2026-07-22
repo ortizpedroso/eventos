@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
@@ -13,13 +14,16 @@ export function ComunicadosClient() {
   const [assunto, setAssunto] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [busy, setBusy] = useState(false);
+  const [carregando, setCarregando] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
+      setCarregando(true);
+      setError(null);
       try {
-        const lista = await apiFetch<Evento[]>("/api/eventos/organizador/meus", { cache: "no-store" });
+        const lista = await apiFetch<Evento[]>("/api/eventos/meus", { cache: "no-store" });
         const opcoes = lista.map((e) => ({
           evento_id: e.id,
           nome: e.nome,
@@ -27,8 +31,15 @@ export function ComunicadosClient() {
         }));
         setEventos(opcoes);
         if (opcoes[0]) setEventoId(opcoes[0].evento_id);
-      } catch {
+      } catch (err) {
         setEventos([]);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Não foi possível carregar seus eventos. Tente novamente.",
+        );
+      } finally {
+        setCarregando(false);
       }
     })();
   }, []);
@@ -74,12 +85,22 @@ export function ComunicadosClient() {
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Comunicados</h1>
         <p className="mt-2 text-sm text-zinc-600">
           Envie e-mail para participantes com ingresso <strong>pago</strong> ou já <strong>utilizado</strong>.
-          Requer SMTP configurado na API.
         </p>
       </div>
 
-      {eventos.length === 0 ? (
-        <p className="text-sm text-zinc-600">Crie um evento antes de enviar comunicados.</p>
+      {carregando ? (
+        <p className="text-sm text-zinc-600">Carregando seus eventos…</p>
+      ) : error && eventos.length === 0 ? (
+        <p className="text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      ) : eventos.length === 0 ? (
+        <p className="text-sm text-zinc-600">
+          Você ainda não tem eventos.{" "}
+          <Link href="/organizador/novo" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+            Criar primeiro evento
+          </Link>
+        </p>
       ) : (
         <form onSubmit={(e) => void enviar(e)} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <div>
