@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ScrollReveal } from "@/components/scroll-reveal";
 import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-routes";
 
 export const metadata: Metadata = {
@@ -249,8 +248,7 @@ export default function FuncionalidadesPage() {
           {destaques.map((item, index) => {
             const isReversed = index % 2 !== 0;
             return (
-              <ScrollReveal key={item.id} delayMs={100}>
-                <div className={`flex flex-col gap-12 lg:items-center ${isReversed ? 'lg:flex-row-reverse' : 'lg:flex-row'}`}>
+              <div key={item.id} className={`flex flex-col gap-12 lg:items-center ${isReversed ? 'lg:flex-row-reverse' : 'lg:flex-row'}`}>
                   
                   {/* Texto */}
                   <div className="flex-1 lg:max-w-xl">
@@ -279,7 +277,6 @@ export default function FuncionalidadesPage() {
                     {item.visual}
                   </div>
                 </div>
-              </ScrollReveal>
             );
           })}
         </div>
@@ -291,8 +288,8 @@ export default function FuncionalidadesPage() {
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900">E não para por aí</h2>
         </div>
         <div className="grid grid-cols-1 gap-6 text-left sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
-          {outrosRecursos.map((b, i) => (
-            <ScrollReveal key={b.titulo} className="h-full" delayMs={i * 75}>
+          {outrosRecursos.map((b) => (
+            <div key={b.titulo} className="h-full">
             <div
               className="h-full rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
             >
@@ -302,13 +299,12 @@ export default function FuncionalidadesPage() {
               </div>
               <p className="mt-4 text-justify text-sm leading-6 text-zinc-600">{b.texto}</p>
             </div>
-            </ScrollReveal>
+            </div>
           ))}
         </div>
       </div>
 
       <div className="mx-auto mt-16 max-w-3xl sm:mt-20">
-        <ScrollReveal>
           <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
             <div className="flex items-start gap-3">
               {icones.resumo}
@@ -320,7 +316,6 @@ export default function FuncionalidadesPage() {
               e mais tempo focando em produzir a experiência ao vivo.
             </p>
           </div>
-        </ScrollReveal>
       </div>
 
       <div className="mx-auto mt-12 max-w-3xl text-center">

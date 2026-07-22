@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ScrollReveal } from "@/components/scroll-reveal";
 
 export const metadata: Metadata = {
   title: "Sobre | EventosBR",
@@ -24,8 +23,7 @@ export default function SobrePage() {
 
       {/* Nossa Proposta (Zigue-Zague) */}
       <div className="mx-auto mt-16 max-w-7xl px-4 sm:mt-24 sm:px-6 lg:px-8">
-        <ScrollReveal>
-          <div className="flex flex-col gap-12 lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-12 lg:flex-row lg:items-center">
             <div className="relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-2xl min-h-[320px] ring-1 ring-zinc-200 lg:min-h-[440px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -50,7 +48,6 @@ export default function SobrePage() {
               </p>
             </div>
           </div>
-        </ScrollReveal>
       </div>
 
       {/* Para quem é (Grid de Cards) */}
@@ -59,7 +56,7 @@ export default function SobrePage() {
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Feito para todo o ecossistema</h2>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
-          <ScrollReveal delayMs={0} className="h-full">
+          <div className="h-full">
             <div className="flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -71,9 +68,9 @@ export default function SobrePage() {
                 Organizadores de shows, festivais, torneios esportivos e feijoadas que buscam autonomia, repasses rápidos e taxas transparentes.
               </p>
             </div>
-          </ScrollReveal>
+          </div>
 
-          <ScrollReveal delayMs={100} className="h-full">
+          <div className="h-full">
             <div className="flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -85,9 +82,9 @@ export default function SobrePage() {
                 O seu público final, que exige uma experiência mobile fluida, rapidez no pagamento via PIX ou cartão e máxima segurança nos dados.
               </p>
             </div>
-          </ScrollReveal>
+          </div>
 
-          <ScrollReveal delayMs={200} className="h-full">
+          <div className="h-full">
             <div className="flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -99,14 +96,13 @@ export default function SobrePage() {
                 Desenvolvedores e agências que valorizam uma API bem documentada (OpenAPI) e uma stack moderna para realizar integrações customizadas.
               </p>
             </div>
-          </ScrollReveal>
+          </div>
         </div>
       </div>
 
       {/* Tecnologia (Dark Premium Section) */}
       <div className="mx-auto mt-24 max-w-7xl px-4 sm:mt-32 sm:px-6 lg:px-8">
-        <ScrollReveal>
-          <div className="relative overflow-hidden rounded-3xl bg-zinc-900 px-6 py-12 shadow-2xl sm:px-12 lg:flex lg:items-center lg:justify-between lg:gap-16 lg:px-16 lg:py-16">
+        <div className="relative overflow-hidden rounded-3xl bg-zinc-900 px-6 py-12 shadow-2xl sm:px-12 lg:flex lg:items-center lg:justify-between lg:gap-16 lg:px-16 lg:py-16">
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-50" />
             
             <div className="relative z-10 lg:max-w-2xl">
@@ -135,7 +131,6 @@ export default function SobrePage() {
               </div>
             </div>
           </div>
-        </ScrollReveal>
       </div>
 
       {/* CTA Final */}

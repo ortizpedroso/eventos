@@ -29,7 +29,7 @@ export function HomeDiferenciais() {
           <Link
             key={item.titulo}
             href={item.href}
-            className="card-interactive rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm hover:border-emerald-300"
+            className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
           >
             <h3 className="font-semibold text-emerald-800">{item.titulo}</h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-600">{item.descricao}</p>

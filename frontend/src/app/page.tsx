@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { HeroEntrance, HeroEntranceItem } from "@/components/hero-entrance";
+import { Suspense } from "react";
+
 import { HomeDepoimentos } from "@/components/home-depoimentos";
 import { HomeDiferenciais } from "@/components/home-diferenciais";
 import { HomeHeroExplorar } from "@/components/home-hero-explorar";
@@ -9,17 +10,17 @@ import { HomeHeroVisual } from "@/components/home-hero-visual";
 import { HomeProvaSocial } from "@/components/home-prova-social";
 import { HomeSelosConfianca } from "@/components/home-selos-confianca";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
-import { ScrollReveal } from "@/components/scroll-reveal";
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { eventosDestaqueHome, fetchEventosPublicos } from "@/lib/eventos-publicos";
 import { homeMetadata } from "@/lib/site-metadata";
+import type { Evento } from "@/lib/types";
 
 export const metadata: Metadata = homeMetadata;
 
-export default async function Home() {
-  let eventosDestaque = null;
-  let eventosHero = null;
+async function HomeEventosDinamicos() {
+  let eventosDestaque: Evento[] | null = null;
+  let eventosHero: Evento[] | null = null;
   try {
     const todos = filtrarEventosVitrine(await fetchEventosPublicos(24));
     eventosDestaque = eventosDestaqueHome(todos);
@@ -29,56 +30,55 @@ export default async function Home() {
     eventosHero = null;
   }
 
+  return (
+    <>
+      <HomeHeroVisual eventos={eventosHero} />
+      <HomeEventosDestaque initialEventos={eventosDestaque} />
+    </>
+  );
+}
+
+export default function Home() {
   const criarHref = hrefCriarEvento;
 
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
-      <HeroEntrance className="mx-auto max-w-3xl text-center">
-        <HeroEntranceItem order={0}>
-          <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700">
-            PIX, cartão e QR Code na entrada
-          </p>
-        </HeroEntranceItem>
-        <HeroEntranceItem order={1}>
-          <h1 className="mt-3 text-5xl font-extrabold tracking-tight text-zinc-900 sm:text-6xl">
-            Venda ingressos sem complicação.{" "}
-            <span className="text-emerald-700">Compre em minutos.</span>
-          </h1>
-        </HeroEntranceItem>
-        <HeroEntranceItem order={2}>
-          <p className="mt-6 text-lg text-zinc-700 sm:text-xl">
-            Publique seu evento em minutos, receba com repasse direto na sua conta e ofereça
-            reembolso automático ao seu público — tudo em um só lugar, sem mensalidade obrigatória.
-          </p>
-        </HeroEntranceItem>
+      <div className="mx-auto max-w-3xl text-center">
+        <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700">
+          PIX, cartão e QR Code na entrada
+        </p>
+        <h1 className="mt-3 text-5xl font-extrabold tracking-tight text-zinc-900 sm:text-6xl">
+          Venda ingressos sem complicação.{" "}
+          <span className="text-emerald-700">Compre em minutos.</span>
+        </h1>
+        <p className="mt-6 text-lg text-zinc-700 sm:text-xl">
+          Publique seu evento em minutos, receba com repasse direto na sua conta e ofereça
+          reembolso automático ao seu público — tudo em um só lugar, sem mensalidade obrigatória.
+        </p>
 
-        <HeroEntranceItem order={3}>
-          <HomeHeroExplorar />
-        </HeroEntranceItem>
-        <HeroEntranceItem order={4}>
+        <HomeHeroExplorar />
+
+        <Suspense fallback={null}>
           <HomeProvaSocial />
-        </HeroEntranceItem>
-        <HeroEntranceItem order={5}>
-          <HomeSelosConfianca />
-        </HeroEntranceItem>
+        </Suspense>
 
-        <HeroEntranceItem order={6}>
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href="/eventos" className="btn-success px-8 py-3.5 text-base shadow-sm">
-              Explorar eventos
-            </Link>
-            <Link href={criarHref} className="btn-outline px-8 py-3.5 text-base shadow-sm">
-              Organizar um evento
-            </Link>
-          </div>
-        </HeroEntranceItem>
-      </HeroEntrance>
+        <HomeSelosConfianca />
 
-      <HomeHeroVisual eventos={eventosHero} />
+        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <Link href="/eventos" className="btn-success px-8 py-3.5 text-base shadow-sm">
+            Explorar eventos
+          </Link>
+          <Link href={criarHref} className="btn-outline px-8 py-3.5 text-base shadow-sm">
+            Organizar um evento
+          </Link>
+        </div>
+      </div>
+
+      <Suspense fallback={null}>
+        <HomeEventosDinamicos />
+      </Suspense>
 
       <HomeDiferenciais />
-
-      <HomeEventosDestaque initialEventos={eventosDestaque} />
 
       <HomeDepoimentos />
 
@@ -98,15 +98,13 @@ export default async function Home() {
       </div>
 
       <div className="mx-auto mt-16 max-w-3xl sm:mt-20">
-        <ScrollReveal>
-          <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
-            <h2 className="text-lg font-semibold text-emerald-700">Transparência e segurança</h2>
-            <p className="mt-3 text-sm leading-6 text-zinc-600">
-              Pagamentos via PIX e cartão com taxas estimadas visíveis nos simuladores.
-              Reembolso automático dentro do prazo legal em Minha conta.
-            </p>
-          </div>
-        </ScrollReveal>
+        <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
+          <h2 className="text-lg font-semibold text-emerald-700">Transparência e segurança</h2>
+          <p className="mt-3 text-sm leading-6 text-zinc-600">
+            Pagamentos via PIX e cartão com taxas estimadas visíveis nos simuladores.
+            Reembolso automático dentro do prazo legal em Minha conta.
+          </p>
+        </div>
       </div>
     </div>
   );

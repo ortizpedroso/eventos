@@ -31,11 +31,6 @@ export default async function RootLayout({
       </head>
       <body
         className="grid min-h-dvh grid-rows-[auto_1fr_auto] antialiased"
-        style={{
-          display: "grid",
-          gridTemplateRows: "auto 1fr auto",
-          minHeight: "100dvh",
-        }}
         suppressHydrationWarning
         nonce={nonce}
       >
@@ -47,7 +42,7 @@ export default async function RootLayout({
           id="conteudo-principal"
           className="mx-auto flex min-h-0 w-full flex-col px-4 py-6 sm:px-6 lg:px-8 max-w-7xl"
         >
-          <div className="flex min-h-[60vh] flex-1 flex-col">{children}</div>
+          <div className="flex flex-1 flex-col">{children}</div>
         </main>
 
         <SiteFooter />

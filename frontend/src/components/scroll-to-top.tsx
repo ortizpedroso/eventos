@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect } from "react";
+import { useLayoutEffect } from "react";
 
 function resetScroll() {
   if (typeof window === "undefined") return;
@@ -22,10 +22,6 @@ export function ScrollToTop() {
     if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
-    resetScroll();
-  }, [pathname]);
-
-  useEffect(() => {
     resetScroll();
   }, [pathname]);
 

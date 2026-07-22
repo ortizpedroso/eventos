@@ -3,7 +3,6 @@ import Link from "next/link";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
 import { PlanosSimuladorComprador } from "@/components/planos-simulador-comprador";
 import { PlanosSimuladorLucro } from "@/components/planos-simulador-lucro";
-import { ScrollReveal } from "@/components/scroll-reveal";
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 
 export const metadata: Metadata = {
@@ -31,19 +30,14 @@ export default function PlanosPage() {
       </div>
 
       <div className="mx-auto mt-16 max-w-6xl sm:mt-20">
-        <ScrollReveal>
-          <PlanosSimuladorLucro />
-        </ScrollReveal>
+        <PlanosSimuladorLucro />
       </div>
 
       <div className="mx-auto mt-12 max-w-3xl sm:mt-16">
-        <ScrollReveal>
-          <PlanosSimuladorComprador />
-        </ScrollReveal>
+        <PlanosSimuladorComprador />
       </div>
 
       <div className="mx-auto mt-16 max-w-3xl sm:mt-20">
-        <ScrollReveal>
         <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
           <h2 className="text-lg font-semibold text-emerald-700">Como funcionam as taxas</h2>
           <p className="mt-3 text-justify text-sm leading-6 text-zinc-600">
@@ -52,7 +46,6 @@ export default function PlanosPage() {
             comprador vê um acréscimo explícito; sua taxa e o líquido do organizador não mudam.
           </p>
         </div>
-        </ScrollReveal>
       </div>
 
       <div className="mx-auto mt-12 max-w-3xl text-center">
