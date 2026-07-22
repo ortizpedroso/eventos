@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 import re
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import Evento, Ingresso, Usuario, get_db
@@ -46,6 +47,74 @@ class ComunicadoRequest(BaseModel):
 def _require_organizador(usuario: Usuario) -> None:
     if usuario.tipo != "organizador":
         raise HTTPException(status_code=403, detail="Apenas organizadores podem enviar comunicados")
+
+
+class EventoComunicadoItem(BaseModel):
+    evento_id: str
+    nome: str
+    publicado: bool
+    data_inicio: str | None = None
+    destinatarios: int
+
+
+def _contagem_destinatarios_por_evento(db: Session, organizador_id: str):
+    """Ingressos pagos/usados com e-mail, agrupados por evento (e-mails únicos)."""
+    email_norm = func.lower(func.trim(Ingresso.participante_email))
+    return (
+        db.query(
+            Ingresso.evento_id,
+            func.count(func.distinct(email_norm)).label("destinatarios"),
+        )
+        .join(Evento, Evento.id == Ingresso.evento_id)
+        .filter(
+            Evento.organizador_id == organizador_id,
+            Ingresso.status.in_(("pago", "usado")),
+            Ingresso.participante_email.isnot(None),
+            func.length(func.trim(Ingresso.participante_email)) > 0,
+        )
+        .group_by(Ingresso.evento_id)
+        .subquery()
+    )
+
+
+@router.get("/comunicados/eventos", response_model=list[EventoComunicadoItem])
+async def listar_eventos_comunicados(
+    q: str = Query("", max_length=120),
+    limit: int = Query(30, ge=1, le=100),
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Eventos com participantes elegíveis a comunicado (ingresso pago/usado + e-mail)."""
+    _require_organizador(usuario_atual)
+
+    contagens = _contagem_destinatarios_por_evento(db, usuario_atual.id)
+    query = (
+        db.query(Evento, contagens.c.destinatarios)
+        .join(contagens, Evento.id == contagens.c.evento_id)
+        .filter(Evento.organizador_id == usuario_atual.id)
+    )
+    termo = (q or "").strip()
+    if termo:
+        query = query.filter(Evento.nome.ilike(f"%{termo}%"))
+
+    rows = (
+        query.order_by(
+            func.coalesce(Evento.data_inicio, Evento.data_criacao).desc(),
+            Evento.nome.asc(),
+        )
+        .limit(limit)
+        .all()
+    )
+    return [
+        EventoComunicadoItem(
+            evento_id=ev.id,
+            nome=ev.nome,
+            publicado=bool(ev.publicado),
+            data_inicio=ev.data_inicio.isoformat() if ev.data_inicio else None,
+            destinatarios=int(dest or 0),
+        )
+        for ev, dest in rows
+    ]
 
 
 @router.post("/comunicados")
@@ -96,7 +165,7 @@ async def enviar_comunicado(
         "ok": True,
         "destinatarios": len(destinos),
         "enfileirados": enfileirados,
-        "mensagem": "Comunicado enfileirado para envio. Verifique SMTP se os e-mails não chegarem.",
+        "mensagem": "Comunicado enfileirado para envio.",
     }
 
 
