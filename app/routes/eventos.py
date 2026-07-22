@@ -521,6 +521,8 @@ async def resumo_evento_organizador(
     """Indicadores simples para o painel do organizador."""
     from sqlalchemy import func
 
+    from app.models import Ingresso
+
     evento = (
         db.query(Evento)
         .options(selectinload(Evento.ingresso_lotes))

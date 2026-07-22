@@ -382,6 +382,7 @@ export default function IngressoDetalhePage() {
             Cada ingresso tem um código diferente. Na portaria, o organizador valida uma única vez.
           </p>
           {qrUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- QR Code dinâmico (blob/data URI), sem ganho de next/image
             <img
               src={qrUrl}
               alt="QR Code do ingresso para entrada"

@@ -179,12 +179,12 @@ export function EventoPublicClient({
     const t = evento.descricao.trim();
     if (t.length <= 320) return t;
     return `${t.slice(0, 320).trim()}…`;
-  }, [evento?.descricao]);
+  }, [evento]);
 
   const descricaoLonga = useMemo(() => {
     if (!evento?.descricao) return false;
     return evento.descricao.trim().length > 320;
-  }, [evento?.descricao]);
+  }, [evento]);
 
   const imagemBanner = useMemo(
     () => resolveEventoImagemSrc(evento?.imagem_url),

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { OrganizadorFinanceiroSimulador } from "@/components/organizador-financeiro-simulador";
 import { OrganizadorRepassesPainel } from "@/components/organizador-repasses-painel";
@@ -57,6 +57,10 @@ function formatCountdown(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function calcularExpiraEm(expiraEm: string | undefined): number {
+  return expiraEm ? new Date(expiraEm).getTime() : Date.now() + PIX_QR_VALIDADE_MS;
+}
+
 function PixCard({
   pix,
   onPago,
@@ -70,10 +74,10 @@ function PixCard({
   const [verificando, setVerificando] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const expiraEm = useMemo(
-    () => (pix.expira_em ? new Date(pix.expira_em).getTime() : Date.now() + PIX_QR_VALIDADE_MS),
-    [pix.expira_em],
-  );
+  const [expiraEm, setExpiraEm] = useState(() => calcularExpiraEm(pix.expira_em));
+  useEffect(() => {
+    setExpiraEm(calcularExpiraEm(pix.expira_em));
+  }, [pix.expira_em]);
   const [countdown, setCountdown] = useState(() => formatCountdown(expiraEm - Date.now()));
   const expirouRef = useRef(false);
 
@@ -137,6 +141,7 @@ function PixCard({
 
       {pix.encoded_image ? (
         <div className="flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- QR Code dinâmico em data URI, sem ganho de next/image */}
           <img
             src={`data:image/png;base64,${pix.encoded_image}`}
             alt="QR Code PIX"

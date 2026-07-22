@@ -25,7 +25,7 @@ function finish(response: NextResponse, nonce: string): NextResponse {
   return response;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const headers = withNonce(request, nonce);

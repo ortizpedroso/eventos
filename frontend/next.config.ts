@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
       ? __dirname
       : path.join(__dirname, ".."),
   output: "standalone",
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
+  },
   async headers() {
     const security = [
       { key: "X-Frame-Options", value: "SAMEORIGIN" },

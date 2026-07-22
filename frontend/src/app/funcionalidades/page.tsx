@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ScrollReveal } from "@/components/scroll-reveal";
@@ -139,8 +140,7 @@ const destaques = [
       "Acompanhamento de vendas em tempo real",
     ],
     visual: (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src="/marketing/organizador.webp"
         alt="Captura de tela do painel Meus eventos do organizador na EventosBR, com lista de eventos e status de publicação"
         width={800}
@@ -159,8 +159,7 @@ const destaques = [
       "Recebimento direto na sua conta, sem dor de cabeça",
     ],
     visual: (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src="/marketing/checkout.webp"
         alt="Captura de tela do checkout EventosBR mostrando pagamento PIX com QR Code e código copia e cola"
         width={800}
@@ -179,8 +178,7 @@ const destaques = [
       "Organize múltiplas portarias simultaneamente",
     ],
     visual: (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src="/marketing/portaria.webp"
         alt="Captura de tela da validação de ingressos na portaria EventosBR com leitura de QR Code"
         width={800}

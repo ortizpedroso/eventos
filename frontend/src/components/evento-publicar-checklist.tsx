@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
 import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
@@ -23,6 +23,11 @@ type ChecklistInput = {
 type Item = { id: string; label: string; ok: boolean; obrigatorio: boolean };
 
 export function EventoPublicarChecklist(props: ChecklistInput) {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    setAgora(Date.now());
+  }, [props.dataInicio]);
+
   const items = useMemo<Item[]>(() => {
     const precoOk =
       props.eventoGratuito ||
@@ -51,7 +56,7 @@ export function EventoPublicarChecklist(props: ChecklistInput) {
         ok: (() => {
           if (!props.dataInicio) return false;
           const d = new Date(props.dataInicio);
-          return Number.isFinite(d.getTime()) && d.getTime() > Date.now() - 60_000;
+          return Number.isFinite(d.getTime()) && d.getTime() > agora - 60_000;
         })(),
         obrigatorio: true,
       },
@@ -81,7 +86,7 @@ export function EventoPublicarChecklist(props: ChecklistInput) {
         obrigatorio: false,
       },
     ];
-  }, [props]);
+  }, [props, agora]);
 
   const pronto = items.filter((i) => i.obrigatorio).every((i) => i.ok);
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ScrollReveal } from "@/components/scroll-reveal";
 
@@ -27,11 +28,12 @@ export default function SobrePage() {
         <ScrollReveal>
           <div className="flex flex-col gap-12 lg:flex-row lg:items-center">
             <div className="relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-2xl min-h-[320px] ring-1 ring-zinc-200 lg:min-h-[440px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"
                 alt="Público em uma grande conferência"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover transition-transform duration-700 hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 via-zinc-900/10 to-transparent" />
               <div className="absolute bottom-6 left-6 right-6">
@@ -128,7 +130,7 @@ export default function SobrePage() {
                 </div>
                 <div className="mt-5 space-y-2 font-mono text-sm leading-relaxed text-zinc-300">
                   <p><span className="text-pink-400">import</span> {"{ EventosBR }"} <span className="text-pink-400">from</span> <span className="text-emerald-300">&apos;future&apos;</span>;</p>
-                  <p className="text-zinc-500 pt-2">// Inicia o motor de vendas</p>
+                  <p className="text-zinc-500 pt-2">{"// Inicia o motor de vendas"}</p>
                   <p>EventosBR.<span className="text-blue-300">startSales</span>();</p>
                   <p className="pt-2 text-emerald-400">➜ Vendas a 500 req/s. Stable.</p>
                 </div>

@@ -65,13 +65,20 @@ export function EventosListaPublica({
 
   // Refs com valores correntes para evitar closures desatualizadas no debounce
   const categoriaRef = useRef(categoria);
-  categoriaRef.current = categoria;
   const cidadeRef = useRef(cidade);
-  cidadeRef.current = cidade;
   const buscaDebouncedRef = useRef(buscaDebounced);
-  buscaDebouncedRef.current = buscaDebounced;
   const pulouFetchInicialRef = useRef(false);
   const primeiraSincronizacaoBuscaRef = useRef(true);
+
+  useEffect(() => {
+    categoriaRef.current = categoria;
+  }, [categoria]);
+  useEffect(() => {
+    cidadeRef.current = cidade;
+  }, [cidade]);
+  useEffect(() => {
+    buscaDebouncedRef.current = buscaDebounced;
+  }, [buscaDebounced]);
 
   const buildUrl = useCallback(
     (overrides: {
