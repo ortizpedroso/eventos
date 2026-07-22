@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.4  
+**Versão:** 1.5  
 **Data:** 2026-07-22  
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `2f515ec` (merge PR #42 — 22/jul/2026). **Deploy VPS pendente:** `bash scripts/atualizar-vps-agora.sh`. **Testes reais (§2.8):** aguardando comando — `bash scripts/validar-go-live-vps.sh`.
+> **Produção (VPS):** `main` em `df3942c` (PR #43). **PR #44** (conta de recebimento PF/PJ) aguardando merge. **Deploy VPS:** após merge → `bash scripts/atualizar-vps-agora.sh`. **Bloqueio pagamentos:** conta mãe Asaas precisa ser **CNPJ** (usuário vai configurar). **Testes reais (§2.8):** após CNPJ + deploy PR #44.
 
 ---
 
@@ -117,7 +117,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (233 testes) |
+| `api` | `pytest` (234 testes) |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -229,6 +229,7 @@ Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida:
 - `ASAAS_ONBOARDING_MODE=baas`
 - `ASAAS_ALLOW_MANUAL_WALLET=false`
 - `ASAAS_DISABLED=false` (check `asaas_payments_enabled`)
+- Conta mãe Asaas **CNPJ** em modo `baas` (check `asaas_platform_cnpj`)
 - Senha Postgres, `CORS_ORIGINS` só HTTPS, `FRONTEND_PUBLIC_URL` preenchida
 
 Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
@@ -241,6 +242,8 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 - [x] Split só para organizador; taxa na conta emissora
 - [x] Conta de recebimento criada pela plataforma (`ASAAS_ONBOARDING_MODE=baas`)
+- [x] Organizador PF ou PJ — rotas `conta-recebimento`; sem “subconta” na UX (PR #44)
+- [x] Pré-check conta mãe CNPJ + mensagem clara se plataforma PF (`asaas_plataforma.py`)
 - [x] KYC → status `approved` libera venda e publicação
 - [x] Bloqueio venda/publicação sem conta de recebimento aprovada
 - [x] Extrato, vendas agrupadas, estornos, saque Pix white-label
@@ -258,27 +261,30 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (227 testes)
+- [x] `pytest` verde (234 testes)
 - [x] `npm run build` verde
-- [ ] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas` verdes no PR #42 (branch `cursor/build-spec-sandbox-asaas-bf71`)
+- [ ] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas` verdes no PR #44
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
+- [x] OpenAPI exportado com rotas `conta-recebimento` (`scripts/export-openapi.py`)
 
-### Operação (VPS — após deploy `2f515ec`)
+### Operação (VPS — após merge PR #44 + CNPJ Asaas)
 
 **Estado do repositório:**
 
-- [x] PR #42 mergeado em `main` (`2f515ec`)
-- [x] CI verde (`api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`)
+- [x] PR #42 e #43 mergeados em `main`
+- [ ] PR #44 mergeado (`cursor/conta-recebimento-pf-pj-bf71`)
+- [ ] Conta mãe Asaas em **CNPJ** + `ASAAS_API_KEY` / `ASAAS_PLATFORM_WALLET_ID` atualizados
 - [ ] Deploy VPS: `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`
+- [ ] `GET /api/admin/setup` → `asaas_platform_cnpj: ok`
 
-**Validado anteriormente no VPS (`2d32122` — revalidar após deploy):**
+**Validado anteriormente no VPS (`df3942c`):**
 
 - [x] `.env` produção preenchido
 - [x] `ASAAS_ENVIRONMENT=production` e `ASAAS_ONBOARDING_MODE=baas`
 - [x] `verify-production.sh` / `verificar-versao-site.sh`
-- [x] `alembic upgrade head` (migração `20260717_000035`)
+- [x] Webhook token HTTP 200 (`test-asaas-webhook.sh --expect-ok`) — revalidar após trocar conta Asaas
 
-**Pendente — testes reais (§2.8) — executar só quando autorizado:**
+**Pendente — testes reais (§2.8) — após CNPJ e deploy:**
 
 ```bash
 cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
@@ -295,7 +301,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Área | Arquivos |
 |------|----------|
 | Split / cobrança | `pagamento_asaas.py`, `pagamentos_asaas_handlers.py` |
-| Conta de recebimento | `organizador_asaas.py`, `evento_repasse.py` |
+| Conta de recebimento | `organizador_asaas.py`, `asaas_plataforma.py`, `evento_repasse.py` |
 | Financeiro | `financeiro_organizador.py`, `financeiro_conciliacao.py`, `saque_asaas.py` |
 | UI financeiro | `organizador-repasses-painel.tsx` |
 | Conta / perfil | `conta-shell.tsx`, `perfil-tabs.tsx`, `conta/layout.tsx`, `organizador/perfil/layout.tsx` |

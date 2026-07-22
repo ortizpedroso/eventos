@@ -138,6 +138,24 @@ def test_asaas_disabled_bloqueado_em_producao():
     assert s["ready_for_production"] is False
 
 
+def test_asaas_platform_cnpj_check():
+    with patch.multiple(
+        settings,
+        ENVIRONMENT="production",
+        ASAAS_DISABLED=False,
+        ASAAS_API_KEY="$aact_prod_test_key_with_enough_length",
+        ASAAS_ONBOARDING_MODE="baas",
+        ASAAS_E2E_MOCK=False,
+    ):
+        with patch(
+            "app.services.asaas_plataforma.plataforma_pode_provisionar_contas",
+            return_value=False,
+        ):
+            s = build_setup_status()
+    assert s["checks"]["asaas_platform_cnpj"] == "pendente"
+    assert s["ready_for_production"] is False
+
+
 def test_onboarding_mode_fallback_baas():
     with patch.multiple(settings, ASAAS_ONBOARDING_MODE="invalido"):
         assert settings.asaas_onboarding_mode == "baas"

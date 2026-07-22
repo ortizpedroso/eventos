@@ -809,7 +809,7 @@ export function OrganizadorRepassesPainel() {
             <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-60">
               {busy ? "Enviando..." : modoReenvio ? "Reenviar dados" : "Criar conta de repasses"}
             </button>
-            <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setMostrarSubconta(false)}>
+            <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setMostrarFormContaRecebimento(false)}>
               Cancelar
             </button>
           </div>
