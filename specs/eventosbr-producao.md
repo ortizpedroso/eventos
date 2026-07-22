@@ -161,8 +161,8 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 ## 3. UX — Área da conta
 
 - `ContaShell` em `/conta/*`: menu lateral **Perfil**, **Pagamentos**, **Ingressos**, **Notificações** (cliente).
-- Dropdown do avatar: **Painel** (só organizador), **Perfil**, **Pagamentos**, **Ingressos**, **Notificações**, **Sair**.
-- Organizador logado: dropdown aponta para `/organizador/perfil` e subrotas (`/pagamentos`, `/ingressos`, `/notificacoes`), renderizando os mesmos clients de `/conta/*` dentro do `OrganizadorShell` — a barra lateral **Painel** não muda.
+- Dropdown do avatar: **Painel** (só organizador), **Perfil**, **Sair**. Pagamentos, Ingressos e Notificações ficam nas abas do perfil (`PerfilTabs`), não no dropdown.
+- Organizador logado: dropdown **Perfil** → `/organizador/perfil`; subpáginas via abas horizontais (`/pagamentos`, `/ingressos`, `/notificacoes`), renderizando os mesmos clients de `/conta/*` dentro do `OrganizadorShell` — a barra lateral **Painel** não muda.
 - Abas horizontais do perfil do organizador via `PerfilTabs` (`frontend/src/components/perfil-tabs.tsx`), renderizadas abaixo do título em cada página `/organizador/perfil/*` (Perfil · Pagamentos · Ingressos · Notificações). O `layout.tsx` do perfil é passthrough.
 - `auth/layout.tsx` + `layout.tsx`: rodapé fixo no fim da viewport — shell estável (`grid` `auto 1fr auto`), CSS crítico `eventosbr-shell-layout`, `EarlyScrollReset` no `<head>`. Validação: `scripts/verificar-versao-site.sh`.
 - Máscaras: CPF/CNPJ, CEP, telefone nos formulários financeiro, checkout e repasse de ingresso.
@@ -256,7 +256,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 - [x] ContaShell lateral persistente (`/conta/*`)
 - [x] Subrotas organizador `/organizador/perfil/*` (mesmos clients)
-- [x] Dropdown organizador com Pagamentos/Ingressos/Notificações → subrotas
+- [x] Dropdown organizador com **Perfil** e **Painel**; Pagamentos/Ingressos/Notificações via `PerfilTabs`
 - [x] Abas horizontais via `PerfilTabs` em `/organizador/perfil/*` (validado em produção)
 - [x] Rodapé estável (shell + `EarlyScrollReset` — validado no VPS)
 - [x] Máscaras formulários
