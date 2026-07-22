@@ -117,7 +117,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (227 testes) |
+| `api` | `pytest` (233 testes) |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
