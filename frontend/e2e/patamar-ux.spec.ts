@@ -208,7 +208,7 @@ test.describe("Navegação — scroll e logo", () => {
 });
 
 test.describe("Menu direito (organizador) — sidebar e rodapé estáveis", () => {
-  test("Perfil/Pagamentos/Ingressos/Notificações no dropdown não trocam a barra lateral nem colapsam o rodapé", async ({
+  test("Perfil no dropdown não troca a barra lateral nem colapsa o rodapé", async ({
     page,
     request,
   }) => {
@@ -258,9 +258,19 @@ test.describe("Menu direito (organizador) — sidebar e rodapé estáveis", () =
     }
 
     await clicarItemDropdown("Perfil", "/organizador/perfil$");
-    await clicarItemDropdown("Pagamentos", "/organizador/perfil/pagamentos");
-    await clicarItemDropdown("Ingressos", "/organizador/perfil/ingressos");
-    await clicarItemDropdown("Notificações", "/organizador/perfil/notificacoes");
+
+    const perfilNav = page.getByRole("navigation", { name: "Seções do perfil" });
+    await perfilNav.getByRole("link", { name: "Pagamentos" }).click();
+    await expect(page).toHaveURL(/\/organizador\/perfil\/pagamentos/);
+    await expect(sidebarNav).toBeVisible();
+
+    await perfilNav.getByRole("link", { name: "Ingressos" }).click();
+    await expect(page).toHaveURL(/\/organizador\/perfil\/ingressos/);
+    await expect(sidebarNav).toBeVisible();
+
+    await perfilNav.getByRole("link", { name: "Notificações" }).click();
+    await expect(page).toHaveURL(/\/organizador\/perfil\/notificacoes/);
+    await expect(sidebarNav).toBeVisible();
   });
 });
 
