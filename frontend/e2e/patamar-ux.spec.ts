@@ -160,7 +160,10 @@ test.describe("Organizador — perfil no painel", () => {
     await expect(painelNav.getByRole("link", { name: "Meus eventos" })).toBeVisible();
     await expect(page.getByText("Minha conta")).not.toBeVisible();
 
-    await page.getByRole("button", { name: "Pagamentos" }).click();
+    await page
+      .getByRole("navigation", { name: "Seções da conta" })
+      .getByRole("link", { name: "Pagamentos" })
+      .click();
     await expect(page.getByRole("heading", { level: 1, name: /pagamentos/i })).toBeVisible({
       timeout: 15_000,
     });
@@ -223,6 +226,9 @@ test.describe("Menu direito (organizador) — sidebar e rodapé estáveis", () =
     expect(reg.ok()).toBeTruthy();
 
     await page.setViewportSize({ width: 1280, height: 800 });
+    await page.addInitScript(() => {
+      localStorage.setItem("eventosbr_tour_v1", "1");
+    });
     await page.goto("/auth?login=1", { waitUntil: "domcontentloaded" });
     await page.waitForSelector("form[data-auth-ready=true]", { timeout: 20_000 });
     await page.locator("#email").fill(email);

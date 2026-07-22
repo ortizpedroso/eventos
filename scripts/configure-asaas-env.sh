@@ -26,7 +26,7 @@ API_KEY=""
 PLATFORM_WALLET=""
 WEBHOOK_TOKEN=""
 ENVIRONMENT="production"
-ONBOARDING_MODE="linked"
+ONBOARDING_MODE="baas"
 ALLOW_MANUAL="false"
 
 usage() {
@@ -57,7 +57,7 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 if [ -z "$API_KEY" ]; then
-  read -r -p "ASAAS_API_KEY (ex.: \$aact_prod_... ou \$aact_hmlg_...): " API_KEY
+  read -r -p "ASAAS_API_KEY (ex.: \$aact_prod_...): " API_KEY
 fi
 if [ -z "$PLATFORM_WALLET" ]; then
   read -r -p "ASAAS_PLATFORM_WALLET_ID (walletId da conta EventosBR): " PLATFORM_WALLET

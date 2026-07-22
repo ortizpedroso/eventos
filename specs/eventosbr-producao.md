@@ -194,7 +194,7 @@ Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida:
 - [x] Abas horizontais em `/organizador/perfil/layout.tsx`
 - [x] Rodapé estável (shell + `EarlyScrollReset` — validado no VPS)
 - [x] Máscaras formulários
-- [ ] White-label completo: zero menção a processador/Asaas/subconta na UI e mensagens de erro
+- [x] White-label: mensagens sanitizadas; UI usa conta de recebimento (sem subconta/Asaas expostos)
 
 ### Qualidade
 

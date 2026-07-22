@@ -114,6 +114,12 @@ def test_frontend_url_obrigatorio_em_producao():
     assert s["ready_for_production"] is False
 
 
+def test_onboarding_baas_obrigatorio_em_producao():
+    with patch.multiple(settings, ENVIRONMENT="production", ASAAS_ONBOARDING_MODE="linked"):
+        s = build_setup_status()
+    assert s["checks"]["asaas_onboarding_mode"] == "pendente"
+
+
 def test_onboarding_mode_fallback_baas():
     with patch.multiple(settings, ASAAS_ONBOARDING_MODE="invalido"):
         assert settings.asaas_onboarding_mode == "baas"

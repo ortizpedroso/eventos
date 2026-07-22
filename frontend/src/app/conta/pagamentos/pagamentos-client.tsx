@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
 import { ListaSkeleton } from "@/components/lista-skeleton";
-import { PerfilTabs } from "@/components/perfil-tabs";
 import { apiFetch } from "@/lib/api";
 import { urlPosCompraEvento } from "@/lib/checkout-return";
 import { classeBadgeStatus, labelStatusIngresso } from "@/lib/ingresso-status";
@@ -14,7 +13,6 @@ import type { PagamentoListItem } from "@/lib/types";
 
 export function PagamentosClient() {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const ok = searchParams.get("ok");
   const ingressoParam = searchParams.get("ingresso");
@@ -88,8 +86,6 @@ export function PagamentosClient() {
           ← Eventos
         </Link>
       </div>
-
-      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
 
       {pendentes.length > 0 ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 shadow-sm">

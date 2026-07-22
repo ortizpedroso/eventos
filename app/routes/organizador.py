@@ -26,10 +26,15 @@ from app.services.organizador_asaas import (
     status_asaas_organizador,
 )
 from app.services.ticket_email import enqueue_comunicado_evento
+from app.utils.mensagens_publicas import sanitizar_mensagem_pagamento
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _erro_pagamento(exc: ValueError) -> HTTPException:
+    return HTTPException(status_code=400, detail=sanitizar_mensagem_pagamento(str(exc)))
 
 
 class ComunicadoRequest(BaseModel):
@@ -202,7 +207,7 @@ async def asaas_definir_wallet(
             api_key_organizador=body.api_key,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.post("/asaas/wallet/consultar")
@@ -223,7 +228,7 @@ async def asaas_consultar_wallet(
     try:
         return consultar_wallet_organizador_por_api_key(body.api_key)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.post("/asaas/subconta")
@@ -253,7 +258,7 @@ async def asaas_criar_subconta(
             data_nascimento=body.data_nascimento,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.post("/asaas/subconta/reenviar")
@@ -284,7 +289,7 @@ async def asaas_reenviar_subconta(
             data_nascimento=body.data_nascimento,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.put("/asaas/antecipacao")
@@ -301,7 +306,7 @@ async def asaas_antecipacao(
             habilitar=body.credit_card_automatic_enabled,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.post("/asaas/antecipacao/simular")
@@ -319,7 +324,7 @@ async def asaas_simular_antecipacao(
             payment_id=body.payment_id,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.get("/assinatura")
@@ -378,7 +383,7 @@ async def salvar_pix(
     try:
         validar_pix_cadastro_repasse(usuario_atual, chave, tipo)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
     usuario_atual.pix_chave_salva = chave
     usuario_atual.pix_tipo_salvo = tipo
@@ -403,4 +408,4 @@ async def pagar_assinatura(
     try:
         return iniciar_cobranca_assinatura(db, usuario_atual, cpf_cnpj=body.cpf_cnpj if body else None)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e

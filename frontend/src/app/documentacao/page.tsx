@@ -233,7 +233,7 @@ export default function DocumentacaoPage() {
                 (PIX, cartão ou fatura) via API de pagamentos. Requer conta de recebimentos do organizador e split da plataforma.
               </p>
               <p>
-                Com pagamentos desativados na API (<code className="rounded bg-zinc-100 px-1">ASAAS_DISABLED=true</code>), o fluxo pode concluir a
+                Com pagamentos desativados na API, o fluxo pode concluir a
                 compra sem cobrança real (apenas para desenvolvimento controlado).
               </p>
               <p>
@@ -267,7 +267,7 @@ export default function DocumentacaoPage() {
               <p>
                 Variáveis principais na raiz: <code className="rounded bg-zinc-100 px-1">DATABASE_URL</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">SECRET_KEY</code> (obrigatória fora de development), chaves
-                do processador de pagamentos (<code className="rounded bg-zinc-100 px-1">ASAAS_*</code> no servidor — não exposto ao utilizador), <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
+                do processador de pagamentos (variáveis no servidor — não expostas ao utilizador), <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">ENVIRONMENT</code>, <code className="rounded bg-zinc-100 px-1">DEBUG</code>.
               </p>
               <p>
@@ -278,7 +278,7 @@ export default function DocumentacaoPage() {
               </p>
               <p>
                 Testes automatizados: <code className="rounded bg-zinc-100 px-1">pytest tests/</code> (SQLite em memória,
-                <code className="rounded bg-zinc-100 px-1"> ASAAS_DISABLED=true</code> por defeito).
+                <code className="rounded bg-zinc-100 px-1">pagamentos desativados</code> por defeito).
               </p>
             </Section>
 

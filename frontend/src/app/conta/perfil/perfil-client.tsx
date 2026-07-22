@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { PerfilPublicoOrganizador } from "@/components/perfil-publico-organizador";
-import { PerfilTabs } from "@/components/perfil-tabs";
 import { apiFetch } from "@/lib/api";
 import type { Usuario } from "@/lib/types";
 import { onlyDigits } from "@/lib/cpf";
@@ -203,8 +202,6 @@ export function PerfilClient() {
           ← Eventos
         </Link>
       </div>
-
-      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
 
       <section className="max-w-lg rounded-2xl border border-zinc-200 bg-zinc-50/90 p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-3">

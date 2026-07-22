@@ -40,7 +40,7 @@ export function sanitizarMensagemPagamento(texto: string): string {
   return texto
     .replace(/conta\s+asaas/gi, "conta de recebimentos")
     .replace(/painel\s+asaas/gi, "sua conta de recebimentos")
-    .replace(/subconta\s+asaas/gi, "conta de repasses")
+    .replace(/\bsubconta\b/gi, "conta de recebimento")
     .replace(/chave\s+api\s+asaas/gi, "chave de acesso")
     .replace(/\basaas\b/gi, "processador de pagamentos")
     .replace(/walletid/gi, "ID da conta");
