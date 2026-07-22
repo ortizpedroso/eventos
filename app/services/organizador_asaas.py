@@ -104,6 +104,7 @@ def consultar_status_repasse_asaas(usuario: Usuario) -> dict[str, Any] | None:
 def atualizar_status_repasse_organizador(db: Session, usuario: Usuario) -> Usuario:
     agora = agora_utc_naive()
     status_local = (usuario.asaas_repasse_status or "").strip().lower()
+    status_anterior = status_local
     if (usuario.asaas_account_id or "").strip() and usuario.asaas_subaccount_api_key:
         remoto = consultar_status_repasse_asaas(usuario)
         if isinstance(remoto, dict):
@@ -113,6 +114,17 @@ def atualizar_status_repasse_organizador(db: Session, usuario: Usuario) -> Usuar
                 usuario.asaas_repasse_status = novo
             usuario.asaas_repasse_status_em = agora
             usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(remoto)
+            depois = (usuario.asaas_repasse_status or "").strip().lower()
+            if depois != status_anterior:
+                from app.services.onboarding_tracker import notificar_transicao_conta
+
+                detalhes_dict = remoto if isinstance(remoto, dict) else None
+                notificar_transicao_conta(
+                    db,
+                    usuario,
+                    status_anterior=status_anterior,
+                    detalhes=detalhes_dict,
+                )
     elif (usuario.asaas_wallet_id or "").strip() and not (usuario.asaas_account_id or "").strip():
         status_atual = (usuario.asaas_repasse_status or "").strip().lower()
         if status_atual not in ("rejected", "pending", "awaiting_approval"):
@@ -485,6 +497,7 @@ def criar_subconta_organizador(
     usuario.asaas_repasse_status = "pending"
     usuario.asaas_repasse_status_em = agora_utc_naive()
     usuario.asaas_repasse_detalhes = None
+    usuario.onboarding_conta_email_event = None
     db.add(usuario)
     db.query(Evento).filter(Evento.organizador_id == usuario.id).update(
         {Evento.asaas_wallet_id: wallet_id},
@@ -502,8 +515,12 @@ def criar_subconta_organizador(
         logger.info("Antecipação automática não ativada na subconta %s", usuario.email)
 
     aprovado = repasse_status_aprovado(usuario.asaas_repasse_status)
+    from app.services.onboarding_tracker import tracking_id_conta
+
+    tid = tracking_id_conta(usuario)
     return {
         "ok": True,
+        "tracking_id": tid,
         "account_id": account_id,
         "wallet_id": wallet_id,
         "tem_api_key": bool(api_key),
@@ -535,6 +552,7 @@ def limpar_subconta_rejeitada(db: Session, usuario: Usuario) -> None:
     usuario.asaas_repasse_status = None
     usuario.asaas_repasse_status_em = None
     usuario.asaas_repasse_detalhes = None
+    usuario.onboarding_conta_email_event = None
     db.add(usuario)
     db.query(Evento).filter(Evento.organizador_id == usuario.id).update(
         {Evento.asaas_wallet_id: None},
@@ -560,6 +578,7 @@ def aplicar_webhook_status_conta_asaas(
 
     general = account_status.get("general")
     status_atual = (usuario.asaas_repasse_status or "").lower()
+    status_anterior = status_atual
     evento_rejeicao = bool(event_type and str(event_type).endswith("_REJECTED"))
 
     if evento_rejeicao:
@@ -580,6 +599,12 @@ def aplicar_webhook_status_conta_asaas(
     usuario.asaas_repasse_status_em = agora_utc_naive()
     usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(account_status)
     db.add(usuario)
+
+    from app.services.onboarding_tracker import notificar_transicao_conta
+
+    detalhes_dict = account_status if isinstance(account_status, dict) else None
+    notificar_transicao_conta(db, usuario, status_anterior=status_anterior, detalhes=detalhes_dict)
+
     logger.info(
         "Repasse %s atualizado via webhook (%s) → %s",
         usuario.email,

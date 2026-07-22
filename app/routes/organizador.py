@@ -14,7 +14,6 @@ from app.models import Evento, Ingresso, Usuario, get_db
 from app.deps.platform_admin import optional_platform_admin
 from app.routes.auth import get_usuario_atual
 from app.services.organizador_asaas import (
-    acompanhamento_repasse_organizador,
     atualizar_antecipacao_cartao,
     atualizar_status_repasse_organizador,
     consultar_wallet_organizador_por_api_key,
@@ -25,6 +24,7 @@ from app.services.organizador_asaas import (
     sincronizar_wallet_eventos_organizador,
     status_asaas_organizador,
 )
+from app.services.onboarding_tracker import acompanhamento_conta_completo
 from app.services.ticket_email import enqueue_comunicado_evento
 from app.utils.mensagens_publicas import sanitizar_mensagem_pagamento
 from config.settings import settings
@@ -206,7 +206,7 @@ async def asaas_acompanhamento_repasse(
     db: Session = Depends(get_db),
 ):
     _require_organizador(usuario_atual)
-    return acompanhamento_repasse_organizador(db, usuario_atual)
+    return acompanhamento_conta_completo(db, usuario_atual)
 
 
 @router.put("/asaas/wallet")
@@ -446,5 +446,37 @@ async def pagar_assinatura(
 
     try:
         return iniciar_cobranca_assinatura(db, usuario_atual, cpf_cnpj=body.cpf_cnpj if body else None)
+    except ValueError as e:
+        raise _erro_pagamento(e) from e
+
+
+@router.get("/onboarding/conta/{tracking_id}/status")
+async def status_onboarding_conta(
+    tracking_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Status dinâmico da criação de conta de recebimento (tracker)."""
+    _require_organizador(usuario_atual)
+    from app.services.onboarding_tracker import status_onboarding_conta as _status
+
+    try:
+        return _status(db, usuario_atual, tracking_id=tracking_id)
+    except ValueError as e:
+        raise _erro_pagamento(e) from e
+
+
+@router.get("/onboarding/assinatura/{subscription_id}/status")
+async def status_onboarding_assinatura(
+    subscription_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Status dinâmico da contratação de assinatura (tracker)."""
+    _require_organizador(usuario_atual)
+    from app.services.onboarding_tracker import status_onboarding_assinatura as _status
+
+    try:
+        return _status(db, usuario_atual, subscription_id=subscription_id)
     except ValueError as e:
         raise _erro_pagamento(e) from e

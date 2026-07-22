@@ -53,6 +53,8 @@ Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos
 
 **Terminologia (UX e spec):** usar sempre **conta de recebimento** ou **conta de repasses**. Não expor “subconta”, “Asaas” nem “vincular wallet” ao usuário.
 
+**Acompanhamento dinâmico (tracker):** após criar conta ou iniciar assinatura, UI exibe stepper com polling (`GET /api/organizador/onboarding/conta/{trackingId}/status` e `GET /api/organizador/onboarding/assinatura/{subscriptionId}/status`, intervalo ~4s). E-mails automáticos no backend em `APPROVED`/`REJECTED` (conta) e `SUBSCRIBED`/`PAYMENT_FAILED` (assinatura). Componente reutilizável: `frontend/src/components/status-tracker.tsx`.
+
 **Modo de produção obrigatório:** `ASAAS_ONBOARDING_MODE=baas` (único modo em produção).
 
 ### 2.3 Configuração Asaas — somente produção
@@ -117,7 +119,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (236 testes) |
+| `api` | `pytest` (241 testes) |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
