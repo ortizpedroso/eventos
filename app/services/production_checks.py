@@ -110,6 +110,17 @@ def build_setup_status() -> dict:
 
     frontend_url_ok = bool((settings.FRONTEND_PUBLIC_URL or "").strip())
 
+    asaas_platform_cnpj_required = (
+        production
+        and not settings.ASAAS_DISABLED
+        and settings.use_asaas
+        and settings.asaas_onboarding_mode in ("baas", "both")
+        and not settings.asaas_e2e_mock
+    )
+    asaas_platform_cnpj_check_ok = (
+        asaas_platform_cnpj_ok is True if asaas_platform_cnpj_required else True
+    )
+
     ready = all(
         [
             sk_ok,
@@ -125,7 +136,7 @@ def build_setup_status() -> dict:
             manual_wallet_ok,
             asaas_disabled_ok,
             postgres_ok,
-            asaas_platform_cnpj_ok is not False or settings.payments_disabled,
+            asaas_platform_cnpj_check_ok or settings.payments_disabled,
         ]
     )
 
@@ -147,7 +158,11 @@ def build_setup_status() -> dict:
                 else (
                     "desativado_asaas"
                     if settings.ASAAS_DISABLED
-                    else ("pendente" if asaas_platform_cnpj_ok is False else "nao_verificado")
+                    else (
+                        "nao_aplicavel"
+                        if not asaas_platform_cnpj_required
+                        else ("pendente" if asaas_platform_cnpj_ok is False else "nao_verificado")
+                    )
                 )
             ),
             "smtp": "ok" if smtp_ok else "pendente",

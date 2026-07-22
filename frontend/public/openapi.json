@@ -2597,7 +2597,7 @@
         ]
       }
     },
-    "/api/organizador/asaas": {
+    "/api/organizador/conta-recebimento": {
       "get": {
         "tags": [
           "Organizador"
@@ -2610,6 +2610,48 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Criar Subconta",
+        "operationId": "asaas_criar_subconta_api_organizador_asaas_subconta_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasSubcontaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -2751,64 +2793,19 @@
         ]
       }
     },
-    "/api/organizador/conta-recebimento/conta-recebimento": {
+    "/api/organizador/conta-recebimento/reenviar": {
       "post": {
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Criar Conta Recebimento",
-        "description": "Cria conta de recebimento PF ou PJ para o organizador (provisionada pela plataforma).",
-        "operationId": "asaas_criar_conta_recebimento_api_organizador_asaas_conta_recebimento_post",
+        "summary": "Asaas Reenviar Subconta",
+        "description": "Reenvia dados ao processador após reprovação da conta de recebimento (KYC).",
+        "operationId": "asaas_reenviar_subconta_api_organizador_asaas_subconta_reenviar_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AsaasContaRecebimentoRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      }
-    },
-    "/api/organizador/conta-recebimento/conta-recebimento/reenviar": {
-      "post": {
-        "tags": [
-          "Organizador"
-        ],
-        "summary": "Asaas Reenviar Conta Recebimento",
-        "description": "Reenvia dados após reprovação da conta de recebimento (KYC).",
-        "operationId": "asaas_reenviar_conta_recebimento_api_organizador_asaas_conta_recebimento_reenviar_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AsaasContaRecebimentoRequest"
+                "$ref": "#/components/schemas/AsaasSubcontaRequest"
               }
             }
           },

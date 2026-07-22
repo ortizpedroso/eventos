@@ -261,7 +261,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (236 testes)
+- [x] `pytest` verde (237 testes)
 - [x] `npm run build` verde
 - [ ] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas` verdes no PR #44
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`

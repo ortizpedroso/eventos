@@ -138,6 +138,33 @@ def test_asaas_disabled_bloqueado_em_producao():
     assert s["ready_for_production"] is False
 
 
+def test_asaas_platform_cnpj_nao_verificado_bloqueia_producao():
+    with patch.multiple(
+        settings,
+        ENVIRONMENT="production",
+        ASAAS_DISABLED=False,
+        ASAAS_API_KEY="$aact_prod_test_key_with_enough_length",
+        ASAAS_ONBOARDING_MODE="baas",
+        ASAAS_E2E_MOCK=False,
+        SECRET_KEY="x" * 32,
+        PLATFORM_ADMIN_API_KEY="admin-key",
+        EMAIL_USER="a@b.com",
+        EMAIL_PASSWORD="secret",
+        CORS_ORIGINS="https://eventosbr.app.br",
+        FRONTEND_PUBLIC_URL="https://eventosbr.app.br",
+        DATABASE_URL="postgresql+psycopg2://eventosbr:s3nh4forte@db:5432/eventosbr",
+        ASAAS_WEBHOOK_TOKEN="webhook_token_forte",
+        ASAAS_PLATFORM_WALLET_ID="wallet-plataforma-id",
+    ):
+        with patch(
+            "app.services.asaas_plataforma.plataforma_pode_provisionar_contas",
+            return_value=None,
+        ):
+            s = build_setup_status()
+    assert s["checks"]["asaas_platform_cnpj"] == "nao_verificado"
+    assert s["ready_for_production"] is False
+
+
 def test_asaas_platform_cnpj_check():
     with patch.multiple(
         settings,

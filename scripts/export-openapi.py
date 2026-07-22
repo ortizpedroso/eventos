@@ -25,6 +25,7 @@ OUT_PATH = ROOT / "frontend" / "public" / "openapi.json"
 _ASAAS_RE = re.compile(r"\basaas\b", re.I)
 _SUBCONTA_RE = re.compile(r"\bsubconta\b", re.I)
 _LEGACY_SUBCONTA_PATH = re.compile(r"/subconta(?:/|$)")
+_ORG_ASAAS_PREFIX = "/api/organizador/asaas"
 
 
 def _sanitizar_texto_publico(texto: str) -> str:
@@ -37,27 +38,39 @@ def _sanitizar_texto_publico(texto: str) -> str:
 
 
 def _caminho_publico(path: str) -> str:
+    if path.startswith(_ORG_ASAAS_PREFIX):
+        suffix = path[len(_ORG_ASAAS_PREFIX) :]
+        if suffix in ("", "/"):
+            return "/api/organizador/conta-recebimento"
+        if suffix.startswith("/subconta"):
+            suffix = suffix.replace("/subconta", "", 1) or ""
+            return "/api/organizador/conta-recebimento" + suffix
+        if suffix.startswith("/conta-recebimento"):
+            return "/api/organizador" + suffix
+        if suffix.startswith("/wallet"):
+            return "/api/organizador/conta-recebimento/conta" + suffix[len("/wallet") :]
+        return "/api/organizador/conta-recebimento" + suffix
     return (
-        path.replace("/organizador/asaas/", "/organizador/conta-recebimento/")
-        .replace("/pagamentos/asaas/", "/pagamentos/")
+        path.replace("/pagamentos/asaas/", "/pagamentos/")
         .replace("/webhooks/asaas", "/webhooks/pagamentos")
         .replace("/subconta", "/conta-recebimento")
-        .replace("/wallet", "/conta")
     )
 
 
 def _sanitizar_paths(paths: dict) -> dict:
     """Remove aliases legados /subconta e expõe paths white-label na documentação."""
-    canonico: dict[str, object] = {}
+    canonico: dict[str, dict] = {}
     for path, ops in (paths or {}).items():
         if _LEGACY_SUBCONTA_PATH.search(path):
             canonico_path = _caminho_publico(path)
             if canonico_path != path and canonico_path in paths:
                 continue
         public_path = _caminho_publico(path)
-        if public_path in canonico and public_path != path:
+        if not isinstance(ops, dict):
             continue
-        canonico[public_path] = ops
+        bucket = canonico.setdefault(public_path, {})
+        for method, spec in ops.items():
+            bucket[method] = spec
     return canonico
 
 
