@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EventoCardVitrine } from "@/components/evento-card-vitrine";
 import { EventoCategoriasChips } from "@/components/evento-categorias-chips";
-import { EventosGridSkeleton } from "@/components/eventos-grid-skeleton";
 import { apiFetch } from "@/lib/api";
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
@@ -22,7 +21,8 @@ import {
 import type { Evento } from "@/lib/types";
 
 type Props = {
-  initialEventos?: Evento[] | null;
+  initialEventos?: Evento[];
+  fetchInicialOk?: boolean;
   initialCategoria?: string;
   initialBusca?: string;
   initialCidade?: string;
@@ -37,7 +37,8 @@ function buscaFromQuery(raw: string | null | undefined): string {
 }
 
 export function EventosListaPublica({
-  initialEventos = null,
+  initialEventos = [],
+  fetchInicialOk = true,
   initialCategoria = "",
   initialBusca = "",
   initialCidade = "",
@@ -48,7 +49,7 @@ export function EventosListaPublica({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [eventos, setEventos] = useState<Evento[] | null>(initialEventos);
+  const [eventos, setEventos] = useState<Evento[]>(initialEventos);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [busca, setBusca] = useState(initialBusca);
@@ -200,7 +201,7 @@ export function EventosListaPublica({
     const deUrl = searchParams.get("de")?.trim() ?? "";
     const ateUrl = searchParams.get("ate")?.trim() ?? "";
     const paramsCoincidemComServidor =
-      initialEventos !== null &&
+      fetchInicialOk &&
       buscaDebounced === initialBusca.trim() &&
       categoria === initialCategoria &&
       cidade.trim() === initialCidade.trim() &&
@@ -235,7 +236,6 @@ export function EventosListaPublica({
       } catch {
         if (!cancelled) {
           setFetchError("Não foi possível carregar a lista agora. Tente novamente em instantes.");
-          setEventos((prev) => (prev === null ? [] : prev));
         }
       }
     })();
@@ -250,6 +250,7 @@ export function EventosListaPublica({
     filtroData,
     searchParams,
     initialEventos,
+    fetchInicialOk,
     initialBusca,
     initialCategoria,
     initialCidade,
@@ -271,8 +272,6 @@ export function EventosListaPublica({
     });
     return lista;
   }, [eventos, somenteVendasAbertas, ordenacao]);
-
-  const listaCarregando = eventos === null;
 
   const temFiltro = Boolean(categoria || buscaDebounced || cidade.trim() || filtroData || dataDe || dataAte);
   const intervaloCustomAtivo = ehIntervaloCustomizado(
@@ -477,11 +476,7 @@ export function EventosListaPublica({
         </p>
       ) : null}
 
-      {listaCarregando ? (
-        <EventosGridSkeleton />
-      ) : null}
-
-      {!listaCarregando && fetchError ? (
+      {fetchError ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
           <p className="text-base font-medium text-red-800">{fetchError}</p>
           <button
@@ -493,7 +488,7 @@ export function EventosListaPublica({
         </div>
       ) : null}
 
-      {!listaCarregando && !fetchError && eventos.length === 0 ? (
+      {!fetchError && eventos.length === 0 ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
           <p className="text-sm text-zinc-600">
             {temFiltro ? (
@@ -531,13 +526,13 @@ export function EventosListaPublica({
         </div>
       ) : null}
 
-      {!listaCarregando && !fetchError && eventos.length > 0 && eventosFiltrados.length === 0 ? (
+      {!fetchError && eventos.length > 0 && eventosFiltrados.length === 0 ? (
         <p className="rounded-2xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-600 shadow-sm">
           Nenhum evento corresponde aos filtros locais. Tente outra busca ou remova filtros.
         </p>
       ) : null}
 
-      {!listaCarregando && !fetchError && eventosFiltrados.length > 0 ? (
+      {!fetchError && eventosFiltrados.length > 0 ? (
         <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {eventosFiltrados.map((e) => (
             <li key={e.id}>

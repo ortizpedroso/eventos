@@ -56,7 +56,7 @@ test.describe("Patamar UX — vitrine e navbar", () => {
   });
 
   test("filtro Este fim de semana na vitrine", async ({ page }) => {
-    await page.goto("/eventos");
+    await page.goto("/eventos", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Este fim de semana" }).click();
     await expect(page).toHaveURL(/de=/);
   });
@@ -200,6 +200,36 @@ test.describe("Mobile — smoke viewport", () => {
     await expect(page.getByRole("button", { name: "Hoje" })).toBeVisible();
     const vitrineOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(vitrineOverflow).toBe(false);
+  });
+});
+
+test.describe("Navegação — renderização imediata", () => {
+  test("planos → home: título visível sem skeleton", async ({ page }) => {
+    await page.goto("/planos");
+    await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).toBeVisible();
+    await page.getByRole("banner").getByRole("link", { name: /EventosBR — início/i }).click();
+    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("heading", { level: 1, name: /Venda ingressos/i })).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test("home → planos: título visível imediatamente", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: /Ver detalhes em Planos/i }).click();
+    await expect(page).toHaveURL(/\/planos/);
+    await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test("home → eventos: hero visível durante carregamento", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: /Explorar eventos/i }).first().click();
+    await expect(page).toHaveURL(/\/eventos/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: /Encontre seu|Busca:|Eventos de/i }),
+    ).toBeVisible({ timeout: 5000 });
   });
 });
 
