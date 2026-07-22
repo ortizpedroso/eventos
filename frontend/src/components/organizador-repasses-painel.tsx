@@ -355,6 +355,7 @@ export function OrganizadorRepassesPainel() {
       const r = await apiFetch<{
         mensagem: string;
         redirecionar_acompanhamento?: boolean;
+        tracking_id?: string;
       }>(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -378,7 +379,8 @@ export function OrganizadorRepassesPainel() {
       setMostrarFormContaRecebimento(false);
       setModoReenvio(false);
       if (r.redirecionar_acompanhamento) {
-        router.push("/organizador/financeiro/conta-repasse");
+        const q = r.tracking_id ? `?tracking=${encodeURIComponent(r.tracking_id)}` : "";
+        router.push(`/organizador/financeiro/conta-repasse${q}`);
         return;
       }
       await carregar();

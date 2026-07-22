@@ -113,7 +113,7 @@ async def asaas_webhook(request: Request, db: Session = Depends(get_db)):
         elif event_type in ("PAYMENT_DELETED", "PAYMENT_OVERDUE") and pay_id:
             from app.services.assinatura_organizador import limpar_renovacao_assinatura_pendente
 
-            limpar_renovacao_assinatura_pendente(db, pay_id)
+            limpar_renovacao_assinatura_pendente(db, pay_id, payment=payment, event_type=event_type)
             cancelar_ingressos_pi_pendentes(db, pay_id)
         elif event_type.startswith("TRANSFER_"):
             from app.services.saque_asaas import aplicar_webhook_transferencia
