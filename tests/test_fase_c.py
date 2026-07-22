@@ -189,6 +189,40 @@ class TestComunicados:
         assert body["enfileirados"] == 1
         mock_enqueue.assert_called_once()
 
+    def test_listar_eventos_comunicados_somente_com_participantes(self):
+        org = _registrar_organizador("com2")
+        cli = _registrar_cliente("com2")
+        ev = _criar_evento(org)
+
+        prev = settings.ASAAS_DISABLED
+        settings.ASAAS_DISABLED = True
+        try:
+            ing = client.post(
+                "/api/pagamentos/criar",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={"evento_id": ev["id"], "valor_centavos": 5000, "termo_compra_aceito": True},
+            )
+            assert ing.status_code == 200, ing.text
+        finally:
+            settings.ASAAS_DISABLED = prev
+
+        r = client.get(
+            "/api/organizador/comunicados/eventos",
+            headers={"Authorization": f"Bearer {org}"},
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert len(body) == 1
+        assert body[0]["evento_id"] == ev["id"]
+        assert body[0]["destinatarios"] >= 1
+
+        r2 = client.get(
+            "/api/organizador/comunicados/eventos?q=inexistente",
+            headers={"Authorization": f"Bearer {org}"},
+        )
+        assert r2.status_code == 200
+        assert r2.json() == []
+
 
 class TestRelatoriosMetricas:
     def test_relatorio_inclui_vagas_e_conversao(self):

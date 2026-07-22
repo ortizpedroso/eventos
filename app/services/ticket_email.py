@@ -250,7 +250,8 @@ def _send_comunicado_sync(evento_id: str, assunto: str, mensagem: str) -> int:
                 f'<h2 style="color:#047857">{ev_nome}</h2>'
                 f"<p>Olá, <strong>{part_nome}</strong>!</p>"
                 f'<div style="margin:16px 0;line-height:1.5">{corpo}</div>'
-                f'<p><a href="{base}/conta/ingressos/{esc(ing.id)}" style="color:#047857">Ver meu ingresso</a></p>'
+                f'<p style="font-size:12px;color:#71717a">Seus ingressos continuam disponíveis em '
+                f'<a href="{base}/conta/ingressos" style="color:#047857">Minha conta → Ingressos</a>.</p>'
                 f'<p style="font-size:11px;color:#a1a1aa">Mensagem enviada pelo organizador do evento.</p>'
                 "</div>"
             )
