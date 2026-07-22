@@ -139,6 +139,43 @@ class AsaasSubcontaRequest(BaseModel):
         return d
 
 
+class AsaasContaRecebimentoRequest(AsaasSubcontaRequest):
+    """Alias de payload para criação de conta de recebimento (PF ou PJ)."""
+
+
+def _payload_conta_recebimento(body: AsaasSubcontaRequest) -> dict:
+    return {
+        "cpf_cnpj": body.cpf_cnpj,
+        "telefone": body.telefone,
+        "renda_mensal": body.renda_mensal,
+        "cep": body.cep,
+        "endereco": body.endereco,
+        "numero": body.numero,
+        "bairro": body.bairro,
+        "complemento": body.complemento,
+        "cidade": body.cidade,
+        "estado": body.estado,
+        "company_type": body.company_type,
+        "data_nascimento": body.data_nascimento,
+    }
+
+
+def _criar_conta_recebimento_organizador(
+    db: Session,
+    usuario: Usuario,
+    body: AsaasSubcontaRequest,
+):
+    return criar_subconta_organizador(db, usuario, **_payload_conta_recebimento(body))
+
+
+def _reenviar_conta_recebimento_organizador(
+    db: Session,
+    usuario: Usuario,
+    body: AsaasSubcontaRequest,
+):
+    return reenviar_subconta_organizador(db, usuario, **_payload_conta_recebimento(body))
+
+
 class AsaasAntecipacaoRequest(BaseModel):
     credit_card_automatic_enabled: bool
 
@@ -231,6 +268,22 @@ async def asaas_consultar_wallet(
         raise _erro_pagamento(e) from e
 
 
+@router.post("/asaas/conta-recebimento")
+async def asaas_criar_conta_recebimento(
+    body: AsaasContaRecebimentoRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Cria conta de recebimento PF ou PJ para o organizador (provisionada pela plataforma)."""
+    _require_organizador(usuario_atual)
+    if settings.payments_disabled:
+        raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
+    try:
+        return _criar_conta_recebimento_organizador(db, usuario_atual, body)
+    except ValueError as e:
+        raise _erro_pagamento(e) from e
+
+
 @router.post("/asaas/subconta")
 async def asaas_criar_subconta(
     body: AsaasSubcontaRequest,
@@ -241,22 +294,23 @@ async def asaas_criar_subconta(
     if settings.payments_disabled:
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
     try:
-        return criar_subconta_organizador(
-            db,
-            usuario_atual,
-            cpf_cnpj=body.cpf_cnpj,
-            telefone=body.telefone,
-            renda_mensal=body.renda_mensal,
-            cep=body.cep,
-            endereco=body.endereco,
-            numero=body.numero,
-            bairro=body.bairro,
-            complemento=body.complemento,
-            cidade=body.cidade,
-            estado=body.estado,
-            company_type=body.company_type,
-            data_nascimento=body.data_nascimento,
-        )
+        return _criar_conta_recebimento_organizador(db, usuario_atual, body)
+    except ValueError as e:
+        raise _erro_pagamento(e) from e
+
+
+@router.post("/asaas/conta-recebimento/reenviar")
+async def asaas_reenviar_conta_recebimento(
+    body: AsaasContaRecebimentoRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Reenvia dados após reprovação da conta de recebimento (KYC)."""
+    _require_organizador(usuario_atual)
+    if settings.payments_disabled:
+        raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
+    try:
+        return _reenviar_conta_recebimento_organizador(db, usuario_atual, body)
     except ValueError as e:
         raise _erro_pagamento(e) from e
 
@@ -267,27 +321,12 @@ async def asaas_reenviar_subconta(
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
 ):
-    """Reenvia dados ao Asaas após reprovação da subconta (KYC)."""
+    """Reenvia dados ao processador após reprovação da conta de recebimento (KYC)."""
     _require_organizador(usuario_atual)
     if settings.payments_disabled:
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
     try:
-        return reenviar_subconta_organizador(
-            db,
-            usuario_atual,
-            cpf_cnpj=body.cpf_cnpj,
-            telefone=body.telefone,
-            renda_mensal=body.renda_mensal,
-            cep=body.cep,
-            endereco=body.endereco,
-            numero=body.numero,
-            bairro=body.bairro,
-            complemento=body.complemento,
-            cidade=body.cidade,
-            estado=body.estado,
-            company_type=body.company_type,
-            data_nascimento=body.data_nascimento,
-        )
+        return _reenviar_conta_recebimento_organizador(db, usuario_atual, body)
     except ValueError as e:
         raise _erro_pagamento(e) from e
 

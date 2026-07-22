@@ -44,10 +44,12 @@ Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos
 
 1. Organizador → **Financeiro** → **Criar conta de recebimento**.
 2. Formulário na plataforma (CPF/CNPJ, endereço, telefone, renda, data de nascimento quando PF).
-3. Backend provisiona a conta via API do processador (`POST /v3/accounts` — rota interna `POST /api/organizador/asaas/subconta`).
+3. Backend provisiona a **conta de recebimento** do organizador (PF ou PJ) via API do processador (`POST /v3/accounts` — rota pública `POST /api/organizador/asaas/conta-recebimento`; alias legado `/asaas/subconta`).
 4. KYC/análise → status `approved` libera publicação e venda.
 5. Repasses caem na conta de recebimento do organizador via split; **saques Pix** são solicitados na plataforma (white-label).
 6. Extrato, vendas e conciliação na área **Financeiro** do organizador.
+
+**Conta mãe da plataforma (operação):** a chave `ASAAS_API_KEY` do EventosBR deve pertencer a uma conta **pessoa jurídica (CNPJ)** no processador. Sem isso, o provisionamento de contas de recebimento dos organizadores é bloqueado pelo processador (limitação BaaS). Organizadores podem ser **PF (CPF)** ou **PJ (CNPJ)** — o bloqueio não é do CPF do organizador, e sim da conta mãe da plataforma.
 
 **Terminologia (UX e spec):** usar sempre **conta de recebimento** ou **conta de repasses**. Não expor “subconta”, “Asaas” nem “vincular wallet” ao usuário.
 
@@ -63,6 +65,8 @@ Em **produção** (`ENVIRONMENT=production`):
 | `ASAAS_ONBOARDING_MODE` | `baas` | Conta de recebimento criada pela plataforma |
 | `ASAAS_ALLOW_MANUAL_WALLET` | `false` | Sem colar walletId manualmente |
 | `ASAAS_DISABLED` | `false` | Pagamentos reais ativos |
+
+A conta Asaas vinculada a `ASAAS_API_KEY` deve ser **CNPJ** (conta mãe da plataforma) para provisionar contas de recebimento dos organizadores. Verificação: `GET /api/admin/setup` → `checks.asaas_platform_cnpj`.
 
 Credenciais Asaas (`ASAAS_API_KEY`, `ASAAS_PLATFORM_WALLET_ID`, `ASAAS_WEBHOOK_TOKEN`) são de **produção**, configuradas uma vez no `.env` do VPS e **não devem ser trocadas** em operação normal. Backups: `backup-prod-env.sh` / `restore-prod-env.sh`.
 
@@ -113,7 +117,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (219 testes) |
+| `api` | `pytest` (227 testes) |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
