@@ -15,6 +15,9 @@ from app.utils.cpf import documento_valido
 
 logger = logging.getLogger(__name__)
 
+# Tempo em que o mesmo QR Code PIX da assinatura é reexibido antes de gerar um novo.
+QR_PIX_VALIDADE = timedelta(minutes=10)
+
 
 def status_assinatura(usuario: Usuario) -> dict:
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -58,13 +61,14 @@ def cancelar_assinatura(db: Session, usuario: Usuario) -> Usuario:
     usuario.plano_tarifa = "padrao"
     usuario.assinatura_valida_ate = None
     usuario.assinatura_renovacao_payment_id = None
+    usuario.assinatura_renovacao_criado_em = None
     usuario.data_atualizacao = agora
     db.commit()
     db.refresh(usuario)
     return usuario
 
 
-def _resposta_assinatura(payment: dict) -> dict:
+def _resposta_assinatura(payment: dict, *, criado_em: datetime | None = None) -> dict:
     """Resposta da cobrança da assinatura (PIX-only), sem expor o gateway ao usuário."""
     from app.services.pagamento_asaas import extrair_pix, obter_pix_qrcode
     from app.services.asaas_client import AsaasAPIError
@@ -89,14 +93,21 @@ def _resposta_assinatura(payment: dict) -> dict:
         "status": payment.get("status"),
     }
     if pix:
+        if criado_em:
+            pix["expira_em"] = (criado_em + QR_PIX_VALIDADE).isoformat() + "Z"
         out["pix"] = pix
     return out
 
 
 def _cobranca_assinatura_pendente(db: Session, usuario: Usuario) -> dict | None:
-    """Reutiliza PIX pendente válido em vez de criar cobrança duplicada."""
+    """Reutiliza PIX pendente válido em vez de criar cobrança duplicada.
+
+    Se a cobrança pendente já passou de QR_PIX_VALIDADE (10min), cancela-a no
+    gateway e retorna None para que uma cobrança/QR genuinamente novo seja gerado.
+    """
     from app.services.asaas_client import AsaasAPIError
     from app.services.pagamento_asaas import (
+        cancelar_cobranca_pendente,
         obter_cobranca,
         status_eh_cancelado,
         status_eh_pago,
@@ -109,6 +120,7 @@ def _cobranca_assinatura_pendente(db: Session, usuario: Usuario) -> dict | None:
         payment = obter_cobranca(pay_id)
     except AsaasAPIError:
         usuario.assinatura_renovacao_payment_id = None
+        usuario.assinatura_renovacao_criado_em = None
         db.commit()
         return None
 
@@ -118,13 +130,26 @@ def _cobranca_assinatura_pendente(db: Session, usuario: Usuario) -> dict | None:
         return {"ja_pago": True, "payment_id": pay_id}
     if status_eh_cancelado(status) or status == "OVERDUE":
         usuario.assinatura_renovacao_payment_id = None
+        usuario.assinatura_renovacao_criado_em = None
+        db.commit()
+        return None
+
+    criado_em = getattr(usuario, "assinatura_renovacao_criado_em", None)
+    agora = datetime.now(timezone.utc).replace(tzinfo=None)
+    if not criado_em or (agora - criado_em) >= QR_PIX_VALIDADE:
+        try:
+            cancelar_cobranca_pendente(pay_id)
+        except AsaasAPIError as e:
+            logger.warning("Falha ao cancelar cobrança expirada da assinatura %s: %s", pay_id, e)
+        usuario.assinatura_renovacao_payment_id = None
+        usuario.assinatura_renovacao_criado_em = None
         db.commit()
         return None
 
     return {
         "payment_id": pay_id,
         "reutilizado": True,
-        **_resposta_assinatura(payment),
+        **_resposta_assinatura(payment, criado_em=criado_em),
     }
 
 
@@ -231,15 +256,18 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
             return {"ja_pago": True, "payment_id": pay_id}
         usuario.assinatura_ultimo_payment_id = pay_id
         usuario.assinatura_renovacao_payment_id = None
+        usuario.assinatura_renovacao_criado_em = None
         renovar_assinatura_meses(db, usuario)
         return {"ja_pago": True, "payment_id": pay_id}
 
     pay_id = (payment.get("id") or "").strip()
+    criado_em = datetime.now(timezone.utc).replace(tzinfo=None)
     if pay_id:
         usuario.assinatura_renovacao_payment_id = pay_id
+        usuario.assinatura_renovacao_criado_em = criado_em
         db.commit()
 
-    return _resposta_assinatura(payment)
+    return _resposta_assinatura(payment, criado_em=criado_em)
 
 
 def sincronizar_assinatura_pendente(db: Session, usuario: Usuario) -> dict:
@@ -314,6 +342,7 @@ def processar_pagamento_assinatura_gateway(
 
     usuario.assinatura_ultimo_payment_id = pay_id
     usuario.assinatura_renovacao_payment_id = None
+    usuario.assinatura_renovacao_criado_em = None
     usuario.assinatura_aviso_expiracao_enviado_em = None
     renovar_assinatura_meses(db, usuario)
     return True
@@ -335,6 +364,7 @@ def limpar_renovacao_assinatura_pendente(db: Session, payment_id: str) -> bool:
         return False
     for u in rows:
         u.assinatura_renovacao_payment_id = None
+        u.assinatura_renovacao_criado_em = None
     db.commit()
     return True
 

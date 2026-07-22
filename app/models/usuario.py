@@ -39,6 +39,8 @@ class Usuario(Base):
     assinatura_ultimo_payment_id = Column(String(64), nullable=True)
     assinatura_aviso_expiracao_enviado_em = Column(DateTime, nullable=True)
     assinatura_renovacao_payment_id = Column(String(64), nullable=True)
+    # Quando a cobrança/QR PIX da renovação atual foi gerada — expira e regenera após 10min.
+    assinatura_renovacao_criado_em = Column(DateTime, nullable=True)
     ativo = Column(Boolean, default=True)
     # Incrementado ao desativar conta ou alterar senha — invalida JWTs antigos.
     token_version = Column(Integer, default=0, nullable=False)

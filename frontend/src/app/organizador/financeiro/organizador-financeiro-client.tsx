@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { OrganizadorFinanceiroSimulador } from "@/components/organizador-financeiro-simulador";
 import { OrganizadorRepassesPainel } from "@/components/organizador-repasses-painel";
@@ -41,22 +41,41 @@ type PixData = {
   encoded_image?: string;
   copia_cola?: string;
   expiration_date?: string;
+  expira_em?: string;
 };
+
+const PIX_QR_VALIDADE_MS = 10 * 60 * 1000;
 
 function fmtBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function formatCountdown(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function PixCard({
   pix,
   onPago,
+  onExpirar,
 }: {
   pix: PixData;
   onPago: () => void;
+  onExpirar: () => void;
 }) {
   const [copiado, setCopiado] = useState(false);
   const [verificando, setVerificando] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const expiraEm = useMemo(
+    () => (pix.expira_em ? new Date(pix.expira_em).getTime() : Date.now() + PIX_QR_VALIDADE_MS),
+    [pix.expira_em],
+  );
+  const [countdown, setCountdown] = useState(() => formatCountdown(expiraEm - Date.now()));
+  const expirouRef = useRef(false);
 
   const verificar = useCallback(async () => {
     setVerificando(true);
@@ -83,6 +102,21 @@ function PixCard({
     };
   }, [verificar]);
 
+  useEffect(() => {
+    expirouRef.current = false;
+    const tick = () => {
+      const restante = expiraEm - Date.now();
+      setCountdown(formatCountdown(restante));
+      if (restante <= 0 && !expirouRef.current) {
+        expirouRef.current = true;
+        onExpirar();
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [expiraEm, onExpirar]);
+
   async function copiar() {
     if (!pix.copia_cola) return;
     try {
@@ -98,10 +132,7 @@ function PixCard({
     <section className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5 space-y-4">
       <div>
         <h2 className="text-sm font-semibold text-indigo-950">Pague via PIX para ativar</h2>
-        <p className="mt-1 text-xs text-indigo-800">
-          Após o pagamento, a taxa reduzida é ativada automaticamente.
-          {pix.expiration_date ? ` Válido até ${new Date(pix.expiration_date).toLocaleString("pt-BR")}.` : ""}
-        </p>
+        <p className="mt-1 text-xs text-indigo-800">Após o pagamento, a taxa reduzida é ativada automaticamente.</p>
       </div>
 
       {pix.encoded_image ? (
@@ -144,6 +175,7 @@ function PixCard({
         {verificando ? "Verificando…" : "Já paguei — verificar"}
       </button>
       <p className="text-center text-xs text-indigo-700">Verificação automática a cada 10 segundos</p>
+      <p className="text-center text-xs text-indigo-500">Este QR Code será renovado automaticamente em {countdown}</p>
     </section>
   );
 }
@@ -221,6 +253,11 @@ export function OrganizadorFinanceiroClient() {
     void carregar();
   }
 
+  function handlePixExpirado() {
+    setPixPendente(null);
+    void contratarAssinatura();
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -236,7 +273,7 @@ export function OrganizadorFinanceiroClient() {
       </div>
 
       {pixPendente ? (
-        <PixCard pix={pixPendente} onPago={handlePagamentoConfirmado} />
+        <PixCard pix={pixPendente} onPago={handlePagamentoConfirmado} onExpirar={handlePixExpirado} />
       ) : assinatura && !assinatura.assinatura_ativa ? (
         <section className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5">
           <h2 className="text-sm font-semibold text-indigo-950">Plano com assinatura</h2>

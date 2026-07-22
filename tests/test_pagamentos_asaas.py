@@ -1080,3 +1080,124 @@ def test_iniciar_cobranca_assinatura_recria_customer_apos_falha_no_pagamento():
         assert usuario.asaas_customer_id == "cus_novo"
     finally:
         db.close()
+
+
+def test_assinatura_pix_reusa_qrcode_dentro_de_10min():
+    from app.services.assinatura_organizador import iniciar_cobranca_assinatura
+
+    db = TestingSessionLocal()
+    try:
+        usuario = Usuario(
+            nome="Organizador Assinante",
+            email=f"org-{uuid.uuid4().hex[:8]}@ex.com",
+            senha_hash="x",
+            tipo="organizador",
+            asaas_customer_id="cus_ok",
+            asaas_repasse_cpf_cnpj="11144477735",
+        )
+        db.add(usuario)
+        db.commit()
+        db.refresh(usuario)
+
+        mock_payment = {
+            "id": "pay_assn_reuse",
+            "status": "PENDING",
+            "billingType": "PIX",
+            "pixTransaction": {"encodedImage": "abc", "payload": "00020126"},
+        }
+        fake_client = MagicMock()
+        fake_client.enabled = True
+        fake_client.post.return_value = mock_payment
+        fake_client.get.return_value = mock_payment
+
+        with (
+            patch("app.services.usuario_asaas.get_asaas_client", return_value=fake_client),
+            patch("app.services.asaas_client.get_asaas_client", return_value=fake_client),
+            patch("app.services.usuario_asaas.settings") as us,
+            patch("config.settings.settings") as global_settings,
+        ):
+            us.ASAAS_DISABLED = False
+            us.use_asaas = True
+            us.ASAAS_CREATE_SUBACCOUNT_ON_REGISTER = False
+            global_settings.use_asaas = True
+            resultado = iniciar_cobranca_assinatura(db, usuario)
+        assert resultado["payment_id"] == "pay_assn_reuse"
+        assert usuario.assinatura_renovacao_criado_em is not None
+
+        with (
+            patch("app.services.pagamento_asaas.get_asaas_client", return_value=fake_client),
+            patch("app.services.usuario_asaas.get_asaas_client", return_value=fake_client),
+            patch("app.services.asaas_client.get_asaas_client", return_value=fake_client),
+            patch("app.services.usuario_asaas.settings") as us,
+            patch("config.settings.settings") as global_settings,
+        ):
+            us.ASAAS_DISABLED = False
+            us.use_asaas = True
+            us.ASAAS_CREATE_SUBACCOUNT_ON_REGISTER = False
+            global_settings.use_asaas = True
+            resultado2 = iniciar_cobranca_assinatura(db, usuario)
+
+        assert resultado2["payment_id"] == "pay_assn_reuse"
+        assert resultado2.get("reutilizado") is True
+        # Só o post inicial de criação da cobrança — a reutilização não cria uma nova.
+        assert fake_client.post.call_count == 1
+    finally:
+        db.close()
+
+
+def test_assinatura_pix_gera_novo_qrcode_apos_10min():
+    from datetime import datetime, timedelta, timezone
+
+    from app.services.assinatura_organizador import iniciar_cobranca_assinatura
+
+    db = TestingSessionLocal()
+    try:
+        usuario = Usuario(
+            nome="Organizador Assinante Expirado",
+            email=f"org-{uuid.uuid4().hex[:8]}@ex.com",
+            senha_hash="x",
+            tipo="organizador",
+            asaas_customer_id="cus_ok",
+            asaas_repasse_cpf_cnpj="11144477735",
+            assinatura_renovacao_payment_id="pay_assn_antigo",
+            assinatura_renovacao_criado_em=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=11),
+        )
+        db.add(usuario)
+        db.commit()
+        db.refresh(usuario)
+
+        mock_payment_antigo = {
+            "id": "pay_assn_antigo",
+            "status": "PENDING",
+            "billingType": "PIX",
+            "pixTransaction": {"encodedImage": "abc", "payload": "00020126"},
+        }
+        mock_payment_novo = {
+            "id": "pay_assn_novo",
+            "status": "PENDING",
+            "billingType": "PIX",
+            "pixTransaction": {"encodedImage": "xyz", "payload": "00020999"},
+        }
+        fake_client = MagicMock()
+        fake_client.enabled = True
+        fake_client.get.return_value = mock_payment_antigo
+        fake_client.post.return_value = mock_payment_novo
+
+        with (
+            patch("app.services.pagamento_asaas.get_asaas_client", return_value=fake_client),
+            patch("app.services.usuario_asaas.get_asaas_client", return_value=fake_client),
+            patch("app.services.asaas_client.get_asaas_client", return_value=fake_client),
+            patch("app.services.usuario_asaas.settings") as us,
+            patch("config.settings.settings") as global_settings,
+        ):
+            us.ASAAS_DISABLED = False
+            us.use_asaas = True
+            us.ASAAS_CREATE_SUBACCOUNT_ON_REGISTER = False
+            global_settings.use_asaas = True
+            resultado = iniciar_cobranca_assinatura(db, usuario)
+
+        assert resultado["payment_id"] == "pay_assn_novo"
+        fake_client.delete.assert_called_once_with("/v3/payments/pay_assn_antigo")
+        assert usuario.assinatura_renovacao_payment_id == "pay_assn_novo"
+    finally:
+        db.close()
