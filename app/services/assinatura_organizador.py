@@ -131,7 +131,6 @@ def _cobranca_assinatura_pendente(db: Session, usuario: Usuario) -> dict | None:
 def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str | None = None) -> dict:
     """Gera cobrança PIX da mensalidade (100% plataforma, sem split de ingresso)."""
     from datetime import date
-
     from app.services.asaas_client import AsaasAPIError
     from app.services.pagamento_asaas import status_eh_pago
     from app.services.usuario_asaas import garantir_customer_asaas
@@ -147,8 +146,6 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
     if reutilizado:
         return reutilizado
 
-    # Asaas exige CPF/CNPJ do cliente para gerar cobrança; reaproveita o documento
-    # já cadastrado (conta de repasses) ou o informado agora nesta requisição.
     doc = re.sub(r"\D", "", (getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
     if not documento_valido(doc):
         doc = re.sub(r"\D", "", cpf_cnpj or "")
@@ -157,65 +154,51 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
         usuario.asaas_repasse_cpf_cnpj = doc
         db.commit()
 
-    customer_id_reutilizado = bool(usuario.asaas_customer_id)
+    customer_id: str | None = None
     try:
         customer_id = garantir_customer_asaas(db, usuario, cpf=doc)
     except AsaasAPIError as e:
-        logger.exception(
-            "Erro Asaas ao criar customer da assinatura (usuario=%s)", usuario.id
-        )
-        raise ValueError(PAGAMENTO_CLIENTE) from e
-
-    ref = f"assinatura:{usuario.id}"[:100]
-    client = __import__("app.services.asaas_client", fromlist=["get_asaas_client"]).get_asaas_client()
-
-    def _payload(cid: str) -> dict:
-        return {
-            "customer": cid,
-            "billingType": "PIX",
-            "value": round(MENSALIDADE_ASSINATURA_MENSAL, 2),
-            "dueDate": (date.today() + timedelta(days=1)).isoformat(),
-            "description": "Assinatura EventosBR — mensal",
-            "externalReference": ref,
-        }
-
-    idem = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
-    try:
-        payment = client.post("/v3/payments", json=_payload(customer_id), idempotency_key=idem)
-    except AsaasAPIError as e:
-        logger.exception(
-            "Erro Asaas ao criar cobrança da assinatura (usuario=%s, customer_id=%s, "
-            "customer_reutilizado=%s, status=%s)",
+        logger.warning(
+            "Falha ao obter customer Asaas para assinatura (usuario=%s), tentando recriar. Erro: %s",
             usuario.id,
-            customer_id,
-            customer_id_reutilizado,
-            e.status_code,
+            e,
         )
-
-        # O customer pode estar obsoleto/inválido para o gateway mesmo recém-criado
-        # (ex.: rotação de chave/ambiente Asaas, atraso de consistência da API).
-        # Recria o customer uma única vez e tenta novamente antes de desistir.
-        usuario.asaas_customer_id = None
+        usuario.asaas_customer_id = None  # Força a recriação
         try:
             customer_id = garantir_customer_asaas(db, usuario, cpf=doc)
         except AsaasAPIError as e_recriar:
             logger.exception(
-                "Erro Asaas ao recriar customer da assinatura após falha (usuario=%s)", usuario.id
+                "Erro Asaas ao recriar customer da assinatura após falha (usuario=%s)",
+                usuario.id,
             )
             raise ValueError(PAGAMENTO_CLIENTE) from e_recriar
 
-        idem_retry = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
-        try:
-            payment = client.post("/v3/payments", json=_payload(customer_id), idempotency_key=idem_retry)
-        except AsaasAPIError as e2:
-            logger.exception(
-                "Erro Asaas ao criar cobrança da assinatura após recriar customer "
-                "(usuario=%s, customer_id=%s, status=%s)",
-                usuario.id,
-                customer_id,
-                e2.status_code,
-            )
-            raise ValueError(PAGAMENTO_CLIENTE) from e2
+    if not customer_id:
+        raise ValueError(PAGAMENTO_CLIENTE)
+
+    ref = f"assinatura:{usuario.id}"[:100]
+    client = __import__("app.services.asaas_client", fromlist=["get_asaas_client"]).get_asaas_client()
+
+    payload = {
+        "customer": customer_id,
+        "billingType": "PIX",
+        "value": round(MENSALIDADE_ASSINATURA_MENSAL, 2),
+        "dueDate": (date.today() + timedelta(days=1)).isoformat(),
+        "description": "Assinatura EventosBR — mensal",
+        "externalReference": ref,
+    }
+    idem = f"assn_{str(usuario.id)[:8]}_{uuid.uuid4().hex[:12]}"
+
+    try:
+        payment = client.post("/v3/payments", json=payload, idempotency_key=idem)
+    except AsaasAPIError as e:
+        logger.exception(
+            "Erro Asaas ao criar cobrança da assinatura (usuario=%s, customer_id=%s, status=%s)",
+            usuario.id,
+            customer_id,
+            e.status_code,
+        )
+        raise ValueError(PAGAMENTO_CLIENTE) from e
 
     if status_eh_pago(payment.get("status")):
         pay_id = (payment.get("id") or "").strip()
