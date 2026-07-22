@@ -1,10 +1,13 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.1  
-**Data:** 2026-07-20  
+**Versão:** 1.2  
+**Data:** 2026-07-22  
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
+>
+> **Produção (VPS):** `main` em `2d32122` — validado em 22/jul/2026 (`verify-production.sh`, `verificar-versao-site.sh`).  
+> **Branch pendente:** PR #42 (`cursor/build-spec-sandbox-asaas-bf71`) — white-label, `FRONTEND_PUBLIC_URL` em `ready_for_production`, abas perfil organizador, script mock renomeado.
 
 ---
 
@@ -97,10 +100,12 @@ Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webh
 ## 3. UX — Área da conta
 
 - `ContaShell` em `/conta/*`: menu lateral **Perfil**, **Pagamentos**, **Ingressos**, **Notificações** (cliente).
-- Dropdown do avatar: Painel (só organizador), Perfil, Pagamentos, Ingressos, Notificações, Sair.
-- Organizador logado: dropdown aponta para `/organizador/perfil` (e subrotas `pagamentos`/`ingressos`/`notificacoes`), que renderizam os mesmos clients de `/conta/*` dentro do `OrganizadorShell` — evita trocar a barra lateral do organizador ao navegar pelo menu da conta.
-- `auth/layout.tsx` + `layout.tsx`: rodapé fixo no fim da viewport (flex shell, CSS crítico `eventosbr-shell-layout`, `EarlyScrollReset` no `<head>`).
+- Dropdown do avatar: **Painel** (só organizador), **Perfil**, **Pagamentos**, **Ingressos**, **Notificações**, **Sair**.
+- Organizador logado: dropdown aponta para `/organizador/perfil` e subrotas (`/pagamentos`, `/ingressos`, `/notificacoes`), renderizando os mesmos clients de `/conta/*` dentro do `OrganizadorShell` — a barra lateral **Painel** não muda.
+- `/organizador/perfil/layout.tsx`: abas horizontais (Perfil · Pagamentos · Ingressos · Notificações) com links para as subrotas. *(PR #42)*
+- `auth/layout.tsx` + `layout.tsx`: rodapé fixo no fim da viewport — shell estável (`grid` `auto 1fr auto` ou `flex` `min-h-dvh flex-col`), CSS crítico `eventosbr-shell-layout`, `EarlyScrollReset` no `<head>`. Validação: `scripts/verificar-versao-site.sh`.
 - Máscaras: CPF/CNPJ, CEP, telefone nos formulários financeiro, checkout e repasse de ingresso.
+- **White-label:** mensagens ao usuário não expõem o processador de pagamentos (`api-errors.ts`, `mensagens_publicas.py`). *(PR #42)*
 
 ---
 
@@ -133,6 +138,7 @@ Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webh
 | Rotação token portaria | `evento_portaria.py` |
 | Rate limit portaria | `rate_limit.py` |
 | Mensagens API em português | `api-errors.ts` |
+| White-label pagamentos (sem marca do provedor) | `api-errors.ts`, `app/utils/mensagens_publicas.py` *(PR #42)* |
 
 ---
 
@@ -153,7 +159,7 @@ Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webh
 | `POSTGRES_PASSWORD` | Sim |
 | `ASAAS_ALLOW_MANUAL_WALLET` | `false` |
 
-Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida também: `ASAAS_ENVIRONMENT=production`, `ASAAS_ONBOARDING_MODE` válido, `ASAAS_ALLOW_MANUAL_WALLET=false`, senha Postgres (via `DATABASE_URL`) e `CORS_ORIGINS` só HTTPS.
+Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida também: `ASAAS_ENVIRONMENT=production`, `ASAAS_ONBOARDING_MODE` válido, `ASAAS_ALLOW_MANUAL_WALLET=false`, senha Postgres (via `DATABASE_URL`), `CORS_ORIGINS` só HTTPS e **`FRONTEND_PUBLIC_URL` preenchida** (bloqueia `ready_for_production` se vazia — *PR #42*).
 
 ---
 
@@ -170,26 +176,34 @@ Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida 
 
 ### UX conta e login
 
-- [x] ContaShell lateral persistente
-- [x] Rodapé login corrigido
+- [x] ContaShell lateral persistente (`/conta/*`)
+- [x] Subrotas organizador `/organizador/perfil/*` (mesmos clients)
+- [x] Rodapé estável (shell + `EarlyScrollReset` — validado no VPS)
 - [x] Máscaras formulários
+- [ ] Dropdown organizador com Pagamentos/Ingressos/Notificações → subrotas *(PR #42)*
+- [ ] Abas horizontais em `/organizador/perfil/layout.tsx` *(PR #42)*
+- [ ] White-label: sem marca do processador no frontend *(PR #42)*
 
 ### Qualidade
 
-- [x] `pytest` verde (208 testes em `main`; branch go-live inclui mock split)
+- [x] `pytest` verde (217 testes na branch; 208+ em `main`)
 - [x] `npm run build` verde
-- [x] CI (api, web, e2e)
-- [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
+- [x] CI `api`, `web`, `e2e-compra`, `e2e-asaas` verdes
+- [ ] CI `e2e` (smoke + patamar) — falhou no PR #42; corrigir antes do merge
+- [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh` *(renomeado na branch; em `main` ainda `test-sandbox-compra-split.sh`)*
 
 ### Operação (usuário no VPS)
 
-- [x] `.env` produção preenchido (validado em `eventosbr.app.br` — jul/2026)
-- [ ] Webhook Asaas configurado e testado com evento real (`PAYMENT_RECEIVED`)
-- [x] Testes mock split no VPS (`test-compra-split-mock.sh` — 2 passed)
-- [ ] SMTP + SPF/DKIM validados (envio real de ingresso)
+- [x] `.env` produção preenchido (validado em `eventosbr.app.br` — 22/jul/2026)
+- [x] VPS em `main` oficial (`2d32122` = `origin/main`)
+- [x] `verify-production.sh` sem falhas críticas
+- [x] `verificar-versao-site.sh` — site atualizado (rodapé, links, shell)
+- [x] Testes mock split no VPS (`test-sandbox-compra-split.sh` ou `test-compra-split-mock.sh` — 2 passed)
 - [x] `alembic upgrade head` (migração `20260717_000035` no deploy)
+- [ ] Webhook Asaas configurado e testado com evento real (`PAYMENT_RECEIVED`)
+- [ ] SMTP + SPF/DKIM validados (envio real de ingresso)
 - [ ] Primeira venda real validada (PIX ou cartão + e-mail recebido)
-- [ ] Merge PR #39 (`cursor/fix-footer-flash-bf71`) na `main` e VPS em `main` oficial
+- [ ] Merge PR #42 (`cursor/build-spec-sandbox-asaas-bf71`) na `main` e redeploy VPS
 
 ---
 
@@ -201,7 +215,9 @@ Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida 
 | Repasse / wallet | `organizador_asaas.py`, `evento_repasse.py` |
 | Financeiro | `financeiro_organizador.py`, `financeiro_conciliacao.py`, `saque_asaas.py` |
 | UI financeiro | `organizador-repasses-painel.tsx` |
-| Conta | `conta-shell.tsx`, `conta/layout.tsx`, `auth/layout.tsx` |
+| Conta | `conta-shell.tsx`, `conta/layout.tsx`, `auth/layout.tsx`, `organizador/perfil/layout.tsx` |
+| White-label | `api-errors.ts`, `mensagens_publicas.py` |
+| Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config | `config/settings.py`, `production_checks.py` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `scripts/atualizar-vps-agora.sh`, `scripts/verify-production.sh` |
 | Teste split mock | `tests/test_compra_split_fluxo_mock.py`, `scripts/test-compra-split-mock.sh` |
