@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.models import Evento, FinanceiroSaque, Ingresso, Usuario
+from app.models import Evento, FinanceiroSaque, Ingresso, Usuario, UsuarioNotificacao
 from app.services.financeiro_organizador import (
     calcular_saldo_organizador,
     listar_vendas_agrupadas,
@@ -256,6 +256,124 @@ def test_webhook_transfer_failed_sem_status_marca_rejeitado():
         db.commit()
         db.refresh(saque)
         assert saque.status == "rejeitado"
+    finally:
+        db.close()
+
+
+def test_webhook_transfer_done_notifica_pago():
+    db = _db()
+    try:
+        org = _org_aprovado(db)
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        tid = f"tra_{uuid.uuid4().hex[:10]}"
+        saque = FinanceiroSaque(
+            organizador_id=org.id,
+            valor=25.0,
+            pix_chave="a@b.com",
+            pix_tipo="EMAIL",
+            status="processando",
+            asaas_transfer_id=tid,
+            criado_em=agora,
+            atualizado_em=agora,
+        )
+        db.add(saque)
+        db.commit()
+
+        with patch("app.services.saque_notificacao.enqueue_email_simples") as mock_email:
+            aplicar_webhook_transferencia(
+                db,
+                {"id": tid, "status": "DONE", "externalReference": saque.id},
+                event_type="TRANSFER_DONE",
+            )
+            db.commit()
+
+        assert mock_email.call_count == 1
+        assert mock_email.call_args[0][0] == org.email
+
+        notif = (
+            db.query(UsuarioNotificacao)
+            .filter(UsuarioNotificacao.usuario_id == org.id, UsuarioNotificacao.tipo == "saque")
+            .first()
+        )
+        assert notif is not None
+        assert "confirmado" in notif.titulo.lower()
+    finally:
+        db.close()
+
+
+def test_webhook_transfer_failed_notifica_falha():
+    db = _db()
+    try:
+        org = _org_aprovado(db)
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        tid = f"tra_{uuid.uuid4().hex[:10]}"
+        saque = FinanceiroSaque(
+            organizador_id=org.id,
+            valor=20.0,
+            pix_chave="a@b.com",
+            pix_tipo="EMAIL",
+            status="processando",
+            asaas_transfer_id=tid,
+            criado_em=agora,
+            atualizado_em=agora,
+        )
+        db.add(saque)
+        db.commit()
+
+        with patch("app.services.saque_notificacao.enqueue_email_simples") as mock_email:
+            aplicar_webhook_transferencia(
+                db,
+                {"id": tid, "failReason": "Erro bancário"},
+                event_type="TRANSFER_FAILED",
+            )
+            db.commit()
+
+        assert mock_email.call_count == 1
+        assert mock_email.call_args[0][0] == org.email
+
+        notif = (
+            db.query(UsuarioNotificacao)
+            .filter(UsuarioNotificacao.usuario_id == org.id, UsuarioNotificacao.tipo == "saque_falha")
+            .first()
+        )
+        assert notif is not None
+        assert "não" in notif.titulo.lower()
+    finally:
+        db.close()
+
+
+def test_solicitar_saque_pago_instantaneo_notifica():
+    db = _db()
+    try:
+        org = _org_aprovado(db)
+        ev = _evento(db, org.id)
+        _ingresso_pago(db, ev, org, liquido=100.0)
+
+        from config.settings import settings
+
+        with (
+            patch.object(settings, "ASAAS_E2E_MOCK", True),
+            patch.object(settings, "ENVIRONMENT", "test"),
+            patch("app.services.saque_notificacao.enqueue_email_simples") as mock_email,
+        ):
+            saque = solicitar_saque(
+                db,
+                org,
+                valor=40.0,
+                pix_chave="teste@exemplo.com",
+                pix_tipo="EMAIL",
+            )
+
+        if saque.status == "pago":
+            assert mock_email.call_count == 1
+            notif = (
+                db.query(UsuarioNotificacao)
+                .filter(UsuarioNotificacao.usuario_id == org.id, UsuarioNotificacao.tipo == "saque")
+                .first()
+            )
+            assert notif is not None
+        else:
+            assert mock_email.call_count == 0
     finally:
         db.close()
 

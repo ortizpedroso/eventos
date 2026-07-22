@@ -580,6 +580,10 @@ def solicitar_saque(
     if status_asaas in ("DONE", "BANK_PROCESSING_DONE"):
         saque.status = "pago"
         saque.processado_em = agora
+
+        from app.services.saque_notificacao import notificar_saque_pago
+
+        notificar_saque_pago(db, saque, usuario=usuario)
     db.commit()
     db.refresh(saque)
     return saque

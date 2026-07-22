@@ -192,6 +192,8 @@ def aplicar_webhook_transferencia(
     if transfer_id and not saque.asaas_transfer_id:
         saque.asaas_transfer_id = transfer_id
 
+    saque.atualizado_em = agora
+
     if novo == "pago" and saque.status != "pago":
         saque.status = "pago"
         saque.processado_em = agora
@@ -202,16 +204,27 @@ def aplicar_webhook_transferencia(
                 )
             except (TypeError, ValueError):
                 pass
+        db.add(saque)
+
+        from app.services.saque_notificacao import notificar_saque_pago
+
+        notificar_saque_pago(db, saque)
     elif novo == "rejeitado" and saque.status not in ("pago", "cancelado"):
         saque.status = "rejeitado"
         fail = transfer.get("failReason") or transfer.get("failDescription")
         if fail:
             saque.observacao = str(fail)[:500]
+        db.add(saque)
+
+        from app.services.saque_notificacao import notificar_saque_falhou
+
+        notificar_saque_falhou(db, saque)
     elif novo == "processando" and saque.status == "pendente":
         saque.status = "processando"
+        db.add(saque)
+    else:
+        db.add(saque)
 
-    saque.atualizado_em = agora
-    db.add(saque)
     return saque
 
 
