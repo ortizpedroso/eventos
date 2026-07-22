@@ -1,6 +1,5 @@
 /** Tokens compartilhados do sistema de motion (conversão > decoração). */
 
-export const MOTION_REVEAL_MIN_OPACITY = 0.68;
 export const MOTION_REVEAL_DURATION_MS = 420;
 export const MOTION_HERO_TOTAL_MS = 480;
 export const MOTION_HERO_STAGGER_MS = 70;
