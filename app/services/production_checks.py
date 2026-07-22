@@ -67,6 +67,17 @@ def build_setup_status() -> dict:
     asaas_webhook = (settings.ASAAS_WEBHOOK_TOKEN or "").strip()
     asaas_webhook_ok = bool(asaas_webhook)
 
+    asaas_platform_cnpj_ok: bool | None = None
+    if (
+        not settings.ASAAS_DISABLED
+        and settings.use_asaas
+        and settings.asaas_onboarding_mode in ("baas", "both")
+        and not settings.asaas_e2e_mock
+    ):
+        from app.services.asaas_plataforma import plataforma_pode_provisionar_contas
+
+        asaas_platform_cnpj_ok = plataforma_pode_provisionar_contas()
+
     if settings.ASAAS_DISABLED:
         asaas_api_status = "desativado_asaas"
     elif asaas_ok:
@@ -99,6 +110,17 @@ def build_setup_status() -> dict:
 
     frontend_url_ok = bool((settings.FRONTEND_PUBLIC_URL or "").strip())
 
+    asaas_platform_cnpj_required = (
+        production
+        and not settings.ASAAS_DISABLED
+        and settings.use_asaas
+        and settings.asaas_onboarding_mode in ("baas", "both")
+        and not settings.asaas_e2e_mock
+    )
+    asaas_platform_cnpj_check_ok = (
+        asaas_platform_cnpj_ok is True if asaas_platform_cnpj_required else True
+    )
+
     ready = all(
         [
             sk_ok,
@@ -114,6 +136,7 @@ def build_setup_status() -> dict:
             manual_wallet_ok,
             asaas_disabled_ok,
             postgres_ok,
+            asaas_platform_cnpj_check_ok or settings.payments_disabled,
         ]
     )
 
@@ -129,6 +152,19 @@ def build_setup_status() -> dict:
             "asaas_onboarding_mode": "ok" if onboarding_ok else "pendente",
             "asaas_manual_wallet_off": "ok" if manual_wallet_ok else "pendente",
             "asaas_payments_enabled": "ok" if asaas_disabled_ok else "pendente",
+            "asaas_platform_cnpj": (
+                "ok"
+                if asaas_platform_cnpj_ok is True
+                else (
+                    "desativado_asaas"
+                    if settings.ASAAS_DISABLED
+                    else (
+                        "nao_aplicavel"
+                        if not asaas_platform_cnpj_required
+                        else ("pendente" if asaas_platform_cnpj_ok is False else "nao_verificado")
+                    )
+                )
+            ),
             "smtp": "ok" if smtp_ok else "pendente",
             "platform_admin": "ok" if admin_ok else "pendente",
             "cors": "ok" if cors_ok else "pendente",

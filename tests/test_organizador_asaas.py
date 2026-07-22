@@ -209,6 +209,7 @@ class TestOrganizadorAsaas:
         with (
             patch("app.routes.organizador.settings") as route_settings,
             patch("app.services.organizador_asaas.settings") as mock_settings,
+            patch("app.services.organizador_asaas.assert_plataforma_pode_provisionar_contas"),
         ):
             route_settings.payments_disabled = False
             route_settings.use_asaas = True
@@ -238,6 +239,7 @@ class TestOrganizadorAsaas:
             patch("app.routes.organizador.settings") as route_settings,
             patch("app.services.organizador_asaas.settings") as mock_settings,
             patch("app.services.organizador_asaas.get_asaas_client") as mock_client_factory,
+            patch("app.services.organizador_asaas.assert_plataforma_pode_provisionar_contas"),
         ):
             route_settings.payments_disabled = False
             route_settings.use_asaas = True
@@ -271,8 +273,77 @@ class TestOrganizadorAsaas:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert st.status_code == 200
-        assert st.json()["tem_subconta"] is True
+        assert st.json()["tem_conta_recebimento"] is True
         assert st.json()["wallet_id"] == wallet
+
+    def test_criar_conta_recebimento_rota_nova(self):
+        token = _registrar_organizador("conta_nova")
+        wallet = str(uuid.uuid4())
+        mock_resp = {"id": "acc_new", "walletId": wallet, "apiKey": "sub_key_new"}
+        with (
+            patch("app.routes.organizador.settings") as route_settings,
+            patch("app.services.organizador_asaas.settings") as mock_settings,
+            patch("app.services.organizador_asaas.get_asaas_client") as mock_client_factory,
+            patch("app.services.organizador_asaas.assert_plataforma_pode_provisionar_contas"),
+        ):
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            mock_settings.use_asaas = True
+            mock_settings.permite_subconta_baas.return_value = True
+            mock_settings.payments_disabled = False
+            mock_client = MagicMock()
+            mock_client.post.return_value = mock_resp
+            mock_client_factory.return_value = mock_client
+            r = client.post(
+                "/api/organizador/asaas/conta-recebimento",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "cpf_cnpj": "52998224725",
+                    "telefone": "11987654321",
+                    "renda_mensal": 8000,
+                    "cep": "89010025",
+                    "endereco": "Rua Teste",
+                    "numero": "100",
+                    "bairro": "Centro",
+                    "data_nascimento": "1990-05-15",
+                },
+            )
+        assert r.status_code == 200, r.text
+        assert r.json()["wallet_id"] == wallet
+
+    def test_criar_conta_bloqueia_plataforma_pf(self):
+        token = _registrar_organizador("pf_plat")
+        with (
+            patch("app.routes.organizador.settings") as route_settings,
+            patch("app.services.organizador_asaas.settings") as mock_settings,
+            patch(
+                "app.services.organizador_asaas.assert_plataforma_pode_provisionar_contas",
+                side_effect=ValueError(
+                    "Não é possível criar sua conta de recebimento no momento. "
+                    "A configuração de pagamentos da plataforma está pendente."
+                ),
+            ),
+        ):
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            mock_settings.use_asaas = True
+            mock_settings.permite_subconta_baas.return_value = True
+            r = client.post(
+                "/api/organizador/asaas/conta-recebimento",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "cpf_cnpj": "52998224725",
+                    "telefone": "11987654321",
+                    "renda_mensal": 8000,
+                    "cep": "89010025",
+                    "endereco": "Rua Teste",
+                    "numero": "100",
+                    "bairro": "Centro",
+                    "data_nascimento": "1990-05-15",
+                },
+            )
+        assert r.status_code == 400
+        assert "configuração de pagamentos" in r.json()["detail"].lower()
 
     def test_subconta_api_key_criptografada_no_banco(self):
         from app.models import Usuario
@@ -296,6 +367,7 @@ class TestOrganizadorAsaas:
             with (
                 patch("app.services.organizador_asaas.settings") as mock_settings,
                 patch("app.services.organizador_asaas.get_asaas_client") as mock_client_factory,
+                patch("app.services.organizador_asaas.assert_plataforma_pode_provisionar_contas"),
             ):
                 mock_settings.use_asaas = True
                 mock_settings.permite_subconta_baas.return_value = True

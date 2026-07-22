@@ -5,6 +5,10 @@ def test_sanitizar_remove_subconta():
     assert "conta de recebimento" in sanitizar_mensagem_pagamento(
         "Falha ao criar subconta"
     ).lower()
+    assert "configuração de pagamentos" in sanitizar_mensagem_pagamento(
+        "Contas de pessoa física (CPF) não podem criar subcontas no Asaas. "
+        "Apenas contas de pessoa jurídica (CNPJ) podem acessar essa funcionalidade."
+    ).lower()
     assert "processador de pagamentos" in sanitizar_mensagem_pagamento(
         "Falha de comunicação com Asaas"
     ).lower()

@@ -16,19 +16,19 @@ type RepasseStatus = {
   asaas_ativo: boolean;
   payments_disabled: boolean;
   wallet_configurado: boolean;
-  tem_subconta: boolean;
+  tem_conta_recebimento: boolean;
   repasses_prontos: boolean;
   repasse_status?: string | null;
   repasse_status_rotulo?: string;
   repasse_aprovado?: boolean;
-  pode_reenviar_subconta?: boolean;
+  pode_reenviar_conta?: boolean;
   pode_publicar_eventos_pagos?: boolean;
   eventos_sem_wallet: number;
   nota_wallet: string | null;
   anticipacao?: { credit_card_automatic_enabled?: boolean | null };
   onboarding_mode?: string;
   permite_vinculo_wallet?: boolean;
-  permite_subconta?: boolean;
+  permite_conta_recebimento?: boolean;
   wallet_id?: string | null;
 };
 
@@ -167,7 +167,7 @@ export function OrganizadorRepassesPainel() {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const [mostrarSubconta, setMostrarSubconta] = useState(false);
+  const [mostrarFormContaRecebimento, setMostrarFormContaRecebimento] = useState(false);
   const [mostrarVinculo, setMostrarVinculo] = useState(false);
   const [walletId, setWalletId] = useState("");
   const [apiKeyOrganizador, setApiKeyOrganizador] = useState("");
@@ -247,12 +247,16 @@ export function OrganizadorRepassesPainel() {
     void carregarVendas(agrupamento);
   }, [agrupamento, carregarVendas]);
 
+  const podeReenviarConta = Boolean(status?.pode_reenviar_conta);
+  const permiteContaRecebimento = Boolean(status?.permite_conta_recebimento);
+  const temContaRecebimento = Boolean(status?.tem_conta_recebimento);
+
   useEffect(() => {
-    if (searchParams.get("reenviar") === "1" || status?.pode_reenviar_subconta) {
-      setModoReenvio(Boolean(status?.pode_reenviar_subconta));
-      setMostrarSubconta(true);
+    if (searchParams.get("reenviar") === "1" || podeReenviarConta) {
+      setModoReenvio(Boolean(podeReenviarConta));
+      setMostrarFormContaRecebimento(true);
     }
-  }, [searchParams, status?.pode_reenviar_subconta]);
+  }, [searchParams, podeReenviarConta]);
 
   async function buscarWalletPelaApiKey() {
     const key = apiKeyOrganizador.trim();
@@ -339,14 +343,14 @@ export function OrganizadorRepassesPainel() {
     }
   }
 
-  async function criarSubconta(e: FormEvent) {
+  async function criarContaRecebimento(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setMsg(null);
     setError(null);
     const endpoint = modoReenvio
-      ? "/api/organizador/asaas/subconta/reenviar"
-      : "/api/organizador/asaas/subconta";
+      ? "/api/organizador/asaas/conta-recebimento/reenviar"
+      : "/api/organizador/asaas/conta-recebimento";
     try {
       const r = await apiFetch<{
         mensagem: string;
@@ -371,7 +375,7 @@ export function OrganizadorRepassesPainel() {
         }),
       });
       setMsg(r.mensagem);
-      setMostrarSubconta(false);
+      setMostrarFormContaRecebimento(false);
       setModoReenvio(false);
       if (r.redirecionar_acompanhamento) {
         router.push("/organizador/financeiro/conta-repasse");
@@ -541,16 +545,16 @@ export function OrganizadorRepassesPainel() {
                 Vincular conta existente
               </button>
             ) : null}
-            {status.permite_subconta ? (
+            {permiteContaRecebimento ? (
               <button
                 type="button"
                 className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
-                onClick={() => setMostrarSubconta(true)}
+                onClick={() => setMostrarFormContaRecebimento(true)}
               >
                 Criar conta de recebimento
               </button>
             ) : null}
-            {status.tem_subconta && !status.repasse_aprovado ? (
+            {temContaRecebimento && !status.repasse_aprovado ? (
               <Link
                 href="/organizador/financeiro/conta-repasse"
                 className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-950"
@@ -558,13 +562,13 @@ export function OrganizadorRepassesPainel() {
                 Acompanhar aprovação
               </Link>
             ) : null}
-            {status.pode_reenviar_subconta ? (
+            {podeReenviarConta ? (
               <button
                 type="button"
                 className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-900"
                 onClick={() => {
                   setModoReenvio(true);
-                  setMostrarSubconta(true);
+                  setMostrarFormContaRecebimento(true);
                 }}
               >
                 Reenviar dados
@@ -650,8 +654,8 @@ export function OrganizadorRepassesPainel() {
         </form>
       ) : null}
 
-      {mostrarSubconta && status?.permite_subconta ? (
-        <form onSubmit={criarSubconta} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5 sm:grid-cols-2">
+      {mostrarFormContaRecebimento && permiteContaRecebimento ? (
+        <form onSubmit={criarContaRecebimento} className="mt-6 grid gap-3 border-t border-zinc-100 pt-5 sm:grid-cols-2">
           <h3 className="sm:col-span-2 text-sm font-semibold text-zinc-900">
             {modoReenvio ? "Reenviar dados da conta de repasses" : "Dados para conta de repasses"}
           </h3>
@@ -800,7 +804,7 @@ export function OrganizadorRepassesPainel() {
             <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-60">
               {busy ? "Enviando..." : modoReenvio ? "Reenviar dados" : "Criar conta de repasses"}
             </button>
-            <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setMostrarSubconta(false)}>
+            <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setMostrarFormContaRecebimento(false)}>
               Cancelar
             </button>
           </div>

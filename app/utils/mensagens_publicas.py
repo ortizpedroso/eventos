@@ -5,6 +5,17 @@ from __future__ import annotations
 import re
 
 _SUBSTITUICOES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(
+            r"pessoa\s+f[ií]sica\s*\(\s*cpf\s*\).*(?:subconta|conta\s+de\s+recebimento).*(?:pessoa\s+jur[ií]dica|cnpj)",
+            re.I | re.S,
+        ),
+        (
+            "Não é possível criar sua conta de recebimento no momento. "
+            "A configuração de pagamentos da plataforma está pendente. "
+            "Entre em contato com o suporte EventosBR."
+        ),
+    ),
     (re.compile(r"conta\s+asaas", re.I), "conta de recebimentos"),
     (re.compile(r"painel\s+asaas", re.I), "sua conta de recebimentos"),
     (re.compile(r"\bsubconta\b", re.I), "conta de recebimento"),

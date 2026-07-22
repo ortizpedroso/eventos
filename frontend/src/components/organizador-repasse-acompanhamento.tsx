@@ -17,7 +17,7 @@ type Acompanhamento = {
   repasse_status: string | null;
   repasse_status_rotulo: string;
   repasse_aprovado: boolean;
-  pode_reenviar_subconta?: boolean;
+  pode_reenviar_conta?: boolean;
   atualizado_em: string | null;
   passos: Passo[];
   pode_publicar_eventos_pagos: boolean;
@@ -147,7 +147,7 @@ export function OrganizadorRepasseAcompanhamento() {
         <Link href="/organizador/financeiro" className="btn-outline px-4 py-2 text-sm">
           Voltar ao Financeiro
         </Link>
-        {data.pode_reenviar_subconta ? (
+        {data.pode_reenviar_conta ? (
           <Link
             href="/organizador/financeiro?reenviar=1"
             className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-900"

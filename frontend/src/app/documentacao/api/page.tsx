@@ -38,12 +38,24 @@ function rotuloPublico(path: string, summary?: string): string | undefined {
 }
 
 function caminhoPublico(path: string): string {
+  const prefix = "/api/organizador/asaas";
+  if (path.startsWith(prefix)) {
+    const suffix = path.slice(prefix.length);
+    if (!suffix || suffix === "/") return "/api/organizador/conta-recebimento";
+    if (suffix.startsWith("/subconta")) {
+      const rest = suffix.replace("/subconta", "") || "";
+      return `/api/organizador/conta-recebimento${rest}`;
+    }
+    if (suffix.startsWith("/conta-recebimento")) return `/api/organizador${suffix}`;
+    if (suffix.startsWith("/wallet")) {
+      return `/api/organizador/conta-recebimento/conta${suffix.slice("/wallet".length)}`;
+    }
+    return `/api/organizador/conta-recebimento${suffix}`;
+  }
   return path
-    .replace(/\/organizador\/asaas/gi, "/organizador/conta-recebimento")
     .replace(/\/pagamentos\/asaas/gi, "/pagamentos")
     .replace(/\/webhooks\/asaas/gi, "/webhooks/pagamentos")
-    .replace(/\/subconta/gi, "/conta-recebimento")
-    .replace(/\/wallet/gi, "/conta");
+    .replace(/\/subconta/gi, "/conta-recebimento");
 }
 
 async function carregarSpec(): Promise<OpenApiSpec | null> {

@@ -1993,13 +1993,13 @@
         }
       }
     },
-    "/api/pagamentos/asaas/cobranca": {
+    "/api/pagamentos/cobranca": {
       "post": {
         "tags": [
           "Pagamentos"
         ],
-        "summary": "pagamentos Iniciar Cobranca",
-        "description": "Gera cobrança pagamentos (PIX, cartão ou fatura) para ingresso reservado.",
+        "summary": "Asaas Iniciar Cobranca",
+        "description": "Gera cobrança Asaas (PIX, cartão ou fatura) para ingresso reservado.",
         "operationId": "asaas_iniciar_cobranca_api_pagamentos_asaas_cobranca_post",
         "requestBody": {
           "content": {
@@ -2038,13 +2038,13 @@
         ]
       }
     },
-    "/api/pagamentos/asaas/status/{ingresso_id}": {
+    "/api/pagamentos/status/{ingresso_id}": {
       "get": {
         "tags": [
           "Pagamentos"
         ],
-        "summary": "pagamentos Status Cobranca",
-        "description": "Consulta status da cobrança pagamentos (polling PIX).",
+        "summary": "Asaas Status Cobranca",
+        "description": "Consulta status da cobrança Asaas (polling PIX).",
         "operationId": "asaas_status_cobranca_api_pagamentos_asaas_status__ingresso_id__get",
         "security": [
           {
@@ -2597,12 +2597,12 @@
         ]
       }
     },
-    "/api/organizador/asaas": {
+    "/api/organizador/conta-recebimento": {
       "get": {
         "tags": [
           "Organizador"
         ],
-        "summary": "pagamentos Status Organizador",
+        "summary": "Asaas Status Organizador",
         "operationId": "asaas_status_organizador_api_organizador_asaas_get",
         "responses": {
           "200": {
@@ -2619,14 +2619,56 @@
             "OAuth2PasswordBearer": []
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Criar Subconta",
+        "operationId": "asaas_criar_subconta_api_organizador_asaas_subconta_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasSubcontaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
-    "/api/organizador/asaas/acompanhamento": {
+    "/api/organizador/conta-recebimento/acompanhamento": {
       "get": {
         "tags": [
           "Organizador"
         ],
-        "summary": "pagamentos Acompanhamento Repasse",
+        "summary": "Asaas Acompanhamento Repasse",
         "operationId": "asaas_acompanhamento_repasse_api_organizador_asaas_acompanhamento_get",
         "responses": {
           "200": {
@@ -2645,12 +2687,12 @@
         ]
       }
     },
-    "/api/organizador/asaas/wallet": {
+    "/api/organizador/conta-recebimento/conta": {
       "put": {
         "tags": [
           "Organizador"
         ],
-        "summary": "pagamentos Definir Wallet",
+        "summary": "Asaas Definir Wallet",
         "operationId": "asaas_definir_wallet_api_organizador_asaas_wallet_put",
         "security": [
           {
@@ -2707,12 +2749,12 @@
         }
       }
     },
-    "/api/organizador/asaas/wallet/consultar": {
+    "/api/organizador/conta-recebimento/conta/consultar": {
       "post": {
         "tags": [
           "Organizador"
         ],
-        "summary": "pagamentos Consultar Wallet",
+        "summary": "Asaas Consultar Wallet",
         "operationId": "asaas_consultar_wallet_api_organizador_asaas_wallet_consultar_post",
         "requestBody": {
           "content": {
@@ -2751,57 +2793,13 @@
         ]
       }
     },
-    "/api/organizador/asaas/subconta": {
+    "/api/organizador/conta-recebimento/reenviar": {
       "post": {
         "tags": [
           "Organizador"
         ],
-        "summary": "pagamentos Criar conta de recebimento",
-        "operationId": "asaas_criar_subconta_api_organizador_asaas_subconta_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AsaasSubcontaRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      }
-    },
-    "/api/organizador/asaas/subconta/reenviar": {
-      "post": {
-        "tags": [
-          "Organizador"
-        ],
-        "summary": "pagamentos Reenviar conta de recebimento",
-        "description": "Reenvia dados ao pagamentos após reprovação da conta de recebimento (KYC).",
+        "summary": "Asaas Reenviar Subconta",
+        "description": "Reenvia dados ao processador após reprovação da conta de recebimento (KYC).",
         "operationId": "asaas_reenviar_subconta_api_organizador_asaas_subconta_reenviar_post",
         "requestBody": {
           "content": {
@@ -2840,12 +2838,12 @@
         ]
       }
     },
-    "/api/organizador/asaas/antecipacao": {
+    "/api/organizador/conta-recebimento/antecipacao": {
       "put": {
         "tags": [
           "Organizador"
         ],
-        "summary": "pagamentos Antecipacao",
+        "summary": "Asaas Antecipacao",
         "operationId": "asaas_antecipacao_api_organizador_asaas_antecipacao_put",
         "requestBody": {
           "content": {
@@ -2884,12 +2882,12 @@
         ]
       }
     },
-    "/api/organizador/asaas/antecipacao/simular": {
+    "/api/organizador/conta-recebimento/antecipacao/simular": {
       "post": {
         "tags": [
           "Organizador"
         ],
-        "summary": "pagamentos Simular Antecipacao",
+        "summary": "Asaas Simular Antecipacao",
         "operationId": "asaas_simular_antecipacao_api_organizador_asaas_antecipacao_simular_post",
         "requestBody": {
           "content": {
@@ -4795,13 +4793,13 @@
         }
       }
     },
-    "/api/webhooks/asaas": {
+    "/api/webhooks/pagamentos": {
       "post": {
         "tags": [
           "Webhooks"
         ],
-        "summary": "pagamentos Webhook",
-        "description": "Recebe eventos do pagamentos (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.).",
+        "summary": "Asaas Webhook",
+        "description": "Recebe eventos do Asaas (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.).",
         "operationId": "asaas_webhook_api_webhooks_asaas_post",
         "responses": {
           "200": {
@@ -4815,13 +4813,13 @@
         }
       }
     },
-    "/api/webhooks/asaas/transfer-auth": {
+    "/api/webhooks/pagamentos/transfer-auth": {
       "post": {
         "tags": [
           "Webhooks"
         ],
-        "summary": "pagamentos Transfer Auth",
-        "description": "Autorização de saques/transferências pagamentos (BaaS — sem token SMS).\n\nO pagamentos envia POST ~5s após criar a transferência. Resposta esperada:\n``{\"status\": \"APPROVED\"}`` ou ``{\"status\": \"REFUSED\", \"refuseReason\": \"...\"}``.",
+        "summary": "Asaas Transfer Auth",
+        "description": "Autorização de saques/transferências Asaas (BaaS — sem token SMS).\n\nO Asaas envia POST ~5s após criar a transferência. Resposta esperada:\n``{\"status\": \"APPROVED\"}`` ou ``{\"status\": \"REFUSED\", \"refuseReason\": \"...\"}``.",
         "operationId": "asaas_transfer_auth_api_webhooks_asaas_transfer_auth_post",
         "responses": {
           "200": {
@@ -5023,6 +5021,118 @@
           "ingresso_id"
         ],
         "title": "AsaasCobrancaRequest"
+      },
+      "AsaasContaRecebimentoRequest": {
+        "properties": {
+          "cpf_cnpj": {
+            "type": "string",
+            "maxLength": 18,
+            "minLength": 11,
+            "title": "Cpf Cnpj"
+          },
+          "telefone": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 10,
+            "title": "Telefone"
+          },
+          "renda_mensal": {
+            "type": "number",
+            "maximum": 10000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Renda Mensal"
+          },
+          "cep": {
+            "type": "string",
+            "maxLength": 10,
+            "minLength": 8,
+            "title": "Cep"
+          },
+          "endereco": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Endereco"
+          },
+          "numero": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Numero"
+          },
+          "bairro": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Bairro"
+          },
+          "complemento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complemento"
+          },
+          "cidade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cidade"
+          },
+          "estado": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado"
+          },
+          "company_type": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Company Type",
+            "default": "INDIVIDUAL"
+          },
+          "data_nascimento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Nascimento"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cpf_cnpj",
+          "telefone",
+          "renda_mensal",
+          "cep",
+          "endereco",
+          "numero",
+          "bairro"
+        ],
+        "title": "AsaasContaRecebimentoRequest",
+        "description": "Alias de payload para criação de conta de recebimento (PF ou PJ)."
       },
       "AsaasSimularAntecipacaoRequest": {
         "properties": {
