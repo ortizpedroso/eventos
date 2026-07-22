@@ -26,7 +26,7 @@ API_KEY=""
 PLATFORM_WALLET=""
 WEBHOOK_TOKEN=""
 ENVIRONMENT="production"
-ONBOARDING_MODE="linked"
+ONBOARDING_MODE="baas"
 ALLOW_MANUAL="false"
 
 usage() {

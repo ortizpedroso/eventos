@@ -544,7 +544,7 @@ export function OrganizadorRepassesPainel() {
             {status.permite_subconta ? (
               <button
                 type="button"
-                className="rounded-lg border border-emerald-700 bg-white px-4 py-2 text-sm font-medium text-emerald-900"
+                className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
                 onClick={() => setMostrarSubconta(true)}
               >
                 Criar conta de recebimento
