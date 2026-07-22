@@ -53,6 +53,8 @@ Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos
 
 **Terminologia (UX e spec):** usar sempre **conta de recebimento** ou **conta de repasses**. Não expor “subconta”, “Asaas” nem “vincular wallet” ao usuário.
 
+**Acompanhamento dinâmico (tracker):** após criar conta ou iniciar assinatura, UI exibe stepper com polling (`GET /api/organizador/onboarding/conta/{trackingId}/status` e `GET /api/organizador/onboarding/assinatura/{subscriptionId}/status`, intervalo ~4s). E-mails automáticos no backend em `APPROVED`/`REJECTED` (conta) e `SUBSCRIBED`/`PAYMENT_FAILED` (assinatura). Componente reutilizável: `frontend/src/components/status-tracker.tsx`.
+
 **Modo de produção obrigatório:** `ASAAS_ONBOARDING_MODE=baas` (único modo em produção).
 
 ### 2.3 Configuração Asaas — somente produção
