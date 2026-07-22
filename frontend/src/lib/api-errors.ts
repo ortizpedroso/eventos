@@ -41,7 +41,8 @@ export function sanitizarMensagemPagamento(texto: string): string {
     .replace(/conta\s+asaas/gi, "conta de recebimentos")
     .replace(/painel\s+asaas/gi, "sua conta de recebimentos")
     .replace(/\bsubconta\b/gi, "conta de recebimento")
-    .replace(/chave\s+api\s+asaas/gi, "chave de acesso")
+    .replace(/chave\s+api\s+asaas/gi, "chave de acesso da conta de recebimentos")
+    .replace(/api\s+asaas/gi, "API da conta de recebimentos")
     .replace(/\basaas\b/gi, "processador de pagamentos")
     .replace(/walletid/gi, "ID da conta");
 }

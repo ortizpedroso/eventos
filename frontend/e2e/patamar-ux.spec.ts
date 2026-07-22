@@ -125,11 +125,10 @@ test.describe("Lista de espera (esgotado)", () => {
 });
 
 test.describe("Organizador — perfil no painel", () => {
-  test.beforeAll(async () => {
-    await waitForApiReady();
-  });
-
   test("perfil mantém menu Painel e abas horizontais", async ({ page, context }) => {
+    test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");
+    await waitForApiReady(90_000);
+
     await page.setViewportSize({ width: 1280, height: 900 });
     const { token } = await seedOrganizerSession();
     await context.addCookies([

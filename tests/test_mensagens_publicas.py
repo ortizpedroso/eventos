@@ -11,3 +11,6 @@ def test_sanitizar_remove_subconta():
     assert "conta de recebimentos" in sanitizar_mensagem_pagamento(
         "Vincule sua conta Asaas"
     ).lower()
+    assert "api da conta de recebimentos" in sanitizar_mensagem_pagamento(
+        "Erro na API Asaas"
+    ).lower()

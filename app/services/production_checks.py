@@ -59,6 +59,7 @@ def build_setup_status() -> dict:
         "both",
     )
     manual_wallet_ok = (not settings.ASAAS_ALLOW_MANUAL_WALLET) if production else True
+    asaas_disabled_ok = (not settings.ASAAS_DISABLED) if production else True
     postgres_ok = _postgres_password_ok()
 
     asaas_ok = not settings.ASAAS_DISABLED and _ok_secret(settings.ASAAS_API_KEY, 20)
@@ -89,12 +90,12 @@ def build_setup_status() -> dict:
     else:
         asaas_wallet_status = "pendente"
 
-    payment_ok = asaas_ok or settings.ASAAS_DISABLED
+    payment_ok = asaas_ok
     payment_webhook_ok = asaas_webhook_ok or asaas_webhook_status in (
         "desativado_asaas",
         "dev_sem_token",
     )
-    wallet_required = asaas_wallet_ok or settings.ASAAS_DISABLED
+    wallet_required = asaas_wallet_ok
 
     frontend_url_ok = bool((settings.FRONTEND_PUBLIC_URL or "").strip())
 
@@ -107,10 +108,11 @@ def build_setup_status() -> dict:
             frontend_url_ok,
             payment_ok or settings.payments_disabled,
             payment_webhook_ok or settings.payments_disabled,
-            wallet_required,
+            wallet_required or settings.payments_disabled,
             asaas_env_ok or settings.payments_disabled,
             onboarding_ok,
             manual_wallet_ok,
+            asaas_disabled_ok,
             postgres_ok,
         ]
     )
@@ -126,6 +128,7 @@ def build_setup_status() -> dict:
             "asaas_environment": "ok" if asaas_env_ok else "pendente",
             "asaas_onboarding_mode": "ok" if onboarding_ok else "pendente",
             "asaas_manual_wallet_off": "ok" if manual_wallet_ok else "pendente",
+            "asaas_payments_enabled": "ok" if asaas_disabled_ok else "pendente",
             "smtp": "ok" if smtp_ok else "pendente",
             "platform_admin": "ok" if admin_ok else "pendente",
             "cors": "ok" if cors_ok else "pendente",

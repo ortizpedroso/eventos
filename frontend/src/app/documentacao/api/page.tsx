@@ -37,6 +37,15 @@ function rotuloPublico(path: string, summary?: string): string | undefined {
     .replace(/walletid/gi, "ID da conta");
 }
 
+function caminhoPublico(path: string): string {
+  return path
+    .replace(/\/organizador\/asaas/gi, "/organizador/conta-recebimento")
+    .replace(/\/pagamentos\/asaas/gi, "/pagamentos")
+    .replace(/\/webhooks\/asaas/gi, "/webhooks/pagamentos")
+    .replace(/\/subconta/gi, "/conta-recebimento")
+    .replace(/\/wallet/gi, "/conta");
+}
+
 async function carregarSpec(): Promise<OpenApiSpec | null> {
   const site = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
   try {
@@ -111,7 +120,7 @@ export default async function ApiReferenciaPage() {
                       >
                         {metodo}
                       </span>
-                      <code className="shrink-0 font-mono text-sm text-zinc-800">{path}</code>
+                      <code className="shrink-0 font-mono text-sm text-zinc-800">{caminhoPublico(path)}</code>
                       {op.summary ? (
                         <span className="text-sm text-zinc-600">{rotuloPublico(path, op.summary)}</span>
                       ) : null}

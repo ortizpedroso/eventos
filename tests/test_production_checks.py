@@ -120,6 +120,24 @@ def test_onboarding_baas_obrigatorio_em_producao():
     assert s["checks"]["asaas_onboarding_mode"] == "pendente"
 
 
+def test_asaas_disabled_bloqueado_em_producao():
+    with patch.multiple(
+        settings,
+        ENVIRONMENT="production",
+        ASAAS_DISABLED=True,
+        SECRET_KEY="x" * 32,
+        PLATFORM_ADMIN_API_KEY="admin-key",
+        EMAIL_USER="a@b.com",
+        EMAIL_PASSWORD="secret",
+        CORS_ORIGINS="https://eventosbr.app.br",
+        FRONTEND_PUBLIC_URL="https://eventosbr.app.br",
+        DATABASE_URL="postgresql+psycopg2://eventosbr:s3nh4forte@db:5432/eventosbr",
+    ):
+        s = build_setup_status()
+    assert s["checks"]["asaas_payments_enabled"] == "pendente"
+    assert s["ready_for_production"] is False
+
+
 def test_onboarding_mode_fallback_baas():
     with patch.multiple(settings, ASAAS_ONBOARDING_MODE="invalido"):
         assert settings.asaas_onboarding_mode == "baas"

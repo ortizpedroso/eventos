@@ -111,7 +111,7 @@ jobs:
         working-directory: frontend
         run: >
           npx playwright test --project=patamar
-          -g "lista de interesse|lista de espera|produtor"
+          -g "lista de interesse|lista de espera|produtor|perfil mantém menu"
         env:
           CI: true
           PLAYWRIGHT_SKIP_WEBSERVER: "1"

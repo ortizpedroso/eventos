@@ -145,7 +145,7 @@ export default function DocumentacaoPage() {
                 <li>
                   <code className="rounded bg-zinc-100 px-1">/api/auth</code> — registo, login,{" "}
                   <code className="rounded bg-zinc-100 px-1">/me</code> (GET/PATCH); organizadores configuram a
-                  conta de recebimentos (<code className="rounded bg-zinc-100 px-1">wallet_id</code>) para repasses via split.
+                  conta de recebimento na plataforma para repasses via split.
                 </li>
                 <li>
                   <code className="rounded bg-zinc-100 px-1">/api/eventos</code> — criar (organizador), atualizar por{" "}

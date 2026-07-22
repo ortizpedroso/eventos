@@ -42,6 +42,7 @@ const SETUP_CHECK_LABELS: Record<string, string> = {
   asaas_environment: "Ambiente de pagamentos",
   asaas_onboarding_mode: "Modo de onboarding",
   asaas_manual_wallet_off: "Vínculo manual desativado",
+  asaas_payments_enabled: "Pagamentos ativos",
   smtp: "E-mail (SMTP)",
   platform_admin: "Admin da plataforma",
   cors: "CORS",

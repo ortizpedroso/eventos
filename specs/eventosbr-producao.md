@@ -113,7 +113,7 @@ Conectividade com API real: `scripts/test-asaas-connection.py` + webhook configu
 - `ContaShell` em `/conta/*`: menu lateral **Perfil**, **Pagamentos**, **Ingressos**, **Notificações** (cliente).
 - Dropdown do avatar: **Painel** (só organizador), **Perfil**, **Pagamentos**, **Ingressos**, **Notificações**, **Sair**.
 - Organizador logado: dropdown aponta para `/organizador/perfil` e subrotas (`/pagamentos`, `/ingressos`, `/notificacoes`), renderizando os mesmos clients de `/conta/*` dentro do `OrganizadorShell` — a barra lateral **Painel** não muda.
-- `/organizador/perfil/layout.tsx`: abas horizontais (Perfil · Pagamentos · Ingressos · Notificações) com links para as subrotas.
+- Abas horizontais do perfil do organizador via `PerfilTabs` (`frontend/src/components/perfil-tabs.tsx`), renderizadas abaixo do título em cada página `/organizador/perfil/*` (Perfil · Pagamentos · Ingressos · Notificações). O `layout.tsx` do perfil é passthrough.
 - `auth/layout.tsx` + `layout.tsx`: rodapé fixo no fim da viewport — shell estável (`grid` `auto 1fr auto` ou `flex` `min-h-dvh flex-col`), CSS crítico `eventosbr-shell-layout`, `EarlyScrollReset` no `<head>`. Validação: `scripts/verificar-versao-site.sh`.
 - Máscaras: CPF/CNPJ, CEP, telefone nos formulários financeiro, checkout e repasse de ingresso.
 - **White-label:** mensagens ao usuário não expõem o processador de pagamentos (`api-errors.ts`, `mensagens_publicas.py`). UI Financeiro fala em **conta de recebimento**, nunca em subconta ou Asaas.
@@ -171,7 +171,7 @@ Conectividade com API real: `scripts/test-asaas-connection.py` + webhook configu
 | `FRONTEND_PUBLIC_URL` | URL pública | |
 | `POSTGRES_PASSWORD` | Sim | |
 
-Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida: `ASAAS_ENVIRONMENT=production`, `ASAAS_ONBOARDING_MODE=baas`, `ASAAS_ALLOW_MANUAL_WALLET=false`, senha Postgres, `CORS_ORIGINS` só HTTPS, `FRONTEND_PUBLIC_URL` preenchida (bloqueia `ready_for_production` se vazia).
+Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida: `ASAAS_ENVIRONMENT=production`, `ASAAS_ONBOARDING_MODE=baas`, `ASAAS_ALLOW_MANUAL_WALLET=false`, `ASAAS_DISABLED=false`, senha Postgres, `CORS_ORIGINS` só HTTPS, `FRONTEND_PUBLIC_URL` preenchida (bloqueia `ready_for_production` se vazia).
 
 ---
 
@@ -191,17 +191,17 @@ Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida:
 - [x] ContaShell lateral persistente (`/conta/*`)
 - [x] Subrotas organizador `/organizador/perfil/*` (mesmos clients)
 - [x] Dropdown organizador com Pagamentos/Ingressos/Notificações → subrotas
-- [x] Abas horizontais em `/organizador/perfil/layout.tsx`
+- [x] Abas horizontais via `PerfilTabs` em `/organizador/perfil/*` (validado em produção)
 - [x] Rodapé estável (shell + `EarlyScrollReset` — validado no VPS)
 - [x] Máscaras formulários
 - [x] White-label: mensagens sanitizadas; UI usa conta de recebimento (sem subconta/Asaas expostos)
 
 ### Qualidade
 
-- [x] `pytest` verde (217 testes)
+- [x] `pytest` verde (219 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e-compra`, `e2e-asaas` verdes
-- [ ] CI `e2e` (smoke + patamar) verde
+- [x] CI `e2e` (smoke + patamar) verde — testes que exigem API rodam só no job `e2e-compra`
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 
 ### Operação (usuário no VPS)
