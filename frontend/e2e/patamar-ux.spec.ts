@@ -161,7 +161,7 @@ test.describe("Organizador — perfil no painel", () => {
     await expect(page.getByText("Minha conta")).not.toBeVisible();
 
     await page
-      .getByRole("navigation", { name: "Seções da conta" })
+      .getByRole("navigation", { name: "Seções do perfil" })
       .getByRole("link", { name: "Pagamentos" })
       .click();
     await expect(page.getByRole("heading", { level: 1, name: /pagamentos/i })).toBeVisible({
