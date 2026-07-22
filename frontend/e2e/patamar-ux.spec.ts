@@ -80,6 +80,22 @@ test.describe("Checkout — copy de pagamento", () => {
     await expect(page.getByText(/EventosBR|taxa/i).first()).toBeVisible();
   });
 
+  test("planos: cards de preço visíveis ao carregar (sem depender de scroll)", async ({ page }) => {
+    await page.goto("/planos", { waitUntil: "domcontentloaded" });
+    const titulo = page.getByRole("heading", { level: 3, name: "Eventos gratuitos" });
+    await expect(titulo).toBeVisible({ timeout: 15_000 });
+    const opacidade = await titulo.evaluate((el) => {
+      let node: HTMLElement | null = el;
+      while (node) {
+        const o = Number.parseFloat(window.getComputedStyle(node).opacity);
+        if (o < 1) return o;
+        node = node.parentElement;
+      }
+      return 1;
+    });
+    expect(opacidade).toBeGreaterThan(0.9);
+  });
+
   test("home menciona transparência de taxas", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText(/taxas|PIX/i).first()).toBeVisible();

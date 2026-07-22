@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { rotuloContagem } from "@/lib/plural-pt";
 
 type Stats = {
   eventos_publicados: number;
@@ -22,17 +23,17 @@ export async function HomeProvaSocial() {
       <p className="text-center text-sm text-zinc-600">
         {stats.eventos_publicados > 0 ? (
           <>
-            <strong className="text-zinc-900">{stats.eventos_publicados.toLocaleString("pt-BR")}</strong>{" "}
-            eventos publicados
+            <strong className="text-zinc-900">
+              {rotuloContagem(stats.eventos_publicados, "evento publicado", "eventos publicados")}
+            </strong>
           </>
         ) : null}
         {stats.eventos_publicados > 0 && stats.ingressos_confirmados > 0 ? " · " : null}
         {stats.ingressos_confirmados > 0 ? (
           <>
             <strong className="text-zinc-900">
-              {stats.ingressos_confirmados.toLocaleString("pt-BR")}
-            </strong>{" "}
-            ingressos confirmados
+              {rotuloContagem(stats.ingressos_confirmados, "ingresso confirmado", "ingressos confirmados")}
+            </strong>
           </>
         ) : null}
       </p>

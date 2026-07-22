@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -15,37 +15,40 @@ type Props = {
   delayMs?: number;
 };
 
+function isInViewport(el: HTMLElement): boolean {
+  const r = el.getBoundingClientRect();
+  const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+  if (r.width <= 0 || r.height <= 0) return false;
+  return r.bottom > 0 && r.top < vh;
+}
+
 export function ScrollReveal({ children, className = "", delayMs = 0 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    const show = () => setVisible(true);
+    let cancelled = false;
+    const show = () => {
+      if (!cancelled) setVisible(true);
+    };
 
-    /* prefers-reduced-motion: mostrar já (evita conteúdo invisível). */
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
       show();
       return;
     }
 
-    /* Se já está visível no primeiro layout, não depender só do observer (Safari / contentores). */
-    const checkImmediate = () => {
-      const r = el.getBoundingClientRect();
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      const overlap = Math.min(r.bottom, vh) - Math.max(r.top, 0);
-      if (overlap > 8 && r.width > 0) {
+    const tryShow = () => {
+      if (isInViewport(el)) {
         show();
         return true;
       }
       return false;
     };
 
-    if (checkImmediate()) {
-      return;
-    }
+    if (tryShow()) return;
 
     const obs = new IntersectionObserver(
       ([entry]) => {
@@ -54,25 +57,39 @@ export function ScrollReveal({ children, className = "", delayMs = 0 }: Props) {
           obs.disconnect();
         }
       },
-      { rootMargin: "0px 0px 8% 0px", threshold: 0.01 },
+      { rootMargin: "0px", threshold: 0 },
     );
     obs.observe(el);
 
-    const t = window.setTimeout(() => {
+    const onLayout = () => {
+      if (tryShow()) obs.disconnect();
+    };
+
+    window.addEventListener("load", onLayout, { once: true });
+    window.addEventListener("resize", onLayout);
+
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(onLayout);
+    });
+
+    const fallback = window.setTimeout(() => {
       show();
       obs.disconnect();
-    }, 4500);
+    }, 600);
 
     return () => {
-      window.clearTimeout(t);
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+      window.clearTimeout(fallback);
+      window.removeEventListener("resize", onLayout);
       obs.disconnect();
     };
   }, []);
 
   const style: CSSProperties | undefined =
-    delayMs > 0
-      ? { transitionDelay: visible ? `${delayMs}ms` : "0ms" }
-      : undefined;
+    delayMs > 0 ? { transitionDelay: visible ? `${delayMs}ms` : "0ms" } : undefined;
 
   return (
     <div

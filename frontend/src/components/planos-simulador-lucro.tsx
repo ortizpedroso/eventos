@@ -76,7 +76,10 @@ export function PlanosSimuladorLucro() {
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
         <label className="flex flex-col gap-2 text-sm">
           <span className="font-medium text-zinc-700">Preço do ingresso</span>
-          <InputValorBrl value={precoInput} onChange={setPrecoInput} />
+          <InputValorBrl value={precoInput} onChange={setPrecoInput} aria-describedby="planos-sim-preco-hint" />
+          <span id="planos-sim-preco-hint" className="text-xs text-zinc-500">
+            Digite em reais; os centavos entram automaticamente (ex.: 8000 → R$ 80,00).
+          </span>
         </label>
         <label className="flex flex-col gap-2 text-sm">
           <span className="font-medium text-zinc-700">Quantidade vendida</span>
