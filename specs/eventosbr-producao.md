@@ -1,10 +1,13 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.1  
-**Data:** 2026-07-20  
+**Versão:** 1.4  
+**Data:** 2026-07-22  
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
+>
+> **Produção (VPS):** `main` em `2d32122` — validado em 22/jul/2026 (`verify-production.sh`, `verificar-versao-site.sh`).  
+> **Branch de entrega:** `cursor/build-spec-sandbox-asaas-bf71` (PR #42) — white-label, checks de produção e CI e2e corrigidos; **aguarda merge** antes de `atualizar-vps-agora.sh`.
 
 ---
 
@@ -12,8 +15,9 @@
 
 Publicar o EventosBR (`eventosbr.app.br`) como plataforma de ingressos com:
 
-- Pagamentos via **Asaas** (PIX, cartão, boleto)
+- Pagamentos integrados (PIX, cartão, boleto) — processador **Asaas** em produção, **invisível ao usuário final**
 - Repasse automático ao organizador via **split**
+- Cada organizador possui **conta de recebimento** criada e gerida **pela plataforma** (sem conta Asaas separada, sem “subconta” exposta na UX)
 - UX de compra, conta, organizador e portaria em nível de mercado
 - Segurança e configuração prontas para **produção**
 
@@ -21,86 +25,145 @@ Publicar o EventosBR (`eventosbr.app.br`) como plataforma de ingressos com:
 
 ---
 
-## 2. Pagamentos e repasse Asaas
+## 2. Pagamentos e repasse
 
 ### 2.1 Split na venda
 
 | Destino | O que recebe | Como |
 |---------|----------------|------|
-| Organizador | Preço − taxa EventosBR − descontos | `split[].walletId` = wallet do organizador |
-| Plataforma | Taxa EventosBR (% + fixo) | Permanece na conta emissora (fora do `split`) |
-| Asaas | Taxas gateway | Fora do split |
+| Organizador | Preço − taxa EventosBR − descontos | `split[].walletId` = wallet da **conta de recebimento** do organizador |
+| Plataforma | Taxa EventosBR (% + fixo) | Permanece na conta emissora EventosBR (fora do `split`) |
+| Processador | Taxas do gateway | Fora do split |
 
 Implementação: `app/services/pagamento_asaas.py` → `split_para_evento()`.
 
 Ledger por ingresso: `financeiro_organizador.py` → `registrar_ledger_ingressos_lote()`.
 
-### 2.2 Modos de conta do organizador (`ASAAS_ONBOARDING_MODE`)
+### 2.2 Conta de recebimento do organizador (modelo de produção)
 
-| Modo | Padrão | Onboarding | Saques |
-|------|--------|------------|--------|
-| `baas` | **Sim** | Subconta via `POST /v3/accounts` | White-label na plataforma (Pix) |
-| `linked` | Não | Vincular `walletId` da conta Asaas própria | No painel Asaas do organizador |
-| `both` | Não | Ambos disponíveis | Conforme tipo ativo |
+**O organizador não cria nem vincula conta em painel externo.** Tudo ocorre dentro do EventosBR:
 
-### 2.3 Modo linked (produção)
+1. Organizador → **Financeiro** → **Criar conta de recebimento**.
+2. Formulário na plataforma (CPF/CNPJ, endereço, telefone, renda, data de nascimento quando PF).
+3. Backend provisiona a conta via API do processador (`POST /v3/accounts` — rota interna `POST /api/organizador/asaas/subconta`).
+4. KYC/análise → status `approved` libera publicação e venda.
+5. Repasses caem na conta de recebimento do organizador via split; **saques Pix** são solicitados na plataforma (white-label).
+6. Extrato, vendas e conciliação na área **Financeiro** do organizador.
 
-1. Organizador obtém `walletId` no painel Asaas.
-2. Financeiro → **Vincular conta Asaas** → `PUT /api/organizador/asaas/wallet`.
-3. Validação: formato UUID; diferente de `ASAAS_PLATFORM_WALLET_ID`; opcionalmente chave API do organizador para conferir `GET /v3/myAccount`.
-4. Status `linked` libera publicação e venda.
-5. Extrato e vendas na plataforma; saque no Asaas do organizador.
+**Terminologia (UX e spec):** usar sempre **conta de recebimento** ou **conta de repasses**. Não expor “subconta”, “Asaas” nem “vincular wallet” ao usuário.
 
-### 2.4 Modo BaaS (opcional)
+**Modo de produção obrigatório:** `ASAAS_ONBOARDING_MODE=baas` (único modo em produção).
 
-- `POST /api/organizador/asaas/subconta` → KYC → status `approved`.
-- Saque Pix white-label, carência 48h, conciliação ledger vs saldo subconta.
-- Webhooks `ACCOUNT_STATUS_*`, transfer-auth §2.7.
+### 2.3 Configuração Asaas — somente produção
 
-### 2.5 Status que liberam venda
+Em **produção** (`ENVIRONMENT=production`):
 
-`app/services/evento_repasse.py` → `linked` | `approved` | `manual` (só dev com flag).
+| Variável | Valor fixo | Observação |
+|----------|------------|------------|
+| `ASAAS_ENVIRONMENT` | `production` | Chaves `$aact_prod_...`; **não alterar** |
+| `ASAAS_ONBOARDING_MODE` | `baas` | Conta de recebimento criada pela plataforma |
+| `ASAAS_ALLOW_MANUAL_WALLET` | `false` | Sem colar walletId manualmente |
+| `ASAAS_DISABLED` | `false` | Pagamentos reais ativos |
 
-### 2.6 Checkout e assinatura
+Credenciais Asaas (`ASAAS_API_KEY`, `ASAAS_PLATFORM_WALLET_ID`, `ASAAS_WEBHOOK_TOKEN`) são de **produção**, configuradas uma vez no `.env` do VPS e **não devem ser trocadas** em operação normal. Backups: `backup-prod-env.sh` / `restore-prod-env.sh`.
 
-- Checkout bloqueado sem repasse configurado.
+`config/settings.py` → com `ENVIRONMENT=production`, `asaas_env()` retorna sempre `production` (sem inferência sandbox).
+
+Modos `linked` e `both` existem apenas no código para desenvolvimento legado — **fora do escopo de produção** e desta spec.
+
+### 2.4 Status que liberam venda
+
+`app/services/evento_repasse.py` → em produção: **`approved`** (conta de recebimento aprovada).
+
+Status `manual` e `linked` aplicam-se só a ambientes de desenvolvimento com flags explícitas — não usados em produção.
+
+### 2.5 Checkout e assinatura
+
+- Checkout bloqueado sem conta de recebimento aprovada.
 - Webhooks `PAYMENT_*` marcam `pago_em`.
 - Assinatura mensal: 100% plataforma, sem split de ingresso; reutiliza PIX pendente.
 
-### 2.7 Webhooks produção
+### 2.6 Webhooks (produção)
 
-- URL: `https://DOMINIO/api/webhooks/asaas`
+- URL: `https://eventosbr.app.br/api/webhooks/asaas`
 - Header: `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN`
 - Pagamentos: `PAYMENT_*`
-- Conta/saques: modo BaaS apenas
-- Transfer-auth (BaaS): `https://DOMINIO/api/webhooks/asaas/transfer-auth`
+- Conta de recebimento / saques: `ACCOUNT_STATUS_*`
+- Autorização de transferência Pix: `https://eventosbr.app.br/api/webhooks/asaas/transfer-auth`
 
-### 2.8 Testes pré-go-live
-
-Testes sandbox reais foram concluídos internamente. Os scripts de alternância sandbox foram removidos do repositório (commit `9149828`).
-
-**Teste automatizado mock (CI e VPS):**
+### 2.7 Testes automatizados (código — não cobram de verdade)
 
 ```bash
-# Local
+# Local — suite completa
+python3 -m pytest -q
+
+# Local — split mock
 python3 -m pytest tests/test_compra_split_fluxo_mock.py -v
 
-# VPS (pytest dentro do container — não use python3 na raiz do servidor)
-bash scripts/test-sandbox-compra-split.sh
+# VPS (pytest dentro do container)
+bash scripts/test-compra-split-mock.sh
+
+# Frontend
+cd frontend && npm run build
+cd frontend && npm run test:e2e          # smoke + patamar (sem API)
 ```
 
 Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do organizador (não da plataforma).
 
-Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webhook no painel.
+**CI** (`.github/workflows/ci.yml`):
+
+| Job | O que valida |
+|-----|----------------|
+| `api` | `pytest` (219 testes) |
+| `web` | `npm run build` |
+| `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
+| `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
+| `e2e-asaas` | Checkout PIX/cartão mock Asaas |
+| `prod-compose` | `docker-compose.prod.yml` válido |
+
+Conectividade API real (produção): `scripts/test-asaas-connection.py`.
+
+### 2.8 Validação operacional (VPS — cobra de verdade)
+
+Procedimentos para marcar os critérios §7 como concluídos **após merge do PR #42**:
+
+#### A) Webhook real (`PAYMENT_RECEIVED`)
+
+1. Painel Asaas → Integrações → Webhooks → URL `https://eventosbr.app.br/api/webhooks/asaas`
+2. Token = `ASAAS_WEBHOOK_TOKEN` do `.env` (header `asaas-access-token`)
+3. Eventos: `PAYMENT_*`, `ACCOUNT_STATUS_*`
+4. No VPS: `bash scripts/test-asaas-webhook.sh --expect-ok` (valida token e URL)
+5. Realizar compra de teste (PIX ou cartão) e confirmar no log da API que `PAYMENT_RECEIVED` atualizou `pago_em`
+
+#### B) SMTP + SPF/DKIM
+
+1. Confirmar `EMAIL_USER`, `EMAIL_PASSWORD`, `EMAIL_SERVER` no `.env`
+2. Compra de teste → e-mail de ingresso recebido na caixa de entrada (não spam)
+3. Validar SPF/DKIM do domínio remetente (painel DNS / ferramenta do provedor)
+
+#### C) Primeira venda real
+
+1. Organizador com conta de recebimento `approved`
+2. Evento publicado com ingresso pago
+3. Compra PIX ou cartão concluída
+4. Ingresso com QR na conta do comprador + e-mail recebido
+5. Split visível no extrato Financeiro do organizador
+
 ---
 
 ## 3. UX — Área da conta
 
 - `ContaShell` em `/conta/*`: menu lateral **Perfil**, **Pagamentos**, **Ingressos**, **Notificações** (cliente).
-- Dropdown do avatar: Painel (só organizador), Perfil, Pagamentos, Ingressos, Notificações, Sair.
-- Organizador logado: dropdown aponta para `/organizador/perfil` (e subrotas `pagamentos`/`ingressos`/`notificacoes`), que renderizam os mesmos clients de `/conta/*` dentro do `OrganizadorShell` — evita trocar a barra lateral do organizador ao navegar pelo menu da conta.
-- `auth/layout.tsx` + `layout.tsx`: rodapé fixo no fim da viewport (flex shell, CSS crítico `eventosbr-shell-layout`, `EarlyScrollReset` no `<head>`).
+- Dropdown do avatar: **Painel** (só organizador), **Perfil**, **Pagamentos**, **Ingressos**, **Notificações**, **Sair**.
+- Organizador logado: dropdown aponta para `/organizador/perfil` e subrotas (`/pagamentos`, `/ingressos`, `/notificacoes`), renderizando os mesmos clients de `/conta/*` dentro do `OrganizadorShell` — a barra lateral **Painel** não muda.
+- Abas horizontais do perfil do organizador via `PerfilTabs` (`frontend/src/components/perfil-tabs.tsx`), renderizadas abaixo do título em cada página `/organizador/perfil/*` (Perfil · Pagamentos · Ingressos · Notificações). O `layout.tsx` do perfil é passthrough.
+- `auth/layout.tsx` + `layout.tsx`: rodapé fixo no fim da viewport — shell estável (`grid` `auto 1fr auto`), CSS crítico `eventosbr-shell-layout`, `EarlyScrollReset` no `<head>`. Validação: `scripts/verificar-versao-site.sh`.
 - Máscaras: CPF/CNPJ, CEP, telefone nos formulários financeiro, checkout e repasse de ingresso.
+- **White-label:** mensagens ao usuário não expõem o processador de pagamentos:
+  - `api-errors.ts` e `mensagens_publicas.py` — sanitização de erros API
+  - `organizador-repasses-painel.tsx` — copy “conta de recebimento/repasses”
+  - `documentacao/page.tsx` e `documentacao/api/page.tsx` — sem `wallet_id`, paths sanitizados na UI
+  - `scripts/export-openapi.py` — summaries/descriptions sem marca do provedor em `openapi.json`
 
 ---
 
@@ -119,7 +182,7 @@ Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webh
 | P9 | Portaria: QR local, feedback som/vibração, rate limit | [x] |
 | P10 | SEO: sitemap, robots, metadata | [x] |
 
-**Fora do escopo desta publicação:** múltiplos operadores, formulário custom inscrição, importação CSV, certificados, PWA equipe, Apple/Google Wallet, NFSe automática.
+**Fora do escopo desta publicação:** múltiplos operadores, formulário custom inscrição, importação CSV, certificados, PWA equipe, Apple/Google Wallet, NFSe automática, modo `linked`/`both`, sandbox Asaas em produção.
 
 ---
 
@@ -133,63 +196,86 @@ Para ambiente novo com API Asaas real: `scripts/test-asaas-connection.py` + webh
 | Rotação token portaria | `evento_portaria.py` |
 | Rate limit portaria | `rate_limit.py` |
 | Mensagens API em português | `api-errors.ts` |
+| White-label pagamentos (sem marca do provedor) | `api-errors.ts`, `mensagens_publicas.py`, `documentacao/api/page.tsx` |
 
 ---
 
 ## 6. Variáveis de ambiente (produção)
 
-| Variável | Obrigatório |
-|----------|-------------|
-| `ASAAS_API_KEY` | Sim |
-| `ASAAS_PLATFORM_WALLET_ID` | Sim |
-| `ASAAS_WEBHOOK_TOKEN` | Sim |
-| `ASAAS_ENVIRONMENT` | `production` |
-| `ASAAS_ONBOARDING_MODE` | `baas` (padrão) ou `linked` / `both` |
-| `SECRET_KEY` | Sim (≥ 32 chars) |
-| `EMAIL_USER` / `EMAIL_PASSWORD` | Sim |
-| `PLATFORM_ADMIN_API_KEY` | Sim |
-| `CORS_ORIGINS` | HTTPS, sem `*` |
-| `FRONTEND_PUBLIC_URL` | URL pública |
-| `POSTGRES_PASSWORD` | Sim |
-| `ASAAS_ALLOW_MANUAL_WALLET` | `false` |
+| Variável | Obrigatório | Valor em produção |
+|----------|-------------|-------------------|
+| `ASAAS_API_KEY` | Sim | Chave `$aact_prod_...` — **não alterar** |
+| `ASAAS_PLATFORM_WALLET_ID` | Sim | Wallet da plataforma — **não alterar** |
+| `ASAAS_WEBHOOK_TOKEN` | Sim | Token do webhook — **não alterar** |
+| `ASAAS_ENVIRONMENT` | Sim | **`production`** (fixo) |
+| `ASAAS_ONBOARDING_MODE` | Sim | **`baas`** (fixo) |
+| `ASAAS_ALLOW_MANUAL_WALLET` | Sim | **`false`** (fixo) |
+| `ASAAS_DISABLED` | Sim | **`false`** |
+| `SECRET_KEY` | Sim (≥ 32 chars) | |
+| `EMAIL_USER` / `EMAIL_PASSWORD` | Sim | |
+| `PLATFORM_ADMIN_API_KEY` | Sim | |
+| `CORS_ORIGINS` | HTTPS, sem `*` | |
+| `FRONTEND_PUBLIC_URL` | URL pública | |
+| `POSTGRES_PASSWORD` | Sim | |
 
-Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida também: `ASAAS_ENVIRONMENT=production`, `ASAAS_ONBOARDING_MODE` válido, `ASAAS_ALLOW_MANUAL_WALLET=false`, senha Postgres (via `DATABASE_URL`) e `CORS_ORIGINS` só HTTPS.
+Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida:
+
+- `ASAAS_ENVIRONMENT=production`
+- `ASAAS_ONBOARDING_MODE=baas`
+- `ASAAS_ALLOW_MANUAL_WALLET=false`
+- `ASAAS_DISABLED=false` (check `asaas_payments_enabled`)
+- Senha Postgres, `CORS_ORIGINS` só HTTPS, `FRONTEND_PUBLIC_URL` preenchida
+
+Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ---
 
 ## 7. Critérios de conclusão para publicação
 
-### Pagamentos
+### Pagamentos (código)
 
 - [x] Split só para organizador; taxa na conta emissora
-- [x] Modo linked: `PUT /asaas/wallet`, status `linked`, UI vínculo
-- [x] Validação wallet: formato, ≠ plataforma, opcional API key organizador (`GET /v3/myAccount`)
-- [x] Bloqueio venda/publicação sem repasse
-- [x] Extrato, vendas agrupadas, estornos
-- [x] Modo BaaS completo (quando `baas` ou `both`)
+- [x] Conta de recebimento criada pela plataforma (`ASAAS_ONBOARDING_MODE=baas`)
+- [x] KYC → status `approved` libera venda e publicação
+- [x] Bloqueio venda/publicação sem conta de recebimento aprovada
+- [x] Extrato, vendas agrupadas, estornos, saque Pix white-label
+- [x] Asaas somente produção no VPS (credenciais fixas; `asaas_env()` força production)
 
-### UX conta e login
+### UX conta e login (código)
 
-- [x] ContaShell lateral persistente
-- [x] Rodapé login corrigido
+- [x] ContaShell lateral persistente (`/conta/*`)
+- [x] Subrotas organizador `/organizador/perfil/*` (mesmos clients)
+- [x] Dropdown organizador com Pagamentos/Ingressos/Notificações → subrotas
+- [x] Abas horizontais via `PerfilTabs` em `/organizador/perfil/*` (validado em produção)
+- [x] Rodapé estável (shell + `EarlyScrollReset` — validado no VPS)
 - [x] Máscaras formulários
+- [x] White-label: mensagens sanitizadas; UI usa conta de recebimento (sem subconta/Asaas expostos)
 
-### Qualidade
+### Qualidade (código + CI)
 
-- [x] `pytest` verde (208 testes em `main`; branch go-live inclui mock split)
+- [x] `pytest` verde (219 testes)
 - [x] `npm run build` verde
-- [x] CI (api, web, e2e)
-- [x] Teste mock compra + split: `scripts/test-sandbox-compra-split.sh`
+- [ ] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas` verdes no PR #42 (branch `cursor/build-spec-sandbox-asaas-bf71`)
+- [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 
-### Operação (usuário no VPS)
+### Operação (VPS — após merge PR #42)
 
-- [x] `.env` produção preenchido (validado em `eventosbr.app.br` — jul/2026)
-- [ ] Webhook Asaas configurado e testado com evento real (`PAYMENT_RECEIVED`)
-- [x] Testes mock split no VPS (`test-sandbox-compra-split.sh` — 2 passed)
-- [ ] SMTP + SPF/DKIM validados (envio real de ingresso)
-- [x] `alembic upgrade head` (migração `20260717_000035` no deploy)
-- [ ] Primeira venda real validada (PIX ou cartão + e-mail recebido)
-- [ ] Merge PR #39 (`cursor/fix-footer-flash-bf71`) na `main` e VPS em `main` oficial
+**Estado atual do VPS (`main` `2d32122`):**
+
+- [x] `.env` produção preenchido (validado em `eventosbr.app.br` — 22/jul/2026)
+- [x] VPS em `main` oficial (`2d32122` = `origin/main`)
+- [x] `ASAAS_ENVIRONMENT=production` e `ASAAS_ONBOARDING_MODE=baas` confirmados
+- [x] `verify-production.sh` sem falhas críticas
+- [x] `verificar-versao-site.sh` — site atualizado
+- [x] Testes mock split no VPS (2 passed)
+- [x] `alembic upgrade head` (migração `20260717_000035`)
+
+**Pendente — validar após deploy da branch (§2.8):**
+
+- [ ] Merge PR #42 + `bash scripts/atualizar-vps-agora.sh`
+- [ ] Webhook configurado e testado com evento real (`PAYMENT_RECEIVED`) — §2.8 A
+- [ ] SMTP + SPF/DKIM validados (envio real de ingresso) — §2.8 B
+- [ ] Primeira venda real validada (PIX ou cartão + e-mail recebido) — §2.8 C
 
 ---
 
@@ -198,17 +284,20 @@ Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida 
 | Área | Arquivos |
 |------|----------|
 | Split / cobrança | `pagamento_asaas.py`, `pagamentos_asaas_handlers.py` |
-| Repasse / wallet | `organizador_asaas.py`, `evento_repasse.py` |
+| Conta de recebimento | `organizador_asaas.py`, `evento_repasse.py` |
 | Financeiro | `financeiro_organizador.py`, `financeiro_conciliacao.py`, `saque_asaas.py` |
 | UI financeiro | `organizador-repasses-painel.tsx` |
-| Conta | `conta-shell.tsx`, `conta/layout.tsx`, `auth/layout.tsx` |
-| Config | `config/settings.py`, `production_checks.py` |
-| Go-live ops | `docs/11-go-live-asaas.md`, `scripts/atualizar-vps-agora.sh`, `scripts/verify-production.sh` |
-| Teste split mock | `tests/test_compra_split_fluxo_mock.py`, `scripts/test-sandbox-compra-split.sh` |
-| Backup produção Asaas | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-asaas-prod-env.sh`, `sync-asaas-prod-from-backup.sh` |
+| Conta / perfil | `conta-shell.tsx`, `perfil-tabs.tsx`, `conta/layout.tsx`, `organizador/perfil/layout.tsx` |
+| White-label | `api-errors.ts`, `mensagens_publicas.py`, `documentacao/api/page.tsx`, `export-openapi.py` |
+| Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
+| Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
+| Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh` |
+| Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py` |
+| CI | `.github/workflows/ci.yml` |
+| Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
 
 ---
 
 ## 9. Extensões (não bloqueiam publicação)
 
-Antecipação cartão subconta, cancelamento saque, mock E2E (`ASAAS_E2E_MOCK`), scripts webhook setup, comprovante transferência, backfill ledger.
+Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2E_MOCK`), scripts de setup de webhook, comprovante de transferência, backfill de ledger, modo `linked` legado (apenas dev).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Testa conectividade com a API Asaas (sandbox ou produção) via GET /v3/myAccount."""
+"""Testa conectividade com a API de pagamentos em produção via GET /v3/myAccount."""
 
 from __future__ import annotations
 

@@ -34,6 +34,23 @@ type Campanha = {
 
 type Tab = "setup" | "eventos" | "usuarios" | "contatos" | "campanhas";
 
+const SETUP_CHECK_LABELS: Record<string, string> = {
+  secret_key: "Chave secreta",
+  asaas_api: "API de pagamentos",
+  asaas_webhook: "Webhook de pagamentos",
+  asaas_platform_wallet: "Carteira da plataforma",
+  asaas_environment: "Ambiente de pagamentos",
+  asaas_onboarding_mode: "Modo de onboarding",
+  asaas_manual_wallet_off: "Vínculo manual desativado",
+  asaas_payments_enabled: "Pagamentos ativos",
+  smtp: "E-mail (SMTP)",
+  platform_admin: "Admin da plataforma",
+  cors: "CORS",
+  postgres_password: "Senha Postgres",
+  redis: "Redis",
+  frontend_url: "URL pública do site",
+};
+
 type UsuarioAdmin = {
   id: string;
   email: string;
@@ -451,7 +468,7 @@ export function AdminDashboardClient() {
                     : "border-amber-100 bg-amber-50/50"
                 }`}
               >
-                <span className="text-zinc-700">{k.replace(/_/g, " ")}</span>
+                <span className="text-zinc-700">{SETUP_CHECK_LABELS[k] ?? k.replace(/_/g, " ")}</span>
                 <span className="font-mono text-xs text-zinc-600">{v}</span>
               </li>
             ))}

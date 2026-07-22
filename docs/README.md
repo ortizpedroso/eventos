@@ -1,6 +1,6 @@
 # Documentação técnica — EventosBR
 
-Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + **Asaas**). Use em conjunto com o [README da raiz](../README.md) para instalação rápida. No site público (Next.js) há uma página resumida em **`/documentacao`**.
+Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + pagamentos integrados). Use em conjunto com o [README da raiz](../README.md) para instalação rápida. No site público (Next.js) há uma página resumida em **`/documentacao`**.
 
 ## Documento consolidado
 
@@ -22,10 +22,9 @@ Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + **A
 | [08 — Deploy Hostinger (VPS)](./08-deploy-hostinger.md) | Docker prod, Caddy, DNS, go-live |
 | [09 — Auditoria segurança e UX](./09-auditoria-seguranca-ux.md) | Checklist do que foi melhorado e o que falta (jun/2026) |
 | [10 — Próximo patamar](./10-checklist-proximo-patamar.md) | Checklist completo: o que temos vs o que falta (produto, paridade, diferenciação) |
-| [11 — Go-live Asaas](./11-go-live-asaas.md) | Checklist operacional de deploy em produção |
+| [11 — Go-live](./11-go-live-asaas.md) | Checklist operacional de deploy em produção |
 | [12 — Checklist publicação](./12-checklist-publicacao.md) | O que está pronto no código vs o que falta no VPS |
 | [13 — Automação GitHub](./13-github-automacao.md) | CI em `cursor/*`, PR automático e permissões |
-| [14 — Teste sandbox Asaas](./14-teste-sandbox-asaas.md) | Backup produção + entrar/sair do sandbox no VPS |
 | **Spec produção** | [`specs/eventosbr-producao.md`](../specs/eventosbr-producao.md) — documento único `/build` e `/review` |
 
 ## Documentação interativa da API

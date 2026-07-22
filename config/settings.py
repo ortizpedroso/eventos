@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     def asaas_env(self) -> str:
+        if self.ENVIRONMENT == "production":
+            return "production"
         explicit = (self.ASAAS_ENVIRONMENT or "").strip().lower()
         if explicit in ("sandbox", "production", "prod"):
             return "production" if explicit in ("production", "prod") else "sandbox"

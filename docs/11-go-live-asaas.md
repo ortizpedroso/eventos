@@ -153,55 +153,6 @@ Para vincular conta Asaas própria: `ASAAS_ONBOARDING_MODE=linked` ou `both`.
 
 ---
 
-## 3.2 Testes sandbox no VPS (produção com credenciais de homologação)
-
-Para validar PIX/cartão real no ambiente `eventosbr.app.br` **sem** perder as credenciais de produção:
-
-### Fluxo recomendado
-
-```bash
-cd /opt/eventosbr
-
-# 1. Deploy da branch em teste (ou main após merge do PR)
-./scripts/atualizar-vps-branch.sh cursor/ux-seo-melhorias-v2-bf71
-# — ou, após merge: ./scripts/atualizar-vps-agora.sh
-
-# 2. Guardar credenciais de produção
-./scripts/backup-asaas-prod-env.sh
-
-# 3. Configurar sandbox manualmente
-# Defina ASAAS_ENVIRONMENT=sandbox e a chave $aact_hmlg_... no .env local (não commitar)
-
-# 4. Webhook no painel Asaas SANDBOX (não o de produção)
-./scripts/asaas-webhook-setup.sh eventosbr.app.br
-
-# 5. Vitrine profissional (opcional)
-python3 scripts/seed-vitrine-profissional.py
-
-# 6. Testes manuais: compra PIX/cartão em valor baixo, confirmação de ingresso
-
-# 7. Restaurar produção
-./scripts/restore-asaas-prod-env.sh --reload
-```
-
-### Scripts
-
-| Script | Função |
-|--------|--------|
-| `backup-prod-env.sh` | Grava `.env.prod-backup` completo + subset Asaas |
-| `verify-prod-backup.sh` | Valida variáveis obrigatórias no backup |
-| `restore-prod-env.sh` | Restaura produção completa; `--reload` reinicia API |
-| `sync-asaas-prod-from-backup.sh` | Aplica backup no `.env` (deploy/bootstrap) |
-| `backup-asaas-prod-env.sh` | Atalho → `backup-prod-env.sh` |
-| `restore-asaas-prod-env.sh` | Restaura produção a partir do backup; `--reload` reinicia a API |
-| `atualizar-vps-branch.sh` | Deploy de branch específica (sem reset para main) |
-
-**Importante:** o webhook de sandbox e o de produção são contas separadas no Asaas. Configure o webhook na conta **sandbox** com a mesma URL pública (`https://SEU_DOMINIO/api/webhooks/asaas`) e o mesmo `ASAAS_WEBHOOK_TOKEN` do `.env`.
-
-**Nota BaaS sandbox:** para subcontas via `POST /v3/accounts`, use conta Asaas PJ (CNPJ) com BaaS habilitado em Sandbox → Configurações. Contas PF retornam HTTP 403.
-
----
-
 ## 4. Organizadores — repasses
 
 Antes de vender ingressos pagos, cada organizador deve:
@@ -227,7 +178,7 @@ Organizadores sacam via **Financeiro → Solicitar transferência Pix** (carênc
 Manual:
 - `curl -fsS https://SEU_DOMINIO/health`
 - `curl -fsS https://SEU_DOMINIO/ready`
-- `bash scripts/test-sandbox-compra-split.sh` (mock split — dentro do Docker)
+- `bash scripts/test-compra-split-mock.sh` (mock split — dentro do Docker)
 - `/admin/dashboard` → aba **Produção** (todos os checks verdes)
 - Compra teste: PIX ou cartão em valor baixo
 - E-mail de ingresso recebido

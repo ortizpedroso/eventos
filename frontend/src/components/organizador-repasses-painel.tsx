@@ -519,7 +519,7 @@ export function OrganizadorRepassesPainel() {
           <p className="mt-1 text-xs text-zinc-600">
             {anticipacao
               ? "Ativa — vendas no cartão podem ser antecipadas automaticamente pela conta de repasses."
-              : "Desativada — recebimentos de cartão seguem o prazo padrão do gateway."}
+              : "Desativada — recebimentos de cartão seguem o prazo padrão de liquidação."}
           </p>
         </div>
       ) : null}
@@ -576,9 +576,7 @@ export function OrganizadorRepassesPainel() {
 
       {status?.repasse_aprovado ? (
         <p className="mt-4 text-sm text-emerald-800">
-          {status.repasse_status === "linked"
-            ? "Conta de recebimento ativa — vendas e repasses automáticos."
-            : "Conta aprovada — vendas e saques ativos."}{" "}
+          Conta de recebimento ativa — vendas e repasses automáticos.{" "}
           <Link href="/organizador/financeiro/conta-repasse" className="font-medium underline">
             Ver detalhes da conta
           </Link>

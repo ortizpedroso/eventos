@@ -98,7 +98,7 @@ export function CompraInfoConfianca() {
           </p>
           <p className="mt-2">
             PIX e cartão são processados por um{" "}
-            <strong className="font-medium text-zinc-700">gateway de pagamento certificado</strong>. A
+            <strong className="font-medium text-zinc-700">processador de pagamentos certificado</strong>. A
             EventosBR <strong className="font-medium text-zinc-700">não armazena</strong> o número completo do cartão.
           </p>
           <p className="mt-2 text-zinc-500">

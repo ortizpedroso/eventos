@@ -9,6 +9,8 @@ import httpx
 
 from config.settings import settings
 
+from app.utils.mensagens_publicas import sanitizar_mensagem_pagamento
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,7 +53,7 @@ class AsaasClient:
 
             return mock_request(method, path, json=json)
         if not self.api_key:
-            raise AsaasAPIError("ASAAS_API_KEY não configurada")
+            raise AsaasAPIError("Chave de acesso ao processador de pagamentos não configurada")
         url = f"{self.base_url}{path}"
         headers = self._headers()
         if idempotency_key:
@@ -61,7 +63,7 @@ class AsaasClient:
                 resp = client.request(method, url, headers=headers, json=json, params=params)
         except httpx.HTTPError as e:
             logger.exception("Falha de rede Asaas %s %s", method, path)
-            raise AsaasAPIError("Falha de comunicação com Asaas") from e
+            raise AsaasAPIError("Falha de comunicação com o processador de pagamentos") from e
 
         if resp.status_code >= 400:
             try:
@@ -88,7 +90,7 @@ class AsaasClient:
                 resp.status_code, method, path, body,
             )
             raise AsaasAPIError(
-                desc or f"Asaas HTTP {resp.status_code}",
+                sanitizar_mensagem_pagamento(desc or f"Erro HTTP {resp.status_code} no processador de pagamentos"),
                 status_code=resp.status_code,
                 errors=errors if isinstance(errors, list) else None,
             )

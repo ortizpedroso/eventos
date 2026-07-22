@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "EventosBR API",
-    "description": "API da EventosBR: eventos, ingressos, pagamentos PIX/cartão via Asaas, repasse a organizadores e reembolsos automáticos.",
+    "description": "API da EventosBR: eventos, ingressos, pagamentos PIX/cartão, repasse a organizadores e reembolsos automáticos.",
     "version": "1.0.0"
   },
   "paths": {
@@ -1998,8 +1998,8 @@
         "tags": [
           "Pagamentos"
         ],
-        "summary": "Asaas Iniciar Cobranca",
-        "description": "Gera cobrança Asaas (PIX, cartão ou fatura) para ingresso reservado.",
+        "summary": "pagamentos Iniciar Cobranca",
+        "description": "Gera cobrança pagamentos (PIX, cartão ou fatura) para ingresso reservado.",
         "operationId": "asaas_iniciar_cobranca_api_pagamentos_asaas_cobranca_post",
         "requestBody": {
           "content": {
@@ -2043,8 +2043,8 @@
         "tags": [
           "Pagamentos"
         ],
-        "summary": "Asaas Status Cobranca",
-        "description": "Consulta status da cobrança Asaas (polling PIX).",
+        "summary": "pagamentos Status Cobranca",
+        "description": "Consulta status da cobrança pagamentos (polling PIX).",
         "operationId": "asaas_status_cobranca_api_pagamentos_asaas_status__ingresso_id__get",
         "security": [
           {
@@ -2602,7 +2602,7 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Status Organizador",
+        "summary": "pagamentos Status Organizador",
         "operationId": "asaas_status_organizador_api_organizador_asaas_get",
         "responses": {
           "200": {
@@ -2626,7 +2626,7 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Acompanhamento Repasse",
+        "summary": "pagamentos Acompanhamento Repasse",
         "operationId": "asaas_acompanhamento_repasse_api_organizador_asaas_acompanhamento_get",
         "responses": {
           "200": {
@@ -2650,7 +2650,7 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Definir Wallet",
+        "summary": "pagamentos Definir Wallet",
         "operationId": "asaas_definir_wallet_api_organizador_asaas_wallet_put",
         "security": [
           {
@@ -2707,12 +2707,56 @@
         }
       }
     },
+    "/api/organizador/asaas/wallet/consultar": {
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "pagamentos Consultar Wallet",
+        "operationId": "asaas_consultar_wallet_api_organizador_asaas_wallet_consultar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasWalletConsultaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/organizador/asaas/subconta": {
       "post": {
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Criar Subconta",
+        "summary": "pagamentos Criar conta de recebimento",
         "operationId": "asaas_criar_subconta_api_organizador_asaas_subconta_post",
         "requestBody": {
           "content": {
@@ -2756,8 +2800,8 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Reenviar Subconta",
-        "description": "Reenvia dados ao Asaas após reprovação da subconta (KYC).",
+        "summary": "pagamentos Reenviar conta de recebimento",
+        "description": "Reenvia dados ao pagamentos após reprovação da conta de recebimento (KYC).",
         "operationId": "asaas_reenviar_subconta_api_organizador_asaas_subconta_reenviar_post",
         "requestBody": {
           "content": {
@@ -2801,7 +2845,7 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Antecipacao",
+        "summary": "pagamentos Antecipacao",
         "operationId": "asaas_antecipacao_api_organizador_asaas_antecipacao_put",
         "requestBody": {
           "content": {
@@ -2845,7 +2889,7 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Simular Antecipacao",
+        "summary": "pagamentos Simular Antecipacao",
         "operationId": "asaas_simular_antecipacao_api_organizador_asaas_antecipacao_simular_post",
         "requestBody": {
           "content": {
@@ -2933,6 +2977,72 @@
         ]
       }
     },
+    "/api/organizador/pix": {
+      "get": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Obter Pix Salvo",
+        "operationId": "obter_pix_salvo_api_organizador_pix_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Salvar Pix",
+        "operationId": "salvar_pix_api_organizador_pix_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PixChaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/organizador/assinatura/pagar": {
       "post": {
         "tags": [
@@ -2941,12 +3051,39 @@
         "summary": "Pagar Assinatura",
         "description": "Gera cobrança PIX da mensalidade EventosBR.",
         "operationId": "pagar_assinatura_api_organizador_assinatura_pagar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AssinaturaPagarRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -4663,8 +4800,8 @@
         "tags": [
           "Webhooks"
         ],
-        "summary": "Asaas Webhook",
-        "description": "Recebe eventos do Asaas (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.).",
+        "summary": "pagamentos Webhook",
+        "description": "Recebe eventos do pagamentos (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.).",
         "operationId": "asaas_webhook_api_webhooks_asaas_post",
         "responses": {
           "200": {
@@ -4683,8 +4820,8 @@
         "tags": [
           "Webhooks"
         ],
-        "summary": "Asaas Transfer Auth",
-        "description": "Autorização de saques/transferências Asaas (BaaS — sem token SMS).\n\nO Asaas envia POST ~5s após criar a transferência. Resposta esperada:\n``{\"status\": \"APPROVED\"}`` ou ``{\"status\": \"REFUSED\", \"refuseReason\": \"...\"}``.",
+        "summary": "pagamentos Transfer Auth",
+        "description": "Autorização de saques/transferências pagamentos (BaaS — sem token SMS).\n\nO pagamentos envia POST ~5s após criar a transferência. Resposta esperada:\n``{\"status\": \"APPROVED\"}`` ou ``{\"status\": \"REFUSED\", \"refuseReason\": \"...\"}``.",
         "operationId": "asaas_transfer_auth_api_webhooks_asaas_transfer_auth_post",
         "responses": {
           "200": {
@@ -4970,11 +5107,47 @@
             ],
             "title": "Complemento"
           },
+          "cidade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cidade"
+          },
+          "estado": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado"
+          },
           "company_type": {
             "type": "string",
             "maxLength": 20,
             "title": "Company Type",
             "default": "INDIVIDUAL"
+          },
+          "data_nascimento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Nascimento"
           }
         },
         "type": "object",
@@ -4989,6 +5162,21 @@
         ],
         "title": "AsaasSubcontaRequest"
       },
+      "AsaasWalletConsultaRequest": {
+        "properties": {
+          "api_key": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Api Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "api_key"
+        ],
+        "title": "AsaasWalletConsultaRequest"
+      },
       "AsaasWalletRequest": {
         "properties": {
           "wallet_id": {
@@ -5001,6 +5189,19 @@
             "type": "boolean",
             "title": "Sincronizar Eventos",
             "default": true
+          },
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key",
+            "description": "Opcional: chave API pagamentos do organizador para validar que o ID da conta pertence à conta."
           }
         },
         "type": "object",
@@ -5030,6 +5231,24 @@
         },
         "type": "object",
         "title": "AssinaturaAdminUpdate"
+      },
+      "AssinaturaPagarRequest": {
+        "properties": {
+          "cpf_cnpj": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpf Cnpj"
+          }
+        },
+        "type": "object",
+        "title": "AssinaturaPagarRequest"
       },
       "AtualizarEventoRequest": {
         "properties": {
@@ -6912,6 +7131,33 @@
         "type": "object",
         "title": "PerfilPublicoUpdate"
       },
+      "PixChaveRequest": {
+        "properties": {
+          "pix_chave": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 5,
+            "title": "Pix Chave"
+          },
+          "pix_tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pix Tipo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pix_chave"
+        ],
+        "title": "PixChaveRequest"
+      },
       "PortariaBuscarRequest": {
         "properties": {
           "evento_id": {
@@ -7144,22 +7390,39 @@
             "title": "Valor"
           },
           "pix_chave": {
-            "type": "string",
-            "maxLength": 120,
-            "minLength": 5,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Pix Chave"
           },
           "pix_tipo": {
-            "type": "string",
-            "maxLength": 20,
-            "title": "Pix Tipo",
-            "default": "EVP"
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pix Tipo"
+          },
+          "salvar_pix": {
+            "type": "boolean",
+            "title": "Salvar Pix",
+            "default": true
           }
         },
         "type": "object",
         "required": [
-          "valor",
-          "pix_chave"
+          "valor"
         ],
         "title": "SaqueRequest"
       },

@@ -19,6 +19,7 @@ from app.services.evento_repasse import (
 )
 from app.services.tarifas_plataforma import tarifa_para_organizador, taxa_ingresso
 from app.utils.cpf import normalizar_cpf
+from app.utils.mensagens_publicas import sanitizar_mensagem_pagamento
 from app.utils.secret_storage import decrypt_at_rest, encrypt_at_rest
 from config.settings import settings
 
@@ -176,7 +177,7 @@ def consultar_wallet_organizador_por_api_key(api_key: str) -> dict[str, Any]:
     try:
         account = org_client.get("/v3/myAccount")
     except AsaasAPIError as e:
-        raise ValueError(str(e) or "Não foi possível consultar a conta de recebimento.") from e
+        raise ValueError(sanitizar_mensagem_pagamento(str(e) or "Não foi possível consultar a conta de recebimento.")) from e
     wallet = _resolver_wallet_conta_asaas(org_client)
     if not wallet:
         raise ValueError(
@@ -216,7 +217,7 @@ def validar_wallet_repasse(
         try:
             org_client.get("/v3/myAccount")
         except AsaasAPIError as e:
-            raise ValueError(str(e) or "Não foi possível validar a conta de recebimento.") from e
+            raise ValueError(sanitizar_mensagem_pagamento(str(e) or "Não foi possível validar a conta de recebimento.")) from e
         acc_wallet = _resolver_wallet_conta_asaas(org_client)
         if acc_wallet:
             _rejeitar_wallet_plataforma(acc_wallet, contexto="api_key")
@@ -362,7 +363,7 @@ def definir_wallet_organizador(
         )
     if (usuario.asaas_account_id or "").strip() and settings.permite_subconta_baas():
         raise ValueError(
-            "Você já possui subconta criada pela plataforma. "
+            "Você já possui conta de recebimento criada pela plataforma. "
             "Use o acompanhamento da conta ou contate o suporte para alterar o modo de repasse."
         )
 
@@ -407,14 +408,14 @@ def criar_subconta_organizador(
     data_nascimento: str | None = None,
 ) -> dict[str, Any]:
     if usuario.tipo != "organizador":
-        raise ValueError("Apenas organizadores podem criar subconta.")
+        raise ValueError("Apenas organizadores podem criar conta de recebimento.")
     if not settings.permite_subconta_baas():
         raise ValueError(
             "A criação de conta de recebimento pela plataforma está desativada. "
             "Configure sua conta de recebimento em Financeiro."
         )
     if (usuario.asaas_account_id or "").strip():
-        raise ValueError("Você já possui subconta de recebimento vinculada.")
+        raise ValueError("Você já possui conta de recebimento vinculada.")
     if not settings.use_asaas:
         raise ValueError("Pagamentos não estão ativos neste ambiente.")
 
@@ -465,13 +466,13 @@ def criar_subconta_organizador(
     try:
         sub = client.post("/v3/accounts", json=payload)
     except AsaasAPIError as e:
-        raise ValueError(str(e) or "Não foi possível criar a subconta de recebimento.") from e
+        raise ValueError(sanitizar_mensagem_pagamento(str(e) or "Não foi possível criar a conta de recebimento.")) from e
 
     account_id = sub.get("id")
     wallet_id = sub.get("walletId")
     api_key = sub.get("apiKey")
     if not wallet_id:
-        raise ValueError("Subconta criada, mas walletId não retornado. Contate o suporte.")
+        raise ValueError("Conta de recebimento criada, mas o identificador não foi retornado. Contate o suporte.")
 
     usuario.asaas_account_id = account_id
     usuario.asaas_wallet_id = wallet_id
@@ -658,8 +659,8 @@ def atualizar_antecipacao_cartao(
     sub_client = _client_subconta(usuario)
     if not sub_client or not sub_client.enabled:
         raise ValueError(
-            "Antecipação automática exige subconta criada pela plataforma. "
-            "Configure sua conta de recebimento ou crie subconta aqui."
+            "Antecipação automática exige conta de recebimento criada pela plataforma. "
+            "Configure ou crie sua conta de recebimento em Financeiro."
         )
     try:
         cfg = sub_client.put(

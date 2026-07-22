@@ -238,7 +238,7 @@ ENVIRONMENT=production
 
 ### "Erro Asaas"
 - Verifique se `ASAAS_API_KEY` e `ASAAS_WALLET_ID` estão corretos no `.env`
-- Use ambiente sandbox para testes (`ASAAS_ENVIRONMENT=sandbox`)
+- Em desenvolvimento local, use `ASAAS_DISABLED=true` ou mock E2E
 - Confirme que o webhook Asaas aponta para `/api/webhooks/asaas`
 
 ### Porta 8000 ocupada

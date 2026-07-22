@@ -361,10 +361,10 @@ Defina `ASAAS_DISABLED=true` no `.env` da API. O checkout marca o ingresso como 
 
 Alternativa: após criar ingresso pendente, `POST /api/webhooks/mock-payment?ingresso_id=...` (apenas `DEBUG` + `ENVIRONMENT=development`).
 
-### Produção / sandbox Asaas
+### Produção — pagamentos
 
 1. Preencha `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `ASAAS_PLATFORM_WALLET_ID` no `.env`
-2. Configure webhook no painel Asaas → `https://SEU_DOMINIO/api/webhooks/asaas`
+2. Configure webhook no painel do processador → `https://SEU_DOMINIO/api/webhooks/asaas`
 3. Organizador informa `walletId` em **Financeiro** antes de vender
 
 Guia completo: [docs/11-go-live-asaas.md](docs/11-go-live-asaas.md).

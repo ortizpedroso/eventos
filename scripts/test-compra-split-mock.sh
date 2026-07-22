@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Teste compra + split (mock Asaas) — rode no VPS dentro do container da API.
+# Teste compra + split (mock) — rode no VPS dentro do container da API.
 #
 # Não use `python3 -m pytest` na raiz do servidor: pytest está na imagem Docker.
 #
 # Uso:
 #   cd /opt/eventosbr
-#   bash scripts/test-sandbox-compra-split.sh
+#   bash scripts/test-compra-split-mock.sh
 #
 # Opções repassadas ao pytest, ex.:
-#   bash scripts/test-sandbox-compra-split.sh -k split
+#   bash scripts/test-compra-split-mock.sh -k split
 
 set -euo pipefail
 

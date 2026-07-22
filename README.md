@@ -35,7 +35,7 @@ O script atualiza o Git, preenche o `.env` automaticamente, sincroniza a senha d
 
 - Python 3.11+
 - Docker & Docker Compose (opcional)
-- Conta Asaas (sandbox ou produção) para pagamentos reais
+- Conta de pagamentos em produção para receber vendas reais
 
 ## 🔧 Instalação
 
@@ -282,7 +282,7 @@ pip install -r requirements.txt
 
 ### Erro: Pagamento Asaas rejeitado
 - Verifique `ASAAS_API_KEY` e `ASAAS_WALLET_ID` no `.env`
-- Use ambiente sandbox (`ASAAS_ENVIRONMENT=sandbox`) para testes
+- Em desenvolvimento local, use `ASAAS_DISABLED=true` ou mock E2E (`ASAAS_E2E_MOCK=1`)
 
 ### Porta 8000 já em uso
 ```bash
