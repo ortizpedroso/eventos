@@ -6,8 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `2d32122` — validado em 22/jul/2026 (`verify-production.sh`, `verificar-versao-site.sh`).  
-> **Branch de entrega:** `cursor/build-spec-sandbox-asaas-bf71` (PR #42) — white-label, checks de produção e CI e2e corrigidos; **aguarda merge** antes de `atualizar-vps-agora.sh`.
+> **Produção (VPS):** `main` em `2f515ec` (merge PR #42 — 22/jul/2026). **Deploy VPS pendente:** `bash scripts/atualizar-vps-agora.sh`. **Testes reais (§2.8):** aguardando comando — `bash scripts/validar-go-live-vps.sh`.
 
 ---
 
@@ -135,6 +134,8 @@ Procedimentos para marcar os critérios §7 como concluídos **após merge do PR
 4. No VPS: `bash scripts/test-asaas-webhook.sh --expect-ok` (valida token e URL)
 5. Realizar compra de teste (PIX ou cartão) e confirmar no log da API que `PAYMENT_RECEIVED` atualizou `pago_em`
 
+**Script (pré-check automatizado):** `bash scripts/validar-go-live-vps.sh --webhook-only`
+
 #### B) SMTP + SPF/DKIM
 
 1. Confirmar `EMAIL_USER`, `EMAIL_PASSWORD`, `EMAIL_SERVER` no `.env`
@@ -253,26 +254,32 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (219 testes)
+- [x] `pytest` verde (227 testes)
 - [x] `npm run build` verde
 - [ ] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas` verdes no PR #42 (branch `cursor/build-spec-sandbox-asaas-bf71`)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 
-### Operação (VPS — após merge PR #42)
+### Operação (VPS — após deploy `2f515ec`)
 
-**Estado atual do VPS (`main` `2d32122`):**
+**Estado do repositório:**
 
-- [x] `.env` produção preenchido (validado em `eventosbr.app.br` — 22/jul/2026)
-- [x] VPS em `main` oficial (`2d32122` = `origin/main`)
-- [x] `ASAAS_ENVIRONMENT=production` e `ASAAS_ONBOARDING_MODE=baas` confirmados
-- [x] `verify-production.sh` sem falhas críticas
-- [x] `verificar-versao-site.sh` — site atualizado
-- [x] Testes mock split no VPS (2 passed)
+- [x] PR #42 mergeado em `main` (`2f515ec`)
+- [x] CI verde (`api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`)
+- [ ] Deploy VPS: `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`
+
+**Validado anteriormente no VPS (`2d32122` — revalidar após deploy):**
+
+- [x] `.env` produção preenchido
+- [x] `ASAAS_ENVIRONMENT=production` e `ASAAS_ONBOARDING_MODE=baas`
+- [x] `verify-production.sh` / `verificar-versao-site.sh`
 - [x] `alembic upgrade head` (migração `20260717_000035`)
 
-**Pendente — validar após deploy da branch (§2.8):**
+**Pendente — testes reais (§2.8) — executar só quando autorizado:**
 
-- [ ] Merge PR #42 + `bash scripts/atualizar-vps-agora.sh`
+```bash
+cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
+```
+
 - [ ] Webhook configurado e testado com evento real (`PAYMENT_RECEIVED`) — §2.8 A
 - [ ] SMTP + SPF/DKIM validados (envio real de ingresso) — §2.8 B
 - [ ] Primeira venda real validada (PIX ou cartão + e-mail recebido) — §2.8 C
@@ -292,7 +299,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 | Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh` |
-| Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py` |
+| Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
 
