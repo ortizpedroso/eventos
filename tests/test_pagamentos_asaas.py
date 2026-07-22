@@ -1033,3 +1033,50 @@ def test_garantir_customer_asaas_sincroniza_documento_de_customer_existente():
     fake_client.put.assert_called_once_with(
         "/v3/customers/cus_existente", json={"cpfCnpj": "46634095000102"}
     )
+
+
+def test_iniciar_cobranca_assinatura_recria_customer_apos_falha_no_pagamento():
+    """Regressão: customer_id salvo pode estar obsoleto no Asaas (conta vinculada antes
+    de uma rotação de ambiente/chave). Se a cobrança falhar com o customer em cache,
+    deve recriar o customer e tentar novamente antes de desistir."""
+    from app.services.asaas_client import AsaasAPIError
+    from app.services.assinatura_organizador import iniciar_cobranca_assinatura
+
+    db = TestingSessionLocal()
+    try:
+        usuario = Usuario(
+            nome="Organizador Existente",
+            email=f"org-{uuid.uuid4().hex[:8]}@ex.com",
+            senha_hash="x",
+            tipo="organizador",
+            asaas_customer_id="cus_antigo",
+            asaas_repasse_cpf_cnpj="11144477735",
+        )
+        db.add(usuario)
+        db.commit()
+        db.refresh(usuario)
+
+        fake_client = MagicMock()
+        fake_client.enabled = True
+        fake_client.post.side_effect = [
+            AsaasAPIError("customer inválido", status_code=400),
+            {"id": "cus_novo"},
+            {"id": "pay_novo", "status": "PENDING"},
+        ]
+
+        with (
+            patch("app.services.usuario_asaas.get_asaas_client", return_value=fake_client),
+            patch("app.services.asaas_client.get_asaas_client", return_value=fake_client),
+            patch("app.services.usuario_asaas.settings") as us,
+            patch("config.settings.settings") as global_settings,
+        ):
+            us.ASAAS_DISABLED = False
+            us.use_asaas = True
+            us.ASAAS_CREATE_SUBACCOUNT_ON_REGISTER = False
+            global_settings.use_asaas = True
+            resultado = iniciar_cobranca_assinatura(db, usuario)
+
+        assert resultado["payment_id"] == "pay_novo"
+        assert usuario.asaas_customer_id == "cus_novo"
+    finally:
+        db.close()
