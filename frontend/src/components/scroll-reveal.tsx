@@ -1,19 +1,8 @@
 "use client";
 
-import {
-  useLayoutEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
+import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
 
-import {
-  MOTION_REVEAL_DURATION_MS,
-  MOTION_REVEAL_MIN_OPACITY,
-  isElementInViewport,
-  prefersReducedMotion,
-} from "@/lib/motion";
+import { MOTION_REVEAL_DURATION_MS, isElementInViewport, prefersReducedMotion } from "@/lib/motion";
 
 type Props = {
   children: ReactNode;
@@ -22,60 +11,45 @@ type Props = {
   delayMs?: number;
 };
 
+/**
+ * Revela conteúdo ao rolar. Sem JS, o conteúdo permanece 100% visível.
+ * Só aplica opacidade reduzida em elementos abaixo da dobra, após hidratação.
+ */
 export function ScrollReveal({ children, className = "", delayMs = 0 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const [revealed, setRevealed] = useState(false);
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
-
-    if (prefersReducedMotion()) {
-      setRevealed(true);
-      return;
-    }
-
-    let cancelled = false;
-    const reveal = () => {
-      if (!cancelled) setRevealed(true);
-    };
+    if (!el || prefersReducedMotion()) return;
 
     if (isElementInViewport(el)) {
-      reveal();
+      el.classList.add("motion-reveal--shown");
       return;
     }
+
+    el.classList.add("motion-reveal--pending");
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
-          reveal();
+          el.classList.add("motion-reveal--shown");
           observer.disconnect();
         }
       },
-      { rootMargin: "0px 0px -4% 0px", threshold: 0.05 },
+      { rootMargin: "0px 0px -2% 0px", threshold: 0.05 },
     );
 
     observer.observe(el);
-
-    return () => {
-      cancelled = true;
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, []);
 
   const style: CSSProperties = {
-    ["--reveal-min-opacity" as string]: MOTION_REVEAL_MIN_OPACITY,
     ["--reveal-duration" as string]: `${MOTION_REVEAL_DURATION_MS}ms`,
-    transitionDelay: revealed && delayMs > 0 ? `${delayMs}ms` : "0ms",
+    ...(delayMs > 0 ? { ["--reveal-delay" as string]: `${delayMs}ms` } : {}),
   };
 
   return (
-    <div
-      ref={ref}
-      style={style}
-      data-revealed={revealed ? "true" : "false"}
-      className={`motion-reveal ${className}`.trim()}
-    >
+    <div ref={ref} style={style} className={`motion-reveal ${className}`.trim()}>
       {children}
     </div>
   );

@@ -27,9 +27,7 @@ export default function PlanosPage() {
       </div>
 
       <div className="mx-auto mt-16 max-w-6xl sm:mt-20">
-        <ScrollReveal>
-          <PlanosPricingCards criarContaHref={criarHref} />
-        </ScrollReveal>
+        <PlanosPricingCards criarContaHref={criarHref} />
       </div>
 
       <div className="mx-auto mt-16 max-w-6xl sm:mt-20">

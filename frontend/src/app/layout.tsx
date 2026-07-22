@@ -5,7 +5,6 @@ import { GeistSans } from "geist/font/sans";
 import { BuildMarker } from "@/components/build-marker";
 import { EarlyScrollReset } from "@/components/early-scroll-reset";
 import { Navbar } from "@/components/navbar";
-import { RouteProgress } from "@/components/route-progress";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { SkipToContent } from "@/components/skip-to-content";
@@ -42,7 +41,6 @@ export default async function RootLayout({
       >
         <SkipToContent />
         <BuildMarker />
-        <RouteProgress />
         <ScrollToTop />
         <Navbar />
         <main
