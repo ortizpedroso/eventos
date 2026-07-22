@@ -4,8 +4,12 @@ import { useMemo, useState } from "react";
 
 import { InputValorBrl } from "@/components/input-valor-brl";
 import {
+  MENSALIDADE_ASSINATURA_MENSAL,
   TARIFA_ASSINATURA,
   TARIFA_PADRAO,
+  type PlanoTarifa,
+  type SimulacaoCenarioPlanos,
+  analisarRecomendacaoPlano,
   formatBrl,
   formatPercentual,
   parseQuantidadeInput,
@@ -13,30 +17,28 @@ import {
   simularLucroPlanos,
 } from "@/lib/tarifas-plataforma";
 import { moedaBrlFromNumber } from "@/lib/moeda-brl";
-import { AVISO_LEGAL_TAXAS, SYMPLA_FONTE_URL, comparativoSympla } from "@/lib/taxas-asaas-publicas";
+import { AVISO_LEGAL_TAXAS } from "@/lib/taxas-asaas-publicas";
 
 const cell =
   "min-w-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900";
 
-function CenarioCard({
+function BreakdownPlano({
   titulo,
   subtitulo,
+  tarifa,
+  quantidade,
+  arrecadacao,
+  cenario,
   destaque,
-  sim,
-  tipo,
 }: {
   titulo: string;
   subtitulo: string;
+  tarifa: PlanoTarifa;
+  quantidade: number;
+  arrecadacao: number;
+  cenario: SimulacaoCenarioPlanos;
   destaque?: boolean;
-  sim: NonNullable<ReturnType<typeof simularLucroPlanos>>;
-  tipo: "padrao" | "assinatura";
 }) {
-  const c = tipo === "padrao" ? sim.padrao : sim.assinatura;
-  const pctLabel =
-    tipo === "padrao" ? formatPercentual(TARIFA_PADRAO.percentual) : formatPercentual(TARIFA_ASSINATURA.percentual);
-  const fixoUnit =
-    tipo === "padrao" ? TARIFA_PADRAO.fixoPorIngresso : TARIFA_ASSINATURA.fixoPorIngresso;
-
   return (
     <div
       className={`rounded-xl border p-5 shadow-sm ${
@@ -47,12 +49,37 @@ function CenarioCard({
         {titulo}
       </p>
       <p className="mt-1 text-sm text-zinc-600">{subtitulo}</p>
-      <p className={`mt-4 text-lg font-bold ${destaque ? "text-emerald-900" : "text-zinc-900"}`}>
-        Você lucra: {formatBrl(c.liquido)}
-      </p>
-      <p className="mt-2 text-xs text-zinc-500">
-        Taxa EventosBR {pctLabel} + {formatBrl(fixoUnit)}/ingresso — total {formatBrl(c.taxaTotal)}
-      </p>
+
+      <ul className="mt-4 space-y-1.5 text-sm text-zinc-700">
+        <li className="flex justify-between gap-2">
+          <span>Receita bruta</span>
+          <span className="font-medium">{formatBrl(arrecadacao)}</span>
+        </li>
+        <li className="flex justify-between gap-2 text-amber-900">
+          <span>Taxa {formatPercentual(tarifa.percentual)} do valor</span>
+          <span>− {formatBrl(cenario.taxaPercentualValor)}</span>
+        </li>
+        <li className="flex justify-between gap-2 text-amber-900">
+          <span>
+            Taxa fixa {formatBrl(tarifa.fixoPorIngresso)} por ingresso × {quantidade}
+          </span>
+          <span>− {formatBrl(cenario.taxaFixaTotal)}</span>
+        </li>
+        {cenario.mensalidade > 0 ? (
+          <li className="flex justify-between gap-2 text-amber-900">
+            <span>Mensalidade da assinatura</span>
+            <span>− {formatBrl(cenario.mensalidade)}</span>
+          </li>
+        ) : null}
+        <li className="flex justify-between gap-2 border-t border-zinc-100 pt-1.5 text-xs text-zinc-500">
+          <span>Total de taxas</span>
+          <span>− {formatBrl(cenario.taxaTotal)}</span>
+        </li>
+        <li className="flex justify-between gap-2 font-semibold text-emerald-800">
+          <span>Valor líquido a receber</span>
+          <span>{formatBrl(cenario.liquido)}</span>
+        </li>
+      </ul>
     </div>
   );
 }
@@ -64,13 +91,14 @@ export function PlanosSimuladorLucro() {
   const preco = useMemo(() => parseValorMonetarioInput(precoInput), [precoInput]);
   const qtd = useMemo(() => parseQuantidadeInput(qtdInput), [qtdInput]);
   const sim = useMemo(() => (preco && qtd ? simularLucroPlanos(preco, qtd) : null), [preco, qtd]);
-  const sympla = preco ? comparativoSympla(preco * (qtd ?? 1)) : null;
+  const analise = useMemo(() => (sim ? analisarRecomendacaoPlano(sim) : null), [sim]);
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-      <h2 className="text-xl font-semibold text-zinc-900">Simulador de lucro</h2>
+      <h2 className="text-xl font-semibold text-zinc-900">Simulador de receita</h2>
       <p className="mt-2 text-sm text-zinc-600">
-        Estime quanto sobra após a taxa EventosBR de cada plano. A taxa é fixa por ingresso — não muda com PIX ou cartão.
+        Estime quanto você recebe em cada plano, com todas as taxas discriminadas. A taxa EventosBR é fixa por
+        ingresso — não muda com PIX ou cartão.
       </p>
 
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
@@ -87,40 +115,53 @@ export function PlanosSimuladorLucro() {
         </label>
       </div>
 
-      {sim ? (
+      {sim && analise ? (
         <>
-          <div className="mt-8 grid gap-6 sm:grid-cols-2">
-            <CenarioCard
-              titulo="EventosBR — sem assinatura"
-              subtitulo={`${formatPercentual(TARIFA_PADRAO.percentual)} + ${formatBrl(TARIFA_PADRAO.fixoPorIngresso)}/ingresso`}
-              sim={sim}
-              tipo="padrao"
-              destaque={!sim.assinaturaValeMais}
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            <BreakdownPlano
+              titulo="Sem assinatura"
+              subtitulo={`${formatPercentual(TARIFA_PADRAO.percentual)} + ${formatBrl(TARIFA_PADRAO.fixoPorIngresso)}/ingresso · sem mensalidade`}
+              tarifa={TARIFA_PADRAO}
+              quantidade={sim.quantidade}
+              arrecadacao={sim.arrecadacao}
+              cenario={sim.padrao}
+              destaque={analise.recomendado === "padrao"}
             />
-            <CenarioCard
-              titulo="EventosBR — com assinatura"
-              subtitulo="Taxa reduzida + mensalidade"
-              sim={sim}
-              tipo="assinatura"
-              destaque={sim.assinaturaValeMais}
+            <BreakdownPlano
+              titulo="Com assinatura"
+              subtitulo={`${formatPercentual(TARIFA_ASSINATURA.percentual)} + ${formatBrl(TARIFA_ASSINATURA.fixoPorIngresso)}/ingresso + ${formatBrl(MENSALIDADE_ASSINATURA_MENSAL)}/mês`}
+              tarifa={TARIFA_ASSINATURA}
+              quantidade={sim.quantidade}
+              arrecadacao={sim.arrecadacao}
+              cenario={sim.assinatura}
+              destaque={analise.recomendado === "assinatura"}
             />
           </div>
 
-          {sympla ? (
-            <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
-              <p className="font-semibold">Comparativo ilustrativo — Sympla</p>
-              <p className="mt-1">
-                Taxa estimada Sympla (~12%): {formatBrl(sympla.taxaEstimada)} · Líquido estimado:{" "}
-                {formatBrl(sympla.liquidoEstimado)}
+          <div
+            className={`mt-6 rounded-xl border p-5 ${
+              analise.recomendado === "assinatura"
+                ? "border-emerald-200 bg-emerald-50/80"
+                : "border-sky-200 bg-sky-50/80"
+            }`}
+          >
+            <p
+              className={`text-sm font-semibold ${
+                analise.recomendado === "assinatura" ? "text-emerald-900" : "text-sky-950"
+              }`}
+            >
+              {analise.titulo}
+            </p>
+            {analise.paragrafos.map((p) => (
+              <p key={p} className="mt-2 text-sm leading-relaxed text-zinc-700">
+                {p}
               </p>
-              <p className="mt-2 text-xs text-amber-900/80">{sympla.disclaimer}</p>
-              <a href={SYMPLA_FONTE_URL} className="mt-1 inline-block text-xs text-amber-900 underline" target="_blank" rel="noopener noreferrer">
-                Conferir no site oficial
-              </a>
-            </div>
-          ) : null}
+            ))}
+          </div>
         </>
-      ) : null}
+      ) : (
+        <p className="mt-6 text-sm text-amber-800">Informe preço e quantidade válidos para simular.</p>
+      )}
 
       <p className="mt-4 text-[11px] leading-relaxed text-zinc-500">{AVISO_LEGAL_TAXAS}</p>
     </div>
