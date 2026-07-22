@@ -222,10 +222,12 @@ def motivo_lote_indisponivel(
 
 
 def classificar_motivo_compra_indisponivel(motivo: str | None) -> str | None:
-    """Código estável para UI/API: pre_venda | esgotado | encerrado | outro."""
+    """Código estável para UI/API: pre_venda | esgotado | encerrado | repasse | outro."""
     if not motivo:
         return None
     m = motivo.lower()
+    if "recebimento" in m or "repasse" in m:
+        return "repasse"
     if "não começaram" in m or "não tem lotes" in m or "período de venda no momento" in m:
         return "pre_venda"
     if "esgotad" in m:

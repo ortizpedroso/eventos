@@ -16,14 +16,12 @@ type RepasseStatus = {
   asaas_ativo: boolean;
   payments_disabled: boolean;
   wallet_configurado: boolean;
-  tem_conta_recebimento?: boolean;
-  tem_subconta?: boolean;
+  tem_conta_recebimento: boolean;
   repasses_prontos: boolean;
   repasse_status?: string | null;
   repasse_status_rotulo?: string;
   repasse_aprovado?: boolean;
   pode_reenviar_conta?: boolean;
-  pode_reenviar_subconta?: boolean;
   pode_publicar_eventos_pagos?: boolean;
   eventos_sem_wallet: number;
   nota_wallet: string | null;
@@ -31,7 +29,6 @@ type RepasseStatus = {
   onboarding_mode?: string;
   permite_vinculo_wallet?: boolean;
   permite_conta_recebimento?: boolean;
-  permite_subconta?: boolean;
   wallet_id?: string | null;
 };
 
@@ -250,11 +247,9 @@ export function OrganizadorRepassesPainel() {
     void carregarVendas(agrupamento);
   }, [agrupamento, carregarVendas]);
 
-  const podeReenviarConta =
-    status?.pode_reenviar_conta ?? status?.pode_reenviar_subconta ?? false;
-  const permiteContaRecebimento =
-    status?.permite_conta_recebimento ?? status?.permite_subconta ?? false;
-  const temContaRecebimento = status?.tem_conta_recebimento ?? status?.tem_subconta ?? false;
+  const podeReenviarConta = Boolean(status?.pode_reenviar_conta);
+  const permiteContaRecebimento = Boolean(status?.permite_conta_recebimento);
+  const temContaRecebimento = Boolean(status?.tem_conta_recebimento);
 
   useEffect(() => {
     if (searchParams.get("reenviar") === "1" || podeReenviarConta) {

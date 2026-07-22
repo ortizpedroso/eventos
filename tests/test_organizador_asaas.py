@@ -273,7 +273,6 @@ class TestOrganizadorAsaas:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert st.status_code == 200
-        assert st.json()["tem_subconta"] is True
         assert st.json()["tem_conta_recebimento"] is True
         assert st.json()["wallet_id"] == wallet
 

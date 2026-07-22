@@ -288,12 +288,10 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "wallet_configurado": bool(wallet),
         "account_id": (usuario.asaas_account_id or "").strip() or None,
         "tem_conta_recebimento": bool((usuario.asaas_account_id or "").strip()),
-        "tem_subconta": bool((usuario.asaas_account_id or "").strip()),
         "repasse_status": status_repasse,
         "repasse_status_rotulo": _rotulo_status_repasse(status_repasse),
         "repasse_aprovado": aprovado,
         "pode_reenviar_conta": pode_reenviar_subconta(usuario),
-        "pode_reenviar_subconta": pode_reenviar_subconta(usuario),
         "repasses_prontos": bool(wallet) and aprovado and settings.use_asaas,
         "pode_publicar_eventos_pagos": aprovado and settings.use_asaas and not settings.payments_disabled,
         "eventos_sem_wallet": eventos_sem_wallet,
@@ -302,7 +300,6 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "asaas_environment": settings.asaas_env(),
         "permite_vinculo_wallet": settings.permite_vinculo_wallet_organizador(),
         "permite_conta_recebimento": settings.permite_subconta_baas(),
-        "permite_subconta": settings.permite_subconta_baas(),
         "nota_wallet": (
             "Configure sua conta de recebimento em Financeiro para publicar eventos pagos e receber automaticamente."
             if not wallet
@@ -331,7 +328,6 @@ def acompanhamento_repasse_organizador(db: Session, usuario: Usuario) -> dict[st
         "repasse_status_rotulo": _rotulo_status_repasse(status_repasse),
         "repasse_aprovado": repasse_status_aprovado(status_repasse),
         "pode_reenviar_conta": pode_reenviar_subconta(usuario),
-        "pode_reenviar_subconta": pode_reenviar_subconta(usuario),
         "atualizado_em": usuario.asaas_repasse_status_em.isoformat() + "Z"
         if usuario.asaas_repasse_status_em
         else None,

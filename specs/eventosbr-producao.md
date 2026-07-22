@@ -1,6 +1,6 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.5  
+**Versão:** 1.6  
 **Data:** 2026-07-22  
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
@@ -117,7 +117,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (234 testes) |
+| `api` | `pytest` (236 testes) |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -261,11 +261,13 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (234 testes)
+- [x] `pytest` verde (236 testes)
 - [x] `npm run build` verde
 - [ ] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas` verdes no PR #44
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
-- [x] OpenAPI exportado com rotas `conta-recebimento` (`scripts/export-openapi.py`)
+- [x] OpenAPI exportado sem paths `subconta` (`export-openapi.py` white-label)
+- [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
+- [x] Checkout: código `repasse` + aviso proativo antes do pagamento (`compra_indisponivel_codigo`)
 
 ### Operação (VPS — após merge PR #44 + CNPJ Asaas)
 
