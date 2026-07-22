@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.6  
+**Versão:** 1.7  
 **Data:** 2026-07-22  
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `df3942c` (PR #43). **PR #44** (conta de recebimento PF/PJ) aguardando merge. **Deploy VPS:** após merge → `bash scripts/atualizar-vps-agora.sh`. **Bloqueio pagamentos:** conta mãe Asaas precisa ser **CNPJ** (usuário vai configurar). **Testes reais (§2.8):** após CNPJ + deploy PR #44.
+> **Produção (VPS):** `main` em `eceec57` (PR #44 + #45 mergeados). **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Bloqueio pagamentos:** conta mãe Asaas precisa ser **CNPJ** (configuração operacional pendente). **Testes reais (§2.8):** após CNPJ + deploy.
 
 ---
 
@@ -130,7 +130,7 @@ Conectividade API real (produção): `scripts/test-asaas-connection.py`.
 
 ### 2.8 Validação operacional (VPS — cobra de verdade)
 
-Procedimentos para marcar os critérios §7 como concluídos **após merge do PR #42**:
+Procedimentos para marcar os critérios §7 como concluídos **após deploy em produção**:
 
 #### A) Webhook real (`PAYMENT_RECEIVED`)
 
@@ -244,8 +244,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 - [x] Split só para organizador; taxa na conta emissora
 - [x] Conta de recebimento criada pela plataforma (`ASAAS_ONBOARDING_MODE=baas`)
-- [x] Organizador PF ou PJ — rotas `conta-recebimento`; sem “subconta” na UX (PR #44)
+- [x] Organizador PF ou PJ — rotas `conta-recebimento`; sem “subconta” na UX
 - [x] Pré-check conta mãe CNPJ + mensagem clara se plataforma PF (`asaas_plataforma.py`)
+- [x] Tracker dinâmico de conta e assinatura com polling + e-mails (`onboarding_tracker.py`, `status-tracker.tsx`)
 - [x] KYC → status `approved` libera venda e publicação
 - [x] Bloqueio venda/publicação sem conta de recebimento aprovada
 - [x] Extrato, vendas agrupadas, estornos, saque Pix white-label
@@ -263,25 +264,25 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (237 testes)
+- [x] `pytest` verde (241 testes)
 - [x] `npm run build` verde
-- [ ] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas` verdes no PR #44
+- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas` verdes (PR #44 e #45)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 - [x] OpenAPI exportado sem paths `subconta` (`export-openapi.py` white-label)
 - [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
 - [x] Checkout: código `repasse` + aviso proativo antes do pagamento (`compra_indisponivel_codigo`)
 
-### Operação (VPS — após merge PR #44 + CNPJ Asaas)
+### Operação (VPS — após deploy + CNPJ Asaas)
 
 **Estado do repositório:**
 
-- [x] PR #42 e #43 mergeados em `main`
-- [ ] PR #44 mergeado (`cursor/conta-recebimento-pf-pj-bf71`)
+- [x] PR #42, #43, #44 e #45 mergeados em `main` (`eceec57`)
 - [ ] Conta mãe Asaas em **CNPJ** + `ASAAS_API_KEY` / `ASAAS_PLATFORM_WALLET_ID` atualizados
 - [ ] Deploy VPS: `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`
+- [ ] Migration `20260722_000038_onboarding_tracker` aplicada (`alembic upgrade head`)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj: ok`
 
-**Validado anteriormente no VPS (`df3942c`):**
+**Validado anteriormente no VPS (`df3942c` — revalidar após deploy `eceec57`):**
 
 - [x] `.env` produção preenchido
 - [x] `ASAAS_ENVIRONMENT=production` e `ASAAS_ONBOARDING_MODE=baas`
@@ -306,6 +307,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 |------|----------|
 | Split / cobrança | `pagamento_asaas.py`, `pagamentos_asaas_handlers.py` |
 | Conta de recebimento | `organizador_asaas.py`, `asaas_plataforma.py`, `evento_repasse.py` |
+| Onboarding tracker | `onboarding_tracker.py`, `onboarding_email.py`, `status-tracker.tsx`, `use-status-polling.ts` |
 | Financeiro | `financeiro_organizador.py`, `financeiro_conciliacao.py`, `saque_asaas.py` |
 | UI financeiro | `organizador-repasses-painel.tsx` |
 | Conta / perfil | `conta-shell.tsx`, `perfil-tabs.tsx`, `conta/layout.tsx`, `organizador/perfil/layout.tsx` |
