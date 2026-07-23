@@ -16,8 +16,13 @@ export default function PlanosPage() {
 
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
+<<<<<<< Updated upstream
       <div className="mx-auto max-w-3xl">
         <h1 className="text-center text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
+=======
+      <div className="mx-auto max-w-3xl text-center">
+        <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
+>>>>>>> Stashed changes
           Planos para cada tipo de <span className="text-emerald-700">evento.</span>
         </h1>
         <p className="mt-6 text-lg text-zinc-600 sm:text-xl">
