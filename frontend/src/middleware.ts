@@ -25,6 +25,21 @@ function finish(response: NextResponse, nonce: string): NextResponse {
   return response;
 }
 
+function authLoginRedirect(request: NextRequest, pathname: string, extra?: Record<string, string>) {
+  const login = new URL("/auth", request.url);
+  login.searchParams.set("next", pathname);
+  if (pathname.startsWith("/organizador")) {
+    login.searchParams.set("mode", "register");
+    login.searchParams.set("fluxo", "organizador");
+  }
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      login.searchParams.set(key, value);
+    }
+  }
+  return login;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
@@ -59,17 +74,14 @@ export async function middleware(request: NextRequest) {
 
   const sessionToken = request.cookies.get(AUTH_COOKIE)?.value;
   if (!sessionToken) {
-    const login = new URL("/auth", request.url);
-    login.searchParams.set("next", pathname);
-    return finish(NextResponse.redirect(login), nonce);
+    return finish(NextResponse.redirect(authLoginRedirect(request, pathname)), nonce);
   }
 
   const session = await fetchMiddlewareSession(sessionToken);
   if (!session.ok) {
-    const login = new URL("/auth", request.url);
-    login.searchParams.set("next", pathname);
-    login.searchParams.set("expirado", "1");
-    const res = NextResponse.redirect(login);
+    const res = NextResponse.redirect(
+      authLoginRedirect(request, pathname, { expirado: "1" }),
+    );
     clearAuthCookie(res);
     return finish(res, nonce);
   }

@@ -96,6 +96,18 @@ test.describe("Checkout — copy de pagamento", () => {
     expect(opacidade).toBeGreaterThan(0.9);
   });
 
+  test("planos → auth: cadastro visível sem skeleton", async ({ page }) => {
+    await page.goto("/planos");
+    await page.getByRole("link", { name: "Criar conta grátis" }).click();
+    await expect(page).toHaveURL(/\/auth\?.*mode=register/);
+    await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
+    await expect(page.locator(".animate-pulse")).toHaveCount(0);
+    await expect(page.locator("form[data-auth-form]")).toBeVisible();
+  });
+
   test("planos: CTA do plano navega sem reload completo", async ({ page }) => {
     await page.goto("/planos");
     await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).toBeVisible();

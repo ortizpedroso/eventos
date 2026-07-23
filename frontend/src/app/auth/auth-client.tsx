@@ -39,14 +39,13 @@ export default function AuthClient({
   nextParam,
 }: AuthClientProps) {
   const router = useRouter();
-  const mode =
-    resetToken
-      ? "reset"
-      : modeParam === "forgot"
-        ? "forgot"
-        : modeParam === "register"
-          ? "register"
-          : "login";
+  const mode = useMemo(() => {
+    if (resetToken) return "reset" as const;
+    if (modeParam === "forgot") return "forgot" as const;
+    if (modeParam === "register") return "register" as const;
+    if (fluxoOrganizador) return "register" as const;
+    return "login" as const;
+  }, [resetToken, modeParam, fluxoOrganizador]);
 
   const defaultTipoRegistro = useMemo(() => {
     if (tipoParam === "organizador") return "organizador";
@@ -61,7 +60,6 @@ export default function AuthClient({
   const [aguardandoRedirect, setAguardandoRedirect] = useState(
     () => cachedSession != null,
   );
-  const [sessaoVerificada, setSessaoVerificada] = useState(() => cachedSession === null);
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
@@ -69,35 +67,24 @@ export default function AuthClient({
   const redirecionar = useCallback(
     (destino: string) => {
       router.replace(destino);
-      window.setTimeout(() => {
-        if (window.location.pathname.startsWith("/auth")) {
-          window.location.assign(destino);
-        }
-      }, 150);
     },
     [router],
   );
 
   useEffect(() => {
-    if (sessaoVerificada && !aguardandoRedirect) {
-      requestAnimationFrame(() => {
-        document.querySelector("form[data-auth-form]")?.setAttribute("data-auth-ready", "true");
-      });
-    }
-  }, [sessaoVerificada, aguardandoRedirect]);
+    requestAnimationFrame(() => {
+      document.querySelector("form[data-auth-form]")?.setAttribute("data-auth-ready", "true");
+    });
+  }, [mode]);
 
   useEffect(() => {
-    const cached = peekSessionCache();
-    if (cached === null) {
-      setSessaoVerificada(true);
-      setAguardandoRedirect(false);
-      return;
-    }
-
     let cancelled = false;
+
     void (async () => {
-      const u = cached ?? (await fetchSession());
+      const cached = peekSessionCache();
+      const u = cached !== undefined ? cached : await fetchSession();
       if (cancelled) return;
+
       const sp = new URLSearchParams(window.location.search);
       const forcarLogin = sp.get("login") === "1";
       if (u && !forcarLogin) {
@@ -105,15 +92,13 @@ export default function AuthClient({
         redirecionar(destinoPosAuth(u, sp.get("next")));
         return;
       }
-      setSessaoVerificada(true);
       setAguardandoRedirect(false);
     })();
+
     return () => {
       cancelled = true;
     };
-    // Verificação de sessão só na montagem — evita loop com deps instáveis (router/searchParams).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [redirecionar]);
 
   function setAuthMode(next: "login" | "register") {
     const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -240,21 +225,6 @@ export default function AuthClient({
   }
 
   const formularioDesabilitado = loading || aguardandoRedirect;
-
-  if (!sessaoVerificada) {
-    return (
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col" aria-busy aria-label="Verificando sessão">
-        <div className="flex flex-1 flex-col justify-center">
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-8 animate-pulse">
-          <div className="mb-6 h-8 w-3/4 rounded bg-zinc-200" />
-          <div className="h-10 w-full rounded bg-zinc-200" />
-          <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
-          <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
