@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { CountUp } from "@/components/count-up";
 
 type Stats = {
   eventos_publicados: number;
@@ -22,7 +23,9 @@ export async function HomeProvaSocial() {
       <p className="text-center text-sm text-zinc-600">
         {stats.eventos_publicados > 0 ? (
           <>
-            <strong className="text-zinc-900">{stats.eventos_publicados.toLocaleString("pt-BR")}</strong>{" "}
+            <strong className="text-zinc-900">
+              <CountUp value={stats.eventos_publicados} />
+            </strong>{" "}
             eventos publicados
           </>
         ) : null}
@@ -30,7 +33,7 @@ export async function HomeProvaSocial() {
         {stats.ingressos_confirmados > 0 ? (
           <>
             <strong className="text-zinc-900">
-              {stats.ingressos_confirmados.toLocaleString("pt-BR")}
+              <CountUp value={stats.ingressos_confirmados} />
             </strong>{" "}
             ingressos confirmados
           </>
