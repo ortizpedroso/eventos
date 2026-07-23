@@ -3,11 +3,16 @@
 import { usePathname } from "next/navigation";
 import { useLayoutEffect } from "react";
 
-/** Garante scroll no topo antes do paint após navegação. */
+const SEM_SCROLL_RESET = /^\/(?:auth|organizador|conta)(?:\/|$)/;
+
+/** Garante scroll no topo antes do paint após navegação pública. */
 export function ScrollToTop() {
   const pathname = usePathname();
 
   useLayoutEffect(() => {
+    if (SEM_SCROLL_RESET.test(pathname)) {
+      return;
+    }
     if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }

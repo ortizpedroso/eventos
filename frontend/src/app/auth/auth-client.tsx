@@ -26,7 +26,6 @@ import { onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask } from "@/lib/telefone-br";
 
 export type AuthClientProps = {
-  hasSessionCookie?: boolean;
   forcarLogin?: boolean;
   resetToken?: string;
   modeParam?: string;
@@ -52,7 +51,6 @@ function serverAuthQuery(props: AuthClientProps): AuthSearchParams {
 
 export default function AuthClient(serverProps: AuthClientProps) {
   const router = useRouter();
-  const { hasSessionCookie = false, forcarLogin = false } = serverProps;
 
   const serverFallback = useMemo(() => serverAuthQuery(serverProps), [serverProps]);
   const params = useAuthSearchParams(serverFallback);
@@ -77,9 +75,7 @@ export default function AuthClient(serverProps: AuthClientProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const [aguardandoRedirect, setAguardandoRedirect] = useState(
-    () => hasSessionCookie && !forcarLogin,
-  );
+  const [aguardandoRedirect, setAguardandoRedirect] = useState(false);
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
@@ -92,10 +88,6 @@ export default function AuthClient(serverProps: AuthClientProps) {
   );
 
   useEffect(() => {
-    if (!hasSessionCookie) {
-      return;
-    }
-
     let cancelled = false;
 
     void (async () => {
@@ -106,15 +98,13 @@ export default function AuthClient(serverProps: AuthClientProps) {
       if (u && !forcar) {
         setAguardandoRedirect(true);
         redirecionar(destinoPosAuth(u, new URLSearchParams(window.location.search).get("next")));
-        return;
       }
-      setAguardandoRedirect(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [hasSessionCookie, redirecionar]);
+  }, [redirecionar]);
 
   function setAuthMode(next: "login" | "register") {
     const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -243,7 +233,7 @@ export default function AuthClient(serverProps: AuthClientProps) {
   const formularioDesabilitado = loading || aguardandoRedirect;
 
   return (
-    <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col">
+    <div className="relative w-full flex-1 flex-col">
       {aguardandoRedirect ? (
         <div
           className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-white/95"

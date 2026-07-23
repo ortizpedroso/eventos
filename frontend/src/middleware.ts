@@ -8,7 +8,7 @@ const AUTH_COOKIE = "eventosbr_session";
 const ADMIN_COOKIE = "eventosbr_admin_key";
 /** Evita /me no middleware a cada clique do painel (TTL curto, amarrado ao token). */
 const SESSION_CHECKED = "eventosbr_session_ok";
-const SESSION_CHECK_TTL = 30;
+const SESSION_CHECK_TTL = 120;
 
 function clearAuthCookie(response: NextResponse) {
   response.cookies.set(AUTH_COOKIE, "", { path: "/", maxAge: 0 });

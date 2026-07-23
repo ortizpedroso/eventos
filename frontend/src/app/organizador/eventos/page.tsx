@@ -64,7 +64,10 @@ export default function OrganizadorMeusEventosPage() {
   const [error, setError] = useState<string | null>(null);
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
   const [publishErr, setPublishErr] = useState<string | null>(null);
-  const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
+  const [mostrarOnboarding, setMostrarOnboarding] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !window.localStorage.getItem(ONBOARDING_KEY);
+  });
 
   const recarregar = useCallback(async () => {
     const data = await apiFetch<Evento[]>("/api/eventos/meus", { cache: "no-store" });
@@ -95,11 +98,6 @@ export default function OrganizadorMeusEventosPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setMostrarOnboarding(!window.localStorage.getItem(ONBOARDING_KEY));
   }, []);
 
   useEffect(() => {
