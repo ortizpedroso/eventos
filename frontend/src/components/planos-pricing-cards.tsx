@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   MENSALIDADE_ASSINATURA_MENSAL,
   TARIFA_ASSINATURA,
@@ -5,8 +6,9 @@ import {
   formatBrl,
   formatPercentual,
 } from "@/lib/tarifas-plataforma";
+import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-routes";
 
-import { CriarEventoLink } from "@/components/criar-evento-link";
+const CRIAR_CONTA_HREF = authHrefRegisterOrganizadorParaCriarEvento();
 
 function IconCheck({ className }: { className?: string }) {
   return (
@@ -50,9 +52,9 @@ export function PlanosPricingCards({ compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <CriarEventoLink className="btn-outline w-full inline-block text-center">
+            <Link href={CRIAR_CONTA_HREF} prefetch scroll={false} className="btn-outline w-full inline-block text-center">
               Criar conta grátis
-            </CriarEventoLink>
+            </Link>
           </div>
         ) : null}
       </div>
@@ -75,9 +77,9 @@ export function PlanosPricingCards({ compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <CriarEventoLink className="btn-success w-full inline-block text-center text-white">
+            <Link href={CRIAR_CONTA_HREF} prefetch scroll={false} className="btn-success w-full inline-block text-center text-white">
               Começar a vender
-            </CriarEventoLink>
+            </Link>
           </div>
         ) : null}
       </div>
@@ -106,9 +108,9 @@ export function PlanosPricingCards({ compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <CriarEventoLink className="btn-success w-full inline-block text-center text-white">
+            <Link href={CRIAR_CONTA_HREF} prefetch scroll={false} className="btn-success w-full inline-block text-center text-white">
               Ver detalhes
-            </CriarEventoLink>
+            </Link>
           </div>
         ) : null}
       </div>

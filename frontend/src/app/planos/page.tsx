@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CriarEventoLink } from "@/components/criar-evento-link";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
 import { PlanosSimuladorComprador } from "@/components/planos-simulador-comprador";
 import { PlanosSimuladorLucro } from "@/components/planos-simulador-lucro";
+import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-routes";
 
 export const metadata: Metadata = {
   title: "Planos | EventosBR",
@@ -51,9 +51,14 @@ export default function PlanosPage() {
         <div className="mx-auto mt-12 max-w-3xl text-center">
           <p className="text-sm text-zinc-600">Pronto para publicar seu primeiro evento?</p>
           <div className="mt-4 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
-            <CriarEventoLink className="btn-success px-6 py-3 text-base shadow-sm">
+            <Link
+              href={authHrefRegisterOrganizadorParaCriarEvento()}
+              prefetch
+              scroll={false}
+              className="btn-success px-6 py-3 text-base shadow-sm"
+            >
               Criar evento
-            </CriarEventoLink>
+            </Link>
             <Link href="/eventos" className="btn-outline px-6 py-3 text-base shadow-sm">
               Ver eventos
             </Link>

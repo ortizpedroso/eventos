@@ -1,13 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
-/** Garante scroll no topo após navegação (useEffect evita bloquear paint). */
+/** Garante scroll no topo antes do paint após navegação. */
 export function ScrollToTop() {
   const pathname = usePathname();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }

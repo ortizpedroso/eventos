@@ -6,9 +6,10 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
-import type { TokenResponse, Usuario } from "@/lib/types";
-import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
+import type { TokenResponse } from "@/lib/types";
+import { apiFetch, fetchSession } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
+import { readAuthSearchParams, resolveAuthMode } from "@/lib/auth-search-params";
 import { onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask } from "@/lib/telefone-br";
 import {
@@ -29,23 +30,36 @@ export type AuthClientProps = {
   nextParam?: string;
 };
 
-export default function AuthClient({
-  resetToken,
-  modeParam,
-  fluxoOrganizador = false,
-  precisaOrganizador = false,
-  sessaoExpirada = false,
-  tipoParam,
-  nextParam,
-}: AuthClientProps) {
+function serverAuthQuery(props: AuthClientProps): string {
+  const sp = new URLSearchParams();
+  if (props.resetToken) sp.set("reset", props.resetToken);
+  if (props.modeParam) sp.set("mode", props.modeParam);
+  if (props.fluxoOrganizador) sp.set("fluxo", "organizador");
+  if (props.precisaOrganizador) sp.set("precisa", "organizador");
+  if (props.sessaoExpirada) sp.set("expirado", "1");
+  if (props.tipoParam) sp.set("tipo", props.tipoParam);
+  if (props.nextParam) sp.set("next", props.nextParam);
+  return sp.toString();
+}
+
+export default function AuthClient(serverProps: AuthClientProps) {
   const router = useRouter();
-  const mode = useMemo(() => {
-    if (resetToken) return "reset" as const;
-    if (modeParam === "forgot") return "forgot" as const;
-    if (modeParam === "register") return "register" as const;
-    if (fluxoOrganizador) return "register" as const;
-    return "login" as const;
-  }, [resetToken, modeParam, fluxoOrganizador]);
+
+  const params =
+    typeof window !== "undefined"
+      ? readAuthSearchParams()
+      : readAuthSearchParams(serverAuthQuery(serverProps));
+
+  const {
+    resetToken,
+    fluxoOrganizador,
+    precisaOrganizador,
+    sessaoExpirada,
+    tipoParam,
+    nextParam,
+  } = params;
+
+  const mode = resolveAuthMode(params);
 
   const defaultTipoRegistro = useMemo(() => {
     if (tipoParam === "organizador") return "organizador";
@@ -53,13 +67,10 @@ export default function AuthClient({
     return "cliente";
   }, [tipoParam, fluxoOrganizador, precisaOrganizador]);
 
-  const cachedSession = peekSessionCache();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const [aguardandoRedirect, setAguardandoRedirect] = useState(
-    () => cachedSession != null,
-  );
+  const [aguardandoRedirect, setAguardandoRedirect] = useState(false);
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
@@ -81,8 +92,7 @@ export default function AuthClient({
     let cancelled = false;
 
     void (async () => {
-      const cached = peekSessionCache();
-      const u = cached !== undefined ? cached : await fetchSession();
+      const u = await fetchSession();
       if (cancelled) return;
 
       const sp = new URLSearchParams(window.location.search);
@@ -90,9 +100,7 @@ export default function AuthClient({
       if (u && !forcarLogin) {
         setAguardandoRedirect(true);
         redirecionar(destinoPosAuth(u, sp.get("next")));
-        return;
       }
-      setAguardandoRedirect(false);
     })();
 
     return () => {
@@ -275,15 +283,11 @@ export default function AuthClient({
       </div>
 
       <div
-        className={`relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 ${
-          aguardandoRedirect ? "pointer-events-none opacity-60" : ""
-        }`}
+        className="relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
         aria-busy={aguardandoRedirect || undefined}
       >
         {aguardandoRedirect ? (
-          <p className="absolute inset-x-0 top-4 text-center text-sm font-medium text-zinc-600">
-            Redirecionando…
-          </p>
+          <p className="mb-3 text-center text-sm font-medium text-zinc-600">Redirecionando…</p>
         ) : null}
         <form data-auth-form method="post" action="#" onSubmit={handleFormSubmit} className="space-y-4">
           {infoMsg ? (

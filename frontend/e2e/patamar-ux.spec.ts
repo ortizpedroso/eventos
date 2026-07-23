@@ -96,6 +96,15 @@ test.describe("Checkout — copy de pagamento", () => {
     expect(opacidade).toBeGreaterThan(0.9);
   });
 
+  test("middleware /organizador/novo → auth abre cadastro (não login)", async ({ page }) => {
+    await page.goto("/organizador/novo");
+    await expect(page).toHaveURL(/\/auth\?.*mode=register/);
+    await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
+  });
+
   test("planos → auth: cadastro visível sem skeleton", async ({ page }) => {
     await page.goto("/planos");
     await page.getByRole("link", { name: "Criar conta grátis" }).click();
