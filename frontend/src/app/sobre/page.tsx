@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 
 export default function SobrePage() {
   return (
-    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16" data-mobile-justify>
-      {/* Hero Section */}
+    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
+      {/* Hero — título e subtítulo centralizados (sem alteração) */}
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
         <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
           Sobre a <span className="text-emerald-700">EventosBR.</span>
@@ -21,6 +21,7 @@ export default function SobrePage() {
         </p>
       </div>
 
+      <div className="[&_p]:text-justify">
       {/* Nossa Proposta (Zigue-Zague) */}
       <div className="mx-auto mt-16 max-w-7xl px-4 sm:mt-24 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-12 lg:flex-row lg:items-center">
@@ -33,7 +34,7 @@ export default function SobrePage() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 via-zinc-900/10 to-transparent" />
               <div className="absolute bottom-6 left-6 right-6">
-                <p className="text-xl font-bold text-white drop-shadow-md sm:text-2xl">
+                <p className="text-left text-xl font-bold text-white drop-shadow-md sm:text-2xl">
                   Menos planilhas, mais conexões reais.
                 </p>
               </div>
@@ -122,7 +123,7 @@ export default function SobrePage() {
                   <div className="h-3 w-3 rounded-full bg-amber-500/80" />
                   <div className="h-3 w-3 rounded-full bg-emerald-500/80" />
                 </div>
-                <div className="mt-5 space-y-2 font-mono text-sm leading-relaxed text-zinc-300">
+                <div className="mt-5 space-y-2 text-left font-mono text-sm leading-relaxed text-zinc-300">
                   <p><span className="text-pink-400">import</span> {"{ EventosBR }"} <span className="text-pink-400">from</span> <span className="text-emerald-300">&apos;future&apos;</span>;</p>
                   <p className="text-zinc-500 pt-2">// Inicia o motor de vendas</p>
                   <p>EventosBR.<span className="text-blue-300">startSales</span>();</p>
@@ -131,6 +132,7 @@ export default function SobrePage() {
               </div>
             </div>
           </div>
+      </div>
       </div>
 
       {/* CTA Final */}
