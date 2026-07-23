@@ -6,8 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { PerfilPublicoOrganizador } from "@/components/perfil-publico-organizador";
-import { PerfilTabs } from "@/components/perfil-tabs";
 import { apiFetch } from "@/lib/api";
+import { CONTA_CACHE_KEYS, readContaCache, writeContaCache } from "@/lib/conta-session-cache";
 import type { Usuario } from "@/lib/types";
 import { onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask } from "@/lib/telefone-br";
@@ -19,9 +19,11 @@ function normalizarEmail(s: string) {
 export function PerfilClient() {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<Usuario | null>(null);
+  const [user, setUser] = useState<Usuario | null>(() =>
+    readContaCache<Usuario>(CONTA_CACHE_KEYS.perfil) ?? null,
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [loadingDb, setLoadingDb] = useState(true);
+  const [loadingDb, setLoadingDb] = useState(() => !readContaCache<Usuario>(CONTA_CACHE_KEYS.perfil));
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -29,15 +31,18 @@ export function PerfilClient() {
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefonePerfil, setTelefonePerfil] = useState("");
 
-  const carregarDoBanco = useCallback(async () => {
+  const carregarDoBanco = useCallback(async (opts?: { silent?: boolean }) => {
     setLoadError(null);
-    setLoadingDb(true);
+    if (!opts?.silent) {
+      setLoadingDb(!readContaCache<Usuario>(CONTA_CACHE_KEYS.perfil));
+    }
     try {
       const u = await apiFetch<Usuario>("/api/auth/me", {
         cache: "no-store",
         headers: { "cache-control": "no-cache" },
       });
       setUser(u);
+      writeContaCache(CONTA_CACHE_KEYS.perfil, u);
       setAceitaComEmail(Boolean(u.aceita_comunicacao_email));
       setAceitaComWhatsapp(Boolean(u.aceita_comunicacao_whatsapp));
       setTelefonePerfil(u.telefone ?? "");
@@ -54,7 +59,7 @@ export function PerfilClient() {
   useEffect(() => {
     const isPerfil = pathname === "/conta/perfil" || pathname === "/organizador/perfil";
     if (isPerfil) {
-      void carregarDoBanco();
+      void carregarDoBanco({ silent: Boolean(readContaCache<Usuario>(CONTA_CACHE_KEYS.perfil)) });
     }
   }, [pathname, carregarDoBanco]);
 
@@ -203,8 +208,6 @@ export function PerfilClient() {
           ← Eventos
         </Link>
       </div>
-
-      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
 
       <section className="max-w-lg rounded-2xl border border-zinc-200 bg-zinc-50/90 p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-3">

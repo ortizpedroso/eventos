@@ -1,17 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { ListaSkeleton } from "@/components/lista-skeleton";
-import { PerfilTabs } from "@/components/perfil-tabs";
 import { apiFetch } from "@/lib/api";
+import { CONTA_CACHE_KEYS, readContaCache, writeContaCache } from "@/lib/conta-session-cache";
 import type { NotificacaoUsuario } from "@/lib/types";
 
 export function NotificacoesClient() {
-  const pathname = usePathname();
-  const [items, setItems] = useState<NotificacaoUsuario[] | null>(null);
+  const [items, setItems] = useState<NotificacaoUsuario[] | null>(() =>
+    readContaCache<NotificacaoUsuario[]>(CONTA_CACHE_KEYS.notificacoes) ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -21,6 +21,7 @@ export function NotificacoesClient() {
         cache: "no-store",
       });
       setItems(data);
+      writeContaCache(CONTA_CACHE_KEYS.notificacoes, data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível carregar notificações");
     }
@@ -44,8 +45,6 @@ export function NotificacoesClient() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-zinc-900">Notificações</h1>
-
-      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
 
       <p className="mt-2 text-sm text-zinc-600">
         Avisos sobre compras, lista de espera e atualizações da sua conta.

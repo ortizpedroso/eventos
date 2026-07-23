@@ -29,15 +29,20 @@ export function ContaShell({ children }: { children: ReactNode }) {
           <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
             Minha conta
           </p>
-          <nav className="flex flex-row flex-wrap gap-1 lg:flex-col" aria-label="Área da conta">
+          <nav
+            className="-mx-1 flex flex-row gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0"
+            aria-label="Área da conta"
+          >
             {LINKS.map(({ href, label }) => {
               const ativo = isActive(pathname, href);
               return (
                 <Link
                   key={href}
                   href={href}
+                  prefetch
+                  scroll={false}
                   aria-current={ativo ? "page" : undefined}
-                  className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  className={`shrink-0 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                     ativo
                       ? "bg-emerald-700 text-white shadow-sm"
                       : "text-zinc-800 hover:bg-white/80 hover:text-emerald-900"
@@ -50,7 +55,9 @@ export function ContaShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </aside>
-      <div className="min-h-[60vh] min-w-0 flex-1">{children}</div>
+      <div className="min-h-[60vh] min-w-0 flex-1" data-mobile-justify>
+        {children}
+      </div>
     </div>
   );
 }

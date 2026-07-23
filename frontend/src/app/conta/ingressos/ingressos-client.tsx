@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
 import { ListaSkeleton } from "@/components/lista-skeleton";
-import { PerfilTabs } from "@/components/perfil-tabs";
 import { apiFetch } from "@/lib/api";
+import { CONTA_CACHE_KEYS, readContaCache, writeContaCache } from "@/lib/conta-session-cache";
 import { classeBadgeStatus, labelStatusIngresso } from "@/lib/ingresso-status";
 import type { IngressoListItem } from "@/lib/types";
 
@@ -45,8 +44,9 @@ function PendenteBadge({ reservadoAte }: { reservadoAte: string }) {
 }
 
 export function IngressosClient() {
-  const pathname = usePathname();
-  const [items, setItems] = useState<IngressoListItem[] | null>(null);
+  const [items, setItems] = useState<IngressoListItem[] | null>(() =>
+    readContaCache<IngressoListItem[]>(CONTA_CACHE_KEYS.ingressos) ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,6 +57,7 @@ export function IngressosClient() {
           cache: "no-store",
         });
         if (!cancelled) setItems(data);
+        if (!cancelled) writeContaCache(CONTA_CACHE_KEYS.ingressos, data);
       } catch (e) {
         if (!cancelled) {
           setError(
@@ -78,8 +79,6 @@ export function IngressosClient() {
           ← Eventos
         </Link>
       </div>
-
-      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
 
       {error ? (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">

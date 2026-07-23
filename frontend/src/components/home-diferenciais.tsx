@@ -20,7 +20,7 @@ const itens = [
 
 export function HomeDiferenciais() {
   return (
-    <section className="mx-auto mt-20 max-w-6xl" aria-labelledby="diferenciais-heading">
+    <section className="mx-auto mt-20 max-w-6xl" aria-labelledby="diferenciais-heading" data-mobile-justify>
       <h2 id="diferenciais-heading" className="text-center text-2xl font-bold text-zinc-900 sm:text-3xl">
         Por que comprar no EventosBR
       </h2>
