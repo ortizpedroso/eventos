@@ -48,10 +48,10 @@ else
   ok=1
 fi
 
-if echo "$HTML" | grep -q 'flex min-h-dvh flex-col'; then
-  echo "  OK      layout flex do body (rodapé no fim)"
+if echo "$HTML" | grep -qE 'grid min-h-dvh grid-rows-\[auto_1fr_auto\]|flex min-h-dvh flex-col'; then
+  echo "  OK      layout do body (rodapé no fim)"
 else
-  echo "  ANTIGO  layout body sem flex — deploy pendente"
+  echo "  ANTIGO  layout body sem shell estável — deploy pendente"
   ok=1
 fi
 

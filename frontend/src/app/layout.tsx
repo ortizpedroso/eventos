@@ -30,12 +30,7 @@ export default async function RootLayout({
         <EarlyScrollReset nonce={nonce} />
       </head>
       <body
-        className="flex min-h-dvh flex-col antialiased"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          minHeight: "100dvh",
-        }}
+        className="grid min-h-dvh grid-rows-[auto_1fr_auto] antialiased"
         suppressHydrationWarning
         nonce={nonce}
       >
@@ -45,10 +40,9 @@ export default async function RootLayout({
         <Navbar />
         <main
           id="conteudo-principal"
-          className="mx-auto flex w-full min-h-0 flex-1 flex-col px-4 py-6 sm:px-6 lg:px-8 max-w-7xl"
-          style={{ flex: "1 1 auto", minHeight: 0 }}
+          className="mx-auto flex min-h-0 w-full flex-col px-4 py-6 sm:px-6 lg:px-8 max-w-7xl"
         >
-          <div className="flex min-h-[60vh] flex-1 flex-col">{children}</div>
+          <div className="flex flex-1 flex-col">{children}</div>
         </main>
 
         <SiteFooter />

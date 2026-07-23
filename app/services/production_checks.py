@@ -53,14 +53,30 @@ def build_setup_status() -> dict:
     # Spec §6 — obrigatórios em produção
     asaas_env = (settings.ASAAS_ENVIRONMENT or "").strip().lower()
     asaas_env_ok = (asaas_env == "production") if production else True
-    onboarding_ok = settings.asaas_onboarding_mode in ("baas", "linked", "both")
+    onboarding_ok = settings.asaas_onboarding_mode == "baas" if production else settings.asaas_onboarding_mode in (
+        "baas",
+        "linked",
+        "both",
+    )
     manual_wallet_ok = (not settings.ASAAS_ALLOW_MANUAL_WALLET) if production else True
+    asaas_disabled_ok = (not settings.ASAAS_DISABLED) if production else True
     postgres_ok = _postgres_password_ok()
 
     asaas_ok = not settings.ASAAS_DISABLED and _ok_secret(settings.ASAAS_API_KEY, 20)
     asaas_wallet_ok = bool((settings.ASAAS_PLATFORM_WALLET_ID or "").strip())
     asaas_webhook = (settings.ASAAS_WEBHOOK_TOKEN or "").strip()
     asaas_webhook_ok = bool(asaas_webhook)
+
+    asaas_platform_cnpj_ok: bool | None = None
+    if (
+        not settings.ASAAS_DISABLED
+        and settings.use_asaas
+        and settings.asaas_onboarding_mode in ("baas", "both")
+        and not settings.asaas_e2e_mock
+    ):
+        from app.services.asaas_plataforma import plataforma_pode_provisionar_contas
+
+        asaas_platform_cnpj_ok = plataforma_pode_provisionar_contas()
 
     if settings.ASAAS_DISABLED:
         asaas_api_status = "desativado_asaas"
@@ -85,12 +101,25 @@ def build_setup_status() -> dict:
     else:
         asaas_wallet_status = "pendente"
 
-    payment_ok = asaas_ok or settings.ASAAS_DISABLED
+    payment_ok = asaas_ok
     payment_webhook_ok = asaas_webhook_ok or asaas_webhook_status in (
         "desativado_asaas",
         "dev_sem_token",
     )
-    wallet_required = asaas_wallet_ok or settings.ASAAS_DISABLED
+    wallet_required = asaas_wallet_ok
+
+    frontend_url_ok = bool((settings.FRONTEND_PUBLIC_URL or "").strip())
+
+    asaas_platform_cnpj_required = (
+        production
+        and not settings.ASAAS_DISABLED
+        and settings.use_asaas
+        and settings.asaas_onboarding_mode in ("baas", "both")
+        and not settings.asaas_e2e_mock
+    )
+    asaas_platform_cnpj_check_ok = (
+        asaas_platform_cnpj_ok is True if asaas_platform_cnpj_required else True
+    )
 
     ready = all(
         [
@@ -98,13 +127,16 @@ def build_setup_status() -> dict:
             cors_ok,
             admin_ok,
             smtp_ok,
+            frontend_url_ok,
             payment_ok or settings.payments_disabled,
             payment_webhook_ok or settings.payments_disabled,
-            wallet_required,
+            wallet_required or settings.payments_disabled,
             asaas_env_ok or settings.payments_disabled,
             onboarding_ok,
             manual_wallet_ok,
+            asaas_disabled_ok,
             postgres_ok,
+            asaas_platform_cnpj_check_ok or settings.payments_disabled,
         ]
     )
 
@@ -119,6 +151,20 @@ def build_setup_status() -> dict:
             "asaas_environment": "ok" if asaas_env_ok else "pendente",
             "asaas_onboarding_mode": "ok" if onboarding_ok else "pendente",
             "asaas_manual_wallet_off": "ok" if manual_wallet_ok else "pendente",
+            "asaas_payments_enabled": "ok" if asaas_disabled_ok else "pendente",
+            "asaas_platform_cnpj": (
+                "ok"
+                if asaas_platform_cnpj_ok is True
+                else (
+                    "desativado_asaas"
+                    if settings.ASAAS_DISABLED
+                    else (
+                        "nao_aplicavel"
+                        if not asaas_platform_cnpj_required
+                        else ("pendente" if asaas_platform_cnpj_ok is False else "nao_verificado")
+                    )
+                )
+            ),
             "smtp": "ok" if smtp_ok else "pendente",
             "platform_admin": "ok" if admin_ok else "pendente",
             "cors": "ok" if cors_ok else "pendente",

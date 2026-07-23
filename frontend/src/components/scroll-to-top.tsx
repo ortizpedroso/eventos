@@ -1,28 +1,17 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect } from "react";
 
-function resetScroll() {
-  if (typeof window === "undefined") return;
-  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
-}
-
-/** Garante que cada navegação começa no topo (evita rodapé visível no meio da tela). */
+/** Garante scroll no topo após navegação (useEffect evita bloquear paint). */
 export function ScrollToTop() {
   const pathname = usePathname();
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
-    resetScroll();
-  }, [pathname]);
-
-  useEffect(() => {
-    resetScroll();
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
 
   return null;

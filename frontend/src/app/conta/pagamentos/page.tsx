@@ -1,15 +1,15 @@
-import { Suspense } from "react";
-
 import { PagamentosClient } from "./pagamentos-client";
 
-export default function MeusPagamentosPage() {
+type Props = {
+  searchParams: Promise<{ ok?: string; ingresso?: string }>;
+};
+
+export default async function MeusPagamentosPage({ searchParams }: Props) {
+  const sp = await searchParams;
   return (
-    <Suspense
-      fallback={
-        <div className="text-sm text-zinc-600">Carregando pagamentos…</div>
-      }
-    >
-      <PagamentosClient />
-    </Suspense>
+    <PagamentosClient
+      okParam={sp.ok ?? null}
+      ingressoParam={sp.ingresso ?? null}
+    />
   );
 }

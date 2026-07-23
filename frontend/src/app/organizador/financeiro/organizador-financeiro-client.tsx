@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { AssinaturaStatusTracker } from "@/components/assinatura-status-tracker";
 import { OrganizadorFinanceiroSimulador } from "@/components/organizador-financeiro-simulador";
 import { OrganizadorRepassesPainel } from "@/components/organizador-repasses-painel";
 import { apiFetch } from "@/lib/api";
@@ -193,6 +194,7 @@ export function OrganizadorFinanceiroClient() {
   const [msg, setMsg] = useState<string | null>(null);
   const [busyAssinatura, setBusyAssinatura] = useState(false);
   const [pixPendente, setPixPendente] = useState<PixData | null>(null);
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [cpfCnpj, setCpfCnpj] = useState("");
 
   const carregar = useCallback(async () => {
@@ -230,6 +232,8 @@ export function OrganizadorFinanceiroClient() {
       const res = await apiFetch<{
         ja_pago?: boolean;
         pix?: PixData;
+        subscription_id?: string;
+        payment_id?: string;
       }>("/api/organizador/assinatura/pagar", {
         method: "POST",
         body: JSON.stringify(assinatura?.precisa_cpf_cnpj ? { cpf_cnpj: doc } : {}),
@@ -242,6 +246,8 @@ export function OrganizadorFinanceiroClient() {
       }
       if (res.pix) {
         setPixPendente(res.pix);
+        const sid = res.subscription_id || res.payment_id;
+        if (sid) setSubscriptionId(sid);
       } else {
         setMsg("Cobrança gerada. Entre em contato com o suporte caso não receba instruções de pagamento.");
       }
@@ -254,12 +260,14 @@ export function OrganizadorFinanceiroClient() {
 
   function handlePagamentoConfirmado() {
     setPixPendente(null);
+    setSubscriptionId(null);
     setMsg("Assinatura ativada com sucesso! Taxa reduzida já está aplicada nas suas vendas.");
     void carregar();
   }
 
   function handlePixExpirado() {
     setPixPendente(null);
+    setSubscriptionId(null);
     void contratarAssinatura();
   }
 
@@ -278,7 +286,17 @@ export function OrganizadorFinanceiroClient() {
       </div>
 
       {pixPendente ? (
-        <PixCard pix={pixPendente} onPago={handlePagamentoConfirmado} onExpirar={handlePixExpirado} />
+        <section className="space-y-4">
+          {subscriptionId ? (
+            <div className="rounded-2xl border border-indigo-200 bg-white p-5">
+              <AssinaturaStatusTracker
+                subscriptionId={subscriptionId}
+                onSuccess={() => void carregar()}
+              />
+            </div>
+          ) : null}
+          <PixCard pix={pixPendente} onPago={handlePagamentoConfirmado} onExpirar={handlePixExpirado} />
+        </section>
       ) : assinatura && !assinatura.assinatura_ativa ? (
         <section className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5">
           <h2 className="text-sm font-semibold text-indigo-950">Plano com assinatura</h2>

@@ -620,7 +620,7 @@ Ficheiros em `alembic/versions/`. Produção: `alembic upgrade head`.
 | `ASAAS_API_KEY` | Chave API Asaas |
 | `ASAAS_WEBHOOK_TOKEN` | Token do webhook |
 | `ASAAS_PLATFORM_WALLET_ID` | Wallet da plataforma (split) |
-| `ASAAS_ENVIRONMENT` | `sandbox` ou `production` |
+| `ASAAS_ENVIRONMENT` | `production` (homologação só em desenvolvimento local) |
 | `ASAAS_DISABLED` | Desliga pagamentos reais |
 | `CORS_ORIGINS` | Origens permitidas (lista separada por vírgula) |
 | `REDIS_URL` | Redis para filas e rate limit |
@@ -652,7 +652,7 @@ Testes usam SQLite em memória e `ASAAS_DISABLED=true` por padrão (`conftest.py
 | Documento | Conteúdo |
 |-----------|----------|
 | [08-deploy-hostinger.md](./08-deploy-hostinger.md) | Docker, Caddy, DNS, VPS |
-| [11-go-live-asaas.md](./11-go-live-asaas.md) | Webhook, chaves, checklist Asaas, **testes sandbox no VPS** |
+| [11-go-live-asaas.md](./11-go-live-asaas.md) | Webhook, chaves, checklist de pagamentos, testes mock no VPS |
 | [09-auditoria-seguranca-ux.md](./09-auditoria-seguranca-ux.md) | Segurança e UX |
 | [10-checklist-proximo-patamar.md](./10-checklist-proximo-patamar.md) | Roadmap produto |
 

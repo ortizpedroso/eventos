@@ -5,16 +5,16 @@ from __future__ import annotations
 import logging
 import re
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import Evento, Ingresso, Usuario, get_db
 from app.deps.platform_admin import optional_platform_admin
 from app.routes.auth import get_usuario_atual
 from app.services.organizador_asaas import (
-    acompanhamento_repasse_organizador,
     atualizar_antecipacao_cartao,
     atualizar_status_repasse_organizador,
     consultar_wallet_organizador_por_api_key,
@@ -25,11 +25,17 @@ from app.services.organizador_asaas import (
     sincronizar_wallet_eventos_organizador,
     status_asaas_organizador,
 )
+from app.services.onboarding_tracker import acompanhamento_conta_completo
 from app.services.ticket_email import enqueue_comunicado_evento
+from app.utils.mensagens_publicas import sanitizar_mensagem_pagamento
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _erro_pagamento(exc: ValueError) -> HTTPException:
+    return HTTPException(status_code=400, detail=sanitizar_mensagem_pagamento(str(exc)))
 
 
 class ComunicadoRequest(BaseModel):
@@ -41,6 +47,74 @@ class ComunicadoRequest(BaseModel):
 def _require_organizador(usuario: Usuario) -> None:
     if usuario.tipo != "organizador":
         raise HTTPException(status_code=403, detail="Apenas organizadores podem enviar comunicados")
+
+
+class EventoComunicadoItem(BaseModel):
+    evento_id: str
+    nome: str
+    publicado: bool
+    data_inicio: str | None = None
+    destinatarios: int
+
+
+def _contagem_destinatarios_por_evento(db: Session, organizador_id: str):
+    """Ingressos pagos/usados com e-mail, agrupados por evento (e-mails únicos)."""
+    email_norm = func.lower(func.trim(Ingresso.participante_email))
+    return (
+        db.query(
+            Ingresso.evento_id,
+            func.count(func.distinct(email_norm)).label("destinatarios"),
+        )
+        .join(Evento, Evento.id == Ingresso.evento_id)
+        .filter(
+            Evento.organizador_id == organizador_id,
+            Ingresso.status.in_(("pago", "usado")),
+            Ingresso.participante_email.isnot(None),
+            func.length(func.trim(Ingresso.participante_email)) > 0,
+        )
+        .group_by(Ingresso.evento_id)
+        .subquery()
+    )
+
+
+@router.get("/comunicados/eventos", response_model=list[EventoComunicadoItem])
+async def listar_eventos_comunicados(
+    q: str = Query("", max_length=120),
+    limit: int = Query(30, ge=1, le=100),
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Eventos com participantes elegíveis a comunicado (ingresso pago/usado + e-mail)."""
+    _require_organizador(usuario_atual)
+
+    contagens = _contagem_destinatarios_por_evento(db, usuario_atual.id)
+    query = (
+        db.query(Evento, contagens.c.destinatarios)
+        .join(contagens, Evento.id == contagens.c.evento_id)
+        .filter(Evento.organizador_id == usuario_atual.id)
+    )
+    termo = (q or "").strip()
+    if termo:
+        query = query.filter(Evento.nome.ilike(f"%{termo}%"))
+
+    rows = (
+        query.order_by(
+            func.coalesce(Evento.data_inicio, Evento.data_criacao).desc(),
+            Evento.nome.asc(),
+        )
+        .limit(limit)
+        .all()
+    )
+    return [
+        EventoComunicadoItem(
+            evento_id=ev.id,
+            nome=ev.nome,
+            publicado=bool(ev.publicado),
+            data_inicio=ev.data_inicio.isoformat() if ev.data_inicio else None,
+            destinatarios=int(dest or 0),
+        )
+        for ev, dest in rows
+    ]
 
 
 @router.post("/comunicados")
@@ -91,7 +165,7 @@ async def enviar_comunicado(
         "ok": True,
         "destinatarios": len(destinos),
         "enfileirados": enfileirados,
-        "mensagem": "Comunicado enfileirado para envio. Verifique SMTP se os e-mails não chegarem.",
+        "mensagem": "Comunicado enfileirado para envio.",
     }
 
 
@@ -134,6 +208,43 @@ class AsaasSubcontaRequest(BaseModel):
         return d
 
 
+class AsaasContaRecebimentoRequest(AsaasSubcontaRequest):
+    """Alias de payload para criação de conta de recebimento (PF ou PJ)."""
+
+
+def _payload_conta_recebimento(body: AsaasSubcontaRequest) -> dict:
+    return {
+        "cpf_cnpj": body.cpf_cnpj,
+        "telefone": body.telefone,
+        "renda_mensal": body.renda_mensal,
+        "cep": body.cep,
+        "endereco": body.endereco,
+        "numero": body.numero,
+        "bairro": body.bairro,
+        "complemento": body.complemento,
+        "cidade": body.cidade,
+        "estado": body.estado,
+        "company_type": body.company_type,
+        "data_nascimento": body.data_nascimento,
+    }
+
+
+def _criar_conta_recebimento_organizador(
+    db: Session,
+    usuario: Usuario,
+    body: AsaasSubcontaRequest,
+):
+    return criar_subconta_organizador(db, usuario, **_payload_conta_recebimento(body))
+
+
+def _reenviar_conta_recebimento_organizador(
+    db: Session,
+    usuario: Usuario,
+    body: AsaasSubcontaRequest,
+):
+    return reenviar_subconta_organizador(db, usuario, **_payload_conta_recebimento(body))
+
+
 class AsaasAntecipacaoRequest(BaseModel):
     credit_card_automatic_enabled: bool
 
@@ -164,7 +275,7 @@ async def asaas_acompanhamento_repasse(
     db: Session = Depends(get_db),
 ):
     _require_organizador(usuario_atual)
-    return acompanhamento_repasse_organizador(db, usuario_atual)
+    return acompanhamento_conta_completo(db, usuario_atual)
 
 
 @router.put("/asaas/wallet")
@@ -202,7 +313,7 @@ async def asaas_definir_wallet(
             api_key_organizador=body.api_key,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.post("/asaas/wallet/consultar")
@@ -223,7 +334,23 @@ async def asaas_consultar_wallet(
     try:
         return consultar_wallet_organizador_por_api_key(body.api_key)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
+
+
+@router.post("/asaas/conta-recebimento")
+async def asaas_criar_conta_recebimento(
+    body: AsaasContaRecebimentoRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Cria conta de recebimento PF ou PJ para o organizador (provisionada pela plataforma)."""
+    _require_organizador(usuario_atual)
+    if settings.payments_disabled:
+        raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
+    try:
+        return _criar_conta_recebimento_organizador(db, usuario_atual, body)
+    except ValueError as e:
+        raise _erro_pagamento(e) from e
 
 
 @router.post("/asaas/subconta")
@@ -236,24 +363,25 @@ async def asaas_criar_subconta(
     if settings.payments_disabled:
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
     try:
-        return criar_subconta_organizador(
-            db,
-            usuario_atual,
-            cpf_cnpj=body.cpf_cnpj,
-            telefone=body.telefone,
-            renda_mensal=body.renda_mensal,
-            cep=body.cep,
-            endereco=body.endereco,
-            numero=body.numero,
-            bairro=body.bairro,
-            complemento=body.complemento,
-            cidade=body.cidade,
-            estado=body.estado,
-            company_type=body.company_type,
-            data_nascimento=body.data_nascimento,
-        )
+        return _criar_conta_recebimento_organizador(db, usuario_atual, body)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
+
+
+@router.post("/asaas/conta-recebimento/reenviar")
+async def asaas_reenviar_conta_recebimento(
+    body: AsaasContaRecebimentoRequest,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Reenvia dados após reprovação da conta de recebimento (KYC)."""
+    _require_organizador(usuario_atual)
+    if settings.payments_disabled:
+        raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
+    try:
+        return _reenviar_conta_recebimento_organizador(db, usuario_atual, body)
+    except ValueError as e:
+        raise _erro_pagamento(e) from e
 
 
 @router.post("/asaas/subconta/reenviar")
@@ -262,29 +390,14 @@ async def asaas_reenviar_subconta(
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
 ):
-    """Reenvia dados ao Asaas após reprovação da subconta (KYC)."""
+    """Reenvia dados ao processador após reprovação da conta de recebimento (KYC)."""
     _require_organizador(usuario_atual)
     if settings.payments_disabled:
         raise HTTPException(status_code=503, detail="Pagamentos desativados neste ambiente.")
     try:
-        return reenviar_subconta_organizador(
-            db,
-            usuario_atual,
-            cpf_cnpj=body.cpf_cnpj,
-            telefone=body.telefone,
-            renda_mensal=body.renda_mensal,
-            cep=body.cep,
-            endereco=body.endereco,
-            numero=body.numero,
-            bairro=body.bairro,
-            complemento=body.complemento,
-            cidade=body.cidade,
-            estado=body.estado,
-            company_type=body.company_type,
-            data_nascimento=body.data_nascimento,
-        )
+        return _reenviar_conta_recebimento_organizador(db, usuario_atual, body)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.put("/asaas/antecipacao")
@@ -301,7 +414,7 @@ async def asaas_antecipacao(
             habilitar=body.credit_card_automatic_enabled,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.post("/asaas/antecipacao/simular")
@@ -319,7 +432,7 @@ async def asaas_simular_antecipacao(
             payment_id=body.payment_id,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
 
 @router.get("/assinatura")
@@ -378,7 +491,7 @@ async def salvar_pix(
     try:
         validar_pix_cadastro_repasse(usuario_atual, chave, tipo)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
 
     usuario_atual.pix_chave_salva = chave
     usuario_atual.pix_tipo_salvo = tipo
@@ -403,4 +516,36 @@ async def pagar_assinatura(
     try:
         return iniciar_cobranca_assinatura(db, usuario_atual, cpf_cnpj=body.cpf_cnpj if body else None)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise _erro_pagamento(e) from e
+
+
+@router.get("/onboarding/conta/{tracking_id}/status")
+async def status_onboarding_conta(
+    tracking_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Status dinâmico da criação de conta de recebimento (tracker)."""
+    _require_organizador(usuario_atual)
+    from app.services.onboarding_tracker import status_onboarding_conta as _status
+
+    try:
+        return _status(db, usuario_atual, tracking_id=tracking_id)
+    except ValueError as e:
+        raise _erro_pagamento(e) from e
+
+
+@router.get("/onboarding/assinatura/{subscription_id}/status")
+async def status_onboarding_assinatura(
+    subscription_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Status dinâmico da contratação de assinatura (tracker)."""
+    _require_organizador(usuario_atual)
+    from app.services.onboarding_tracker import status_onboarding_assinatura as _status
+
+    try:
+        return _status(db, usuario_atual, subscription_id=subscription_id)
+    except ValueError as e:
+        raise _erro_pagamento(e) from e

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Evento, Ingresso, Usuario
 from app.services.asaas_client import AsaasAPIError, AsaasClient, get_asaas_client
+from app.services.asaas_plataforma import assert_plataforma_pode_provisionar_contas
 from app.services.evento_repasse import (
     agora_utc_naive,
     repasse_status_aprovado,
@@ -19,6 +20,7 @@ from app.services.evento_repasse import (
 )
 from app.services.tarifas_plataforma import tarifa_para_organizador, taxa_ingresso
 from app.utils.cpf import normalizar_cpf
+from app.utils.mensagens_publicas import sanitizar_mensagem_pagamento
 from app.utils.secret_storage import decrypt_at_rest, encrypt_at_rest
 from config.settings import settings
 
@@ -102,6 +104,7 @@ def consultar_status_repasse_asaas(usuario: Usuario) -> dict[str, Any] | None:
 def atualizar_status_repasse_organizador(db: Session, usuario: Usuario) -> Usuario:
     agora = agora_utc_naive()
     status_local = (usuario.asaas_repasse_status or "").strip().lower()
+    status_anterior = status_local
     if (usuario.asaas_account_id or "").strip() and usuario.asaas_subaccount_api_key:
         remoto = consultar_status_repasse_asaas(usuario)
         if isinstance(remoto, dict):
@@ -111,6 +114,17 @@ def atualizar_status_repasse_organizador(db: Session, usuario: Usuario) -> Usuar
                 usuario.asaas_repasse_status = novo
             usuario.asaas_repasse_status_em = agora
             usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(remoto)
+            depois = (usuario.asaas_repasse_status or "").strip().lower()
+            if depois != status_anterior:
+                from app.services.onboarding_tracker import notificar_transicao_conta
+
+                detalhes_dict = remoto if isinstance(remoto, dict) else None
+                notificar_transicao_conta(
+                    db,
+                    usuario,
+                    status_anterior=status_anterior,
+                    detalhes=detalhes_dict,
+                )
     elif (usuario.asaas_wallet_id or "").strip() and not (usuario.asaas_account_id or "").strip():
         status_atual = (usuario.asaas_repasse_status or "").strip().lower()
         if status_atual not in ("rejected", "pending", "awaiting_approval"):
@@ -176,7 +190,7 @@ def consultar_wallet_organizador_por_api_key(api_key: str) -> dict[str, Any]:
     try:
         account = org_client.get("/v3/myAccount")
     except AsaasAPIError as e:
-        raise ValueError(str(e) or "Não foi possível consultar a conta de recebimento.") from e
+        raise ValueError(sanitizar_mensagem_pagamento(str(e) or "Não foi possível consultar a conta de recebimento.")) from e
     wallet = _resolver_wallet_conta_asaas(org_client)
     if not wallet:
         raise ValueError(
@@ -216,7 +230,7 @@ def validar_wallet_repasse(
         try:
             org_client.get("/v3/myAccount")
         except AsaasAPIError as e:
-            raise ValueError(str(e) or "Não foi possível validar a conta de recebimento.") from e
+            raise ValueError(sanitizar_mensagem_pagamento(str(e) or "Não foi possível validar a conta de recebimento.")) from e
         acc_wallet = _resolver_wallet_conta_asaas(org_client)
         if acc_wallet:
             _rejeitar_wallet_plataforma(acc_wallet, contexto="api_key")
@@ -285,11 +299,11 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "wallet_id": wallet,
         "wallet_configurado": bool(wallet),
         "account_id": (usuario.asaas_account_id or "").strip() or None,
-        "tem_subconta": bool((usuario.asaas_account_id or "").strip()),
+        "tem_conta_recebimento": bool((usuario.asaas_account_id or "").strip()),
         "repasse_status": status_repasse,
         "repasse_status_rotulo": _rotulo_status_repasse(status_repasse),
         "repasse_aprovado": aprovado,
-        "pode_reenviar_subconta": pode_reenviar_subconta(usuario),
+        "pode_reenviar_conta": pode_reenviar_subconta(usuario),
         "repasses_prontos": bool(wallet) and aprovado and settings.use_asaas,
         "pode_publicar_eventos_pagos": aprovado and settings.use_asaas and not settings.payments_disabled,
         "eventos_sem_wallet": eventos_sem_wallet,
@@ -297,7 +311,7 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
         "onboarding_mode": settings.asaas_onboarding_mode,
         "asaas_environment": settings.asaas_env(),
         "permite_vinculo_wallet": settings.permite_vinculo_wallet_organizador(),
-        "permite_subconta": settings.permite_subconta_baas(),
+        "permite_conta_recebimento": settings.permite_subconta_baas(),
         "nota_wallet": (
             "Configure sua conta de recebimento em Financeiro para publicar eventos pagos e receber automaticamente."
             if not wallet
@@ -325,7 +339,7 @@ def acompanhamento_repasse_organizador(db: Session, usuario: Usuario) -> dict[st
         "repasse_status": status_repasse,
         "repasse_status_rotulo": _rotulo_status_repasse(status_repasse),
         "repasse_aprovado": repasse_status_aprovado(status_repasse),
-        "pode_reenviar_subconta": pode_reenviar_subconta(usuario),
+        "pode_reenviar_conta": pode_reenviar_subconta(usuario),
         "atualizado_em": usuario.asaas_repasse_status_em.isoformat() + "Z"
         if usuario.asaas_repasse_status_em
         else None,
@@ -362,7 +376,7 @@ def definir_wallet_organizador(
         )
     if (usuario.asaas_account_id or "").strip() and settings.permite_subconta_baas():
         raise ValueError(
-            "Você já possui subconta criada pela plataforma. "
+            "Você já possui conta de recebimento criada pela plataforma. "
             "Use o acompanhamento da conta ou contate o suporte para alterar o modo de repasse."
         )
 
@@ -407,16 +421,18 @@ def criar_subconta_organizador(
     data_nascimento: str | None = None,
 ) -> dict[str, Any]:
     if usuario.tipo != "organizador":
-        raise ValueError("Apenas organizadores podem criar subconta.")
+        raise ValueError("Apenas organizadores podem criar conta de recebimento.")
     if not settings.permite_subconta_baas():
         raise ValueError(
             "A criação de conta de recebimento pela plataforma está desativada. "
             "Configure sua conta de recebimento em Financeiro."
         )
     if (usuario.asaas_account_id or "").strip():
-        raise ValueError("Você já possui subconta de recebimento vinculada.")
+        raise ValueError("Você já possui conta de recebimento vinculada.")
     if not settings.use_asaas:
         raise ValueError("Pagamentos não estão ativos neste ambiente.")
+
+    assert_plataforma_pode_provisionar_contas()
 
     doc = _digits(cpf_cnpj, 14)
     if len(doc) not in (11, 14):
@@ -465,13 +481,13 @@ def criar_subconta_organizador(
     try:
         sub = client.post("/v3/accounts", json=payload)
     except AsaasAPIError as e:
-        raise ValueError(str(e) or "Não foi possível criar a subconta de recebimento.") from e
+        raise ValueError(sanitizar_mensagem_pagamento(str(e) or "Não foi possível criar a conta de recebimento.")) from e
 
     account_id = sub.get("id")
     wallet_id = sub.get("walletId")
     api_key = sub.get("apiKey")
     if not wallet_id:
-        raise ValueError("Subconta criada, mas walletId não retornado. Contate o suporte.")
+        raise ValueError("Conta de recebimento criada, mas o identificador não foi retornado. Contate o suporte.")
 
     usuario.asaas_account_id = account_id
     usuario.asaas_wallet_id = wallet_id
@@ -481,6 +497,7 @@ def criar_subconta_organizador(
     usuario.asaas_repasse_status = "pending"
     usuario.asaas_repasse_status_em = agora_utc_naive()
     usuario.asaas_repasse_detalhes = None
+    usuario.onboarding_conta_email_event = None
     db.add(usuario)
     db.query(Evento).filter(Evento.organizador_id == usuario.id).update(
         {Evento.asaas_wallet_id: wallet_id},
@@ -498,8 +515,12 @@ def criar_subconta_organizador(
         logger.info("Antecipação automática não ativada na subconta %s", usuario.email)
 
     aprovado = repasse_status_aprovado(usuario.asaas_repasse_status)
+    from app.services.onboarding_tracker import tracking_id_conta
+
+    tid = tracking_id_conta(usuario)
     return {
         "ok": True,
+        "tracking_id": tid,
         "account_id": account_id,
         "wallet_id": wallet_id,
         "tem_api_key": bool(api_key),
@@ -531,6 +552,7 @@ def limpar_subconta_rejeitada(db: Session, usuario: Usuario) -> None:
     usuario.asaas_repasse_status = None
     usuario.asaas_repasse_status_em = None
     usuario.asaas_repasse_detalhes = None
+    usuario.onboarding_conta_email_event = None
     db.add(usuario)
     db.query(Evento).filter(Evento.organizador_id == usuario.id).update(
         {Evento.asaas_wallet_id: None},
@@ -556,6 +578,7 @@ def aplicar_webhook_status_conta_asaas(
 
     general = account_status.get("general")
     status_atual = (usuario.asaas_repasse_status or "").lower()
+    status_anterior = status_atual
     evento_rejeicao = bool(event_type and str(event_type).endswith("_REJECTED"))
 
     if evento_rejeicao:
@@ -576,6 +599,12 @@ def aplicar_webhook_status_conta_asaas(
     usuario.asaas_repasse_status_em = agora_utc_naive()
     usuario.asaas_repasse_detalhes = serializar_detalhes_repasse(account_status)
     db.add(usuario)
+
+    from app.services.onboarding_tracker import notificar_transicao_conta
+
+    detalhes_dict = account_status if isinstance(account_status, dict) else None
+    notificar_transicao_conta(db, usuario, status_anterior=status_anterior, detalhes=detalhes_dict)
+
     logger.info(
         "Repasse %s atualizado via webhook (%s) → %s",
         usuario.email,
@@ -658,8 +687,8 @@ def atualizar_antecipacao_cartao(
     sub_client = _client_subconta(usuario)
     if not sub_client or not sub_client.enabled:
         raise ValueError(
-            "Antecipação automática exige subconta criada pela plataforma. "
-            "Configure sua conta de recebimento ou crie subconta aqui."
+            "Antecipação automática exige conta de recebimento criada pela plataforma. "
+            "Configure ou crie sua conta de recebimento em Financeiro."
         )
     try:
         cfg = sub_client.put(

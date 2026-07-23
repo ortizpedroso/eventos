@@ -29,6 +29,35 @@ const METODO_COR: Record<string, string> = {
   delete: "bg-red-100 text-red-800",
 };
 
+function rotuloPublico(path: string, summary?: string): string | undefined {
+  if (!summary) return undefined;
+  return summary
+    .replace(/\basaas\b/gi, "pagamentos")
+    .replace(/\bsubconta\b/gi, "conta de recebimento")
+    .replace(/walletid/gi, "ID da conta");
+}
+
+function caminhoPublico(path: string): string {
+  const prefix = "/api/organizador/asaas";
+  if (path.startsWith(prefix)) {
+    const suffix = path.slice(prefix.length);
+    if (!suffix || suffix === "/") return "/api/organizador/conta-recebimento";
+    if (suffix.startsWith("/subconta")) {
+      const rest = suffix.replace("/subconta", "") || "";
+      return `/api/organizador/conta-recebimento${rest}`;
+    }
+    if (suffix.startsWith("/conta-recebimento")) return `/api/organizador${suffix}`;
+    if (suffix.startsWith("/wallet")) {
+      return `/api/organizador/conta-recebimento/conta${suffix.slice("/wallet".length)}`;
+    }
+    return `/api/organizador/conta-recebimento${suffix}`;
+  }
+  return path
+    .replace(/\/pagamentos\/asaas/gi, "/pagamentos")
+    .replace(/\/webhooks\/asaas/gi, "/webhooks/pagamentos")
+    .replace(/\/subconta/gi, "/conta-recebimento");
+}
+
 async function carregarSpec(): Promise<OpenApiSpec | null> {
   const site = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
   try {
@@ -103,9 +132,9 @@ export default async function ApiReferenciaPage() {
                       >
                         {metodo}
                       </span>
-                      <code className="shrink-0 font-mono text-sm text-zinc-800">{path}</code>
+                      <code className="shrink-0 font-mono text-sm text-zinc-800">{caminhoPublico(path)}</code>
                       {op.summary ? (
-                        <span className="text-sm text-zinc-600">{op.summary}</span>
+                        <span className="text-sm text-zinc-600">{rotuloPublico(path, op.summary)}</span>
                       ) : null}
                       {op.deprecated ? (
                         <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-700">

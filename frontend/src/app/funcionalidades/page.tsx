@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ScrollReveal } from "@/components/scroll-reveal";
 import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-routes";
 
 export const metadata: Metadata = {
@@ -210,7 +209,7 @@ const outrosRecursos = [
 
 export default function FuncionalidadesPage() {
   return (
-    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
+    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
           Tudo o que você precisa para <span className="text-emerald-700">fazer acontecer.</span>
@@ -247,15 +246,14 @@ export default function FuncionalidadesPage() {
           {destaques.map((item, index) => {
             const isReversed = index % 2 !== 0;
             return (
-              <ScrollReveal key={item.id} delayMs={100}>
-                <div className={`flex flex-col gap-12 lg:items-center ${isReversed ? 'lg:flex-row-reverse' : 'lg:flex-row'}`}>
+              <div key={item.id} className={`flex flex-col gap-12 lg:items-center ${isReversed ? 'lg:flex-row-reverse' : 'lg:flex-row'}`}>
                   
                   {/* Texto */}
                   <div className="flex-1 lg:max-w-xl">
                     <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">
                       {item.titulo}
                     </h2>
-                    <p className="mt-4 text-lg text-zinc-600 text-justify">
+                    <p className="mt-4 text-lg text-zinc-600">
                       {item.texto}
                     </p>
                     <ul className="mt-8 space-y-4 text-zinc-600">
@@ -277,7 +275,6 @@ export default function FuncionalidadesPage() {
                     {item.visual}
                   </div>
                 </div>
-              </ScrollReveal>
             );
           })}
         </div>
@@ -289,8 +286,8 @@ export default function FuncionalidadesPage() {
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900">E não para por aí</h2>
         </div>
         <div className="grid grid-cols-1 gap-6 text-left sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
-          {outrosRecursos.map((b, i) => (
-            <ScrollReveal key={b.titulo} className="h-full" delayMs={i * 75}>
+          {outrosRecursos.map((b) => (
+            <div key={b.titulo} className="h-full">
             <div
               className="h-full rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
             >
@@ -298,27 +295,25 @@ export default function FuncionalidadesPage() {
                 {icones[b.icone]}
                 <h2 className="text-lg font-semibold leading-tight text-zinc-900">{b.titulo}</h2>
               </div>
-              <p className="mt-4 text-justify text-sm leading-6 text-zinc-600">{b.texto}</p>
+              <p className="mt-4 text-sm leading-6 text-zinc-600">{b.texto}</p>
             </div>
-            </ScrollReveal>
+            </div>
           ))}
         </div>
       </div>
 
       <div className="mx-auto mt-16 max-w-3xl sm:mt-20">
-        <ScrollReveal>
           <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
             <div className="flex items-start gap-3">
               {icones.resumo}
               <h2 className="text-lg font-semibold leading-tight text-emerald-700">Resumo</h2>
             </div>
-            <p className="mt-3 text-justify text-sm leading-6 text-zinc-600">
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
               O EventosBR concentra criação de eventos, venda de ingressos, cobrança automatizada 
               e tratamento de cancelamentos em um fluxo único — ideal para quem quer menos planilha 
               e mais tempo focando em produzir a experiência ao vivo.
             </p>
           </div>
-        </ScrollReveal>
       </div>
 
       <div className="mx-auto mt-12 max-w-3xl text-center">

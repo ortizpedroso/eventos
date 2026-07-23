@@ -38,6 +38,11 @@ export function mapCheckoutError(raw: string): string {
   if (lower.includes("e-mail já") || lower.includes("email já") || lower.includes("409")) {
     return "Este e-mail já tem conta. Use «Entrar» ou «Continuar com Google».";
   }
+  if (lower.includes("conta de recebimento") || lower.includes("repasse")) {
+    return msg.includes("recebimento") || msg.includes("repasse")
+      ? msg
+      : "As vendas deste evento ainda não estão liberadas. O organizador precisa concluir a conta de recebimento em Financeiro.";
+  }
   if (lower.includes("pagamento") && (lower.includes("cliente") || lower.includes("asaas"))) {
     return "Não foi possível preparar o pagamento. Tente de novo em instantes ou entre em contato com o suporte.";
   }

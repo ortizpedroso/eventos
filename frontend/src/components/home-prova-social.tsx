@@ -24,18 +24,24 @@ export async function HomeProvaSocial() {
         {stats.eventos_publicados > 0 ? (
           <>
             <strong className="text-zinc-900">
-              <CountUp value={stats.eventos_publicados} />
-            </strong>{" "}
-            eventos publicados
+              <CountUp
+                value={stats.eventos_publicados}
+                singular="evento publicado"
+                plural="eventos publicados"
+              />
+            </strong>
           </>
         ) : null}
         {stats.eventos_publicados > 0 && stats.ingressos_confirmados > 0 ? " · " : null}
         {stats.ingressos_confirmados > 0 ? (
           <>
             <strong className="text-zinc-900">
-              <CountUp value={stats.ingressos_confirmados} />
-            </strong>{" "}
-            ingressos confirmados
+              <CountUp
+                value={stats.ingressos_confirmados}
+                singular="ingresso confirmado"
+                plural="ingressos confirmados"
+              />
+            </strong>
           </>
         ) : null}
       </p>

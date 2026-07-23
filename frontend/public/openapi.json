@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "EventosBR API",
-    "description": "API da EventosBR: eventos, ingressos, pagamentos PIX/cartão via Asaas, repasse a organizadores e reembolsos automáticos.",
+    "description": "API da EventosBR: eventos, ingressos, pagamentos PIX/cartão, repasse a organizadores e reembolsos automáticos.",
     "version": "1.0.0"
   },
   "paths": {
@@ -1993,7 +1993,7 @@
         }
       }
     },
-    "/api/pagamentos/asaas/cobranca": {
+    "/api/pagamentos/cobranca": {
       "post": {
         "tags": [
           "Pagamentos"
@@ -2038,7 +2038,7 @@
         ]
       }
     },
-    "/api/pagamentos/asaas/status/{ingresso_id}": {
+    "/api/pagamentos/status/{ingresso_id}": {
       "get": {
         "tags": [
           "Pagamentos"
@@ -2597,7 +2597,7 @@
         ]
       }
     },
-    "/api/organizador/asaas": {
+    "/api/organizador/conta-recebimento": {
       "get": {
         "tags": [
           "Organizador"
@@ -2619,9 +2619,51 @@
             "OAuth2PasswordBearer": []
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Asaas Criar Subconta",
+        "operationId": "asaas_criar_subconta_api_organizador_asaas_subconta_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsaasSubcontaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
-    "/api/organizador/asaas/acompanhamento": {
+    "/api/organizador/conta-recebimento/acompanhamento": {
       "get": {
         "tags": [
           "Organizador"
@@ -2645,7 +2687,7 @@
         ]
       }
     },
-    "/api/organizador/asaas/wallet": {
+    "/api/organizador/conta-recebimento/conta": {
       "put": {
         "tags": [
           "Organizador"
@@ -2707,18 +2749,18 @@
         }
       }
     },
-    "/api/organizador/asaas/subconta": {
+    "/api/organizador/conta-recebimento/conta/consultar": {
       "post": {
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Criar Subconta",
-        "operationId": "asaas_criar_subconta_api_organizador_asaas_subconta_post",
+        "summary": "Asaas Consultar Wallet",
+        "operationId": "asaas_consultar_wallet_api_organizador_asaas_wallet_consultar_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AsaasSubcontaRequest"
+                "$ref": "#/components/schemas/AsaasWalletConsultaRequest"
               }
             }
           },
@@ -2751,13 +2793,13 @@
         ]
       }
     },
-    "/api/organizador/asaas/subconta/reenviar": {
+    "/api/organizador/conta-recebimento/reenviar": {
       "post": {
         "tags": [
           "Organizador"
         ],
         "summary": "Asaas Reenviar Subconta",
-        "description": "Reenvia dados ao Asaas após reprovação da subconta (KYC).",
+        "description": "Reenvia dados ao processador após reprovação da conta de recebimento (KYC).",
         "operationId": "asaas_reenviar_subconta_api_organizador_asaas_subconta_reenviar_post",
         "requestBody": {
           "content": {
@@ -2796,7 +2838,7 @@
         ]
       }
     },
-    "/api/organizador/asaas/antecipacao": {
+    "/api/organizador/conta-recebimento/antecipacao": {
       "put": {
         "tags": [
           "Organizador"
@@ -2840,7 +2882,7 @@
         ]
       }
     },
-    "/api/organizador/asaas/antecipacao/simular": {
+    "/api/organizador/conta-recebimento/antecipacao/simular": {
       "post": {
         "tags": [
           "Organizador"
@@ -2933,6 +2975,72 @@
         ]
       }
     },
+    "/api/organizador/pix": {
+      "get": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Obter Pix Salvo",
+        "operationId": "obter_pix_salvo_api_organizador_pix_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Salvar Pix",
+        "operationId": "salvar_pix_api_organizador_pix_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PixChaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/organizador/assinatura/pagar": {
       "post": {
         "tags": [
@@ -2941,12 +3049,39 @@
         "summary": "Pagar Assinatura",
         "description": "Gera cobrança PIX da mensalidade EventosBR.",
         "operationId": "pagar_assinatura_api_organizador_assinatura_pagar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AssinaturaPagarRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -4658,7 +4793,7 @@
         }
       }
     },
-    "/api/webhooks/asaas": {
+    "/api/webhooks/pagamentos": {
       "post": {
         "tags": [
           "Webhooks"
@@ -4678,7 +4813,7 @@
         }
       }
     },
-    "/api/webhooks/asaas/transfer-auth": {
+    "/api/webhooks/pagamentos/transfer-auth": {
       "post": {
         "tags": [
           "Webhooks"
@@ -4887,6 +5022,118 @@
         ],
         "title": "AsaasCobrancaRequest"
       },
+      "AsaasContaRecebimentoRequest": {
+        "properties": {
+          "cpf_cnpj": {
+            "type": "string",
+            "maxLength": 18,
+            "minLength": 11,
+            "title": "Cpf Cnpj"
+          },
+          "telefone": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 10,
+            "title": "Telefone"
+          },
+          "renda_mensal": {
+            "type": "number",
+            "maximum": 10000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Renda Mensal"
+          },
+          "cep": {
+            "type": "string",
+            "maxLength": 10,
+            "minLength": 8,
+            "title": "Cep"
+          },
+          "endereco": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Endereco"
+          },
+          "numero": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Numero"
+          },
+          "bairro": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Bairro"
+          },
+          "complemento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complemento"
+          },
+          "cidade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cidade"
+          },
+          "estado": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado"
+          },
+          "company_type": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Company Type",
+            "default": "INDIVIDUAL"
+          },
+          "data_nascimento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Nascimento"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cpf_cnpj",
+          "telefone",
+          "renda_mensal",
+          "cep",
+          "endereco",
+          "numero",
+          "bairro"
+        ],
+        "title": "AsaasContaRecebimentoRequest",
+        "description": "Alias de payload para criação de conta de recebimento (PF ou PJ)."
+      },
       "AsaasSimularAntecipacaoRequest": {
         "properties": {
           "valor_reais": {
@@ -4970,11 +5217,47 @@
             ],
             "title": "Complemento"
           },
+          "cidade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cidade"
+          },
+          "estado": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado"
+          },
           "company_type": {
             "type": "string",
             "maxLength": 20,
             "title": "Company Type",
             "default": "INDIVIDUAL"
+          },
+          "data_nascimento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Nascimento"
           }
         },
         "type": "object",
@@ -4989,6 +5272,21 @@
         ],
         "title": "AsaasSubcontaRequest"
       },
+      "AsaasWalletConsultaRequest": {
+        "properties": {
+          "api_key": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Api Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "api_key"
+        ],
+        "title": "AsaasWalletConsultaRequest"
+      },
       "AsaasWalletRequest": {
         "properties": {
           "wallet_id": {
@@ -5001,6 +5299,19 @@
             "type": "boolean",
             "title": "Sincronizar Eventos",
             "default": true
+          },
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key",
+            "description": "Opcional: chave API pagamentos do organizador para validar que o ID da conta pertence à conta."
           }
         },
         "type": "object",
@@ -5030,6 +5341,24 @@
         },
         "type": "object",
         "title": "AssinaturaAdminUpdate"
+      },
+      "AssinaturaPagarRequest": {
+        "properties": {
+          "cpf_cnpj": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpf Cnpj"
+          }
+        },
+        "type": "object",
+        "title": "AssinaturaPagarRequest"
       },
       "AtualizarEventoRequest": {
         "properties": {
@@ -6912,6 +7241,33 @@
         "type": "object",
         "title": "PerfilPublicoUpdate"
       },
+      "PixChaveRequest": {
+        "properties": {
+          "pix_chave": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 5,
+            "title": "Pix Chave"
+          },
+          "pix_tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pix Tipo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pix_chave"
+        ],
+        "title": "PixChaveRequest"
+      },
       "PortariaBuscarRequest": {
         "properties": {
           "evento_id": {
@@ -7144,22 +7500,39 @@
             "title": "Valor"
           },
           "pix_chave": {
-            "type": "string",
-            "maxLength": 120,
-            "minLength": 5,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Pix Chave"
           },
           "pix_tipo": {
-            "type": "string",
-            "maxLength": 20,
-            "title": "Pix Tipo",
-            "default": "EVP"
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pix Tipo"
+          },
+          "salvar_pix": {
+            "type": "boolean",
+            "title": "Salvar Pix",
+            "default": true
           }
         },
         "type": "object",
         "required": [
-          "valor",
-          "pix_chave"
+          "valor"
         ],
         "title": "SaqueRequest"
       },

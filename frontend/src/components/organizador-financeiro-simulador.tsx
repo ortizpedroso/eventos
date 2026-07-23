@@ -57,7 +57,10 @@ export function OrganizadorFinanceiroSimulador({ planoTarifa = "padrao" }: Props
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <div>
           <label className="text-xs text-zinc-600">Preço do ingresso</label>
-          <InputValorBrl value={preco} onChange={setPreco} className="mt-1 rounded-lg" />
+          <InputValorBrl value={preco} onChange={setPreco} className="mt-1 rounded-lg" aria-describedby="fin-sim-preco-hint" />
+          <p id="fin-sim-preco-hint" className="mt-1 text-[11px] text-zinc-500">
+            Digite em reais; os centavos entram automaticamente (ex.: 8000 → R$ 80,00).
+          </p>
         </div>
         <div>
           <label className="text-xs text-zinc-600">Quantidade vendida</label>

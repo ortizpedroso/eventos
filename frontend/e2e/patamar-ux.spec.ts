@@ -4,6 +4,7 @@ import {
   seedPreVendaEvent,
   seedPublicProducer,
   seedSoldOutWaitlistEvent,
+  seedOrganizerSession,
   waitForApiReady,
 } from "./helpers/api-setup";
 
@@ -22,7 +23,7 @@ test.describe("Patamar UX — vitrine e navbar", () => {
       const box = await footer.boundingBox();
       expect(box).toBeTruthy();
       if (box) {
-        // Rodapé colado ao fundo da viewport (flex layout) — não no meio da tela
+        // Rodapé colado ao fundo da viewport (grid layout) — não no meio da tela
         expect(box.y + box.height).toBeGreaterThan(viewportHeight * 0.85);
         expect(box.y).toBeGreaterThan(viewportHeight * 0.45);
       }
@@ -55,7 +56,7 @@ test.describe("Patamar UX — vitrine e navbar", () => {
   });
 
   test("filtro Este fim de semana na vitrine", async ({ page }) => {
-    await page.goto("/eventos");
+    await page.goto("/eventos", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Este fim de semana" }).click();
     await expect(page).toHaveURL(/de=/);
   });
@@ -77,6 +78,22 @@ test.describe("Checkout — copy de pagamento", () => {
   test("página de planos menciona taxa EventosBR", async ({ page }) => {
     await page.goto("/planos");
     await expect(page.getByText(/EventosBR|taxa/i).first()).toBeVisible();
+  });
+
+  test("planos: cards de preço visíveis ao carregar (sem depender de scroll)", async ({ page }) => {
+    await page.goto("/planos", { waitUntil: "domcontentloaded" });
+    const titulo = page.getByRole("heading", { level: 3, name: "Eventos gratuitos" });
+    await expect(titulo).toBeVisible({ timeout: 15_000 });
+    const opacidade = await titulo.evaluate((el) => {
+      let node: HTMLElement | null = el;
+      while (node) {
+        const o = Number.parseFloat(window.getComputedStyle(node).opacity);
+        if (o < 1) return o;
+        node = node.parentElement;
+      }
+      return 1;
+    });
+    expect(opacidade).toBeGreaterThan(0.9);
   });
 
   test("home menciona transparência de taxas", async ({ page }) => {
@@ -123,6 +140,53 @@ test.describe("Lista de espera (esgotado)", () => {
   });
 });
 
+test.describe("Organizador — perfil no painel", () => {
+  test("perfil mantém menu Painel e abas horizontais", async ({ page, context }) => {
+    test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");
+    await waitForApiReady(90_000);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const { token } = await seedOrganizerSession();
+    await context.addCookies([
+      {
+        name: "eventosbr_session",
+        value: token,
+        domain: "127.0.0.1",
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("eventosbr_tour_v1", "1");
+    });
+
+    await page.goto("/organizador/eventos", { waitUntil: "domcontentloaded" });
+    const painelNav = page.getByRole("navigation", { name: "Navegação do organizador" });
+    await expect(painelNav.getByRole("link", { name: "Meus eventos" })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await painelNav.getByRole("link", { name: "Perfil" }).click();
+    await expect(page).toHaveURL(/\/organizador\/perfil/);
+    await expect(page).not.toHaveURL(/\/conta\//);
+
+    await expect(painelNav.getByRole("link", { name: "Meus eventos" })).toBeVisible();
+    await expect(page.getByText("Minha conta")).not.toBeVisible();
+
+    await page
+      .getByRole("navigation", { name: "Seções do perfil" })
+      .getByRole("link", { name: "Pagamentos" })
+      .click();
+    await expect(page.getByRole("heading", { level: 1, name: /pagamentos/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(painelNav.getByRole("link", { name: "Financeiro" })).toBeVisible();
+    await expect(page.getByText("Minha conta")).not.toBeVisible();
+  });
+});
+
 test.describe("Mobile — smoke viewport", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -136,6 +200,36 @@ test.describe("Mobile — smoke viewport", () => {
     await expect(page.getByRole("button", { name: "Hoje" })).toBeVisible();
     const vitrineOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(vitrineOverflow).toBe(false);
+  });
+});
+
+test.describe("Navegação — renderização imediata", () => {
+  test("planos → home: título visível sem skeleton", async ({ page }) => {
+    await page.goto("/planos");
+    await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).toBeVisible();
+    await page.getByRole("banner").getByRole("link", { name: /EventosBR — início/i }).click();
+    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("heading", { level: 1, name: /Venda ingressos/i })).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test("home → planos: título visível imediatamente", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: /Ver detalhes em Planos/i }).click();
+    await expect(page).toHaveURL(/\/planos/);
+    await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test("home → eventos: hero visível durante carregamento", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: /Explorar eventos/i }).first().click();
+    await expect(page).toHaveURL(/\/eventos/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: /Encontre seu|Busca:|Eventos de/i }),
+    ).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -160,7 +254,7 @@ test.describe("Navegação — scroll e logo", () => {
 });
 
 test.describe("Menu direito (organizador) — sidebar e rodapé estáveis", () => {
-  test("Perfil/Pagamentos/Ingressos/Notificações no dropdown não trocam a barra lateral nem colapsam o rodapé", async ({
+  test("Perfil no dropdown não troca a barra lateral nem colapsa o rodapé", async ({
     page,
     request,
   }) => {
@@ -177,6 +271,9 @@ test.describe("Menu direito (organizador) — sidebar e rodapé estáveis", () =
     expect(reg.ok()).toBeTruthy();
 
     await page.setViewportSize({ width: 1280, height: 800 });
+    await page.addInitScript(() => {
+      localStorage.setItem("eventosbr_tour_v1", "1");
+    });
     await page.goto("/auth?login=1", { waitUntil: "domcontentloaded" });
     await page.waitForSelector("form[data-auth-ready=true]", { timeout: 20_000 });
     await page.locator("#email").fill(email);
@@ -207,9 +304,19 @@ test.describe("Menu direito (organizador) — sidebar e rodapé estáveis", () =
     }
 
     await clicarItemDropdown("Perfil", "/organizador/perfil$");
-    await clicarItemDropdown("Pagamentos", "/organizador/perfil/pagamentos");
-    await clicarItemDropdown("Ingressos", "/organizador/perfil/ingressos");
-    await clicarItemDropdown("Notificações", "/organizador/perfil/notificacoes");
+
+    const perfilNav = page.getByRole("navigation", { name: "Seções do perfil" });
+    await perfilNav.getByRole("link", { name: "Pagamentos" }).click();
+    await expect(page).toHaveURL(/\/organizador\/perfil\/pagamentos/);
+    await expect(sidebarNav).toBeVisible();
+
+    await perfilNav.getByRole("link", { name: "Ingressos" }).click();
+    await expect(page).toHaveURL(/\/organizador\/perfil\/ingressos/);
+    await expect(sidebarNav).toBeVisible();
+
+    await perfilNav.getByRole("link", { name: "Notificações" }).click();
+    await expect(page).toHaveURL(/\/organizador\/perfil\/notificacoes/);
+    await expect(sidebarNav).toBeVisible();
   });
 });
 

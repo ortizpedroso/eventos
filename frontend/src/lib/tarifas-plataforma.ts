@@ -98,6 +98,57 @@ export function simularLucroPlanos(precoIngresso: number, quantidade: number): S
   };
 }
 
+/** Quantidade mínima de ingressos (neste preço) para a assinatura valer mais que o plano padrão. */
+export function calcularPontoEquilibrioAssinatura(precoIngresso: number): number {
+  if (!Number.isFinite(precoIngresso) || precoIngresso <= 0) return 1;
+  const denom = 0.02 * precoIngresso + 1;
+  return Math.floor(MENSALIDADE_ASSINATURA_MENSAL / denom) + 1;
+}
+
+export type AnaliseRecomendacaoPlano = {
+  recomendado: PlanoTarifaId;
+  titulo: string;
+  paragrafos: string[];
+};
+
+export function analisarRecomendacaoPlano(sim: SimulacaoPlanosResult): AnaliseRecomendacaoPlano {
+  const diff = Math.abs(sim.diferencaLiquido);
+  const eq = calcularPontoEquilibrioAssinatura(sim.precoIngresso);
+  const precoFmt = formatBrl(sim.precoIngresso);
+  const mensalidadeFmt = formatBrl(MENSALIDADE_ASSINATURA_MENSAL);
+
+  if (Math.abs(sim.diferencaLiquido) < 0.01) {
+    return {
+      recomendado: "padrao",
+      titulo: "Os dois planos empatam neste cenário",
+      paragrafos: [
+        `Com ${sim.quantidade} ingressos a ${precoFmt}, o líquido estimado é o mesmo nos dois planos (${formatBrl(sim.padrao.liquido)}).`,
+        `Pequenas variações de volume ou preço podem inclinar para um lado — use a assinatura se espera vender pelo menos cerca de ${eq} ingressos neste preço.`,
+      ],
+    };
+  }
+
+  if (sim.assinaturaValeMais) {
+    return {
+      recomendado: "assinatura",
+      titulo: "Assinatura é mais vantajosa para você",
+      paragrafos: [
+        `Com ${sim.quantidade} ingressos a ${precoFmt}, o plano com assinatura deixa ${formatBrl(sim.assinatura.liquido)} líquido — ${formatBrl(diff)} a mais que sem assinatura.`,
+        `A mensalidade de ${mensalidadeFmt} já é compensada pela taxa reduzida (${formatPercentual(TARIFA_ASSINATURA.percentual)} + ${formatBrl(TARIFA_ASSINATURA.fixoPorIngresso)} por ingresso).`,
+      ],
+    };
+  }
+
+  return {
+    recomendado: "padrao",
+    titulo: "Plano sem assinatura é mais vantajoso para você",
+    paragrafos: [
+      `Com ${sim.quantidade} ingressos a ${precoFmt}, ficar sem assinatura deixa ${formatBrl(sim.padrao.liquido)} líquido — ${formatBrl(diff)} a mais que com assinatura.`,
+      `A assinatura tende a compensar a partir de cerca de ${eq} ingressos vendidos neste preço (mensalidade ${mensalidadeFmt} + taxa menor).`,
+    ],
+  };
+}
+
 export function formatBrl(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }

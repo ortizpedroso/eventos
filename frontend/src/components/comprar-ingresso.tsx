@@ -30,6 +30,7 @@ type Props = {
   limiteIngressosPorCpf?: number | null;
   compraDisponivel?: boolean;
   motivoCompraIndisponivel?: string | null;
+  compraIndisponivelCodigo?: string | null;
   embedded?: boolean;
   /** Sessão já obtida pela página pai — evita refetch e layout shift. */
   usuarioInicial?: Usuario | null;
@@ -68,6 +69,7 @@ export function ComprarIngresso({
   limiteIngressosPorCpf = null,
   compraDisponivel = true,
   motivoCompraIndisponivel = null,
+  compraIndisponivelCodigo = null,
   embedded = false,
   usuarioInicial = null,
   sessaoInicialResolvida = false,
@@ -139,6 +141,7 @@ export function ComprarIngresso({
   const [emailConfirmacao, setEmailConfirmacao] = useState("");
   const [pagamentoModoTeste, setPagamentoModoTeste] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [compraBloqueadaRepasse, setCompraBloqueadaRepasse] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const [mesmoPagador, setMesmoPagador] = useState(true);
@@ -492,7 +495,12 @@ export function ComprarIngresso({
       setStep(2);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Não foi possível iniciar o pagamento";
-      setError(mapCheckoutError(msg));
+      const amigavel = mapCheckoutError(msg);
+      const lower = amigavel.toLowerCase();
+      if (lower.includes("recebimento") || lower.includes("repasse")) {
+        setCompraBloqueadaRepasse(true);
+      }
+      setError(amigavel);
     } finally {
       setCreating(false);
     }
@@ -508,18 +516,29 @@ export function ComprarIngresso({
     ? "mt-0 border-0 bg-transparent p-0 shadow-none [&_p]:text-justify"
     : "mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 shadow-sm [&_p]:text-justify";
 
-  if (!compraDisponivel) {
+  if (!compraDisponivel || compraBloqueadaRepasse) {
+    const titulo =
+      compraIndisponivelCodigo === "repasse" || compraBloqueadaRepasse
+        ? "Vendas temporariamente indisponíveis"
+        : "Compras indisponíveis";
+    const mensagem =
+      motivoCompraIndisponivel ??
+      (compraBloqueadaRepasse
+        ? "O organizador ainda não concluiu a conta de recebimento. Tente novamente mais tarde."
+        : "Não há ingressos à venda neste momento. Recarregue a página ou contacte o organizador.");
     return (
       <div className={shellClass}>
         <div
           className="rounded-md border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950"
           role="status"
         >
-          <p className="font-semibold">Compras indisponíveis</p>
-          <p className="mt-2 leading-relaxed">
-            {motivoCompraIndisponivel ??
-              "Não há ingressos à venda neste momento. Recarregue a página ou contacte o organizador."}
-          </p>
+          <p className="font-semibold">{titulo}</p>
+          <p className="mt-2 leading-relaxed">{mensagem}</p>
+          {compraIndisponivelCodigo === "repasse" || compraBloqueadaRepasse ? (
+            <p className="mt-2 text-xs text-amber-900/90">
+              O organizador precisa ativar a conta de recebimento em Financeiro antes de vender ingressos pagos.
+            </p>
+          ) : null}
         </div>
       </div>
     );
@@ -558,11 +577,6 @@ export function ComprarIngresso({
     <div className={shellClass}>
       <CheckoutStepper current={step} />
 
-      {devCheckout && process.env.NEXT_PUBLIC_ASAAS_DISABLED === "true" ? (
-        <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-          Modo de teste no site (pagamento simulado, sem cobrança real).
-        </p>
-      ) : null}
 
       {step === 1 ? (
         <div className="space-y-4">

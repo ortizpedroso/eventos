@@ -60,7 +60,7 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 ### Qualidade
 
 - [x] `pytest` — 208 testes
-- [x] Teste mock split VPS: `bash scripts/test-sandbox-compra-split.sh`
+- [x] Teste mock split VPS: `bash scripts/test-compra-split-mock.sh`
 - [x] `npm run build` — OK
 - [x] CI — `.github/workflows/ci.yml` (api, web, e2e)
 
@@ -85,14 +85,10 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 | 13 | Migração DB | `alembic upgrade head` (automático no deploy) | ✅ `20260717_000035` |
 | 14 | Organizador vincula wallet / subconta BaaS | Financeiro → conta de repasses | 🔧 Por organizador |
 | 15 | Primeira venda real | PIX ou cartão + webhook + ingresso pago | 🔧 Pendente |
-| 16 | Teste mock split | `bash scripts/test-sandbox-compra-split.sh` | ✅ 2 passed |
+| 16 | Teste mock split | `bash scripts/test-compra-split-mock.sh` | ✅ 2 passed |
 | 17 | Fix rodapé em produção | `curl -s https://DOMINIO/auth \| grep eventosbr-shell-layout` | ✅ (branch feature; merge PR #39) |
 
 **Scripts úteis:** `docs/11-go-live-asaas.md`, `scripts/go-live-anexo-b.sh`, `scripts/verify-production.sh`
-
-### Testes sandbox Asaas (antes do go-live) 🧪
-
-Testes sandbox foram concluídos internamente. Ver `docs/11-go-live-asaas.md` para instruções de ambiente manual.
 
 ### GitHub — PR automático
 

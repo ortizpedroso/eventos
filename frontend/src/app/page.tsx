@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+
 import { HomeDepoimentos } from "@/components/home-depoimentos";
 import { HomeDiferenciais } from "@/components/home-diferenciais";
 import { HomeHeroExplorar } from "@/components/home-hero-explorar";
@@ -8,17 +10,17 @@ import { HomeHeroVisual } from "@/components/home-hero-visual";
 import { HomeProvaSocial } from "@/components/home-prova-social";
 import { HomeSelosConfianca } from "@/components/home-selos-confianca";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
-import { ScrollReveal } from "@/components/scroll-reveal";
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { eventosDestaqueHome, fetchEventosPublicos } from "@/lib/eventos-publicos";
 import { homeMetadata } from "@/lib/site-metadata";
+import type { Evento } from "@/lib/types";
 
 export const metadata: Metadata = homeMetadata;
 
-export default async function Home() {
-  let eventosDestaque = null;
-  let eventosHero = null;
+async function HomeEventosDinamicos() {
+  let eventosDestaque: Evento[] | null = null;
+  let eventosHero: Evento[] | null = null;
   try {
     const todos = filtrarEventosVitrine(await fetchEventosPublicos(24));
     eventosDestaque = eventosDestaqueHome(todos);
@@ -28,10 +30,19 @@ export default async function Home() {
     eventosHero = null;
   }
 
+  return (
+    <>
+      <HomeHeroVisual eventos={eventosHero} />
+      <HomeEventosDestaque initialEventos={eventosDestaque} />
+    </>
+  );
+}
+
+export default function Home() {
   const criarHref = hrefCriarEvento;
 
   return (
-    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
+    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700">
           PIX, cartão e QR Code na entrada
@@ -46,7 +57,11 @@ export default async function Home() {
         </p>
 
         <HomeHeroExplorar />
-        <HomeProvaSocial />
+
+        <Suspense fallback={null}>
+          <HomeProvaSocial />
+        </Suspense>
+
         <HomeSelosConfianca />
 
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -59,11 +74,11 @@ export default async function Home() {
         </div>
       </div>
 
-      <HomeHeroVisual eventos={eventosHero} />
+      <Suspense fallback={null}>
+        <HomeEventosDinamicos />
+      </Suspense>
 
       <HomeDiferenciais />
-
-      <HomeEventosDestaque initialEventos={eventosDestaque} />
 
       <HomeDepoimentos />
 
@@ -83,15 +98,13 @@ export default async function Home() {
       </div>
 
       <div className="mx-auto mt-16 max-w-3xl sm:mt-20">
-        <ScrollReveal>
-          <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
-            <h2 className="text-lg font-semibold text-emerald-700">Transparência e segurança</h2>
-            <p className="mt-3 text-sm leading-6 text-zinc-600">
-              Pagamentos via PIX e cartão com taxas estimadas visíveis nos simuladores.
-              Reembolso automático dentro do prazo legal em Minha conta.
-            </p>
-          </div>
-        </ScrollReveal>
+        <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
+          <h2 className="text-lg font-semibold text-emerald-700">Transparência e segurança</h2>
+          <p className="mt-3 text-sm leading-6 text-zinc-600">
+            Pagamentos via PIX e cartão com taxas estimadas visíveis nos simuladores.
+            Reembolso automático dentro do prazo legal em Minha conta.
+          </p>
+        </div>
       </div>
     </div>
   );

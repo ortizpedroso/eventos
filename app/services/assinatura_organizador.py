@@ -263,11 +263,17 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
     pay_id = (payment.get("id") or "").strip()
     criado_em = datetime.now(timezone.utc).replace(tzinfo=None)
     if pay_id:
+        from app.services.onboarding_tracker import marcar_assinatura_processando
+
+        marcar_assinatura_processando(db, usuario)
         usuario.assinatura_renovacao_payment_id = pay_id
         usuario.assinatura_renovacao_criado_em = criado_em
         db.commit()
 
-    return _resposta_assinatura(payment, criado_em=criado_em)
+    out = _resposta_assinatura(payment, criado_em=criado_em)
+    if pay_id:
+        out["subscription_id"] = pay_id
+    return out
 
 
 def sincronizar_assinatura_pendente(db: Session, usuario: Usuario) -> dict:
@@ -345,15 +351,29 @@ def processar_pagamento_assinatura_gateway(
     usuario.assinatura_renovacao_criado_em = None
     usuario.assinatura_aviso_expiracao_enviado_em = None
     renovar_assinatura_meses(db, usuario)
+    from app.services.onboarding_tracker import notificar_assinatura_contratada
+
+    notificar_assinatura_contratada(db, usuario)
+    db.commit()
     return True
 
 
-def limpar_renovacao_assinatura_pendente(db: Session, payment_id: str) -> bool:
+def limpar_renovacao_assinatura_pendente(
+    db: Session,
+    payment_id: str,
+    *,
+    payment: dict | None = None,
+    event_type: str | None = None,
+) -> bool:
     """Remove cobrança de renovação pendente/expirada para permitir nova geração."""
     pay_id = (payment_id or "").strip()
     if not pay_id:
         return False
     from app.models import Usuario
+    from app.services.onboarding_tracker import (
+        motivos_falha_pagamento_assinatura,
+        notificar_assinatura_falhou,
+    )
 
     rows = (
         db.query(Usuario)
@@ -363,6 +383,10 @@ def limpar_renovacao_assinatura_pendente(db: Session, payment_id: str) -> bool:
     if not rows:
         return False
     for u in rows:
+        ref = (payment or {}).get("externalReference") or ""
+        if str(ref).startswith("assinatura:"):
+            motivos = motivos_falha_pagamento_assinatura(payment or {}, event_type=event_type)
+            notificar_assinatura_falhou(db, u, motivos=motivos)
         u.assinatura_renovacao_payment_id = None
         u.assinatura_renovacao_criado_em = None
     db.commit()

@@ -35,7 +35,7 @@ Ficheiros principais:
 2. **Secrets** — `.\scripts\generate-secrets.ps1` (guardar no gestor de senhas).
 3. **Domínio na Hostinger** — registar; preparar zona DNS (ver Fase C).
 4. **E-mail** — criar `noreply@seudominio.com.br` (Hostinger Email ou Brevo/Resend).
-5. **Asaas** — sandbox ou produção; webhook em `https://<domínio>/api/webhooks/asaas` (ver [11-go-live-asaas.md](./11-go-live-asaas.md)).
+5. **Pagamentos** — produção; webhook em `https://<domínio>/api/webhooks/asaas` (ver [11-go-live-asaas.md](./11-go-live-asaas.md)).
 
 ## Fase B — Preparar o VPS (sem tráfego público ainda)
 

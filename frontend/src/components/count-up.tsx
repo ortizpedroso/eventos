@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 
 type Props = {
   value: number;
+  singular?: string;
+  plural?: string;
   durationMs?: number;
   className?: string;
 };
 
 /** Conta de 0 até `value` ao entrar na viewport (ease-out), respeitando prefers-reduced-motion. */
-export function CountUp({ value, durationMs = 1000, className = "" }: Props) {
+export function CountUp({ value, singular, plural, durationMs = 1000, className = "" }: Props) {
   const ref = useRef<HTMLSpanElement>(null);
   const [display, setDisplay] = useState(0);
   const started = useRef(false);
@@ -54,9 +56,12 @@ export function CountUp({ value, durationMs = 1000, className = "" }: Props) {
     return () => obs.disconnect();
   }, [value, durationMs]);
 
+  const label = singular && plural ? (value === 1 ? singular : plural) : null;
+
   return (
     <span ref={ref} className={className}>
       {display.toLocaleString("pt-BR")}
+      {label ? ` ${label}` : ""}
     </span>
   );
 }

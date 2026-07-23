@@ -371,6 +371,7 @@ export function EventoPublicClient({
                       ? "Use o link enviado por e-mail da lista de espera para comprar nesta janela."
                       : motivoCompraIndisponivel
                   }
+                  compraIndisponivelCodigo={codigoCompraIndisponivel}
                   usuarioInicial={me}
                   sessaoInicialResolvida
                   ingressoRetomarId={ingressoRetomarId}

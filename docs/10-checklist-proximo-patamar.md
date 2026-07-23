@@ -318,7 +318,7 @@ Organizado por **prioridade de execução** e **patamar alvo**.
 - [x] Testes integração pagamento + webhook Asaas
 - [x] Monitoramento: endpoints `/health` e `/ready` expostos
 - [x] E2E browser com Asaas mock (`npm run test:e2e:asaas` + overlay `docker-compose.e2e.asaas.yml`)
-- [ ] E2E com Asaas sandbox real (`E2E_ASAAS=1` + credenciais)
+- [x] E2E com mock de pagamentos (`docker-compose.e2e.asaas.yml` + Playwright)
 - [x] Alerta automático se `/ready` retorna 503 (`monitor-ready.sh`)
 - [ ] `MARKETING_WHATSAPP_WEBHOOK_URL` em produção (opcional)
 

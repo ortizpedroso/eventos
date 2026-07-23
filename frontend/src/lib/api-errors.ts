@@ -11,12 +11,12 @@ const STATUS_FALLBACK: Record<number, string> = {
 };
 
 export function mensagemErroHttp(status: number, detail?: unknown): string {
+  let msg: string;
   if (typeof detail === "string" && detail.trim()) {
-    return detail;
-  }
-  if (Array.isArray(detail) && detail.length > 0) {
+    msg = detail;
+  } else if (Array.isArray(detail) && detail.length > 0) {
     const items = detail as { loc?: unknown[]; msg?: string }[];
-    return items
+    msg = items
       .map((e) => {
         const loc = Array.isArray(e.loc)
           ? e.loc.filter((x) => x !== "body" && typeof x === "string").join(".")
@@ -25,12 +25,24 @@ export function mensagemErroHttp(status: number, detail?: unknown): string {
         return loc ? `${loc}: ${m}` : m;
       })
       .join("; ");
-  }
-  if (status >= 500) {
-    return (
+  } else if (status >= 500) {
+    msg =
       STATUS_FALLBACK[status] ??
-      "A API não respondeu corretamente. Confirme que o backend está a correr na porta 8000."
-    );
+      "A API não respondeu corretamente. Confirme que o backend está a correr na porta 8000.";
+  } else {
+    msg = STATUS_FALLBACK[status] ?? `Não foi possível concluir a operação (erro ${status}).`;
   }
-  return STATUS_FALLBACK[status] ?? `Não foi possível concluir a operação (erro ${status}).`;
+  return sanitizarMensagemPagamento(msg);
+}
+
+/** Oculta nome do processador de pagamentos em mensagens exibidas ao usuário. */
+export function sanitizarMensagemPagamento(texto: string): string {
+  return texto
+    .replace(/conta\s+asaas/gi, "conta de recebimentos")
+    .replace(/painel\s+asaas/gi, "sua conta de recebimentos")
+    .replace(/\bsubconta\b/gi, "conta de recebimento")
+    .replace(/chave\s+api\s+asaas/gi, "chave de acesso da conta de recebimentos")
+    .replace(/api\s+asaas/gi, "API da conta de recebimentos")
+    .replace(/\basaas\b/gi, "processador de pagamentos")
+    .replace(/walletid/gi, "ID da conta");
 }

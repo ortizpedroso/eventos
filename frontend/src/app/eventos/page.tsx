@@ -46,8 +46,10 @@ export default async function EventosListPage({ searchParams }: PageProps) {
   const cidadeInicial = sp.cidade?.trim() ?? "";
   const deInicial = sp.de?.trim() ?? "";
   const ateInicial = sp.ate?.trim() ?? "";
+  const criarHref = hrefCriarEvento;
 
-  let eventosIniciais = null;
+  let eventosIniciais: Awaited<ReturnType<typeof filtrarEventosVitrine>> = [];
+  let fetchInicialOk = true;
   try {
     eventosIniciais = filtrarEventosVitrine(
       await fetchEventosPublicos(50, {
@@ -59,11 +61,12 @@ export default async function EventosListPage({ searchParams }: PageProps) {
       }),
     );
   } catch {
-    eventosIniciais = null;
+    eventosIniciais = [];
+    fetchInicialOk = false;
   }
 
   return (
-    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
+    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
           {buscaInicial ? (
@@ -87,6 +90,7 @@ export default async function EventosListPage({ searchParams }: PageProps) {
 
       <EventosListaPublica
         initialEventos={eventosIniciais}
+        fetchInicialOk={fetchInicialOk}
         initialCategoria={categoriaInicial}
         initialBusca={buscaInicial}
         initialCidade={cidadeInicial}
@@ -97,7 +101,7 @@ export default async function EventosListPage({ searchParams }: PageProps) {
       <div className="mx-auto mt-16 max-w-3xl text-center sm:mt-20">
         <p className="text-sm text-zinc-600">Organiza eventos?</p>
         <div className="mt-4 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
-          <Link href={hrefCriarEvento} className="btn-success px-6 py-3 text-base shadow-sm">
+          <Link href={criarHref} className="btn-success px-6 py-3 text-base shadow-sm">
             Publicar evento
           </Link>
           <Link href="/planos" className="btn-outline px-6 py-3 text-base shadow-sm">

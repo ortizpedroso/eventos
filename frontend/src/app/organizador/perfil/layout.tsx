@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
 
+import { PerfilTabs } from "@/components/perfil-tabs";
+
 export default function OrganizadorPerfilLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return (
+    <div className="space-y-4 textos-justificados">
+      <PerfilTabs base="/organizador/perfil" />
+      <div className="min-h-[50vh]">{children}</div>
+    </div>
+  );
 }
