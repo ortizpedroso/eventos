@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventoCardVitrine } from "@/components/evento-card-vitrine";
 import { EventoCategoriasChips } from "@/components/evento-categorias-chips";
 import { apiFetch } from "@/lib/api";
-import { hrefCriarEvento } from "@/lib/criar-evento-routes";
+import { CriarEventoLink } from "@/components/criar-evento-link";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { EVENTO_CATEGORIAS, categoriaFromQuery } from "@/lib/evento-categorias";
 import {
@@ -519,9 +519,9 @@ export function EventosListaPublica({
                 Ver todos os eventos
               </button>
             ) : null}
-            <Link href={hrefCriarEvento} className="btn-success px-6 py-3 text-base shadow-sm">
+            <CriarEventoLink className="btn-success px-6 py-3 text-base shadow-sm">
               Criar evento
-            </Link>
+            </CriarEventoLink>
           </div>
         </div>
       ) : null}

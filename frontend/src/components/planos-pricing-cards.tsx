@@ -6,6 +6,8 @@ import {
   formatPercentual,
 } from "@/lib/tarifas-plataforma";
 
+import { CriarEventoLink } from "@/components/criar-evento-link";
+
 function IconCheck({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -28,11 +30,10 @@ function Feature({ children }: { children: React.ReactNode }) {
 }
 
 type Props = {
-  criarContaHref: string;
   compact?: boolean;
 };
 
-export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
+export function PlanosPricingCards({ compact = false }: Props) {
   return (
     <div className={`grid grid-cols-1 gap-6 text-left lg:grid-cols-3 lg:gap-8 ${compact ? "mt-8" : "mt-12"}`}>
       <div className="card-interactive h-full rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
@@ -49,9 +50,9 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <a href={criarContaHref} className="btn-outline w-full inline-block text-center">
+            <CriarEventoLink className="btn-outline w-full inline-block text-center">
               Criar conta grátis
-            </a>
+            </CriarEventoLink>
           </div>
         ) : null}
       </div>
@@ -74,9 +75,9 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <a href={criarContaHref} className="btn-success w-full inline-block text-center text-white">
+            <CriarEventoLink className="btn-success w-full inline-block text-center text-white">
               Começar a vender
-            </a>
+            </CriarEventoLink>
           </div>
         ) : null}
       </div>
@@ -105,9 +106,9 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <a href={criarContaHref} className="btn-success w-full inline-block text-center text-white">
+            <CriarEventoLink className="btn-success w-full inline-block text-center text-white">
               Ver detalhes
-            </a>
+            </CriarEventoLink>
           </div>
         ) : null}
       </div>

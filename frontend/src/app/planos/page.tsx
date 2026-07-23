@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CriarEventoLink } from "@/components/criar-evento-link";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
 import { PlanosSimuladorComprador } from "@/components/planos-simulador-comprador";
 import { PlanosSimuladorLucro } from "@/components/planos-simulador-lucro";
-import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 
 export const metadata: Metadata = {
   title: "Planos | EventosBR",
@@ -12,8 +12,6 @@ export const metadata: Metadata = {
 };
 
 export default function PlanosPage() {
-  const criarHref = hrefCriarEvento;
-
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
@@ -28,7 +26,7 @@ export default function PlanosPage() {
 
       <div className="textos-justificados">
         <div className="mx-auto mt-16 max-w-6xl sm:mt-20">
-          <PlanosPricingCards criarContaHref={criarHref} />
+          <PlanosPricingCards />
         </div>
 
         <div className="mx-auto mt-16 max-w-6xl sm:mt-20">
@@ -53,9 +51,9 @@ export default function PlanosPage() {
         <div className="mx-auto mt-12 max-w-3xl text-center">
           <p className="text-sm text-zinc-600">Pronto para publicar seu primeiro evento?</p>
           <div className="mt-4 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
-            <Link href={criarHref} className="btn-success px-6 py-3 text-base shadow-sm">
+            <CriarEventoLink className="btn-success px-6 py-3 text-base shadow-sm">
               Criar evento
-            </Link>
+            </CriarEventoLink>
             <Link href="/eventos" className="btn-outline px-6 py-3 text-base shadow-sm">
               Ver eventos
             </Link>

@@ -96,6 +96,18 @@ test.describe("Checkout — copy de pagamento", () => {
     expect(opacidade).toBeGreaterThan(0.9);
   });
 
+  test("planos: CTA do plano navega sem reload completo", async ({ page }) => {
+    await page.goto("/planos");
+    await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).toBeVisible();
+
+    const navPromise = page.waitForEvent("framenavigated");
+    await page.getByRole("link", { name: "Criar conta grátis" }).click();
+    await navPromise;
+
+    await expect(page).toHaveURL(/\/auth\?.*mode=register/);
+    await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).not.toBeVisible();
+  });
+
   test("home menciona transparência de taxas", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText(/taxas|PIX/i).first()).toBeVisible();

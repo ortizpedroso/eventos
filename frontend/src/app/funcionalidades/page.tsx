@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-routes";
+
+import { CriarEventoLink } from "@/components/criar-evento-link";
 
 export const metadata: Metadata = {
   title: "Funcionalidades | EventosBR",
@@ -324,9 +325,9 @@ export default function FuncionalidadesPage() {
           <Link href="/planos" className="btn-outline px-6 py-3 text-base shadow-sm">
             Ver planos
           </Link>
-          <Link href={authHrefRegisterOrganizadorParaCriarEvento()} className="btn-success px-6 py-3 text-base shadow-sm">
+          <CriarEventoLink className="btn-success px-6 py-3 text-base shadow-sm">
             Criar conta
-          </Link>
+          </CriarEventoLink>
         </div>
       </div>
     </div>

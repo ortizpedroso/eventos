@@ -9,8 +9,8 @@ import { HomeEventosDestaque } from "@/components/home-eventos-destaque";
 import { HomeHeroVisual } from "@/components/home-hero-visual";
 import { HomeProvaSocial } from "@/components/home-prova-social";
 import { HomeSelosConfianca } from "@/components/home-selos-confianca";
+import { CriarEventoLink } from "@/components/criar-evento-link";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
-import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { eventosDestaqueHome, fetchEventosPublicos } from "@/lib/eventos-publicos";
 import { homeMetadata } from "@/lib/site-metadata";
@@ -39,8 +39,6 @@ async function HomeEventosDinamicos() {
 }
 
 export default function Home() {
-  const criarHref = hrefCriarEvento;
-
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
       <div className="mx-auto max-w-3xl text-center">
@@ -68,9 +66,9 @@ export default function Home() {
           <Link href="/eventos" className="btn-success px-8 py-3.5 text-base shadow-sm">
             Explorar eventos
           </Link>
-          <Link href={criarHref} className="btn-outline px-8 py-3.5 text-base shadow-sm">
+          <CriarEventoLink className="btn-outline px-8 py-3.5 text-base shadow-sm">
             Organizar um evento
-          </Link>
+          </CriarEventoLink>
         </div>
       </div>
 
@@ -94,7 +92,7 @@ export default function Home() {
             Ver detalhes em Planos →
           </Link>
         </div>
-        <PlanosPricingCards criarContaHref={criarHref} />
+        <PlanosPricingCards />
       </div>
 
       <div className="mx-auto mt-16 max-w-3xl sm:mt-20">

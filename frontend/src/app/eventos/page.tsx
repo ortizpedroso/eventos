@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { hrefCriarEvento } from "@/lib/criar-evento-routes";
+import { CriarEventoLink } from "@/components/criar-evento-link";
 import { categoriaFromQuery } from "@/lib/evento-categorias";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { fetchEventosPublicos } from "@/lib/eventos-publicos";
@@ -46,7 +46,6 @@ export default async function EventosListPage({ searchParams }: PageProps) {
   const cidadeInicial = sp.cidade?.trim() ?? "";
   const deInicial = sp.de?.trim() ?? "";
   const ateInicial = sp.ate?.trim() ?? "";
-  const criarHref = hrefCriarEvento;
 
   let eventosIniciais: Awaited<ReturnType<typeof filtrarEventosVitrine>> = [];
   let fetchInicialOk = true;
@@ -101,9 +100,9 @@ export default async function EventosListPage({ searchParams }: PageProps) {
       <div className="mx-auto mt-16 max-w-3xl text-center sm:mt-20">
         <p className="text-sm text-zinc-600">Organiza eventos?</p>
         <div className="mt-4 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
-          <Link href={criarHref} className="btn-success px-6 py-3 text-base shadow-sm">
+          <CriarEventoLink className="btn-success px-6 py-3 text-base shadow-sm">
             Publicar evento
-          </Link>
+          </CriarEventoLink>
           <Link href="/planos" className="btn-outline px-6 py-3 text-base shadow-sm">
             Ver planos
           </Link>

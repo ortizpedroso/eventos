@@ -5,10 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { NavbarCategoriasMenu } from "@/components/navbar-categorias-menu";
+import { CriarEventoLink } from "@/components/criar-evento-link";
 import { EventosBRLogo } from "@/components/eventosbr-logo";
 import { fetchSession, logoutSession, peekSessionCache } from "@/lib/api";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
-import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 
 function UserIcon({ className }: { className?: string }) {
   return (
@@ -268,13 +268,12 @@ export function Navbar() {
               </Link>
             )}
             {!loggedIn || userTipo !== "cliente" ? (
-              <Link
-                href={hrefCriarEvento}
+              <CriarEventoLink
                 className="btn-success shrink-0 whitespace-nowrap px-3 py-2 text-xs shadow-sm sm:px-4 sm:text-sm"
               >
                 <span className="sm:hidden">Criar</span>
                 <span className="hidden sm:inline">Crie um evento</span>
-              </Link>
+              </CriarEventoLink>
             ) : null}
           </div>
         </div>
