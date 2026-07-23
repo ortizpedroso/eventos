@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function SobrePage() {
   return (
-    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
+    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16" data-mobile-justify>
       {/* Hero Section */}
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
         <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
@@ -40,10 +40,10 @@ export default function SobrePage() {
             </div>
             <div className="flex-1 lg:max-w-xl">
               <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">A nossa proposta</h2>
-              <p className="mt-6 text-lg leading-relaxed text-zinc-600 text-justify">
+              <p className="mt-6 text-lg leading-relaxed text-zinc-600">
                 Acreditamos que organizar um evento não deve ser um pesadelo logístico. Queremos reduzir fricção: oferecemos formulários claros, uma página pública otimizada para conversão, pagamentos seguros e regras de cancelamento flexíveis.
               </p>
-              <p className="mt-4 text-lg leading-relaxed text-zinc-600 text-justify">
+              <p className="mt-4 text-lg leading-relaxed text-zinc-600">
                 O nosso objetivo é devolver o seu tempo. Menos horas lidando com burocracias ou conciliações financeiras, e mais tempo para focar no conteúdo, na experiência e na energia do seu público.
               </p>
             </div>
@@ -64,7 +64,7 @@ export default function SobrePage() {
                 </svg>
               </div>
               <h3 className="mt-5 text-lg font-semibold text-zinc-900">Produtores</h3>
-              <p className="mt-2 text-justify text-sm leading-relaxed text-zinc-600">
+              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
                 Organizadores de shows, festivais, torneios esportivos e feijoadas que buscam autonomia, repasses rápidos e taxas transparentes.
               </p>
             </div>
@@ -78,7 +78,7 @@ export default function SobrePage() {
                 </svg>
               </div>
               <h3 className="mt-5 text-lg font-semibold text-zinc-900">Participantes</h3>
-              <p className="mt-2 text-justify text-sm leading-relaxed text-zinc-600">
+              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
                 O seu público final, que exige uma experiência mobile fluida, rapidez no pagamento via PIX ou cartão e máxima segurança nos dados.
               </p>
             </div>
@@ -92,7 +92,7 @@ export default function SobrePage() {
                 </svg>
               </div>
               <h3 className="mt-5 text-lg font-semibold text-zinc-900">Equipes Tech</h3>
-              <p className="mt-2 text-justify text-sm leading-relaxed text-zinc-600">
+              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
                 Desenvolvedores e agências que valorizam uma API bem documentada (OpenAPI) e uma stack moderna para realizar integrações customizadas.
               </p>
             </div>
@@ -107,10 +107,10 @@ export default function SobrePage() {
             
             <div className="relative z-10 lg:max-w-2xl">
               <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Tecnologia de alto tráfego</h2>
-              <p className="mt-6 text-lg leading-relaxed text-zinc-300 text-justify">
+              <p className="mt-6 text-lg leading-relaxed text-zinc-300">
                 Construída para não te deixar na mão no momento da virada de lote. O nosso painel web é desenvolvido em <strong className="text-emerald-400 font-semibold">Next.js e TypeScript</strong> para velocidade máxima. A API roda em <strong className="text-emerald-400 font-semibold">FastAPI</strong> (Python), com arquitetura escalável e pronta para alta concorrência.
               </p>
-              <p className="mt-4 text-lg leading-relaxed text-zinc-300 text-justify">
+              <p className="mt-4 text-lg leading-relaxed text-zinc-300">
                 Pagamentos e reembolsos passam por um ecossistema financeiro externo robusto, garantindo estabilidade bancária e segurança antifraude global em cada transação processada.
               </p>
             </div>

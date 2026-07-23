@@ -211,7 +211,7 @@ const outrosRecursos = [
 
 export default function FuncionalidadesPage() {
   return (
-    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
+    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16" data-mobile-justify>
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
           Tudo o que você precisa para <span className="text-emerald-700">fazer acontecer.</span>
@@ -255,7 +255,7 @@ export default function FuncionalidadesPage() {
                     <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">
                       {item.titulo}
                     </h2>
-                    <p className="mt-4 text-lg text-zinc-600 text-justify">
+                    <p className="mt-4 text-lg text-zinc-600">
                       {item.texto}
                     </p>
                     <ul className="mt-8 space-y-4 text-zinc-600">
@@ -297,7 +297,7 @@ export default function FuncionalidadesPage() {
                 {icones[b.icone]}
                 <h2 className="text-lg font-semibold leading-tight text-zinc-900">{b.titulo}</h2>
               </div>
-              <p className="mt-4 text-justify text-sm leading-6 text-zinc-600">{b.texto}</p>
+              <p className="mt-4 text-sm leading-6 text-zinc-600">{b.texto}</p>
             </div>
             </div>
           ))}
@@ -310,7 +310,7 @@ export default function FuncionalidadesPage() {
               {icones.resumo}
               <h2 className="text-lg font-semibold leading-tight text-emerald-700">Resumo</h2>
             </div>
-            <p className="mt-3 text-justify text-sm leading-6 text-zinc-600">
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
               O EventosBR concentra criação de eventos, venda de ingressos, cobrança automatizada 
               e tratamento de cancelamentos em um fluxo único — ideal para quem quer menos planilha 
               e mais tempo focando em produzir a experiência ao vivo.

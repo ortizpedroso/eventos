@@ -57,8 +57,12 @@ test.describe("Patamar UX — vitrine e navbar", () => {
 
   test("filtro Este fim de semana na vitrine", async ({ page }) => {
     await page.goto("/eventos", { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Este fim de semana" }).click();
-    await expect(page).toHaveURL(/de=/);
+    const btn = page.getByRole("button", { name: "Este fim de semana" });
+    await btn.click();
+    await expect(btn).toHaveClass(/bg-emerald-700/);
+    await expect
+      .poll(async () => page.evaluate(() => window.location.search))
+      .toMatch(/de=/);
   });
 
   test("seletor de intervalo de datas na vitrine", async ({ page }) => {
@@ -69,8 +73,12 @@ test.describe("Patamar UX — vitrine e navbar", () => {
     await page.getByTestId("filtro-data-ate").fill("2026-12-31");
     await expect(page.getByTestId("filtro-data-de")).toHaveValue("2026-12-01");
     await page.getByTestId("filtro-data-aplicar").click();
-    await expect(page).toHaveURL(/de=/);
-    await expect(page).toHaveURL(/ate=/);
+    await expect
+      .poll(async () => page.evaluate(() => window.location.search))
+      .toMatch(/de=/);
+    await expect
+      .poll(async () => page.evaluate(() => window.location.search))
+      .toMatch(/ate=/);
   });
 });
 

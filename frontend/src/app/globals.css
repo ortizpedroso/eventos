@@ -53,6 +53,86 @@ body > footer {
 }
 
 @layer components {
+  /* Prosa para Central de Ajuda, Blog e páginas longas */
+  .content-prose {
+    color: #3f3f46;
+    line-height: 1.75;
+  }
+
+  .content-prose h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #18181b;
+    margin-bottom: 1rem;
+  }
+
+  .content-prose h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #18181b;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .content-prose p {
+    margin-top: 1rem;
+    margin-bottom: 0;
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    color: #52525b;
+  }
+
+  .content-prose ol {
+    margin-top: 1rem;
+    margin-left: 1.25rem;
+    list-style: decimal;
+  }
+
+  .content-prose ul {
+    margin-top: 1rem;
+    margin-left: 1.25rem;
+    list-style: disc;
+  }
+
+  .content-prose li {
+    margin-top: 0.5rem;
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    color: #52525b;
+  }
+
+  .content-prose a {
+    font-weight: 500;
+    color: #065f46;
+    text-underline-offset: 2px;
+  }
+
+  .content-prose a:hover {
+    text-decoration: underline;
+  }
+
+  .content-prose strong {
+    font-weight: 600;
+    color: #18181b;
+  }
+}
+
+/* Parágrafos justificados no mobile (conteúdo legível); títulos centralizados preservados */
+@media (max-width: 639px) {
+  main#conteudo-principal .content-prose p,
+  main#conteudo-principal .content-prose li,
+  main#conteudo-principal [data-mobile-justify] p,
+  main#conteudo-principal [data-mobile-justify] li {
+    text-align: justify;
+  }
+
+  main#conteudo-principal .text-center p,
+  main#conteudo-principal .text-center li {
+    text-align: center;
+  }
+}
+
+@layer components {
   /* Hover discreto em cards de preço — sem animação de entrada */
   .card-interactive {
     transition:

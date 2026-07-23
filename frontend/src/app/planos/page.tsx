@@ -15,7 +15,7 @@ export default function PlanosPage() {
   const criarHref = hrefCriarEvento;
 
   return (
-    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 [&_li]:text-justify [&_p]:text-justify">
+    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16" data-mobile-justify>
       <div className="mx-auto max-w-3xl">
         <h1 className="text-center text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
           Planos para cada tipo de <span className="text-emerald-700">evento.</span>
@@ -40,7 +40,7 @@ export default function PlanosPage() {
       <div className="mx-auto mt-16 max-w-3xl sm:mt-20">
         <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
           <h2 className="text-lg font-semibold text-emerald-700">Como funcionam as taxas</h2>
-          <p className="mt-3 text-justify text-sm leading-6 text-zinc-600">
+          <p className="mt-3 text-sm leading-6 text-zinc-600">
             No plano de eventos pagos sem assinatura, a taxa percentual e o valor fixo por ingresso são a única taxa
             cobrada — fixa para você e para o organizador, independente do meio de pagamento. No parcelamento, o
             comprador vê um acréscimo explícito; sua taxa e o líquido do organizador não mudam.
