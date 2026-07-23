@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EventoCardVitrine } from "@/components/evento-card-vitrine";
 import { EventoCategoriasChips } from "@/components/evento-categorias-chips";
 import { apiFetch } from "@/lib/api";
 import { hrefCriarEvento } from "@/lib/criar-evento-routes";
-import { replaceUrlShallow } from "@/lib/shallow-url";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { EVENTO_CATEGORIAS, categoriaFromQuery } from "@/lib/evento-categorias";
 import {
@@ -46,6 +45,7 @@ export function EventosListaPublica({
   initialDe = "",
   initialAte = "",
 }: Props) {
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -59,40 +59,20 @@ export function EventosListaPublica({
   const [cidadesOpcoes, setCidadesOpcoes] = useState<{ cidade: string; total: number }[]>([]);
   const [somenteVendasAbertas, setSomenteVendasAbertas] = useState(false);
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("data_asc");
-  const [filtroData, setFiltroData] = useState<FiltroDataPreset>(() =>
-    presetFromDeAte(initialDe, initialAte),
-  );
-  const [dataDe, setDataDe] = useState(() => {
-    const preset = presetFromDeAte(initialDe, initialAte);
-    if (preset === "" && initialDe && initialAte) return isoToDateInputValue(initialDe);
-    return "";
-  });
-  const [dataAte, setDataAte] = useState(() => {
-    const preset = presetFromDeAte(initialDe, initialAte);
-    if (preset === "" && initialDe && initialAte) return isoToDateInputValue(initialAte);
-    return "";
-  });
+  const [filtroData, setFiltroData] = useState<FiltroDataPreset>("");
+  const [dataDe, setDataDe] = useState("");
+  const [dataAte, setDataAte] = useState("");
   const [erroIntervalo, setErroIntervalo] = useState<string | null>(null);
 
+  // Refs com valores correntes para evitar closures desatualizadas no debounce
   const categoriaRef = useRef(categoria);
   categoriaRef.current = categoria;
   const cidadeRef = useRef(cidade);
   cidadeRef.current = cidade;
   const buscaDebouncedRef = useRef(buscaDebounced);
   buscaDebouncedRef.current = buscaDebounced;
-  const filtroDataRef = useRef(filtroData);
-  filtroDataRef.current = filtroData;
-  const dataDeRef = useRef(dataDe);
-  dataDeRef.current = dataDe;
-  const dataAteRef = useRef(dataAte);
-  dataAteRef.current = dataAte;
   const pulouFetchInicialRef = useRef(false);
   const primeiraSincronizacaoBuscaRef = useRef(true);
-  const ultimoSearchParamsRef = useRef<string | null>(null);
-
-  const syncUrl = useCallback((url: string) => {
-    replaceUrlShallow(url);
-  }, []);
 
   const buildUrl = useCallback(
     (overrides: {
@@ -106,9 +86,9 @@ export function EventosListaPublica({
       const cat = overrides.categoria !== undefined ? overrides.categoria : categoriaRef.current;
       const cid = overrides.cidade !== undefined ? overrides.cidade : cidadeRef.current;
       const q = overrides.busca !== undefined ? overrides.busca : buscaDebouncedRef.current;
-      const fd = overrides.filtroData !== undefined ? overrides.filtroData : filtroDataRef.current;
-      const deInput = overrides.dataDe !== undefined ? overrides.dataDe : dataDeRef.current;
-      const ateInput = overrides.dataAte !== undefined ? overrides.dataAte : dataAteRef.current;
+      const fd = overrides.filtroData !== undefined ? overrides.filtroData : filtroData;
+      const deInput = overrides.dataDe !== undefined ? overrides.dataDe : dataDe;
+      const ateInput = overrides.dataAte !== undefined ? overrides.dataAte : dataAte;
       const params = new URLSearchParams();
       if (cat) params.set("categoria", cat);
       if (q.trim()) params.set("q", q.trim());
@@ -127,77 +107,45 @@ export function EventosListaPublica({
       const qs = params.toString();
       return qs ? `${pathname}?${qs}` : pathname;
     },
-    [pathname],
+    [pathname, filtroData, dataDe, dataAte],
   );
-
-  const intervaloApi = useMemo(() => {
-    if (dataDe.trim() && dataAte.trim() && !filtroData) {
-      return dateInputToIntervalo(dataDe, dataAte);
-    }
-    if (filtroData) {
-      return intervaloFiltroData(filtroData);
-    }
-    return {};
-  }, [filtroData, dataDe, dataAte]);
-
-  const intervaloCustomAtivo = useMemo(() => {
-    if (filtroData) return false;
-    if (!dataDe.trim() || !dataAte.trim()) return false;
-    const custom = dateInputToIntervalo(dataDe, dataAte);
-    if (!custom.de || !custom.ate) return false;
-    return ehIntervaloCustomizado(custom.de, custom.ate);
-  }, [filtroData, dataDe, dataAte]);
 
   const atualizarCategoria = useCallback(
     (nova: string) => {
       setCategoria(nova);
       categoriaRef.current = nova;
-      syncUrl(buildUrl({ categoria: nova }));
+      router.replace(buildUrl({ categoria: nova }), { scroll: false });
     },
-    [buildUrl, syncUrl],
+    [buildUrl, router],
   );
 
   const atualizarCidade = useCallback(
     (nova: string) => {
       setCidade(nova);
       cidadeRef.current = nova;
-      syncUrl(buildUrl({ cidade: nova }));
+      router.replace(buildUrl({ cidade: nova }), { scroll: false });
     },
-    [buildUrl, syncUrl],
+    [buildUrl, router],
   );
 
   useEffect(() => {
-    const qs = searchParams.toString();
-    if (ultimoSearchParamsRef.current === qs) return;
-    ultimoSearchParamsRef.current = qs;
-
     const daUrl = categoriaFromQuery(searchParams.get("categoria"));
     setCategoria((atual) => (atual === daUrl ? atual : daUrl));
-    categoriaRef.current = daUrl;
     const qUrl = buscaFromQuery(searchParams.get("q"));
     setBusca((atual) => (atual === qUrl ? atual : qUrl));
     setBuscaDebounced((atual) => (atual === qUrl ? atual : qUrl));
-    buscaDebouncedRef.current = qUrl;
     const cUrl = searchParams.get("cidade")?.trim() ?? "";
     setCidade((atual) => (atual === cUrl ? atual : cUrl));
-    cidadeRef.current = cUrl;
     const deUrl = searchParams.get("de")?.trim() ?? "";
     const ateUrl = searchParams.get("ate")?.trim() ?? "";
     const preset = presetFromDeAte(deUrl, ateUrl);
     setFiltroData(preset);
-    filtroDataRef.current = preset;
     if (preset === "" && deUrl && ateUrl) {
-      const deInput = isoToDateInputValue(deUrl);
-      const ateInput = isoToDateInputValue(ateUrl);
-      setDataDe(deInput);
-      setDataAte(ateInput);
-      dataDeRef.current = deInput;
-      dataAteRef.current = ateInput;
+      setDataDe(isoToDateInputValue(deUrl));
+      setDataAte(isoToDateInputValue(ateUrl));
     } else if (preset !== "") {
       setDataDe("");
       setDataAte("");
-      dataDeRef.current = "";
-      dataAteRef.current = "";
     }
   }, [searchParams]);
 
@@ -213,37 +161,15 @@ export function EventosListaPublica({
     }
     setErroIntervalo(null);
     setFiltroData("");
-    filtroDataRef.current = "";
-    syncUrl(buildUrl({ filtroData: "", dataDe, dataAte }));
+    router.replace(buildUrl({ filtroData: "", dataDe, dataAte }), { scroll: false });
   }
 
   function limparIntervaloCustom() {
     setDataDe("");
     setDataAte("");
-    dataDeRef.current = "";
-    dataAteRef.current = "";
     setErroIntervalo(null);
     setFiltroData("");
-    filtroDataRef.current = "";
-    syncUrl(buildUrl({ filtroData: "", dataDe: "", dataAte: "" }));
-  }
-
-  function limparTodosFiltros() {
-    setBusca("");
-    setBuscaDebounced("");
-    buscaDebouncedRef.current = "";
-    setCategoria("");
-    categoriaRef.current = "";
-    setCidade("");
-    cidadeRef.current = "";
-    setFiltroData("");
-    filtroDataRef.current = "";
-    setDataDe("");
-    setDataAte("");
-    dataDeRef.current = "";
-    dataAteRef.current = "";
-    setErroIntervalo(null);
-    syncUrl(pathname);
+    router.replace(buildUrl({ filtroData: "", dataDe: "", dataAte: "" }), { scroll: false });
   }
 
   useEffect(() => {
@@ -257,6 +183,7 @@ export function EventosListaPublica({
     })();
   }, []);
 
+  // Debounce da busca: atualiza estado E URL após 400 ms de pausa
   useEffect(() => {
     const id = window.setTimeout(() => {
       const trimmed = busca.trim();
@@ -265,21 +192,21 @@ export function EventosListaPublica({
         primeiraSincronizacaoBuscaRef.current = false;
         if (trimmed === initialBusca.trim()) return;
       }
-      syncUrl(buildUrl({ busca: trimmed }));
+      router.replace(buildUrl({ busca: trimmed }), { scroll: false });
     }, 400);
     return () => window.clearTimeout(id);
-  }, [busca, buildUrl, syncUrl, initialBusca]);
+  }, [busca, buildUrl, router, initialBusca]);
 
   useEffect(() => {
-    const deApi = intervaloApi.de?.trim() ?? "";
-    const ateApi = intervaloApi.ate?.trim() ?? "";
+    const deUrl = searchParams.get("de")?.trim() ?? "";
+    const ateUrl = searchParams.get("ate")?.trim() ?? "";
     const paramsCoincidemComServidor =
       fetchInicialOk &&
       buscaDebounced === initialBusca.trim() &&
       categoria === initialCategoria &&
       cidade.trim() === initialCidade.trim() &&
-      deApi === initialDe.trim() &&
-      ateApi === initialAte.trim();
+      deUrl === initialDe.trim() &&
+      ateUrl === initialAte.trim();
 
     if (!pulouFetchInicialRef.current && paramsCoincidemComServidor) {
       pulouFetchInicialRef.current = true;
@@ -294,9 +221,13 @@ export function EventosListaPublica({
         if (buscaDebounced) params.set("q", buscaDebounced);
         if (categoria) params.set("categoria", categoria);
         if (cidade.trim()) params.set("cidade", cidade.trim());
-        if (deApi && ateApi) {
-          params.set("de", deApi);
-          params.set("ate", ateApi);
+        if (deUrl && ateUrl) {
+          params.set("de", deUrl);
+          params.set("ate", ateUrl);
+        } else {
+          const { de, ate } = intervaloFiltroData(filtroData);
+          if (de) params.set("de", de);
+          if (ate) params.set("ate", ate);
         }
         const data = await apiFetch<Evento[]>(`/api/eventos?${params.toString()}`, {
           cache: "no-store",
@@ -316,7 +247,8 @@ export function EventosListaPublica({
     buscaDebounced,
     categoria,
     cidade,
-    intervaloApi,
+    filtroData,
+    searchParams,
     initialEventos,
     fetchInicialOk,
     initialBusca,
@@ -341,8 +273,10 @@ export function EventosListaPublica({
     return lista;
   }, [eventos, somenteVendasAbertas, ordenacao]);
 
-  const temFiltro = Boolean(
-    categoria || buscaDebounced || cidade.trim() || filtroData || intervaloCustomAtivo,
+  const temFiltro = Boolean(categoria || buscaDebounced || cidade.trim() || filtroData || dataDe || dataAte);
+  const intervaloCustomAtivo = ehIntervaloCustomizado(
+    searchParams.get("de"),
+    searchParams.get("ate"),
   );
 
   return (
@@ -376,13 +310,10 @@ export function EventosListaPublica({
               type="button"
               onClick={() => {
                 setFiltroData(val);
-                filtroDataRef.current = val;
                 setDataDe("");
                 setDataAte("");
-                dataDeRef.current = "";
-                dataAteRef.current = "";
                 setErroIntervalo(null);
-                syncUrl(buildUrl({ filtroData: val, dataDe: "", dataAte: "" }));
+                router.replace(buildUrl({ filtroData: val, dataDe: "", dataAte: "" }), { scroll: false });
               }}
               className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                 val === ""
@@ -528,7 +459,16 @@ export function EventosListaPublica({
           {" · "}
           <button
             type="button"
-            onClick={limparTodosFiltros}
+            onClick={() => {
+              setBusca("");
+              setBuscaDebounced("");
+              buscaDebouncedRef.current = "";
+              setCategoria("");
+              categoriaRef.current = "";
+              setCidade("");
+              cidadeRef.current = "";
+              router.replace(pathname, { scroll: false });
+            }}
             className="font-medium text-emerald-800 underline-offset-2 hover:underline"
           >
             Limpar filtros
@@ -564,7 +504,16 @@ export function EventosListaPublica({
             {temFiltro ? (
               <button
                 type="button"
-                onClick={limparTodosFiltros}
+                onClick={() => {
+                  setBusca("");
+                  setBuscaDebounced("");
+                  buscaDebouncedRef.current = "";
+                  setCategoria("");
+                  categoriaRef.current = "";
+                  setCidade("");
+                  cidadeRef.current = "";
+                  router.replace(pathname, { scroll: false });
+                }}
                 className="btn-outline px-6 py-3 text-base shadow-sm"
               >
                 Ver todos os eventos

@@ -1,25 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
 import { ListaSkeleton } from "@/components/lista-skeleton";
-import { PerfilTabs } from "@/components/perfil-tabs";
 import { apiFetch } from "@/lib/api";
 import { urlPosCompraEvento } from "@/lib/checkout-return";
+import { CONTA_CACHE_KEYS, readContaCache, writeContaCache } from "@/lib/conta-session-cache";
 import { classeBadgeStatus, labelStatusIngresso } from "@/lib/ingresso-status";
 import type { PagamentoListItem } from "@/lib/types";
 
-export function PagamentosClient() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const ok = searchParams.get("ok");
-  const ingressoParam = searchParams.get("ingresso");
+type Props = {
+  okParam?: string | null;
+  ingressoParam?: string | null;
+};
 
-  const [items, setItems] = useState<PagamentoListItem[] | null>(null);
+export function PagamentosClient({ okParam = null, ingressoParam = null }: Props) {
+  const router = useRouter();
+  const ok = okParam;
+  const ingresso = ingressoParam;
+
+  const [items, setItems] = useState<PagamentoListItem[] | null>(() =>
+    readContaCache<PagamentoListItem[]>(CONTA_CACHE_KEYS.pagamentos) ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [cancelMsg, setCancelMsg] = useState<string | null>(null);
 
@@ -30,6 +35,7 @@ export function PagamentosClient() {
         cache: "no-store",
       });
       setItems(data);
+      writeContaCache(CONTA_CACHE_KEYS.pagamentos, data);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Não foi possível carregar pagamentos",
@@ -43,16 +49,16 @@ export function PagamentosClient() {
 
   const destaque = useMemo(
     () =>
-      items && ingressoParam
-        ? items.find((i) => i.id === ingressoParam)
+      items && ingresso
+        ? items.find((i) => i.id === ingresso)
         : undefined,
-    [items, ingressoParam],
+    [items, ingresso],
   );
 
   useEffect(() => {
-    if (ok !== "1" || !ingressoParam || !destaque?.evento.slug) return;
-    router.replace(urlPosCompraEvento(destaque.evento.slug, ingressoParam));
-  }, [ok, ingressoParam, destaque?.evento.slug, router]);
+    if (ok !== "1" || !ingresso || !destaque?.evento.slug) return;
+    router.replace(urlPosCompraEvento(destaque.evento.slug, ingresso));
+  }, [ok, ingresso, destaque?.evento.slug, router]);
 
   async function cancelar(ingressoId: string) {
     const ok = window.confirm(
@@ -89,8 +95,6 @@ export function PagamentosClient() {
         </Link>
       </div>
 
-      {pathname.startsWith("/organizador") ? <PerfilTabs base="/organizador/perfil" /> : null}
-
       {pendentes.length > 0 ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
           <p className="font-semibold text-amber-950">
@@ -120,18 +124,18 @@ export function PagamentosClient() {
         </div>
       ) : null}
 
-      {ok && ingressoParam && destaque?.evento.slug ? (
+      {ok && ingresso && destaque?.evento.slug ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
           Pagamento confirmado! Redirecionando para seu ingresso…
         </div>
       ) : null}
 
-      {ok && (!ingressoParam || !destaque?.evento.slug) ? (
+      {ok && (!ingresso || !destaque?.evento.slug) ? (
         <div className="space-y-3">
           <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
             Pagamento recebido! Seu ingresso será confirmado em instantes.{" "}
-            {ingressoParam ? (
-              <Link href={`/conta/ingressos/${ingressoParam}`} className="font-medium underline">
+            {ingresso ? (
+              <Link href={`/conta/ingressos/${ingresso}`} className="font-medium underline">
                 Ver ingresso e QR Code
               </Link>
             ) : (
