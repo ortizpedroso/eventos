@@ -224,7 +224,9 @@ export function OrganizadorFinanceiroClient() {
         planoTarifa: plano,
       });
     } catch (e) {
-      setData(null);
+      if (!readOrganizadorCache(ORGANIZADOR_CACHE_KEYS.financeiro)) {
+        setData(null);
+      }
       setError(e instanceof Error ? e.message : "Não foi possível carregar o resumo financeiro.");
     }
   }, []);

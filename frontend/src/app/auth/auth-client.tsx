@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
 import type { TokenResponse } from "@/lib/types";
 import { apiFetch, fetchSession } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
-import { readAuthSearchParams, resolveAuthMode } from "@/lib/auth-search-params";
-import { hasAuthCookie } from "@/lib/has-auth-cookie";
-import { onlyDigits } from "@/lib/cpf";
-import { formatTelefoneBrMask } from "@/lib/telefone-br";
+import {
+  readAuthSearchParams,
+  resolveAuthMode,
+  useAuthSearchParams,
+  type AuthSearchParams,
+} from "@/lib/auth-search-params";
 import {
   authHrefPrecisaContaOrganizador,
   CRIAR_EVENTO_DESTINO,
@@ -20,9 +22,12 @@ import {
   isSafeInternalNext,
   nextRequerContaOrganizador,
 } from "@/lib/criar-evento-routes";
+import { onlyDigits } from "@/lib/cpf";
+import { formatTelefoneBrMask } from "@/lib/telefone-br";
 
 export type AuthClientProps = {
   hasSessionCookie?: boolean;
+  forcarLogin?: boolean;
   resetToken?: string;
   modeParam?: string;
   fluxoOrganizador?: boolean;
@@ -32,7 +37,7 @@ export type AuthClientProps = {
   nextParam?: string;
 };
 
-function serverAuthQuery(props: AuthClientProps): string {
+function serverAuthQuery(props: AuthClientProps): AuthSearchParams {
   const sp = new URLSearchParams();
   if (props.resetToken) sp.set("reset", props.resetToken);
   if (props.modeParam) sp.set("mode", props.modeParam);
@@ -41,17 +46,16 @@ function serverAuthQuery(props: AuthClientProps): string {
   if (props.sessaoExpirada) sp.set("expirado", "1");
   if (props.tipoParam) sp.set("tipo", props.tipoParam);
   if (props.nextParam) sp.set("next", props.nextParam);
-  return sp.toString();
+  if (props.forcarLogin) sp.set("login", "1");
+  return readAuthSearchParams(sp.toString());
 }
 
 export default function AuthClient(serverProps: AuthClientProps) {
   const router = useRouter();
-  const { hasSessionCookie = false } = serverProps;
+  const { hasSessionCookie = false, forcarLogin = false } = serverProps;
 
-  const params =
-    typeof window !== "undefined"
-      ? readAuthSearchParams()
-      : readAuthSearchParams(serverAuthQuery(serverProps));
+  const serverFallback = useMemo(() => serverAuthQuery(serverProps), [serverProps]);
+  const params = useAuthSearchParams(serverFallback);
 
   const {
     resetToken,
@@ -73,7 +77,9 @@ export default function AuthClient(serverProps: AuthClientProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const [aguardandoRedirect, setAguardandoRedirect] = useState(false);
+  const [aguardandoRedirect, setAguardandoRedirect] = useState(
+    () => hasSessionCookie && !forcarLogin,
+  );
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
@@ -85,14 +91,8 @@ export default function AuthClient(serverProps: AuthClientProps) {
     [router],
   );
 
-  useLayoutEffect(() => {
-    if (!hasSessionCookie && !hasAuthCookie()) {
-      document.querySelector("form[data-auth-form]")?.setAttribute("data-auth-ready", "true");
-    }
-  }, [hasSessionCookie]);
-
   useEffect(() => {
-    if (!hasSessionCookie && !hasAuthCookie()) {
+    if (!hasSessionCookie) {
       return;
     }
 
@@ -102,16 +102,13 @@ export default function AuthClient(serverProps: AuthClientProps) {
       const u = await fetchSession();
       if (cancelled) return;
 
-      const sp = new URLSearchParams(window.location.search);
-      const forcarLogin = sp.get("login") === "1";
-      if (u && !forcarLogin) {
+      const forcar = new URLSearchParams(window.location.search).get("login") === "1";
+      if (u && !forcar) {
         setAguardandoRedirect(true);
-        redirecionar(destinoPosAuth(u, sp.get("next")));
+        redirecionar(destinoPosAuth(u, new URLSearchParams(window.location.search).get("next")));
         return;
       }
-      requestAnimationFrame(() => {
-        document.querySelector("form[data-auth-form]")?.setAttribute("data-auth-ready", "true");
-      });
+      setAguardandoRedirect(false);
     })();
 
     return () => {
@@ -245,16 +242,18 @@ export default function AuthClient(serverProps: AuthClientProps) {
 
   const formularioDesabilitado = loading || aguardandoRedirect;
 
-  if (aguardandoRedirect) {
-    return (
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12" aria-busy>
-        <p className="text-center text-sm font-medium text-zinc-600">Redirecionando…</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+    <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col">
+      {aguardandoRedirect ? (
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-white/95"
+          aria-busy
+          aria-live="polite"
+        >
+          <p className="text-center text-sm font-medium text-zinc-600">Redirecionando…</p>
+        </div>
+      ) : null}
+
       {sessaoExpirada ? (
         <div
           className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
@@ -301,8 +300,12 @@ export default function AuthClient(serverProps: AuthClientProps) {
         ) : null}
       </div>
 
-      <div className="relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-        <form data-auth-form method="post" action="#" onSubmit={handleFormSubmit} className="space-y-4">
+      <div
+        className={`relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 ${
+          aguardandoRedirect ? "pointer-events-none select-none opacity-40" : ""
+        }`}
+      >
+        <form data-auth-form data-auth-ready="true" method="post" action="#" onSubmit={handleFormSubmit} className="space-y-4">
           {infoMsg ? (
             <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
               {infoMsg}

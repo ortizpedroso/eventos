@@ -86,7 +86,9 @@ export default function OrganizadorMeusEventosPage() {
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Não foi possível carregar os eventos");
-          setItems([]);
+          if (!readOrganizadorCache<Evento[]>(ORGANIZADOR_CACHE_KEYS.eventos)) {
+            setItems([]);
+          }
         }
       }
     })();

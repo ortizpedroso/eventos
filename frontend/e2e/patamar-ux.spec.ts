@@ -114,6 +114,11 @@ test.describe("Checkout — copy de pagamento", () => {
     });
     await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
     await expect(page.locator("form[data-auth-form]")).toBeVisible();
+    // Título de cadastro estável — não alterna para login durante hidratação
+    await expect
+      .poll(async () => page.getByRole("heading", { name: "Crie sua conta" }).isVisible())
+      .toBe(true);
+    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
   });
 
   test("planos: CTA do plano navega sem reload completo", async ({ page }) => {

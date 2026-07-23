@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 /** Lê parâmetros da URL /auth no cliente — evita atraso dos props do RSC na navegação. */
 export type AuthSearchParams = {
   resetToken?: string;
@@ -32,4 +34,18 @@ export function resolveAuthMode(params: AuthSearchParams): "login" | "register" 
   if (params.modeParam === "register") return "register";
   if (params.fluxoOrganizador) return "register";
   return "login";
+}
+
+function subscribeAuthSearchParams(onStoreChange: () => void) {
+  window.addEventListener("popstate", onStoreChange);
+  return () => window.removeEventListener("popstate", onStoreChange);
+}
+
+/** Parâmetros /auth sem hydration mismatch — snapshot SSR alinhado ao cliente. */
+export function useAuthSearchParams(serverFallback: AuthSearchParams): AuthSearchParams {
+  return useSyncExternalStore(
+    subscribeAuthSearchParams,
+    () => readAuthSearchParams(),
+    () => serverFallback,
+  );
 }

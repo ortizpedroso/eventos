@@ -120,7 +120,9 @@ export function OrganizadorRelatoriosClient() {
       setData(r);
       writeOrganizadorCache(ORGANIZADOR_CACHE_KEYS.relatorios, r);
     } catch (e) {
-      setData(null);
+      if (!readOrganizadorCache(ORGANIZADOR_CACHE_KEYS.relatorios)) {
+        setData(null);
+      }
       setError(e instanceof Error ? e.message : "Não foi possível carregar os relatórios.");
     }
   }, [query]);

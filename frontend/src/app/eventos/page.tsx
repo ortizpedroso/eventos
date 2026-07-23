@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { CriarEventoLink } from "@/components/criar-evento-link";
 import { categoriaFromQuery } from "@/lib/evento-categorias";
@@ -87,15 +88,17 @@ export default async function EventosListPage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      <EventosListaPublica
-        initialEventos={eventosIniciais}
-        fetchInicialOk={fetchInicialOk}
-        initialCategoria={categoriaInicial}
-        initialBusca={buscaInicial}
-        initialCidade={cidadeInicial}
-        initialDe={deInicial}
-        initialAte={ateInicial}
-      />
+      <Suspense fallback={null}>
+        <EventosListaPublica
+          initialEventos={eventosIniciais}
+          fetchInicialOk={fetchInicialOk}
+          initialCategoria={categoriaInicial}
+          initialBusca={buscaInicial}
+          initialCidade={cidadeInicial}
+          initialDe={deInicial}
+          initialAte={ateInicial}
+        />
+      </Suspense>
 
       <div className="mx-auto mt-16 max-w-3xl text-center sm:mt-20">
         <p className="text-sm text-zinc-600">Organiza eventos?</p>

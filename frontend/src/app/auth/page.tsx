@@ -22,6 +22,7 @@ export default async function AuthPage({
   return (
     <AuthClient
       hasSessionCookie={hasSessionCookie}
+      forcarLogin={q(sp, "login") === "1"}
       resetToken={q(sp, "reset")}
       modeParam={q(sp, "mode")}
       fluxoOrganizador={q(sp, "fluxo") === "organizador"}

@@ -8,6 +8,11 @@ import { InputValorBrl } from "@/components/input-valor-brl";
 import { apiFetch } from "@/lib/api";
 import { formatCepMask } from "@/lib/cep";
 import { formatCpfCnpjMask, formatCpfMask, onlyDigits } from "@/lib/cpf";
+import {
+  ORGANIZADOR_CACHE_KEYS,
+  readOrganizadorCache,
+  writeOrganizadorCache,
+} from "@/lib/organizador-session-cache";
 import { formatTelefoneBrMask } from "@/lib/telefone-br";
 import { moedaBrlFromNumber } from "@/lib/moeda-brl";
 import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
@@ -114,6 +119,17 @@ type GrupoVendas = {
 
 type Agrupamento = "dia" | "semana" | "mes" | "ano" | "evento";
 
+type RepassesCache = {
+  status: RepasseStatus;
+  saldo: Saldo;
+  movimentos: Movimento[];
+  extratoOffset: number;
+  extratoTotal: number;
+  anticipacao: boolean | null;
+  gruposVendas: GrupoVendas[];
+  conciliacao: Conciliacao | null;
+};
+
 const AGRUPAMENTOS: { id: Agrupamento; rotulo: string }[] = [
   { id: "dia", rotulo: "Dia" },
   { id: "semana", rotulo: "Semana" },
@@ -153,15 +169,16 @@ function rotuloStatusSaque(status: string) {
 export function OrganizadorRepassesPainel() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<RepasseStatus | null>(null);
-  const [saldo, setSaldo] = useState<Saldo | null>(null);
-  const [movimentos, setMovimentos] = useState<Movimento[]>([]);
-  const [gruposVendas, setGruposVendas] = useState<GrupoVendas[]>([]);
-  const [conciliacao, setConciliacao] = useState<Conciliacao | null>(null);
-  const [anticipacao, setAnticipacao] = useState<boolean | null>(null);
+  const cached = readOrganizadorCache<RepassesCache>(ORGANIZADOR_CACHE_KEYS.repasses);
+  const [status, setStatus] = useState<RepasseStatus | null>(() => cached?.status ?? null);
+  const [saldo, setSaldo] = useState<Saldo | null>(() => cached?.saldo ?? null);
+  const [movimentos, setMovimentos] = useState<Movimento[]>(() => cached?.movimentos ?? []);
+  const [gruposVendas, setGruposVendas] = useState<GrupoVendas[]>(() => cached?.gruposVendas ?? []);
+  const [conciliacao, setConciliacao] = useState<Conciliacao | null>(() => cached?.conciliacao ?? null);
+  const [anticipacao, setAnticipacao] = useState<boolean | null>(() => cached?.anticipacao ?? null);
   const [agrupamento, setAgrupamento] = useState<Agrupamento>("mes");
-  const [extratoOffset, setExtratoOffset] = useState(0);
-  const [extratoTotal, setExtratoTotal] = useState(0);
+  const [extratoOffset, setExtratoOffset] = useState(() => cached?.extratoOffset ?? 0);
+  const [extratoTotal, setExtratoTotal] = useState(() => cached?.extratoTotal ?? 0);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -206,6 +223,14 @@ export function OrganizadorRepassesPainel() {
       ]);
       setGruposVendas(v.grupos);
       setConciliacao(c);
+      const prev = readOrganizadorCache<RepassesCache>(ORGANIZADOR_CACHE_KEYS.repasses);
+      if (prev) {
+        writeOrganizadorCache(ORGANIZADOR_CACHE_KEYS.repasses, {
+          ...prev,
+          gruposVendas: v.grupos,
+          conciliacao: c,
+        });
+      }
     } catch {
       setGruposVendas([]);
     }
@@ -231,6 +256,16 @@ export function OrganizadorRepassesPainel() {
         if (!append) {
           const disp = ex.saldo.saldo_disponivel_saque ?? ex.saldo.saldo_disponivel;
           if (disp > 0) setSaqueValor(moedaBrlFromNumber(Math.min(disp, 100)));
+          writeOrganizadorCache(ORGANIZADOR_CACHE_KEYS.repasses, {
+            status: s,
+            saldo: ex.saldo,
+            movimentos: ex.movimentos,
+            extratoOffset: offset + ex.movimentos.length,
+            extratoTotal: ex.total_movimentos ?? ex.movimentos.length,
+            anticipacao: s.anticipacao?.credit_card_automatic_enabled ?? null,
+            gruposVendas: readOrganizadorCache<RepassesCache>(ORGANIZADOR_CACHE_KEYS.repasses)?.gruposVendas ?? [],
+            conciliacao: readOrganizadorCache<RepassesCache>(ORGANIZADOR_CACHE_KEYS.repasses)?.conciliacao ?? null,
+          });
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Não foi possível carregar o financeiro.");
@@ -419,7 +454,7 @@ export function OrganizadorRepassesPainel() {
   const prazoH = saldo?.prazo_transferencia_horas ?? 48;
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6 min-h-[12rem]">
       <h2 className="text-lg font-semibold text-zinc-900">Financeiro e repasses</h2>
       <p className="mt-1 text-sm text-zinc-600">
         Tudo em um só lugar: acompanhe vendas, saldo e solicite transferências para sua conta Pix — sem precisar
