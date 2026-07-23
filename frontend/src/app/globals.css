@@ -80,6 +80,7 @@ body > footer {
     font-size: 0.9375rem;
     line-height: 1.75;
     color: #52525b;
+    text-align: justify;
   }
 
   .content-prose ol {
@@ -99,6 +100,7 @@ body > footer {
     font-size: 0.9375rem;
     line-height: 1.75;
     color: #52525b;
+    text-align: justify;
   }
 
   .content-prose a {
@@ -115,19 +117,17 @@ body > footer {
     font-weight: 600;
     color: #18181b;
   }
-}
 
-/* Parágrafos justificados no mobile (conteúdo legível); títulos centralizados preservados */
-@media (max-width: 639px) {
-  main#conteudo-principal .content-prose p,
-  main#conteudo-principal .content-prose li,
-  main#conteudo-principal [data-mobile-justify] p,
-  main#conteudo-principal [data-mobile-justify] li {
+  /* Corpo justificado nas páginas principais — títulos (h1–h6) intactos */
+  .textos-justificados p,
+  .textos-justificados li,
+  .textos-justificados blockquote {
     text-align: justify;
   }
 
-  main#conteudo-principal .text-center p,
-  main#conteudo-principal .text-center li {
+  .textos-justificados .text-center p,
+  .textos-justificados .text-center li,
+  .textos-justificados .text-center blockquote {
     text-align: center;
   }
 }

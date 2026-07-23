@@ -55,7 +55,7 @@ export function ContaShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </aside>
-      <div className="min-h-[60vh] min-w-0 flex-1" data-mobile-justify>
+      <div className="min-h-[60vh] min-w-0 flex-1 textos-justificados">
         {children}
       </div>
     </div>

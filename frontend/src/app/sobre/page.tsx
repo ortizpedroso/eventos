@@ -21,7 +21,7 @@ export default function SobrePage() {
         </p>
       </div>
 
-      <div className="[&_p]:text-justify">
+      <div className="textos-justificados">
       {/* Nossa Proposta (Zigue-Zague) */}
       <div className="mx-auto mt-16 max-w-7xl px-4 sm:mt-24 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-12 lg:flex-row lg:items-center">

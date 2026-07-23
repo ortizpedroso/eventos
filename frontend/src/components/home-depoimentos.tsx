@@ -21,7 +21,7 @@ const depoimentos = [
 
 export function HomeDepoimentos() {
   return (
-    <section className="mx-auto mt-20 max-w-6xl sm:mt-28" aria-labelledby="home-depoimentos-titulo" data-mobile-justify>
+    <section className="mx-auto mt-20 max-w-6xl sm:mt-28" aria-labelledby="home-depoimentos-titulo">
       <div className="text-center">
         <h2 id="home-depoimentos-titulo" className="text-3xl font-extrabold tracking-tight text-zinc-900">
           Quem usa, recomenda

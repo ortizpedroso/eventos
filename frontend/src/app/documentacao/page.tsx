@@ -81,7 +81,7 @@ export default function DocumentacaoPage() {
             </div>
           </nav>
 
-          <article className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 lg:col-span-9">
+          <article className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 lg:col-span-9 textos-justificados">
             <Section id="visao" title="Visão geral">
               <p>
                 A <strong className="text-zinc-900">EventosBR</strong> permite a organizadores criarem eventos
