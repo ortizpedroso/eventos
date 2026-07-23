@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
@@ -10,6 +10,7 @@ import type { TokenResponse } from "@/lib/types";
 import { apiFetch, fetchSession } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import { readAuthSearchParams, resolveAuthMode } from "@/lib/auth-search-params";
+import { hasAuthCookie } from "@/lib/has-auth-cookie";
 import { onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask } from "@/lib/telefone-br";
 import {
@@ -21,6 +22,7 @@ import {
 } from "@/lib/criar-evento-routes";
 
 export type AuthClientProps = {
+  hasSessionCookie?: boolean;
   resetToken?: string;
   modeParam?: string;
   fluxoOrganizador?: boolean;
@@ -44,6 +46,7 @@ function serverAuthQuery(props: AuthClientProps): string {
 
 export default function AuthClient(serverProps: AuthClientProps) {
   const router = useRouter();
+  const { hasSessionCookie = false } = serverProps;
 
   const params =
     typeof window !== "undefined"
@@ -82,13 +85,17 @@ export default function AuthClient(serverProps: AuthClientProps) {
     [router],
   );
 
-  useEffect(() => {
-    requestAnimationFrame(() => {
+  useLayoutEffect(() => {
+    if (!hasSessionCookie && !hasAuthCookie()) {
       document.querySelector("form[data-auth-form]")?.setAttribute("data-auth-ready", "true");
-    });
-  }, [mode]);
+    }
+  }, [hasSessionCookie]);
 
   useEffect(() => {
+    if (!hasSessionCookie && !hasAuthCookie()) {
+      return;
+    }
+
     let cancelled = false;
 
     void (async () => {
@@ -100,13 +107,17 @@ export default function AuthClient(serverProps: AuthClientProps) {
       if (u && !forcarLogin) {
         setAguardandoRedirect(true);
         redirecionar(destinoPosAuth(u, sp.get("next")));
+        return;
       }
+      requestAnimationFrame(() => {
+        document.querySelector("form[data-auth-form]")?.setAttribute("data-auth-ready", "true");
+      });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [redirecionar]);
+  }, [hasSessionCookie, redirecionar]);
 
   function setAuthMode(next: "login" | "register") {
     const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -234,6 +245,14 @@ export default function AuthClient(serverProps: AuthClientProps) {
 
   const formularioDesabilitado = loading || aguardandoRedirect;
 
+  if (aguardandoRedirect) {
+    return (
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12" aria-busy>
+        <p className="text-center text-sm font-medium text-zinc-600">Redirecionando…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
       {sessaoExpirada ? (
@@ -282,13 +301,7 @@ export default function AuthClient(serverProps: AuthClientProps) {
         ) : null}
       </div>
 
-      <div
-        className="relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
-        aria-busy={aguardandoRedirect || undefined}
-      >
-        {aguardandoRedirect ? (
-          <p className="mb-3 text-center text-sm font-medium text-zinc-600">Redirecionando…</p>
-        ) : null}
+      <div className="relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <form data-auth-form method="post" action="#" onSubmit={handleFormSubmit} className="space-y-4">
           {infoMsg ? (
             <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">

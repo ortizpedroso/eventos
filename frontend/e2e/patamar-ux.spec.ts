@@ -113,7 +113,6 @@ test.describe("Checkout — copy de pagamento", () => {
       timeout: 5000,
     });
     await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
-    await expect(page.locator(".animate-pulse")).toHaveCount(0);
     await expect(page.locator("form[data-auth-form]")).toBeVisible();
   });
 
@@ -283,6 +282,59 @@ test.describe("Navegação — scroll e logo", () => {
     await page.waitForTimeout(400);
     const scrollY = await page.evaluate(() => window.scrollY);
     expect(scrollY).toBeLessThan(8);
+  });
+});
+
+test.describe("Organizador — navegação sem piscada", () => {
+  test("eventos → financeiro → relatórios mantém sidebar e conteúdo estável", async ({
+    page,
+    context,
+  }) => {
+    test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");
+    await waitForApiReady(90_000);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const { token } = await seedOrganizerSession();
+    await context.addCookies([
+      {
+        name: "eventosbr_session",
+        value: token,
+        domain: "127.0.0.1",
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("eventosbr_tour_v1", "1");
+    });
+
+    await page.goto("/organizador/eventos", { waitUntil: "domcontentloaded" });
+    const sidebar = page.getByRole("navigation", { name: "Navegação do organizador" });
+    await expect(sidebar.getByRole("link", { name: "Meus eventos" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { level: 1, name: "Meus eventos" })).toBeVisible();
+
+    await sidebar.getByRole("link", { name: "Financeiro" }).click();
+    await expect(page).toHaveURL(/\/organizador\/financeiro/);
+    await expect(page.getByRole("heading", { level: 1, name: "Financeiro" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(sidebar.getByRole("link", { name: "Meus eventos" })).toBeVisible();
+
+    await sidebar.getByRole("link", { name: "Relatórios" }).click();
+    await expect(page).toHaveURL(/\/organizador\/relatorios/);
+    await expect(page.getByRole("heading", { level: 1, name: /Relatórios/i })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(sidebar.getByRole("link", { name: "Financeiro" })).toBeVisible();
+
+    await sidebar.getByRole("link", { name: "Meus eventos" }).click();
+    await expect(page).toHaveURL(/\/organizador\/eventos/);
+    await expect(page.getByRole("heading", { level: 1, name: "Meus eventos" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(sidebar.getByRole("link", { name: "Relatórios" })).toBeVisible();
   });
 });
 

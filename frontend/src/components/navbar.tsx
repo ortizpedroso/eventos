@@ -51,6 +51,7 @@ export function Navbar() {
   const [loggedIn, setLoggedIn] = useState(() => peekSessionCache() != null);
   const [userNome, setUserNome] = useState<string | null>(() => peekSessionCache()?.nome ?? null);
   const [userTipo, setUserTipo] = useState<string | null>(() => peekSessionCache()?.tipo ?? null);
+  const [sessionReady, setSessionReady] = useState(() => peekSessionCache() !== undefined);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [buscaNav, setBuscaNav] = useState("");
@@ -62,6 +63,7 @@ export function Navbar() {
       setLoggedIn(Boolean(u));
       setUserNome(u?.nome ?? null);
       setUserTipo(u?.tipo ?? null);
+      setSessionReady(true);
     }
     const onSync = () => void syncSession();
     void syncSession();
@@ -108,8 +110,8 @@ export function Navbar() {
     };
   }, [menuOpen]);
 
-  const isOrganizador = loggedIn && userTipo === "organizador";
-  const navClienteOuCarregando = loggedIn && (userTipo === null || userTipo === "cliente");
+  const isOrganizador = sessionReady && loggedIn && userTipo === "organizador";
+  const navCliente = sessionReady && loggedIn && userTipo === "cliente";
 
   const mobileLink =
     "block rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-emerald-50 hover:text-emerald-950";
@@ -152,7 +154,7 @@ export function Navbar() {
               aria-label="Principal (ambiente de trabalho)"
             >
               {/* Logado como cliente ou carregando: apenas Eventos */}
-              {navClienteOuCarregando ? (
+              {navCliente ? (
                 <>
                   <Link href="/eventos" className={navLinkClass("/eventos")}>
                     Eventos
@@ -294,7 +296,7 @@ export function Navbar() {
                 aria-label="Buscar eventos"
               />
             </form>
-            {navClienteOuCarregando ? (
+            {navCliente ? (
               <div className="flex flex-col gap-0.5">
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Eventos

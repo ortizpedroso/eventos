@@ -3,11 +3,17 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { PainelKpiSkeleton } from "@/components/painel-kpi-skeleton";
 import { AssinaturaStatusTracker } from "@/components/assinatura-status-tracker";
 import { OrganizadorFinanceiroSimulador } from "@/components/organizador-financeiro-simulador";
 import { OrganizadorRepassesPainel } from "@/components/organizador-repasses-painel";
 import { apiFetch } from "@/lib/api";
 import { formatCpfCnpjMask, isValidCpfCnpj, onlyDigits } from "@/lib/cpf";
+import {
+  ORGANIZADOR_CACHE_KEYS,
+  readOrganizadorCache,
+  writeOrganizadorCache,
+} from "@/lib/organizador-session-cache";
 import { AVISO_LEGAL_TAXAS } from "@/lib/taxas-asaas-publicas";
 import type { PlanoTarifaId } from "@/lib/tarifas-plataforma";
 
@@ -181,10 +187,17 @@ function PixCard({
   );
 }
 
+type FinanceiroCache = {
+  data: FinanceiroResumo;
+  assinatura: AssinaturaStatus;
+  planoTarifa: PlanoTarifaId;
+};
+
 export function OrganizadorFinanceiroClient() {
-  const [data, setData] = useState<FinanceiroResumo | null>(null);
-  const [assinatura, setAssinatura] = useState<AssinaturaStatus | null>(null);
-  const [planoTarifa, setPlanoTarifa] = useState<PlanoTarifaId>("padrao");
+  const cached = readOrganizadorCache<FinanceiroCache>(ORGANIZADOR_CACHE_KEYS.financeiro);
+  const [data, setData] = useState<FinanceiroResumo | null>(() => cached?.data ?? null);
+  const [assinatura, setAssinatura] = useState<AssinaturaStatus | null>(() => cached?.assinatura ?? null);
+  const [planoTarifa, setPlanoTarifa] = useState<PlanoTarifaId>(() => cached?.planoTarifa ?? "padrao");
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busyAssinatura, setBusyAssinatura] = useState(false);
@@ -203,7 +216,13 @@ export function OrganizadorFinanceiroClient() {
       setData(r);
       setAssinatura(ass);
       const efetivo = (ass.taxa_efetiva || saldo.plano_tarifa || "padrao") as PlanoTarifaId;
-      setPlanoTarifa(efetivo === "assinatura" ? "assinatura" : "padrao");
+      const plano = efetivo === "assinatura" ? "assinatura" : "padrao";
+      setPlanoTarifa(plano);
+      writeOrganizadorCache(ORGANIZADOR_CACHE_KEYS.financeiro, {
+        data: r,
+        assinatura: ass,
+        planoTarifa: plano,
+      });
     } catch (e) {
       setData(null);
       setError(e instanceof Error ? e.message : "Não foi possível carregar o resumo financeiro.");
@@ -354,6 +373,8 @@ export function OrganizadorFinanceiroClient() {
           {msg}
         </p>
       ) : null}
+
+      {!data && !error ? <PainelKpiSkeleton /> : null}
 
       <OrganizadorRepassesPainel />
       <OrganizadorFinanceiroSimulador planoTarifa={planoTarifa} />

@@ -1,3 +1,7 @@
+import { cookies } from "next/headers";
+
+import { AUTH_COOKIE } from "@/lib/has-auth-cookie";
+
 import AuthClient from "./auth-client";
 
 function q(
@@ -14,8 +18,10 @@ export default async function AuthPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  const hasSessionCookie = Boolean((await cookies()).get(AUTH_COOKIE)?.value);
   return (
     <AuthClient
+      hasSessionCookie={hasSessionCookie}
       resetToken={q(sp, "reset")}
       modeParam={q(sp, "mode")}
       fluxoOrganizador={q(sp, "fluxo") === "organizador"}

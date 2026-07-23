@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AppNavLink } from "@/components/app-nav-link";
 import { OrganizadorTour } from "@/components/organizador-tour";
 
 const navDesktop = [
@@ -104,9 +104,10 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
               {navDesktop.map((item) => {
                 const active = isActive(pathname, item.href);
                 return (
-                  <Link
+                  <AppNavLink
                     key={item.href}
                     href={item.href}
+                    active={active}
                     data-tour={item.tour}
                     className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                       active
@@ -115,7 +116,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
                     }`}
                   >
                     {item.label}
-                  </Link>
+                  </AppNavLink>
                 );
               })}
             </nav>
@@ -132,9 +133,10 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
           {navMobilePrincipal.map((item) => {
             const active = isActive(pathname, item.href);
             return (
-              <Link
+              <AppNavLink
                 key={item.href}
                 href={item.href}
+                active={active}
                 data-tour={item.tour}
                 className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 py-2.5 text-[10px] font-medium ${
                   active ? "text-emerald-800" : "text-zinc-500"
@@ -142,7 +144,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
               >
                 {mobileIcon(item.href, `h-5 w-5 ${active ? "text-emerald-700" : "text-zinc-400"}`)}
                 <span className="truncate">{item.short}</span>
-              </Link>
+              </AppNavLink>
             );
           })}
           <button
@@ -173,9 +175,10 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
                 {navMobileMais.map((item) => {
                   const active = isActive(pathname, item.href);
                   return (
-                    <Link
+                    <AppNavLink
                       key={item.href}
                       href={item.href}
+                      active={active}
                       onClick={() => setMenuMaisAberto(false)}
                       className={`rounded-lg px-3 py-2.5 text-sm font-medium ${
                         active
@@ -184,7 +187,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
                       }`}
                     >
                       {item.label}
-                    </Link>
+                    </AppNavLink>
                   );
                 })}
               </div>

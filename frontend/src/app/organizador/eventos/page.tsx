@@ -8,6 +8,11 @@ import { EventoCategoriaBadge } from "@/components/evento-categoria-badge";
 import { ListaSkeleton } from "@/components/lista-skeleton";
 import { apiFetch } from "@/lib/api";
 import { formatEventoDataHora } from "@/lib/eventos";
+import {
+  ORGANIZADOR_CACHE_KEYS,
+  readOrganizadorCache,
+  writeOrganizadorCache,
+} from "@/lib/organizador-session-cache";
 import type { Evento } from "@/lib/types";
 
 function ordenarPorCriacaoDesc(lista: Evento[]): Evento[] {
@@ -52,7 +57,9 @@ type ResumoEvento = {
 const ONBOARDING_KEY = "eventosbr_org_onboarding_v1";
 
 export default function OrganizadorMeusEventosPage() {
-  const [items, setItems] = useState<Evento[] | null>(null);
+  const [items, setItems] = useState<Evento[] | null>(
+    () => readOrganizadorCache<Evento[]>(ORGANIZADOR_CACHE_KEYS.eventos) ?? null,
+  );
   const [resumos, setResumos] = useState<Record<string, ResumoEvento>>({});
   const [error, setError] = useState<string | null>(null);
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
@@ -62,6 +69,7 @@ export default function OrganizadorMeusEventosPage() {
   const recarregar = useCallback(async () => {
     const data = await apiFetch<Evento[]>("/api/eventos/meus", { cache: "no-store" });
     setItems(data);
+    writeOrganizadorCache(ORGANIZADOR_CACHE_KEYS.eventos, data);
     setError(null);
   }, []);
 
@@ -72,6 +80,7 @@ export default function OrganizadorMeusEventosPage() {
         const data = await apiFetch<Evento[]>("/api/eventos/meus", { cache: "no-store" });
         if (!cancelled) {
           setItems(data);
+          writeOrganizadorCache(ORGANIZADOR_CACHE_KEYS.eventos, data);
           setError(null);
         }
       } catch (e) {
