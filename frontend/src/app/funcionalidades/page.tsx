@@ -211,7 +211,7 @@ const outrosRecursos = [
 
 export default function FuncionalidadesPage() {
   return (
-    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16" data-mobile-justify>
+    <div className="overflow-hidden pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
           Tudo o que você precisa para <span className="text-emerald-700">fazer acontecer.</span>

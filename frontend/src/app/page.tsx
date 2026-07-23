@@ -42,7 +42,7 @@ export default function Home() {
   const criarHref = hrefCriarEvento;
 
   return (
-    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
+    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700">
           PIX, cartão e QR Code na entrada

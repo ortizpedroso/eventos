@@ -15,7 +15,7 @@ export default function PlanosPage() {
   const criarHref = hrefCriarEvento;
 
   return (
-    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16" data-mobile-justify>
+    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
       <div className="mx-auto max-w-3xl">
         <h1 className="text-center text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
           Planos para cada tipo de <span className="text-emerald-700">evento.</span>
