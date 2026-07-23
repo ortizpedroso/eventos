@@ -14,4 +14,5 @@ export const ORGANIZADOR_CACHE_KEYS = {
   relatorios: "org:relatorios",
   financeiro: "org:financeiro",
   repasses: "org:repasses",
+  comunicados: "org:comunicados",
 } as const;

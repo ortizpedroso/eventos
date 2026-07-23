@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppNavLink } from "@/components/app-nav-link";
-import { OrganizadorPanelKeepAlive } from "@/components/organizador-panel-keepalive";
 import { OrganizadorTour } from "@/components/organizador-tour";
 
 const navDesktop = [
@@ -123,9 +122,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
             </nav>
           </div>
         </aside>
-        <div className="min-h-[60vh] min-w-0 flex-1">
-          <OrganizadorPanelKeepAlive>{children}</OrganizadorPanelKeepAlive>
-        </div>
+        <div className="min-h-[60vh] min-w-0 flex-1 textos-justificados">{children}</div>
       </div>
 
       <nav

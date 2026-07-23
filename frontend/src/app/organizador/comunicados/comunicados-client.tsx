@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import {
+  ORGANIZADOR_CACHE_KEYS,
+  readOrganizadorCache,
+  writeOrganizadorCache,
+} from "@/lib/organizador-session-cache";
 
 type EventoOpcao = {
   evento_id: string;
@@ -21,18 +26,23 @@ function formatarDataEvento(iso: string | null): string {
 }
 
 export function ComunicadosClient() {
-  const [eventos, setEventos] = useState<EventoOpcao[]>([]);
+  const [eventos, setEventos] = useState<EventoOpcao[]>(
+    () => readOrganizadorCache<EventoOpcao[]>(ORGANIZADOR_CACHE_KEYS.comunicados) ?? [],
+  );
   const [busca, setBusca] = useState("");
   const [eventoId, setEventoId] = useState("");
   const [assunto, setAssunto] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [busy, setBusy] = useState(false);
-  const [carregando, setCarregando] = useState(true);
+  const [carregando, setCarregando] = useState(
+    () => !readOrganizadorCache<EventoOpcao[]>(ORGANIZADOR_CACHE_KEYS.comunicados),
+  );
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const carregarEventos = useCallback(async (termo: string) => {
-    setCarregando(true);
+    const temCache = Boolean(readOrganizadorCache(ORGANIZADOR_CACHE_KEYS.comunicados)) && !termo.trim();
+    if (!temCache) setCarregando(true);
     setError(null);
     try {
       const params = new URLSearchParams({ limit: "30" });
@@ -43,6 +53,7 @@ export function ComunicadosClient() {
         { cache: "no-store" },
       );
       setEventos(lista);
+      writeOrganizadorCache(ORGANIZADOR_CACHE_KEYS.comunicados, lista);
       setEventoId((atual) => {
         if (atual && lista.some((e) => e.evento_id === atual)) return atual;
         return lista[0]?.evento_id ?? "";

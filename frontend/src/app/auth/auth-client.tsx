@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
 import type { TokenResponse } from "@/lib/types";
-import { apiFetch, fetchSession } from "@/lib/api";
+import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import {
   readAuthSearchParams,
@@ -75,7 +75,6 @@ export default function AuthClient(serverProps: AuthClientProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const [aguardandoRedirect, setAguardandoRedirect] = useState(false);
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
@@ -87,16 +86,35 @@ export default function AuthClient(serverProps: AuthClientProps) {
     [router],
   );
 
-  useEffect(() => {
-    let cancelled = false;
+  useLayoutEffect(() => {
+    const cached = peekSessionCache();
+    if (cached === null) return;
+    const forcar =
+      serverProps.forcarLogin ||
+      (typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("login") === "1");
+    if (cached && !forcar) {
+      redirecionar(
+        destinoPosAuth(
+          cached,
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("next")
+            : null,
+        ),
+      );
+    }
+  }, [redirecionar, serverProps.forcarLogin]);
 
+  useEffect(() => {
+    if (peekSessionCache() !== undefined) return;
+
+    let cancelled = false;
     void (async () => {
       const u = await fetchSession();
-      if (cancelled) return;
+      if (cancelled || !u) return;
 
       const forcar = new URLSearchParams(window.location.search).get("login") === "1";
-      if (u && !forcar) {
-        setAguardandoRedirect(true);
+      if (!forcar) {
         redirecionar(destinoPosAuth(u, new URLSearchParams(window.location.search).get("next")));
       }
     })();
@@ -135,7 +153,6 @@ export default function AuthClient(serverProps: AuthClientProps) {
       });
       return;
     }
-    setAguardandoRedirect(true);
     redirecionar(destinoPosAuth(data.usuario, next));
   }
 
@@ -230,20 +247,10 @@ export default function AuthClient(serverProps: AuthClientProps) {
     void onSubmit(new FormData(e.currentTarget));
   }
 
-  const formularioDesabilitado = loading || aguardandoRedirect;
+  const formularioDesabilitado = loading;
 
   return (
     <div className="relative w-full flex-1 flex-col">
-      {aguardandoRedirect ? (
-        <div
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-white/95"
-          aria-busy
-          aria-live="polite"
-        >
-          <p className="text-center text-sm font-medium text-zinc-600">Redirecionando…</p>
-        </div>
-      ) : null}
-
       {sessaoExpirada ? (
         <div
           className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
@@ -290,11 +297,7 @@ export default function AuthClient(serverProps: AuthClientProps) {
         ) : null}
       </div>
 
-      <div
-        className={`relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 ${
-          aguardandoRedirect ? "pointer-events-none select-none opacity-40" : ""
-        }`}
-      >
+      <div className="relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <form data-auth-form data-auth-ready="true" method="post" action="#" onSubmit={handleFormSubmit} className="space-y-4">
           {infoMsg ? (
             <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">

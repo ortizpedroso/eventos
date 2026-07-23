@@ -167,7 +167,7 @@ export function Navbar() {
                   <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
                     Funcionalidades
                   </Link>
-                  <Link href="/planos" className={navLinkClass("/planos")}>
+                  <Link href="/planos" prefetch scroll={false} className={navLinkClass("/planos")}>
                     Planos
                   </Link>
                   <Link href="/eventos" className={navLinkClass("/eventos")}>
@@ -184,7 +184,7 @@ export function Navbar() {
                   <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
                     Funcionalidades
                   </Link>
-                  <Link href="/planos" className={navLinkClass("/planos")}>
+                  <Link href="/planos" prefetch scroll={false} className={navLinkClass("/planos")}>
                     Planos
                   </Link>
                   <Link href="/eventos" className={navLinkClass("/eventos")}>
@@ -310,7 +310,7 @@ export function Navbar() {
                 <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Funcionalidades
                 </Link>
-                <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                <Link href="/planos" prefetch scroll={false} className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Planos
                 </Link>
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
@@ -326,7 +326,7 @@ export function Navbar() {
                 <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Funcionalidades
                 </Link>
-                <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                <Link href="/planos" prefetch scroll={false} className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Planos
                 </Link>
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
