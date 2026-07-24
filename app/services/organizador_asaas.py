@@ -19,7 +19,7 @@ from app.services.evento_repasse import (
     serializar_detalhes_repasse,
 )
 from app.services.tarifas_plataforma import tarifa_para_organizador, taxa_ingresso
-from app.utils.cpf import normalizar_cpf
+from app.utils.cpf import documento_valido, normalizar_cpf
 from app.utils.mensagens_publicas import sanitizar_mensagem_pagamento
 from app.utils.secret_storage import decrypt_at_rest, encrypt_at_rest
 from config.settings import settings
@@ -437,6 +437,8 @@ def criar_subconta_organizador(
     doc = _digits(cpf_cnpj, 14)
     if len(doc) not in (11, 14):
         raise ValueError("Informe CPF (11 dígitos) ou CNPJ (14 dígitos) válido.")
+    if not documento_valido(doc):
+        raise ValueError("CPF ou CNPJ inválido (dígito verificador incorreto).")
     if len(doc) == 11:
         birth = (data_nascimento or "").strip()
         if not birth:
@@ -486,14 +488,29 @@ def criar_subconta_organizador(
     account_id = sub.get("id")
     wallet_id = sub.get("walletId")
     api_key = sub.get("apiKey")
-    if not wallet_id:
-        raise ValueError("Conta de recebimento criada, mas o identificador não foi retornado. Contate o suporte.")
 
+    # Salva account_id/api_key antes de verificar walletId: se o wallet vier ausente,
+    # o suporte pode consultar/associar manualmente via admin sem perder a referência.
     usuario.asaas_account_id = account_id
-    usuario.asaas_wallet_id = wallet_id
-    usuario.asaas_repasse_cpf_cnpj = doc
+    # Cifra CPF/CNPJ em repouso (LGPD — dado pessoal sensível).
+    usuario.asaas_repasse_cpf_cnpj = encrypt_at_rest(doc)
     if api_key:
         usuario.asaas_subaccount_api_key = encrypt_at_rest(str(api_key))
+    db.add(usuario)
+    db.flush()
+
+    if not wallet_id:
+        db.commit()
+        logger.error(
+            "Subconta criada (account_id=%s) mas walletId ausente para usuário %s.",
+            account_id, usuario.id,
+        )
+        raise ValueError(
+            "Conta de recebimento criada, mas o identificador não foi retornado. "
+            "account_id salvo — contate o suporte para associar o wallet manualmente."
+        )
+
+    usuario.asaas_wallet_id = wallet_id
     usuario.asaas_repasse_status = "pending"
     usuario.asaas_repasse_status_em = agora_utc_naive()
     usuario.asaas_repasse_detalhes = None

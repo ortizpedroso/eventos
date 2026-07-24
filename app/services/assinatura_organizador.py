@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.models import Usuario
 from app.services.tarifas_plataforma import MENSALIDADE_ASSINATURA_MENSAL
 from app.utils.cpf import documento_valido
+from app.utils.secret_storage import decrypt_at_rest, encrypt_at_rest
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ def status_assinatura(usuario: Usuario) -> dict:
         "renovacao_pendente": bool(pendente),
         "renovacao_payment_id": pendente or None,
         "precisa_cpf_cnpj": not documento_valido(
-            re.sub(r"\D", "", getattr(usuario, "asaas_repasse_cpf_cnpj", None) or "")
+            re.sub(r"\D", "", decrypt_at_rest(getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
         ),
     }
 
@@ -171,12 +172,12 @@ def iniciar_cobranca_assinatura(db: Session, usuario: Usuario, *, cpf_cnpj: str 
     if reutilizado:
         return reutilizado
 
-    doc = re.sub(r"\D", "", (getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
+    doc = re.sub(r"\D", "", decrypt_at_rest(getattr(usuario, "asaas_repasse_cpf_cnpj", None) or ""))
     if not documento_valido(doc):
         doc = re.sub(r"\D", "", cpf_cnpj or "")
         if not documento_valido(doc):
             raise ValueError("Informe um CPF ou CNPJ válido para gerar a cobrança.")
-        usuario.asaas_repasse_cpf_cnpj = doc
+        usuario.asaas_repasse_cpf_cnpj = encrypt_at_rest(doc)
         db.commit()
 
     customer_id: str | None = None
