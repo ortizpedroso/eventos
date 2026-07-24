@@ -1,33 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 36" fill="none" role="img" aria-label="EventosBR">
-  <defs>
-    <!-- Diagonal gradient: emerald-500 → emerald-900 -->
-    <linearGradient id="g" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#10b981"/>
-      <stop offset="100%" stop-color="#064e3b"/>
-    </linearGradient>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 248 52" fill="none" role="img" aria-label="EventosBR — Ingressos, Shows, Transparência">
+  <!-- Ícone ticket EBR -->
+  <rect x="0" y="2" width="40" height="40" rx="8" fill="#10b981"/>
+  <line x1="11" y1="10" x2="11" y2="34" stroke="rgba(255,255,255,0.45)" stroke-width="1.2" stroke-dasharray="2.5 2.5" stroke-linecap="round"/>
+  <circle cx="1.5" cy="22" r="3.5" fill="#fff" fill-opacity="0.92"/>
+  <circle cx="38.5" cy="22" r="3.5" fill="#fff" fill-opacity="0.92"/>
+  <text x="20" y="26.5" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,sans-serif" font-size="11.5" font-weight="800" fill="#fff" letter-spacing="0.4">EBR</text>
 
-  <!-- Icon: green gradient rounded square -->
-  <rect width="36" height="36" rx="9" fill="url(#g)"/>
+  <!-- Wordmark -->
+  <text x="48" y="28" font-family="system-ui,-apple-system,BlinkMacSystemFont,sans-serif" font-size="20" font-weight="700">
+    <tspan fill="#1c2a33">Eventos</tspan><tspan fill="#10b981">BR</tspan>
+  </text>
 
-  <!-- Ticket body with right-side notch (stub cutout) -->
-  <!-- Path: full rectangle with a concave arc on the right side at mid-height -->
-  <path fill="white" fill-opacity="0.93"
-    d="M11 8 Q9 8 9 10 L9 26 Q9 28 11 28 L25 28 Q27 28 27 26
-       L27 21.5 A3.5 3.5 0 0 0 27 14.5 L27 10 Q27 8 25 8 Z"/>
-
-  <!-- 5-pointed star centered at (17.5, 18), outer r=4.5, inner r=1.9 -->
-  <path fill="#065f46"
-    d="M17.5 13.5 L18.6 16.5 L21.8 16.6 L19.3 18.6 L20.2 21.6
-       L17.5 19.9 L14.8 21.6 L15.7 18.6 L13.2 16.6 L16.4 16.5 Z"/>
-
-  <!-- Wordmark: "Eventos" in near-black + "BR" in emerald-500 -->
-  <text x="44" y="24"
-    font-family="system-ui,-apple-system,sans-serif"
-    font-size="18" font-weight="800"
-    fill="#18181b">Eventos</text>
-  <text x="119" y="24"
-    font-family="system-ui,-apple-system,sans-serif"
-    font-size="18" font-weight="800"
-    fill="#10b981">BR</text>
+  <!-- Tagline -->
+  <text x="124" y="46" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,sans-serif" font-size="7.5" font-weight="600" fill="#888" letter-spacing="1.8">INGRESSOS · SHOWS · TRANSPARÊNCIA</text>
 </svg>
