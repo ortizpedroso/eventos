@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { adminFetch, adminSessionActive, clearAdminSession, validateAdminKey } from "@/lib/admin-api";
+import { adminFetch, adminSessionInfo, clearAdminSession, validateAdminKey } from "@/lib/admin-api";
 import { AdminPlatformSettingsPanel } from "./admin-platform-settings";
 
 type Contato = {
@@ -80,6 +80,8 @@ type EventoAdmin = {
 
 export function AdminDashboardClient() {
   const [keyInput, setKeyInput] = useState("");
+  const [codigoAdmin, setCodigoAdmin] = useState("");
+  const [totpRequired, setTotpRequired] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<Tab>("setup");
   const [setup, setSetup] = useState<SetupStatus | null>(null);
@@ -112,8 +114,9 @@ export function AdminDashboardClient() {
   const [setupUnavailable, setSetupUnavailable] = useState(false);
 
   useEffect(() => {
-    void adminSessionActive().then((active) => {
-      if (active) setAuthed(true);
+    void adminSessionInfo().then(({ unlocked, totpRequired: req }) => {
+      setTotpRequired(req);
+      if (unlocked) setAuthed(true);
     });
   }, []);
 
@@ -123,10 +126,14 @@ export function AdminDashboardClient() {
       setError("Informe a chave de administrador.");
       return;
     }
+    if (totpRequired && !codigoAdmin.trim()) {
+      setError("Informe o código do app autenticador.");
+      return;
+    }
     setLoginBusy(true);
     setError(null);
     try {
-      await validateAdminKey(key);
+      await validateAdminKey(key, codigoAdmin);
       setAuthed(true);
     } catch (e) {
       await clearAdminSession();
@@ -363,6 +370,22 @@ export function AdminDashboardClient() {
           placeholder="Chave de administrador"
           autoComplete="off"
         />
+        {totpRequired ? (
+          <input
+            type="text"
+            inputMode="numeric"
+            value={codigoAdmin}
+            onChange={(e) => setCodigoAdmin(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void entrar();
+            }}
+            disabled={loginBusy}
+            maxLength={6}
+            className="mt-2 w-full rounded-md border border-zinc-300 px-3 py-2 text-center text-sm font-mono tracking-widest"
+            placeholder="Código do app autenticador"
+            autoComplete="one-time-code"
+          />
+        ) : null}
         {error ? (
           <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {error}
@@ -371,7 +394,7 @@ export function AdminDashboardClient() {
         <button
           type="button"
           className="btn-primary mt-3 w-full disabled:opacity-60"
-          disabled={loginBusy || !keyInput.trim()}
+          disabled={loginBusy || !keyInput.trim() || (totpRequired && !codigoAdmin.trim())}
           onClick={() => void entrar()}
         >
           {loginBusy ? "Validando…" : "Entrar"}

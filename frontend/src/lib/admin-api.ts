@@ -1,14 +1,21 @@
-export async function validateAdminKey(key: string): Promise<void> {
+export async function validateAdminKey(key: string, codigo?: string): Promise<void> {
   const trimmed = key.trim();
   if (!trimmed) throw new Error("Informe a chave de administrador.");
   const res = await fetch("/api/admin/session", {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ key: trimmed }),
+    body: JSON.stringify({ key: trimmed, codigo: (codigo ?? "").trim() }),
     credentials: "include",
   });
   if (res.status === 401) {
-    throw new Error("Chave de administrador inválida. Confira PLATFORM_ADMIN_API_KEY no .env da API.");
+    let msg = "Chave de administrador inválida. Confira PLATFORM_ADMIN_API_KEY no .env da API.";
+    try {
+      const j = (await res.json()) as { detail?: string };
+      if (j.detail) msg = j.detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
   }
   if (!res.ok) {
     let msg = `API respondeu ${res.status}.`;
@@ -20,6 +27,13 @@ export async function validateAdminKey(key: string): Promise<void> {
     }
     throw new Error(msg);
   }
+}
+
+export async function adminSessionInfo(): Promise<{ unlocked: boolean; totpRequired: boolean }> {
+  const res = await fetch("/api/admin/session", { credentials: "include", cache: "no-store" });
+  if (!res.ok) return { unlocked: false, totpRequired: false };
+  const j = (await res.json()) as { unlocked?: boolean; totp_required?: boolean };
+  return { unlocked: Boolean(j.unlocked), totpRequired: Boolean(j.totp_required) };
 }
 
 export async function clearAdminSession(): Promise<void> {
