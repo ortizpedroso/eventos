@@ -57,7 +57,17 @@ export default function AuthClient(serverProps: AuthClientProps) {
 
   const serverFallback = useMemo(
     () => enrichAuthSearchParams(serverAuthQuery(serverProps), serverProps.forcarLogin),
-    [serverProps],
+    [
+      serverProps.mode,
+      serverProps.forcarLogin,
+      serverProps.resetToken,
+      serverProps.modeParam,
+      serverProps.fluxoOrganizador,
+      serverProps.precisaOrganizador,
+      serverProps.sessaoExpirada,
+      serverProps.tipoParam,
+      serverProps.nextParam,
+    ],
   );
   const params = enrichAuthSearchParams(
     useAuthSearchParams(serverFallback),
@@ -73,10 +83,17 @@ export default function AuthClient(serverProps: AuthClientProps) {
     nextParam,
   } = params;
 
-  const [mode, setMode] = useState(serverProps.mode);
-  useEffect(() => {
-    setMode(resolveAuthMode(params, serverProps.forcarLogin));
-  }, [params, serverProps.forcarLogin]);
+  const mode = useMemo(
+    () => resolveAuthMode(params, serverProps.forcarLogin),
+    [
+      params.modeParam,
+      params.fluxoOrganizador,
+      params.precisaOrganizador,
+      params.resetToken,
+      params.nextParam,
+      serverProps.forcarLogin,
+    ],
+  );
 
   const defaultTipoRegistro = useMemo(() => {
     if (tipoParam === "organizador") return "organizador";
