@@ -14,6 +14,10 @@ services:
       ENVIRONMENT: production
       DEBUG: "False"
       TRUST_FORWARDED_HEADERS: "true"
+      UPLOAD_DIR: /app/uploads
+      PLATFORM_BASE_DOMAIN: ${DOMAIN}
+    volumes:
+      - uploads_data:/app/uploads
     expose:
       - "8000"
     command:
@@ -79,10 +83,12 @@ services:
         NEXT_PUBLIC_PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-asaas}
         NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
         NEXT_PUBLIC_BUILD_SHA: ${GIT_COMMIT:-dev}
+        NEXT_PUBLIC_PLATFORM_DOMAIN: ${DOMAIN}
     restart: unless-stopped
     environment:
       INTERNAL_API_URL: http://api:8000
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://${DOMAIN}}
+      NEXT_PUBLIC_PLATFORM_DOMAIN: ${DOMAIN}
     expose:
       - "3000"
     depends_on:
@@ -112,6 +118,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:
   caddy_data:
   caddy_config:
 
