@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { CriarEventoLink } from "@/components/criar-evento-link";
 import { EventosBRLogo } from "@/components/eventosbr-logo";
+import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 
 function IconInstagram({ className }: { className?: string }) {
   return (
@@ -61,7 +61,7 @@ export function SiteFooter() {
                 <li><Link href="/ajuda" className="text-zinc-400 hover:text-emerald-300">Central de ajuda</Link></li>
                 <li><Link href="/blog" className="text-zinc-400 hover:text-emerald-300">Blog</Link></li>
                 <li><Link href="/documentacao/api" className="text-zinc-400 hover:text-emerald-300">Documentação da API</Link></li>
-                <li><CriarEventoLink className="text-zinc-400 hover:text-emerald-300">Publicar evento</CriarEventoLink></li>
+                <li><Link href={hrefCriarEvento} className="text-zinc-400 hover:text-emerald-300">Publicar evento</Link></li>
               </ul>
             </div>
             <div>

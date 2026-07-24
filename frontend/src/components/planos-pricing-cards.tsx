@@ -6,9 +6,9 @@ import {
   formatBrl,
   formatPercentual,
 } from "@/lib/tarifas-plataforma";
-import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-routes";
+import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 
-const CRIAR_CONTA_HREF = authHrefRegisterOrganizadorParaCriarEvento();
+const CRIAR_CONTA_HREF = hrefCriarEvento;
 
 function IconCheck({ className }: { className?: string }) {
   return (

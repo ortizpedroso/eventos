@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PlanosPricingCards } from "@/components/planos-pricing-cards";
 import { PlanosSimuladorComprador } from "@/components/planos-simulador-comprador";
 import { PlanosSimuladorLucro } from "@/components/planos-simulador-lucro";
-import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-routes";
+import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 
 export const metadata: Metadata = {
   title: "Planos | EventosBR",
@@ -52,7 +52,7 @@ export default function PlanosPage() {
           <p className="text-sm text-zinc-600">Pronto para publicar seu primeiro evento?</p>
           <div className="mt-4 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
             <Link
-              href={authHrefRegisterOrganizadorParaCriarEvento()}
+              href={hrefCriarEvento}
               prefetch
               scroll={false}
               className="btn-success px-6 py-3 text-base shadow-sm"

@@ -5,10 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { NavbarCategoriasMenu } from "@/components/navbar-categorias-menu";
-import { CriarEventoLink } from "@/components/criar-evento-link";
 import { EventosBRLogo } from "@/components/eventosbr-logo";
 import { fetchSession, logoutSession, peekSessionCache } from "@/lib/api";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
+import { hrefCriarEvento } from "@/lib/criar-evento-routes";
 
 function UserIcon({ className }: { className?: string }) {
   return (
@@ -51,7 +51,6 @@ export function Navbar() {
   const [loggedIn, setLoggedIn] = useState(() => peekSessionCache() != null);
   const [userNome, setUserNome] = useState<string | null>(() => peekSessionCache()?.nome ?? null);
   const [userTipo, setUserTipo] = useState<string | null>(() => peekSessionCache()?.tipo ?? null);
-  const [sessionReady, setSessionReady] = useState(() => peekSessionCache() !== undefined);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [buscaNav, setBuscaNav] = useState("");
@@ -63,7 +62,6 @@ export function Navbar() {
       setLoggedIn(Boolean(u));
       setUserNome(u?.nome ?? null);
       setUserTipo(u?.tipo ?? null);
-      setSessionReady(true);
     }
     const onSync = () => void syncSession();
     void syncSession();
@@ -110,8 +108,8 @@ export function Navbar() {
     };
   }, [menuOpen]);
 
-  const isOrganizador = sessionReady && loggedIn && userTipo === "organizador";
-  const navCliente = sessionReady && loggedIn && userTipo === "cliente";
+  const isOrganizador = loggedIn && userTipo === "organizador";
+  const navClienteOuCarregando = loggedIn && (userTipo === null || userTipo === "cliente");
 
   const mobileLink =
     "block rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-emerald-50 hover:text-emerald-950";
@@ -154,7 +152,7 @@ export function Navbar() {
               aria-label="Principal (ambiente de trabalho)"
             >
               {/* Logado como cliente ou carregando: apenas Eventos */}
-              {navCliente ? (
+              {navClienteOuCarregando ? (
                 <>
                   <Link href="/eventos" className={navLinkClass("/eventos")}>
                     Eventos
@@ -167,7 +165,7 @@ export function Navbar() {
                   <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
                     Funcionalidades
                   </Link>
-                  <Link href="/planos" prefetch scroll={false} className={navLinkClass("/planos")}>
+                  <Link href="/planos" className={navLinkClass("/planos")}>
                     Planos
                   </Link>
                   <Link href="/eventos" className={navLinkClass("/eventos")}>
@@ -184,7 +182,7 @@ export function Navbar() {
                   <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
                     Funcionalidades
                   </Link>
-                  <Link href="/planos" prefetch scroll={false} className={navLinkClass("/planos")}>
+                  <Link href="/planos" className={navLinkClass("/planos")}>
                     Planos
                   </Link>
                   <Link href="/eventos" className={navLinkClass("/eventos")}>
@@ -264,20 +262,19 @@ export function Navbar() {
             ) : (
               <Link
                 href="/auth"
-                prefetch={false}
-                scroll={false}
                 className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
               >
                 Login
               </Link>
             )}
             {!loggedIn || userTipo !== "cliente" ? (
-              <CriarEventoLink
+              <Link
+                href={hrefCriarEvento}
                 className="btn-success shrink-0 whitespace-nowrap px-3 py-2 text-xs shadow-sm sm:px-4 sm:text-sm"
               >
                 <span className="sm:hidden">Criar</span>
                 <span className="hidden sm:inline">Crie um evento</span>
-              </CriarEventoLink>
+              </Link>
             ) : null}
           </div>
         </div>
@@ -298,7 +295,7 @@ export function Navbar() {
                 aria-label="Buscar eventos"
               />
             </form>
-            {navCliente ? (
+            {navClienteOuCarregando ? (
               <div className="flex flex-col gap-0.5">
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Eventos
@@ -310,7 +307,7 @@ export function Navbar() {
                 <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Funcionalidades
                 </Link>
-                <Link href="/planos" prefetch scroll={false} className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Planos
                 </Link>
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
@@ -326,7 +323,7 @@ export function Navbar() {
                 <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Funcionalidades
                 </Link>
-                <Link href="/planos" prefetch scroll={false} className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Planos
                 </Link>
                 <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
