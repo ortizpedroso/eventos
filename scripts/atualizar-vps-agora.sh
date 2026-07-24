@@ -67,6 +67,19 @@ fi
 
 DOMAIN="$(env_get DOMAIN .env || echo eventosbr.app.br)"
 
+# Garante variáveis do white-label / uploads (não sobrescreve valores existentes).
+_ensure_env() {
+  local key="$1" val="$2"
+  if ! grep -q "^${key}=" .env 2>/dev/null; then
+    set_env_var "$key" "$val" .env
+    echo "  + .env: ${key}"
+  fi
+}
+_ensure_env NEXT_PUBLIC_PLATFORM_DOMAIN "$DOMAIN"
+_ensure_env PLATFORM_BASE_DOMAIN "$DOMAIN"
+_ensure_env UPLOAD_DIR "/app/uploads"
+_ensure_env UPLOAD_PUBLIC_BASE_URL "https://${DOMAIN}"
+
 echo ""
 echo "[2/9] Postgres + Redis..."
 docker compose -f "$COMPOSE" up -d db redis
