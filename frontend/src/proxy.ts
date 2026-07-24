@@ -52,6 +52,9 @@ function finish(response: NextResponse, nonce: string): NextResponse {
 }
 
 function authLoginRedirect(request: NextRequest, pathname: string, extra?: Record<string, string>) {
+  if (pathname === "/organizador/novo" && !extra?.expirado) {
+    return new URL("/cadastro", request.url);
+  }
   const login = new URL("/auth", request.url);
   login.searchParams.set("next", pathname);
   if (pathname.startsWith("/organizador")) {

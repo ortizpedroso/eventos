@@ -1,5 +1,10 @@
 import AuthClient from "./auth-client";
-import { normalizeAuthNext, nextRequerContaOrganizador } from "@/lib/criar-evento-routes";
+import { redirect } from "next/navigation";
+import {
+  CRIAR_EVENTO_DESTINO,
+  normalizeAuthNext,
+  nextRequerContaOrganizador,
+} from "@/lib/criar-evento-routes";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +31,17 @@ export default async function AuthPage({
   const fluxoOrganizador = q(sp, "fluxo") === "organizador" || destinoOrganizador;
   if (destinoOrganizador && !forcarLogin && !modeParam) {
     modeParam = "register";
+  }
+
+  if (
+    !forcarLogin &&
+    !q(sp, "reset") &&
+    modeParam === "register" &&
+    fluxoOrganizador &&
+    nextParam === CRIAR_EVENTO_DESTINO &&
+    q(sp, "precisa") !== "organizador"
+  ) {
+    redirect("/cadastro");
   }
 
   return (

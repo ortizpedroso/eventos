@@ -7,15 +7,15 @@ import { fetchSession } from "@/lib/api";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import {
   authHrefPrecisaContaOrganizador,
-  authHrefRegisterOrganizadorParaCriarEvento,
+  hrefCadastroOrganizador,
   hrefCriarEvento,
 } from "@/lib/criar-evento-routes";
 
 type Props = Omit<ComponentProps<typeof Link>, "href">;
 
-/** Link client-side para criar evento — href estável até confirmar sessão de organizador. */
+/** Link para criar evento — /cadastro (deslogado) ou /organizador/novo (organizador). */
 export function CriarEventoLink(props: Props) {
-  const [href, setHref] = useState(authHrefRegisterOrganizadorParaCriarEvento());
+  const [href, setHref] = useState(hrefCadastroOrganizador);
 
   useEffect(() => {
     async function sync() {
@@ -25,7 +25,7 @@ export function CriarEventoLink(props: Props) {
       } else if (u?.tipo === "cliente") {
         setHref(authHrefPrecisaContaOrganizador());
       } else {
-        setHref(authHrefRegisterOrganizadorParaCriarEvento());
+        setHref(hrefCadastroOrganizador);
       }
     }
     const onSync = () => void sync();
@@ -34,5 +34,5 @@ export function CriarEventoLink(props: Props) {
     return () => window.removeEventListener(AUTH_SYNC_EVENT, onSync);
   }, []);
 
-  return <Link href={href} prefetch scroll={false} {...props} />;
+  return <Link href={href} prefetch {...props} />;
 }

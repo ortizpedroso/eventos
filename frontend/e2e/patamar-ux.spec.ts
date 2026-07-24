@@ -96,17 +96,18 @@ test.describe("Checkout — copy de pagamento", () => {
     expect(opacidade).toBeGreaterThan(0.9);
   });
 
-  test("middleware /organizador/novo → auth abre cadastro (não login)", async ({ page }) => {
+  test("middleware /organizador/novo → cadastro (URL amigável)", async ({ page }) => {
     await page.goto("/organizador/novo");
-    await expect(page).toHaveURL(/\/auth\?.*mode=register/);
+    await expect(page).toHaveURL(/\/cadastro$/);
     await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
       timeout: 5000,
     });
     await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
   });
 
-  test("auth?next=/organizador/novo abre cadastro direto (sem piscar login)", async ({ page }) => {
+  test("auth?next=/organizador/novo redireciona para /cadastro", async ({ page }) => {
     await page.goto("/auth?next=%2Forganizador%2Fnovo", { waitUntil: "networkidle" });
+    await expect(page).toHaveURL(/\/cadastro$/);
     await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
       timeout: 5000,
     });
@@ -116,20 +117,18 @@ test.describe("Checkout — copy de pagamento", () => {
       .toBe(true);
   });
 
-  test("planos → auth: cadastro visível sem skeleton", async ({ page }) => {
+  test("planos → cadastro: formulário no topo sem scroll herdado", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/planos");
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.getByRole("link", { name: "Criar conta grátis" }).click();
-    await expect(page).toHaveURL(/\/auth\?.*mode=register/);
+    await expect(page).toHaveURL(/\/cadastro$/);
     await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
       timeout: 5000,
     });
-    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeLessThan(80);
     await expect(page.locator("form[data-auth-form]")).toBeVisible();
-    // Título de cadastro estável — não alterna para login durante hidratação
-    await expect
-      .poll(async () => page.getByRole("heading", { name: "Crie sua conta" }).isVisible())
-      .toBe(true);
-    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
   });
 
   test("planos: CTA do plano navega sem reload completo", async ({ page }) => {
@@ -140,7 +139,7 @@ test.describe("Checkout — copy de pagamento", () => {
     await page.getByRole("link", { name: "Criar conta grátis" }).click();
     await navPromise;
 
-    await expect(page).toHaveURL(/\/auth\?.*mode=register/);
+    await expect(page).toHaveURL(/\/cadastro$/);
     await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).not.toBeVisible();
   });
 

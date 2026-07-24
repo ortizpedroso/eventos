@@ -2,8 +2,7 @@ import type { ReactNode } from "react";
 
 import { AuthScrollReset } from "@/components/auth-scroll-reset";
 
-/** Mesmo padrão da coluna de conteúdo em conta-shell — altura mínima estável, sem centralizar (evita salto do rodapé). */
-export default function AuthLayout({ children }: { children: ReactNode }) {
+export default function CadastroLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[60vh] min-w-0 flex-1">
       <AuthScrollReset />

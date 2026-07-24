@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useLayoutEffect } from "react";
 
-const SEM_SCROLL_RESET = /^\/(?:auth|organizador|conta|planos)(?:\/|$)/;
+const SEM_SCROLL_RESET = /^\/(?:organizador|conta|planos)(?:\/|$)/;
 
 /** Garante scroll no topo antes do paint após navegação pública. */
 export function ScrollToTop() {

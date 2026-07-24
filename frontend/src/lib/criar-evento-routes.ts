@@ -4,6 +4,9 @@ export const CRIAR_EVENTO_DESTINO = "/organizador/novo";
 /** Link direto — use em botões “Criar evento” (evita flash via /auth no cliente). */
 export const hrefCriarEvento = CRIAR_EVENTO_DESTINO;
 
+/** URL amigável — cadastro de organizador (CTAs públicos: planos, navbar deslogado). */
+export const hrefCadastroOrganizador = "/cadastro";
+
 const ALLOWED_NEXT_PREFIXES = ["/", "/eventos", "/conta", "/organizador", "/auth"] as const;
 
 /** Decodifica next da query (?next=%2Forganizador%2Fnovo → /organizador/novo). */
@@ -19,11 +22,7 @@ export function normalizeAuthNext(raw: string | undefined): string | undefined {
 
 /** Abre o cadastro já como organizador, com destino após sucesso = criar evento. */
 export function authHrefRegisterOrganizadorParaCriarEvento(): string {
-  const p = new URLSearchParams();
-  p.set("mode", "register");
-  p.set("next", CRIAR_EVENTO_DESTINO);
-  p.set("fluxo", "organizador");
-  return `/auth?${p.toString()}`;
+  return hrefCadastroOrganizador;
 }
 
 export function authHrefParaCriarEvento(): string {

@@ -6,9 +6,9 @@ import {
   formatBrl,
   formatPercentual,
 } from "@/lib/tarifas-plataforma";
-import { hrefCriarEvento } from "@/lib/criar-evento-routes";
+import { hrefCadastroOrganizador } from "@/lib/criar-evento-routes";
 
-const CRIAR_CONTA_HREF = hrefCriarEvento;
+const CRIAR_CONTA_HREF = hrefCadastroOrganizador;
 
 function IconCheck({ className }: { className?: string }) {
   return (
@@ -52,7 +52,7 @@ export function PlanosPricingCards({ compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <Link href={CRIAR_CONTA_HREF} prefetch scroll={false} className="btn-outline w-full inline-block text-center">
+            <Link href={CRIAR_CONTA_HREF} prefetch className="btn-outline w-full inline-block text-center">
               Criar conta grátis
             </Link>
           </div>
@@ -77,7 +77,7 @@ export function PlanosPricingCards({ compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <Link href={CRIAR_CONTA_HREF} prefetch scroll={false} className="btn-success w-full inline-block text-center text-white">
+            <Link href={CRIAR_CONTA_HREF} prefetch className="btn-success w-full inline-block text-center text-white">
               Começar a vender
             </Link>
           </div>
@@ -108,7 +108,7 @@ export function PlanosPricingCards({ compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <Link href={CRIAR_CONTA_HREF} prefetch scroll={false} className="btn-success w-full inline-block text-center text-white">
+            <Link href={CRIAR_CONTA_HREF} prefetch className="btn-success w-full inline-block text-center text-white">
               Ver detalhes
             </Link>
           </div>
