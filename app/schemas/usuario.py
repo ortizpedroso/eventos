@@ -10,6 +10,8 @@ class UsuarioCreate(BaseModel):
     aceita_comunicacao_email: bool = False
     aceita_comunicacao_whatsapp: bool = False
     telefone: str | None = Field(default=None, max_length=20)
+    # Token do Cloudflare Turnstile (anti-bot); opcional se TURNSTILE_SECRET_KEY não estiver configurada.
+    turnstile_token: str | None = None
 
     @field_validator("tipo", mode="before")
     @classmethod
@@ -24,6 +26,7 @@ class UsuarioCreate(BaseModel):
 class UsuarioLogin(BaseModel):
     email: EmailStr
     senha: str
+    turnstile_token: str | None = None
 
 
 class CompraRapidaRequest(BaseModel):
@@ -71,6 +74,7 @@ class UsuarioResponse(BaseModel):
     aceita_comunicacao_whatsapp: bool = False
     telefone: str | None = None
     comunicacao_consentimento_em: datetime | None = None
+    totp_ativado: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -102,6 +106,35 @@ class Token(BaseModel):
 
 class SolicitarRecuperacaoSenhaRequest(BaseModel):
     email: EmailStr
+    turnstile_token: str | None = None
+
+
+class TotpSetupResponse(BaseModel):
+    secret: str
+    otpauth_uri: str
+    qr_base64: str
+
+
+class TotpAtivarRequest(BaseModel):
+    codigo: str = Field(min_length=6, max_length=6)
+
+
+class TotpAtivarResponse(BaseModel):
+    recovery_codes: list[str]
+
+
+class TotpDesativarRequest(BaseModel):
+    codigo: str = Field(min_length=6, max_length=9)
+
+
+class TotpChallengeResponse(BaseModel):
+    requires_2fa: bool = True
+    login_token: str
+
+
+class TotpVerificarLoginRequest(BaseModel):
+    login_token: str
+    codigo: str = Field(min_length=6, max_length=9)
 
 
 class RedefinirSenhaRequest(BaseModel):

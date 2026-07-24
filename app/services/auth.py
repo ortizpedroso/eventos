@@ -55,3 +55,16 @@ def token_version_from_payload(token: str) -> int | None:
         return int(ver)
     except (TypeError, ValueError):
         return None
+
+
+def create_2fa_challenge_token(usuario_id: str) -> str:
+    """Token de curta duração (5 min) emitido após senha correta, aguardando o código 2FA."""
+    return create_access_token({"sub": usuario_id, "scope": "2fa_pending"}, expires_delta=timedelta(minutes=5))
+
+
+def decode_2fa_challenge_token(token: str) -> str | None:
+    """Devolve o usuario_id se o token for um desafio 2FA válido e ainda não expirado."""
+    payload = decode_token_payload(token)
+    if not payload or payload.get("scope") != "2fa_pending":
+        return None
+    return payload.get("sub")
