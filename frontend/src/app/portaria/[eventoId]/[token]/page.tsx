@@ -14,13 +14,7 @@ type Props = {
 export default async function PortariaPage({ params }: Props) {
   const { eventoId, token } = await params;
   return (
-    <Suspense
-      fallback={
-        <div className="mx-auto max-w-lg px-4 py-16 text-center text-sm text-zinc-500">
-          A carregar…
-        </div>
-      }
-    >
+    <Suspense fallback={null}>
       <PortariaClient eventoId={eventoId} token={token} />
     </Suspense>
   );

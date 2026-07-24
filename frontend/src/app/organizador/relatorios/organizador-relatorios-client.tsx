@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { PainelKpiSkeleton } from "@/components/painel-kpi-skeleton";
 import { apiFetch, getApiBaseUrl } from "@/lib/api";
+import {
+  ORGANIZADOR_CACHE_KEYS,
+  readOrganizadorCache,
+  writeOrganizadorCache,
+} from "@/lib/organizador-session-cache";
 
 type RelatorioOrganizador = {
   resumo: {
@@ -90,7 +96,9 @@ function serieParaBarras(
 export function OrganizadorRelatoriosClient() {
   const [dias, setDias] = useState(90);
   const [eventoFiltro, setEventoFiltro] = useState<string>("");
-  const [data, setData] = useState<RelatorioOrganizador | null>(null);
+  const [data, setData] = useState<RelatorioOrganizador | null>(
+    () => readOrganizadorCache<RelatorioOrganizador>(ORGANIZADOR_CACHE_KEYS.relatorios) ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [csvBusy, setCsvBusy] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -102,6 +110,8 @@ export function OrganizadorRelatoriosClient() {
     return p.toString();
   }, [dias, eventoFiltro]);
 
+  const temCacheRelatorios = Boolean(readOrganizadorCache(ORGANIZADOR_CACHE_KEYS.relatorios));
+
   const carregar = useCallback(async () => {
     setError(null);
     try {
@@ -110,8 +120,11 @@ export function OrganizadorRelatoriosClient() {
         { cache: "no-store" },
       );
       setData(r);
+      writeOrganizadorCache(ORGANIZADOR_CACHE_KEYS.relatorios, r);
     } catch (e) {
-      setData(null);
+      if (!readOrganizadorCache(ORGANIZADOR_CACHE_KEYS.relatorios)) {
+        setData(null);
+      }
       setError(e instanceof Error ? e.message : "Não foi possível carregar os relatórios.");
     }
   }, [query]);
@@ -215,7 +228,7 @@ export function OrganizadorRelatoriosClient() {
         </p>
         <p className="mt-2 text-sm text-zinc-500">
           Quer o detalhe de cada cobrança? Veja também{" "}
-          <Link href="/conta/pagamentos" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+          <Link href="/organizador/perfil/pagamentos" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
             Meus pagamentos
           </Link>
           .
@@ -304,8 +317,8 @@ export function OrganizadorRelatoriosClient() {
         </div>
       ) : null}
 
-      {!data && !error ? (
-        <p className="text-sm text-zinc-500">Carregando números…</p>
+      {!data && !error && !temCacheRelatorios ? (
+        <PainelKpiSkeleton />
       ) : data ? (
         <>
           <section aria-labelledby="kpi-heading">

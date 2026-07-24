@@ -96,6 +96,54 @@ test.describe("Checkout — copy de pagamento", () => {
     expect(opacidade).toBeGreaterThan(0.9);
   });
 
+  test("middleware /organizador/novo → auth abre cadastro (não login)", async ({ page }) => {
+    await page.goto("/organizador/novo");
+    await expect(page).toHaveURL(/\/auth\?.*mode=register/);
+    await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
+  });
+
+  test("auth?next=/organizador/novo abre cadastro direto (sem piscar login)", async ({ page }) => {
+    await page.goto("/auth?next=%2Forganizador%2Fnovo", { waitUntil: "networkidle" });
+    await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
+    await expect
+      .poll(async () => page.getByRole("heading", { name: "Crie sua conta" }).isVisible())
+      .toBe(true);
+  });
+
+  test("planos → auth: cadastro visível sem skeleton", async ({ page }) => {
+    await page.goto("/planos");
+    await page.getByRole("link", { name: "Criar conta grátis" }).click();
+    await expect(page).toHaveURL(/\/auth\?.*mode=register/);
+    await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
+    await expect(page.locator("form[data-auth-form]")).toBeVisible();
+    // Título de cadastro estável — não alterna para login durante hidratação
+    await expect
+      .poll(async () => page.getByRole("heading", { name: "Crie sua conta" }).isVisible())
+      .toBe(true);
+    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
+  });
+
+  test("planos: CTA do plano navega sem reload completo", async ({ page }) => {
+    await page.goto("/planos");
+    await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).toBeVisible();
+
+    const navPromise = page.waitForEvent("framenavigated");
+    await page.getByRole("link", { name: "Criar conta grátis" }).click();
+    await navPromise;
+
+    await expect(page).toHaveURL(/\/auth\?.*mode=register/);
+    await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).not.toBeVisible();
+  });
+
   test("home menciona transparência de taxas", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText(/taxas|PIX/i).first()).toBeVisible();
@@ -250,6 +298,66 @@ test.describe("Navegação — scroll e logo", () => {
     await page.waitForTimeout(400);
     const scrollY = await page.evaluate(() => window.scrollY);
     expect(scrollY).toBeLessThan(8);
+  });
+});
+
+test.describe("Organizador — navegação sem piscada", () => {
+  test("eventos → financeiro → relatórios mantém sidebar e conteúdo estável", async ({
+    page,
+    context,
+  }) => {
+    test.skip(!process.env.PLAYWRIGHT_API_URL, "Requer API (PLAYWRIGHT_API_URL)");
+    await waitForApiReady(90_000);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const { token } = await seedOrganizerSession();
+    await context.addCookies([
+      {
+        name: "eventosbr_session",
+        value: token,
+        domain: "127.0.0.1",
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("eventosbr_tour_v1", "1");
+    });
+
+    await page.goto("/organizador/eventos", { waitUntil: "domcontentloaded" });
+    const sidebar = page.getByRole("navigation", { name: "Navegação do organizador" });
+    await expect(sidebar.getByRole("link", { name: "Meus eventos" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { level: 1, name: "Meus eventos" })).toBeVisible();
+
+    await sidebar.getByRole("link", { name: "Financeiro" }).click();
+    await expect(page).toHaveURL(/\/organizador\/financeiro/);
+    await expect(page.getByRole("heading", { level: 1, name: "Financeiro" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(sidebar.getByRole("link", { name: "Meus eventos" })).toBeVisible();
+
+    await sidebar.getByRole("link", { name: "Relatórios" }).click();
+    await expect(page).toHaveURL(/\/organizador\/relatorios/);
+    await expect(page.getByRole("heading", { level: 1, name: /Relatórios/i })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(sidebar.getByRole("link", { name: "Financeiro" })).toBeVisible();
+
+    await sidebar.getByRole("link", { name: "Meus eventos" }).click();
+    await expect(page).toHaveURL(/\/organizador\/eventos/);
+    await expect(page.getByRole("heading", { level: 1, name: "Meus eventos" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(sidebar.getByRole("link", { name: "Relatórios" })).toBeVisible();
+
+    // 2ª visita a Eventos: painel keep-alive — sem skeleton de carregamento
+    await expect(page.getByRole("status", { name: "Carregando" })).not.toBeVisible();
+    await expect(page.locator('[data-panel-route="/organizador/eventos"]')).not.toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 });
 

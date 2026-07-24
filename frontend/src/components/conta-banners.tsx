@@ -1,33 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import type { Usuario } from "@/lib/types";
 
 export function ContaBanners() {
-  const pathname = usePathname();
   const [semSenha, setSemSenha] = useState(false);
   const [emailPendente, setEmailPendente] = useState(false);
   const [reenviando, setReenviando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [perfilHref, setPerfilHref] = useState("/conta/perfil");
 
-  const carregar = useCallback(async () => {
-    try {
-      const u = await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
-      setSemSenha(u.tem_senha === false);
-      setEmailPendente(u.email_verificado === false);
-    } catch {
-      setSemSenha(false);
-      setEmailPendente(false);
-    }
+  useEffect(() => {
+    setPerfilHref(
+      window.location.pathname.startsWith("/organizador") ? "/organizador/perfil" : "/conta/perfil",
+    );
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function carregar() {
+      try {
+        const u = await apiFetch<Usuario>("/api/auth/me", { cache: "no-store" });
+        if (cancelled) return;
+        setSemSenha(u.tem_senha === false);
+        setEmailPendente(u.email_verificado === false);
+      } catch {
+        if (!cancelled) {
+          setSemSenha(false);
+          setEmailPendente(false);
+        }
+      }
+    }
+
+    const onSync = () => void carregar();
     void carregar();
-  }, [pathname, carregar]);
+    window.addEventListener(AUTH_SYNC_EVENT, onSync);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(AUTH_SYNC_EVENT, onSync);
+    };
+  }, []);
 
   async function reenviarEmail() {
     setReenviando(true);
@@ -46,8 +63,6 @@ export function ContaBanners() {
   }
 
   if (!semSenha && !emailPendente) return null;
-
-  const perfilHref = pathname.startsWith("/organizador") ? "/organizador/perfil" : "/conta/perfil";
 
   return (
     <div className="mb-4 space-y-3">
@@ -84,6 +99,8 @@ export function ContaBanners() {
           </p>
           <Link
             href={perfilHref}
+            prefetch
+            scroll={false}
             className="mt-2 inline-flex text-sm font-medium text-amber-950 underline underline-offset-2"
           >
             Definir senha agora →

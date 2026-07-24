@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import { AppNavLink } from "@/components/app-nav-link";
 
 const TABS = [
   { slug: "", label: "Perfil" },
@@ -22,12 +23,10 @@ export function PerfilTabs({ base }: { base: string }) {
         const href = slug ? `${base}/${slug}` : base;
         const active = slug ? pathname.startsWith(href) : pathname === base;
         return (
-          <Link
+          <AppNavLink
             key={label}
             href={href}
-            prefetch
-            scroll={false}
-            aria-current={active ? "page" : undefined}
+            active={active}
             className={`rounded-t-lg border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
               active
                 ? "border-emerald-700 text-emerald-800"
@@ -35,7 +34,7 @@ export function PerfilTabs({ base }: { base: string }) {
             }`}
           >
             {label}
-          </Link>
+          </AppNavLink>
         );
       })}
     </nav>

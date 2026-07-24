@@ -1,8 +1,7 @@
 "use client";
 
+import { AppNavLink } from "@/components/app-nav-link";
 import type { ReactNode } from "react";
-
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
@@ -36,12 +35,10 @@ export function ContaShell({ children }: { children: ReactNode }) {
             {LINKS.map(({ href, label }) => {
               const ativo = isActive(pathname, href);
               return (
-                <Link
+                <AppNavLink
                   key={href}
                   href={href}
-                  prefetch
-                  scroll={false}
-                  aria-current={ativo ? "page" : undefined}
+                  active={ativo}
                   className={`shrink-0 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                     ativo
                       ? "bg-emerald-700 text-white shadow-sm"
@@ -49,7 +46,7 @@ export function ContaShell({ children }: { children: ReactNode }) {
                   }`}
                 >
                   {label}
-                </Link>
+                </AppNavLink>
               );
             })}
           </nav>

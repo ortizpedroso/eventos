@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventoCardVitrine } from "@/components/evento-card-vitrine";
 import { EventoCategoriasChips } from "@/components/evento-categorias-chips";
 import { apiFetch } from "@/lib/api";
-import { hrefCriarEvento } from "@/lib/criar-evento-routes";
+import { CriarEventoLink } from "@/components/criar-evento-link";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { EVENTO_CATEGORIAS, categoriaFromQuery } from "@/lib/evento-categorias";
 import {
@@ -64,6 +64,13 @@ export function EventosListaPublica({
   const [dataAte, setDataAte] = useState("");
   const [erroIntervalo, setErroIntervalo] = useState<string | null>(null);
 
+  const filtroDataRef = useRef(filtroData);
+  filtroDataRef.current = filtroData;
+  const dataDeRef = useRef(dataDe);
+  dataDeRef.current = dataDe;
+  const dataAteRef = useRef(dataAte);
+  dataAteRef.current = dataAte;
+
   // Refs com valores correntes para evitar closures desatualizadas no debounce
   const categoriaRef = useRef(categoria);
   const cidadeRef = useRef(cidade);
@@ -93,9 +100,9 @@ export function EventosListaPublica({
       const cat = overrides.categoria !== undefined ? overrides.categoria : categoriaRef.current;
       const cid = overrides.cidade !== undefined ? overrides.cidade : cidadeRef.current;
       const q = overrides.busca !== undefined ? overrides.busca : buscaDebouncedRef.current;
-      const fd = overrides.filtroData !== undefined ? overrides.filtroData : filtroData;
-      const deInput = overrides.dataDe !== undefined ? overrides.dataDe : dataDe;
-      const ateInput = overrides.dataAte !== undefined ? overrides.dataAte : dataAte;
+      const fd = overrides.filtroData !== undefined ? overrides.filtroData : filtroDataRef.current;
+      const deInput = overrides.dataDe !== undefined ? overrides.dataDe : dataDeRef.current;
+      const ateInput = overrides.dataAte !== undefined ? overrides.dataAte : dataAteRef.current;
       const params = new URLSearchParams();
       if (cat) params.set("categoria", cat);
       if (q.trim()) params.set("q", q.trim());
@@ -114,8 +121,10 @@ export function EventosListaPublica({
       const qs = params.toString();
       return qs ? `${pathname}?${qs}` : pathname;
     },
-    [pathname, filtroData, dataDe, dataAte],
+    [pathname],
   );
+  const buildUrlRef = useRef(buildUrl);
+  buildUrlRef.current = buildUrl;
 
   const atualizarCategoria = useCallback(
     (nova: string) => {
@@ -190,7 +199,7 @@ export function EventosListaPublica({
     })();
   }, []);
 
-  // Debounce da busca: atualiza estado E URL após 400 ms de pausa
+  // Debounce da busca: atualiza estado E URL após 400 ms de pausa (só quando busca muda)
   useEffect(() => {
     const id = window.setTimeout(() => {
       const trimmed = busca.trim();
@@ -199,10 +208,10 @@ export function EventosListaPublica({
         primeiraSincronizacaoBuscaRef.current = false;
         if (trimmed === initialBusca.trim()) return;
       }
-      router.replace(buildUrl({ busca: trimmed }), { scroll: false });
+      router.replace(buildUrlRef.current({ busca: trimmed }), { scroll: false });
     }, 400);
     return () => window.clearTimeout(id);
-  }, [busca, buildUrl, router, initialBusca]);
+  }, [busca, router, initialBusca]);
 
   useEffect(() => {
     const deUrl = searchParams.get("de")?.trim() ?? "";
@@ -317,8 +326,11 @@ export function EventosListaPublica({
               type="button"
               onClick={() => {
                 setFiltroData(val);
+                filtroDataRef.current = val;
                 setDataDe("");
                 setDataAte("");
+                dataDeRef.current = "";
+                dataAteRef.current = "";
                 setErroIntervalo(null);
                 router.replace(buildUrl({ filtroData: val, dataDe: "", dataAte: "" }), { scroll: false });
               }}
@@ -526,9 +538,9 @@ export function EventosListaPublica({
                 Ver todos os eventos
               </button>
             ) : null}
-            <Link href={hrefCriarEvento} className="btn-success px-6 py-3 text-base shadow-sm">
+            <CriarEventoLink className="btn-success px-6 py-3 text-base shadow-sm">
               Criar evento
-            </Link>
+            </CriarEventoLink>
           </div>
         </div>
       ) : null}

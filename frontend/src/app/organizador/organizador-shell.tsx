@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AppNavLink } from "@/components/app-nav-link";
 import { OrganizadorTour } from "@/components/organizador-tour";
 
 const navDesktop = [
@@ -94,7 +94,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 md:pb-8 lg:flex-row lg:gap-10 lg:px-8 lg:py-12 pb-24">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 md:pb-8 lg:flex-row lg:gap-10 pb-24 lg:pb-8">
         <aside className="hidden shrink-0 lg:block lg:w-56">
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50/90 to-white p-3 shadow-sm ring-1 ring-emerald-200/80 lg:sticky lg:top-24">
             <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-emerald-800">
@@ -104,9 +104,10 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
               {navDesktop.map((item) => {
                 const active = isActive(pathname, item.href);
                 return (
-                  <Link
+                  <AppNavLink
                     key={item.href}
                     href={item.href}
+                    active={active}
                     data-tour={item.tour}
                     className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                       active
@@ -115,13 +116,13 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
                     }`}
                   >
                     {item.label}
-                  </Link>
+                  </AppNavLink>
                 );
               })}
             </nav>
           </div>
         </aside>
-        <div className="min-h-[60vh] min-w-0 flex-1">{children}</div>
+        <div className="min-h-[60vh] min-w-0 flex-1 textos-justificados">{children}</div>
       </div>
 
       <nav
@@ -132,9 +133,10 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
           {navMobilePrincipal.map((item) => {
             const active = isActive(pathname, item.href);
             return (
-              <Link
+              <AppNavLink
                 key={item.href}
                 href={item.href}
+                active={active}
                 data-tour={item.tour}
                 className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 py-2.5 text-[10px] font-medium ${
                   active ? "text-emerald-800" : "text-zinc-500"
@@ -142,7 +144,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
               >
                 {mobileIcon(item.href, `h-5 w-5 ${active ? "text-emerald-700" : "text-zinc-400"}`)}
                 <span className="truncate">{item.short}</span>
-              </Link>
+              </AppNavLink>
             );
           })}
           <button
@@ -173,9 +175,10 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
                 {navMobileMais.map((item) => {
                   const active = isActive(pathname, item.href);
                   return (
-                    <Link
+                    <AppNavLink
                       key={item.href}
                       href={item.href}
+                      active={active}
                       onClick={() => setMenuMaisAberto(false)}
                       className={`rounded-lg px-3 py-2.5 text-sm font-medium ${
                         active
@@ -184,7 +187,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
                       }`}
                     >
                       {item.label}
-                    </Link>
+                    </AppNavLink>
                   );
                 })}
               </div>

@@ -2,15 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
-import type { TokenResponse, Usuario } from "@/lib/types";
+import type { TokenResponse } from "@/lib/types";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
-import { onlyDigits } from "@/lib/cpf";
-import { formatTelefoneBrMask } from "@/lib/telefone-br";
+import {
+  enrichAuthSearchParams,
+  readAuthSearchParams,
+  resolveAuthMode,
+  useAuthSearchParams,
+  type AuthSearchParams,
+} from "@/lib/auth-search-params";
 import {
   authHrefPrecisaContaOrganizador,
   CRIAR_EVENTO_DESTINO,
@@ -18,8 +23,13 @@ import {
   isSafeInternalNext,
   nextRequerContaOrganizador,
 } from "@/lib/criar-evento-routes";
+import { onlyDigits } from "@/lib/cpf";
+import { formatTelefoneBrMask } from "@/lib/telefone-br";
 
 export type AuthClientProps = {
+  /** Modo resolvido no servidor — 1º paint estável (evita piscada). */
+  mode: "login" | "register" | "forgot" | "reset";
+  forcarLogin?: boolean;
   resetToken?: string;
   modeParam?: string;
   fluxoOrganizador?: boolean;
@@ -29,24 +39,44 @@ export type AuthClientProps = {
   nextParam?: string;
 };
 
-export default function AuthClient({
-  resetToken,
-  modeParam,
-  fluxoOrganizador = false,
-  precisaOrganizador = false,
-  sessaoExpirada = false,
-  tipoParam,
-  nextParam,
-}: AuthClientProps) {
+function serverAuthQuery(props: AuthClientProps): AuthSearchParams {
+  const sp = new URLSearchParams();
+  if (props.resetToken) sp.set("reset", props.resetToken);
+  if (props.modeParam) sp.set("mode", props.modeParam);
+  if (props.fluxoOrganizador) sp.set("fluxo", "organizador");
+  if (props.precisaOrganizador) sp.set("precisa", "organizador");
+  if (props.sessaoExpirada) sp.set("expirado", "1");
+  if (props.tipoParam) sp.set("tipo", props.tipoParam);
+  if (props.nextParam) sp.set("next", props.nextParam);
+  if (props.forcarLogin) sp.set("login", "1");
+  return readAuthSearchParams(sp.toString());
+}
+
+export default function AuthClient(serverProps: AuthClientProps) {
   const router = useRouter();
-  const mode =
-    resetToken
-      ? "reset"
-      : modeParam === "forgot"
-        ? "forgot"
-        : modeParam === "register"
-          ? "register"
-          : "login";
+
+  const serverFallback = useMemo(
+    () => enrichAuthSearchParams(serverAuthQuery(serverProps), serverProps.forcarLogin),
+    [serverProps],
+  );
+  const params = enrichAuthSearchParams(
+    useAuthSearchParams(serverFallback),
+    serverProps.forcarLogin,
+  );
+
+  const {
+    resetToken,
+    fluxoOrganizador,
+    precisaOrganizador,
+    sessaoExpirada,
+    tipoParam,
+    nextParam,
+  } = params;
+
+  const [mode, setMode] = useState(serverProps.mode);
+  useEffect(() => {
+    setMode(resolveAuthMode(params, serverProps.forcarLogin));
+  }, [params, serverProps.forcarLogin]);
 
   const defaultTipoRegistro = useMemo(() => {
     if (tipoParam === "organizador") return "organizador";
@@ -54,14 +84,9 @@ export default function AuthClient({
     return "cliente";
   }, [tipoParam, fluxoOrganizador, precisaOrganizador]);
 
-  const cachedSession = peekSessionCache();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const [aguardandoRedirect, setAguardandoRedirect] = useState(
-    () => cachedSession != null,
-  );
-  const [sessaoVerificada, setSessaoVerificada] = useState(() => cachedSession === null);
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
@@ -69,51 +94,47 @@ export default function AuthClient({
   const redirecionar = useCallback(
     (destino: string) => {
       router.replace(destino);
-      window.setTimeout(() => {
-        if (window.location.pathname.startsWith("/auth")) {
-          window.location.assign(destino);
-        }
-      }, 150);
     },
     [router],
   );
 
-  useEffect(() => {
-    if (sessaoVerificada && !aguardandoRedirect) {
-      requestAnimationFrame(() => {
-        document.querySelector("form[data-auth-form]")?.setAttribute("data-auth-ready", "true");
-      });
+  useLayoutEffect(() => {
+    const cached = peekSessionCache();
+    if (cached === null) return;
+    const forcar =
+      serverProps.forcarLogin ||
+      (typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("login") === "1");
+    if (cached && !forcar) {
+      redirecionar(
+        destinoPosAuth(
+          cached,
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("next")
+            : null,
+        ),
+      );
     }
-  }, [sessaoVerificada, aguardandoRedirect]);
+  }, [redirecionar, serverProps.forcarLogin]);
 
   useEffect(() => {
-    const cached = peekSessionCache();
-    if (cached === null) {
-      setSessaoVerificada(true);
-      setAguardandoRedirect(false);
-      return;
-    }
+    if (peekSessionCache() !== undefined) return;
 
     let cancelled = false;
     void (async () => {
-      const u = cached ?? (await fetchSession());
-      if (cancelled) return;
-      const sp = new URLSearchParams(window.location.search);
-      const forcarLogin = sp.get("login") === "1";
-      if (u && !forcarLogin) {
-        setAguardandoRedirect(true);
-        redirecionar(destinoPosAuth(u, sp.get("next")));
-        return;
+      const u = await fetchSession();
+      if (cancelled || !u) return;
+
+      const forcar = new URLSearchParams(window.location.search).get("login") === "1";
+      if (!forcar) {
+        redirecionar(destinoPosAuth(u, new URLSearchParams(window.location.search).get("next")));
       }
-      setSessaoVerificada(true);
-      setAguardandoRedirect(false);
     })();
+
     return () => {
       cancelled = true;
     };
-    // Verificação de sessão só na montagem — evita loop com deps instáveis (router/searchParams).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [redirecionar]);
 
   function setAuthMode(next: "login" | "register") {
     const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -144,7 +165,6 @@ export default function AuthClient({
       });
       return;
     }
-    setAguardandoRedirect(true);
     redirecionar(destinoPosAuth(data.usuario, next));
   }
 
@@ -239,25 +259,10 @@ export default function AuthClient({
     void onSubmit(new FormData(e.currentTarget));
   }
 
-  const formularioDesabilitado = loading || aguardandoRedirect;
-
-  if (!sessaoVerificada) {
-    return (
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col" aria-busy aria-label="Verificando sessão">
-        <div className="flex flex-1 flex-col justify-center">
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-8 animate-pulse">
-          <div className="mb-6 h-8 w-3/4 rounded bg-zinc-200" />
-          <div className="h-10 w-full rounded bg-zinc-200" />
-          <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
-          <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const formularioDesabilitado = loading;
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+    <div className="relative w-full flex-1 flex-col">
       {sessaoExpirada ? (
         <div
           className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
@@ -304,18 +309,8 @@ export default function AuthClient({
         ) : null}
       </div>
 
-      <div
-        className={`relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 ${
-          aguardandoRedirect ? "pointer-events-none opacity-60" : ""
-        }`}
-        aria-busy={aguardandoRedirect || undefined}
-      >
-        {aguardandoRedirect ? (
-          <p className="absolute inset-x-0 top-4 text-center text-sm font-medium text-zinc-600">
-            Redirecionando…
-          </p>
-        ) : null}
-        <form data-auth-form method="post" action="#" onSubmit={handleFormSubmit} className="space-y-4">
+      <div className="relative rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+        <form data-auth-form data-auth-ready="true" method="post" action="#" onSubmit={handleFormSubmit} className="space-y-4">
           {infoMsg ? (
             <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
               {infoMsg}

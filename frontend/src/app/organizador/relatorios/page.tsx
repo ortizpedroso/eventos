@@ -1,5 +1,4 @@
-import { OrganizadorRelatoriosClient } from "./organizador-relatorios-client";
-
+/** Conteúdo renderizado via OrganizadorPanelViews. */
 export default function OrganizadorRelatoriosPage() {
-  return <OrganizadorRelatoriosClient />;
+  return null;
 }

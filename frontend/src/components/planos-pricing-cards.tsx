@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   MENSALIDADE_ASSINATURA_MENSAL,
   TARIFA_ASSINATURA,
@@ -5,6 +6,9 @@ import {
   formatBrl,
   formatPercentual,
 } from "@/lib/tarifas-plataforma";
+import { authHrefRegisterOrganizadorParaCriarEvento } from "@/lib/criar-evento-routes";
+
+const CRIAR_CONTA_HREF = authHrefRegisterOrganizadorParaCriarEvento();
 
 function IconCheck({ className }: { className?: string }) {
   return (
@@ -28,11 +32,10 @@ function Feature({ children }: { children: React.ReactNode }) {
 }
 
 type Props = {
-  criarContaHref: string;
   compact?: boolean;
 };
 
-export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
+export function PlanosPricingCards({ compact = false }: Props) {
   return (
     <div className={`grid grid-cols-1 gap-6 text-left lg:grid-cols-3 lg:gap-8 ${compact ? "mt-8" : "mt-12"}`}>
       <div className="card-interactive h-full rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
@@ -49,9 +52,9 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <a href={criarContaHref} className="btn-outline w-full inline-block text-center">
+            <Link href={CRIAR_CONTA_HREF} prefetch scroll={false} className="btn-outline w-full inline-block text-center">
               Criar conta grátis
-            </a>
+            </Link>
           </div>
         ) : null}
       </div>
@@ -74,9 +77,9 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <a href={criarContaHref} className="btn-success w-full inline-block text-center text-white">
+            <Link href={CRIAR_CONTA_HREF} prefetch scroll={false} className="btn-success w-full inline-block text-center text-white">
               Começar a vender
-            </a>
+            </Link>
           </div>
         ) : null}
       </div>
@@ -105,9 +108,9 @@ export function PlanosPricingCards({ criarContaHref, compact = false }: Props) {
         </ul>
         {!compact ? (
           <div className="mt-8">
-            <a href={criarContaHref} className="btn-success w-full inline-block text-center text-white">
+            <Link href={CRIAR_CONTA_HREF} prefetch scroll={false} className="btn-success w-full inline-block text-center text-white">
               Ver detalhes
-            </a>
+            </Link>
           </div>
         ) : null}
       </div>
