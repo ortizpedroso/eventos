@@ -270,8 +270,10 @@ def iniciar_cobranca_asaas(
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
     # Bucket de 10min: retries dentro da mesma janela reusam a cobrança (evita duplicar
     # no double-click), mas cada janela nova gera uma cobrança/QR genuinamente novo.
+    # Inclui o billing type: troca de método de pagamento (ex.: PIX -> cartão) dentro da
+    # mesma janela não deve reaproveitar o cache da chave anterior no Asaas.
     bucket = int(agora.timestamp() // QR_PIX_VALIDADE.total_seconds())
-    idem_key = f"cob_{ingresso.id.replace('-', '')[:16]}_{bucket}"
+    idem_key = f"cob_{ingresso.id.replace('-', '')[:16]}_{bucket}_{billing.lower()}"
 
     try:
         payment = criar_cobranca_asaas(

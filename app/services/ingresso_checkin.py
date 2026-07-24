@@ -29,6 +29,15 @@ def _secret() -> bytes:
 
 
 def assinatura_ingresso(ingresso_id: str) -> str:
+    # 20 chars hex = 80 bits de entropia (recomendado para HMAC truncado).
+    return hmac.new(_secret(), ingresso_id.encode("utf-8"), hashlib.sha256).hexdigest()[:20]
+
+
+def _assinatura_legada_ingresso(ingresso_id: str) -> str:
+    """Formato anterior (12 chars/48 bits) — mantido só para validar QR Codes já emitidos
+
+    antes desta mudança. Novos códigos (codigo_checkin) sempre usam assinatura_ingresso (20 chars).
+    """
     return hmac.new(_secret(), ingresso_id.encode("utf-8"), hashlib.sha256).hexdigest()[:12]
 
 
@@ -77,7 +86,7 @@ def extrair_ingresso_id(codigo: str) -> str | None:
         if len(parts) >= 3:
             iid = parts[1].strip()
             sig = parts[2].strip()
-            if iid and sig == assinatura_ingresso(iid):
+            if iid and sig and (sig == assinatura_ingresso(iid) or sig == _assinatura_legada_ingresso(iid)):
                 return iid
         return None
 
