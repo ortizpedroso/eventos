@@ -8,7 +8,7 @@ function q(
   return typeof v === "string" ? v : undefined;
 }
 
-/** Sem cookies() — prefetch mais rápido; sessão checada só no cliente após mount. */
+/** searchParams no servidor — título/mode corretos no 1º paint; AuthClient sincroniza no cliente. */
 export default async function AuthPage({
   searchParams,
 }: {

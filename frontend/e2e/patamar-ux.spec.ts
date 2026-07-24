@@ -340,6 +340,13 @@ test.describe("Organizador — navegação sem piscada", () => {
       timeout: 10_000,
     });
     await expect(sidebar.getByRole("link", { name: "Relatórios" })).toBeVisible();
+
+    // 2ª visita a Eventos: painel keep-alive — sem skeleton de carregamento
+    await expect(page.getByRole("status", { name: "Carregando" })).not.toBeVisible();
+    await expect(page.locator('[data-panel-route="/organizador/eventos"]')).not.toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 });
 

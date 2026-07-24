@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { ContaBanners } from "@/components/conta-banners";
 import { OrganizadorPanelBootstrap } from "@/components/organizador-panel-bootstrap";
+import { OrganizadorPanelViews } from "@/components/organizador-panel-views";
 
 import { OrganizadorShell } from "./organizador-shell";
 
@@ -15,7 +16,7 @@ export default function OrganizadorLayout({ children }: { children: ReactNode })
     <OrganizadorShell>
       <OrganizadorPanelBootstrap />
       <ContaBanners />
-      {children}
+      <OrganizadorPanelViews>{children}</OrganizadorPanelViews>
     </OrganizadorShell>
   );
 }

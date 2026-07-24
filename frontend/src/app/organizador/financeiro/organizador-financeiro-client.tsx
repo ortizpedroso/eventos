@@ -205,6 +205,8 @@ export function OrganizadorFinanceiroClient() {
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [cpfCnpj, setCpfCnpj] = useState("");
 
+  const temCacheFinanceiro = Boolean(readOrganizadorCache(ORGANIZADOR_CACHE_KEYS.financeiro));
+
   const carregar = useCallback(async () => {
     setError(null);
     try {
@@ -376,7 +378,7 @@ export function OrganizadorFinanceiroClient() {
         </p>
       ) : null}
 
-      {!data && !error ? <PainelKpiSkeleton /> : null}
+      {!data && !error && !temCacheFinanceiro ? <PainelKpiSkeleton /> : null}
 
       <OrganizadorRepassesPainel />
       <OrganizadorFinanceiroSimulador planoTarifa={planoTarifa} />

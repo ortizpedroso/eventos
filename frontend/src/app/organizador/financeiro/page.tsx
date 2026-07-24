@@ -1,5 +1,4 @@
-import { OrganizadorFinanceiroClient } from "./organizador-financeiro-client";
-
+/** Conteúdo renderizado via OrganizadorPanelViews. */
 export default function OrganizadorFinanceiroPage() {
-  return <OrganizadorFinanceiroClient />;
+  return null;
 }

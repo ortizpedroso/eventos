@@ -110,6 +110,8 @@ export function OrganizadorRelatoriosClient() {
     return p.toString();
   }, [dias, eventoFiltro]);
 
+  const temCacheRelatorios = Boolean(readOrganizadorCache(ORGANIZADOR_CACHE_KEYS.relatorios));
+
   const carregar = useCallback(async () => {
     setError(null);
     try {
@@ -315,7 +317,7 @@ export function OrganizadorRelatoriosClient() {
         </div>
       ) : null}
 
-      {!data && !error ? (
+      {!data && !error && !temCacheRelatorios ? (
         <PainelKpiSkeleton />
       ) : data ? (
         <>
