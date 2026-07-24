@@ -5,10 +5,24 @@ type Block =
   | { type: "p"; html: string }
   | { type: "ul"; items: string[] };
 
-function inlineMarkdown(text: string): string {
+/** Escapa caracteres HTML antes de qualquer formatação, para evitar XSS se o texto de entrada deixar de ser estático. */
+function escapeHtml(text: string): string {
   return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function inlineMarkdown(text: string): string {
+  return escapeHtml(text)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="font-medium text-emerald-800 underline-offset-2 hover:underline">$1</a>');
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, href: string) => {
+      // Após o escape acima, só permitimos esquemas http(s) e caminhos relativos (bloqueia javascript:).
+      const safeHref = /^(https?:)?\/\//i.test(href) || href.startsWith("/") ? href : "#";
+      return `<a href="${safeHref}" class="font-medium text-emerald-800 underline-offset-2 hover:underline">${label}</a>`;
+    });
 }
 
 function parseBlocks(source: string): Block[] {

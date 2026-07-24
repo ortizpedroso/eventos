@@ -339,6 +339,7 @@ export default function AuthClient({
                 id="nova_senha"
                 name="nova_senha"
                 type="password"
+                autoComplete="new-password"
                 required
                 minLength={8}
               />
@@ -354,6 +355,7 @@ export default function AuthClient({
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -368,6 +370,7 @@ export default function AuthClient({
                       className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
                       id="nome"
                       name="nome"
+                      autoComplete="name"
                       required
                     />
                   </div>
@@ -410,6 +413,7 @@ export default function AuthClient({
                     id="senha"
                     name="senha"
                     type="password"
+                    autoComplete={mode === "register" ? "new-password" : "current-password"}
                     required
                     minLength={mode === "register" ? 8 : 1}
                   />
@@ -436,6 +440,7 @@ export default function AuthClient({
                   <input
                     id="tel_cadastro"
                     inputMode="tel"
+                    autoComplete="tel-national"
                     value={formatTelefoneBrMask(telefoneCadastro)}
                     onChange={(e) => setTelefoneCadastro(onlyDigits(e.target.value, 11))}
                     className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
