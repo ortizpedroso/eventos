@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # Gera SECRET_KEY, PLATFORM_ADMIN_API_KEY, POSTGRES_PASSWORD e ASAAS_WEBHOOK_TOKEN.
 # Uso: ./scripts/generate-secrets.sh
 
