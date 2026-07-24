@@ -27,6 +27,11 @@ www.{$DOMAIN} {
 		reverse_proxy api:8000
 	}
 
+	@uploads path /uploads/*
+	handle @uploads {
+		reverse_proxy api:8000
+	}
+
 	handle {
 		reverse_proxy web:3000
 	}
