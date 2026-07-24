@@ -105,6 +105,17 @@ test.describe("Checkout — copy de pagamento", () => {
     await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
   });
 
+  test("auth?next=/organizador/novo abre cadastro direto (sem piscar login)", async ({ page }) => {
+    await page.goto("/auth?next=%2Forganizador%2Fnovo", { waitUntil: "networkidle" });
+    await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
+    await expect
+      .poll(async () => page.getByRole("heading", { name: "Crie sua conta" }).isVisible())
+      .toBe(true);
+  });
+
   test("planos → auth: cadastro visível sem skeleton", async ({ page }) => {
     await page.goto("/planos");
     await page.getByRole("link", { name: "Criar conta grátis" }).click();

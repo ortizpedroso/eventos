@@ -10,6 +10,7 @@ import type { TokenResponse } from "@/lib/types";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import {
+  enrichAuthSearchParams,
   readAuthSearchParams,
   resolveAuthMode,
   useAuthSearchParams,
@@ -26,6 +27,8 @@ import { onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask } from "@/lib/telefone-br";
 
 export type AuthClientProps = {
+  /** Modo resolvido no servidor — 1º paint estável (evita piscada). */
+  mode: "login" | "register" | "forgot" | "reset";
   forcarLogin?: boolean;
   resetToken?: string;
   modeParam?: string;
@@ -52,8 +55,14 @@ function serverAuthQuery(props: AuthClientProps): AuthSearchParams {
 export default function AuthClient(serverProps: AuthClientProps) {
   const router = useRouter();
 
-  const serverFallback = useMemo(() => serverAuthQuery(serverProps), [serverProps]);
-  const params = useAuthSearchParams(serverFallback);
+  const serverFallback = useMemo(
+    () => enrichAuthSearchParams(serverAuthQuery(serverProps), serverProps.forcarLogin),
+    [serverProps],
+  );
+  const params = enrichAuthSearchParams(
+    useAuthSearchParams(serverFallback),
+    serverProps.forcarLogin,
+  );
 
   const {
     resetToken,
@@ -64,7 +73,10 @@ export default function AuthClient(serverProps: AuthClientProps) {
     nextParam,
   } = params;
 
-  const mode = resolveAuthMode(params);
+  const [mode, setMode] = useState(serverProps.mode);
+  useEffect(() => {
+    setMode(resolveAuthMode(params, serverProps.forcarLogin));
+  }, [params, serverProps.forcarLogin]);
 
   const defaultTipoRegistro = useMemo(() => {
     if (tipoParam === "organizador") return "organizador";

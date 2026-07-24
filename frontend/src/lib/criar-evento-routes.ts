@@ -6,6 +6,17 @@ export const hrefCriarEvento = CRIAR_EVENTO_DESTINO;
 
 const ALLOWED_NEXT_PREFIXES = ["/", "/eventos", "/conta", "/organizador", "/auth"] as const;
 
+/** Decodifica next da query (?next=%2Forganizador%2Fnovo → /organizador/novo). */
+export function normalizeAuthNext(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  try {
+    const decoded = decodeURIComponent(raw.trim());
+    return decoded.startsWith("/") ? decoded : `/${decoded}`;
+  } catch {
+    return raw.startsWith("/") ? raw : `/${raw}`;
+  }
+}
+
 /** Abre o cadastro já como organizador, com destino após sucesso = criar evento. */
 export function authHrefRegisterOrganizadorParaCriarEvento(): string {
   const p = new URLSearchParams();
@@ -16,10 +27,7 @@ export function authHrefRegisterOrganizadorParaCriarEvento(): string {
 }
 
 export function authHrefParaCriarEvento(): string {
-  const p = new URLSearchParams();
-  p.set("next", CRIAR_EVENTO_DESTINO);
-  p.set("fluxo", "organizador");
-  return `/auth?${p.toString()}`;
+  return authHrefRegisterOrganizadorParaCriarEvento();
 }
 
 export function authHrefPrecisaContaOrganizador(nextPath: string = CRIAR_EVENTO_DESTINO): string {

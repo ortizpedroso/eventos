@@ -264,7 +264,7 @@ export function Navbar() {
             ) : (
               <Link
                 href="/auth"
-                prefetch
+                prefetch={false}
                 scroll={false}
                 className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
               >
