@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
+import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import type { TokenResponse, Usuario } from "@/lib/types";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
@@ -65,6 +66,7 @@ export default function AuthClient({
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
+  const [senhaDigitada, setSenhaDigitada] = useState("");
 
   const redirecionar = useCallback(
     (destino: string) => {
@@ -342,7 +344,9 @@ export default function AuthClient({
                 autoComplete="new-password"
                 required
                 minLength={8}
+                onChange={(e) => setSenhaDigitada(e.target.value)}
               />
+              <PasswordStrengthMeter senha={senhaDigitada} />
             </div>
           ) : (
             <>
@@ -416,7 +420,9 @@ export default function AuthClient({
                     autoComplete={mode === "register" ? "new-password" : "current-password"}
                     required
                     minLength={mode === "register" ? 8 : 1}
+                    onChange={mode === "register" ? (e) => setSenhaDigitada(e.target.value) : undefined}
                   />
+                  {mode === "register" ? <PasswordStrengthMeter senha={senhaDigitada} /> : null}
                 </div>
               ) : null}
             </>
