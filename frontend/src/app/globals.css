@@ -4,6 +4,8 @@
   /* Paleta "Conversão & Confiança" */
   --background: #fafafa; /* zinc-50 */
   --foreground: #18181b; /* zinc-900 */
+  --brand-primary: #10b981;
+  --brand-primary-dark: #047857;
 }
 
 @theme inline {
@@ -44,7 +46,14 @@ body > footer {
   }
   
   .btn-success {
-    @apply flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    background-color: var(--brand-primary, #047857);
+  }
+  .btn-success:hover {
+    background-color: var(--brand-primary-dark, #065f46);
+  }
+  .btn-success:focus-visible {
+    --tw-ring-color: var(--brand-primary, #10b981);
   }
 
   .btn-outline {

@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { usePlatformSettings } from "@/components/platform-settings-provider";
+
 type Props = {
   className?: string;
   showWordmark?: boolean;
@@ -13,8 +15,13 @@ type Props = {
 
 export function EventosBRLogo({ className = "", showWordmark = true, variant = "default" }: Props) {
   const pathname = usePathname();
-  const customUrl = process.env.NEXT_PUBLIC_LOGO_URL?.trim();
-  const src = customUrl || (variant === "light" ? "/logo-light.svg" : "/logo.svg");
+  const platform = usePlatformSettings();
+  const envLogo = process.env.NEXT_PUBLIC_LOGO_URL?.trim();
+  const custom =
+    variant === "light"
+      ? platform.logo_light_url || platform.logo_url || envLogo
+      : platform.logo_url || envLogo;
+  const src = custom || (variant === "light" ? "/logo-light.svg" : "/logo.svg");
 
   function onClick(e: React.MouseEvent<HTMLAnchorElement>) {
     if (pathname === "/") {

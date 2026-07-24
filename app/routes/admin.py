@@ -17,6 +17,7 @@ from sqlalchemy import func
 from app.models import CampanhaMarketing, Evento, Usuario, get_db
 from app.services.production_checks import build_setup_status
 from app.schemas.campanha_marketing import CampanhaCreate, CampanhaDetalheResponse, CampanhaResponse
+from app.schemas.platform_settings import PlatformSettingsUpdate
 from app.services.marketing_campanha import criar_campanha, disparar_campanha
 from app.services.marketing_contatos import (
     CanalMarketing,
@@ -316,3 +317,31 @@ async def disparar_campanha_marketing(campanha_id: str, db: Session = Depends(ge
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return CampanhaResponse.model_validate(campanha)
+
+
+@router.get("/settings")
+async def obter_configuracoes_plataforma(db: Session = Depends(get_db)):
+    """Branding e contatos da plataforma (admin)."""
+    from app.models.platform_settings import PlatformSettings
+    from app.schemas.platform_settings import PlatformSettingsAdmin
+    from app.services.platform_settings import get_or_create_row, get_public_settings
+    row = get_or_create_row(db)
+    public = get_public_settings(db)
+    updated = row.updated_at.isoformat() if row.updated_at else None
+    return PlatformSettingsAdmin(**public.model_dump(), updated_at=updated)
+
+
+@router.patch("/settings")
+async def atualizar_configuracoes_plataforma(
+    body: PlatformSettingsUpdate,
+    db: Session = Depends(get_db),
+):
+    """Atualiza branding da plataforma (white-label)."""
+    from app.models.platform_settings import PlatformSettings
+    from app.schemas.platform_settings import PlatformSettingsAdmin
+    from app.services.platform_settings import update_settings
+
+    public = update_settings(db, body)
+    row = db.get(PlatformSettings, "default")
+    updated = row.updated_at.isoformat() if row and row.updated_at else None
+    return PlatformSettingsAdmin(**public.model_dump(), updated_at=updated)

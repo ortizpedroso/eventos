@@ -1,6 +1,7 @@
 from config.database import Base, get_db, create_tables
 
 # Importa modelos para registrá-los no Base
+from app.models.platform_settings import PlatformSettings
 from app.models.usuario import Usuario
 from app.models.evento import Evento
 from app.models.ingresso import Ingresso
@@ -31,4 +32,5 @@ __all__ = [
     "EventoListaEspera",
     "UsuarioNotificacao",
     "FinanceiroSaque",
+    "PlatformSettings",
 ]

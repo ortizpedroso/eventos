@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 
 import { EventosBRLogo } from "@/components/eventosbr-logo";
+import { usePlatformSettings } from "@/components/platform-settings-provider";
 import { hrefCadastroOrganizador } from "@/lib/criar-evento-routes";
 
 function IconInstagram({ className }: { className?: string }) {
@@ -19,19 +22,23 @@ function IconWhatsapp({ className }: { className?: string }) {
   );
 }
 
-function socialLink(url: string | undefined) {
+function socialLink(url: string | null | undefined) {
   const u = url?.trim();
   return u && u !== "#" ? u : null;
 }
 
 export function SiteFooter() {
+  const platform = usePlatformSettings();
   const year = new Date().getFullYear();
-  const emailContato = process.env.NEXT_PUBLIC_EMAIL_CONTATO?.trim();
+  const emailContato = platform.contact_email?.trim();
 
   const socialLinks = [
-    { href: socialLink(process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL), label: "Instagram", Icon: IconInstagram },
-    { href: socialLink(process.env.NEXT_PUBLIC_SOCIAL_WHATSAPP_URL), label: "WhatsApp", Icon: IconWhatsapp },
-  ].filter((s): s is { href: string; label: string; Icon: typeof IconInstagram } => Boolean(s.href));
+    { href: socialLink(platform.social_instagram_url), label: "Instagram", Icon: IconInstagram },
+    { href: socialLink(platform.social_whatsapp_url), label: "WhatsApp", Icon: IconWhatsapp },
+    { href: socialLink(platform.social_linkedin_url), label: "LinkedIn" },
+    { href: socialLink(platform.social_x_url), label: "X" },
+    { href: socialLink(platform.social_youtube_url), label: "YouTube" },
+  ].filter((s): s is { href: string; label: string; Icon?: typeof IconInstagram } => Boolean(s.href));
 
   return (
     <footer className="relative border-t border-emerald-500/20 bg-zinc-950 text-zinc-400">
@@ -40,7 +47,8 @@ export function SiteFooter() {
           <div className="lg:col-span-4">
             <EventosBRLogo variant="light" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-400">
-              Ingressos, reembolsos e repasses com transparência — do primeiro clique ao dia do evento.
+              {platform.footer_description ||
+                "Ingressos, reembolsos e repasses com transparência — do primeiro clique ao dia do evento."}
             </p>
             {emailContato ? (
               <p className="mt-3 text-sm">
@@ -85,9 +93,9 @@ export function SiteFooter() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={label}
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-700/90 bg-zinc-900/80 text-zinc-300 hover:border-emerald-500/60 hover:text-emerald-300"
+                      className="flex h-11 min-w-[2.75rem] items-center justify-center rounded-xl border border-zinc-700/90 bg-zinc-900/80 px-3 text-zinc-300 hover:border-emerald-500/60 hover:text-emerald-300"
                     >
-                      <Icon className="h-[1.125rem] w-[1.125rem]" />
+                      {Icon ? <Icon className="h-[1.125rem] w-[1.125rem]" /> : <span className="text-xs font-semibold">{label}</span>}
                     </a>
                   </li>
                 ))}
@@ -100,7 +108,7 @@ export function SiteFooter() {
           <p className="text-xs text-zinc-400">
             © {year}{" "}
             <Link href="/" className="text-zinc-300 underline underline-offset-2 hover:text-emerald-300">
-              EventosBR
+              {platform.site_name}
             </Link>
             . Todos os direitos reservados.
           </p>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { adminFetch, adminSessionActive, clearAdminSession, validateAdminKey } from "@/lib/admin-api";
+import { AdminPlatformSettingsPanel } from "./admin-platform-settings";
 
 type Contato = {
   id: string;
@@ -32,7 +33,7 @@ type Campanha = {
   disparado_em: string | null;
 };
 
-type Tab = "setup" | "eventos" | "usuarios" | "contatos" | "campanhas";
+type Tab = "setup" | "eventos" | "usuarios" | "contatos" | "campanhas" | "configuracoes";
 
 const SETUP_CHECK_LABELS: Record<string, string> = {
   secret_key: "Chave secreta",
@@ -405,6 +406,7 @@ export function AdminDashboardClient() {
             ["usuarios", "Usuários"],
             ["contatos", "Contatos"],
             ["campanhas", "Campanhas"],
+            ["configuracoes", "Configurações"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -687,7 +689,9 @@ export function AdminDashboardClient() {
             </table>
           </div>
         </section>
-      ) : (
+      ) : null}
+
+      {tab === "campanhas" ? (
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h2 className="font-semibold text-zinc-900">Nova campanha</h2>
@@ -780,7 +784,11 @@ export function AdminDashboardClient() {
             </ul>
           </div>
         </section>
-      )}
+      ) : null}
+
+      {tab === "configuracoes" ? (
+        <AdminPlatformSettingsPanel onMsg={setMsg} onError={setError} />
+      ) : null}
     </div>
   );
 }
