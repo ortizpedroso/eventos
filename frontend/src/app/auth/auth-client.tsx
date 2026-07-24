@@ -6,7 +6,9 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
-import type { TokenResponse, Usuario } from "@/lib/types";
+import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { TurnstileWidget } from "@/components/turnstile-widget";
+import type { LoginTotpChallenge, TokenResponse, Usuario } from "@/lib/types";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import { onlyDigits } from "@/lib/cpf";
@@ -28,6 +30,12 @@ export type AuthClientProps = {
   tipoParam?: string;
   nextParam?: string;
 };
+
+function isLoginTotpChallenge(
+  data: TokenResponse | LoginTotpChallenge,
+): data is LoginTotpChallenge {
+  return (data as LoginTotpChallenge).requires_2fa === true;
+}
 
 export default function AuthClient({
   resetToken,
@@ -65,6 +73,10 @@ export default function AuthClient({
   const [aceitaComEmail, setAceitaComEmail] = useState(false);
   const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
+  const [senhaDigitada, setSenhaDigitada] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [login2fa, setLogin2fa] = useState<{ loginToken: string } | null>(null);
+  const [codigo2fa, setCodigo2fa] = useState("");
 
   const redirecionar = useCallback(
     (destino: string) => {
@@ -159,7 +171,7 @@ export default function AuthClient({
         const r = await apiFetch<{ message: string }>("/api/auth/solicitar-recuperacao-senha", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ email, turnstile_token: turnstileToken }),
         });
         setInfoMsg(r.message);
         return;
@@ -193,6 +205,7 @@ export default function AuthClient({
           ? {
               email: String(formData.get("email") ?? ""),
               senha: String(formData.get("senha") ?? ""),
+              turnstile_token: turnstileToken,
             }
           : {
               email: String(formData.get("email") ?? ""),
@@ -204,9 +217,10 @@ export default function AuthClient({
               telefone: aceitaComWhatsapp
                 ? onlyDigits(telefoneCadastro, 13) || null
                 : null,
+              turnstile_token: turnstileToken,
             };
 
-      const data = await apiFetch<TokenResponse>(
+      const data = await apiFetch<TokenResponse | LoginTotpChallenge>(
         mode === "login" ? "/api/auth/login" : "/api/auth/registrar",
         {
           method: "POST",
@@ -214,6 +228,11 @@ export default function AuthClient({
           body: JSON.stringify(payload),
         },
       );
+
+      if (isLoginTotpChallenge(data)) {
+        setLogin2fa({ loginToken: data.login_token });
+        return;
+      }
 
       finishAuth(data);
     } catch (e) {
@@ -239,6 +258,25 @@ export default function AuthClient({
     void onSubmit(new FormData(e.currentTarget));
   }
 
+  async function onSubmit2fa(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!login2fa) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch<TokenResponse>("/api/auth/2fa/verificar-login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ login_token: login2fa.loginToken, codigo: codigo2fa.trim() }),
+      });
+      finishAuth(data);
+    } catch (e2) {
+      setError(e2 instanceof Error ? e2.message : "Código inválido.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const formularioDesabilitado = loading || aguardandoRedirect;
 
   if (!sessaoVerificada) {
@@ -252,6 +290,61 @@ export default function AuthClient({
           <div className="mt-4 h-10 w-full rounded bg-zinc-200" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (login2fa) {
+    return (
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">Verificação em duas etapas</h1>
+          <p className="mt-2 text-sm text-zinc-600">
+            Digite o código do seu app autenticador (ou um código de recuperação).
+          </p>
+        </div>
+        <form onSubmit={onSubmit2fa} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          {error ? (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 whitespace-pre-line">
+              {error}
+            </div>
+          ) : null}
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-zinc-800" htmlFor="codigo2fa">
+              Código de 6 dígitos ou de recuperação
+            </label>
+            <input
+              id="codigo2fa"
+              name="codigo2fa"
+              autoComplete="one-time-code"
+              inputMode="text"
+              autoFocus
+              required
+              value={codigo2fa}
+              onChange={(e) => setCodigo2fa(e.target.value)}
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-center text-lg tracking-widest focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+              placeholder="000000"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
+          >
+            {loading ? "Verificando…" : "Confirmar"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setLogin2fa(null);
+              setCodigo2fa("");
+              setError(null);
+            }}
+            className="w-full text-center text-xs font-medium text-zinc-500 hover:underline"
+          >
+            Voltar ao login
+          </button>
+        </form>
       </div>
     );
   }
@@ -342,7 +435,9 @@ export default function AuthClient({
                 autoComplete="new-password"
                 required
                 minLength={8}
+                onChange={(e) => setSenhaDigitada(e.target.value)}
               />
+              <PasswordStrengthMeter senha={senhaDigitada} />
             </div>
           ) : (
             <>
@@ -416,7 +511,9 @@ export default function AuthClient({
                     autoComplete={mode === "register" ? "new-password" : "current-password"}
                     required
                     minLength={mode === "register" ? 8 : 1}
+                    onChange={mode === "register" ? (e) => setSenhaDigitada(e.target.value) : undefined}
                   />
+                  {mode === "register" ? <PasswordStrengthMeter senha={senhaDigitada} /> : null}
                 </div>
               ) : null}
             </>
@@ -449,6 +546,10 @@ export default function AuthClient({
                 </div>
               ) : null}
             </div>
+          ) : null}
+
+          {mode !== "reset" ? (
+            <TurnstileWidget onToken={setTurnstileToken} />
           ) : null}
 
           <button disabled={formularioDesabilitado} className="btn-success w-full" type="submit">

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { PerfilPublicoOrganizador } from "@/components/perfil-publico-organizador";
+import { SegurancaDoisFatores } from "@/components/seguranca-2fa";
 import { apiFetch } from "@/lib/api";
 import { CONTA_CACHE_KEYS, readContaCache, writeContaCache } from "@/lib/conta-session-cache";
 import type { Usuario } from "@/lib/types";
@@ -418,6 +419,10 @@ export function PerfilClient() {
             </button>
           </div>
         </form>
+
+        {user.tipo === "organizador" ? (
+          <SegurancaDoisFatores ativado={Boolean(user.totp_ativado)} onChanged={() => void carregarDoBanco()} />
+        ) : null}
       </section>
       {user.tipo === "organizador" ? <PerfilPublicoOrganizador /> : null}
     </div>

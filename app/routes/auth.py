@@ -20,6 +20,12 @@ from app.schemas.usuario import (
     SolicitarRecuperacaoSenhaRequest,
     RedefinirSenhaRequest,
     VerificarEmailRequest,
+    TotpSetupResponse,
+    TotpAtivarRequest,
+    TotpAtivarResponse,
+    TotpDesativarRequest,
+    TotpChallengeResponse,
+    TotpVerificarLoginRequest,
 )
 from app.deps.rate_limit import rate_limit_login, rate_limit_oauth, rate_limit_register
 from app.services.oauth_verify import (
@@ -31,11 +37,15 @@ from app.services.oauth_usuario import obter_ou_criar_usuario_oauth
 from app.services.oauth_vincular import vincular_google_a_conta_email
 from app.services.auth import (
     create_access_token,
+    create_2fa_challenge_token,
+    decode_2fa_challenge_token,
     decode_token,
     decode_token_payload,
     hash_password,
     verify_password,
 )
+from app.services.organizador_2fa import TotpError, confirmar_totp, desativar_totp, iniciar_totp, verificar_totp_ou_recovery
+from app.services.turnstile import turnstile_habilitado, verificar_turnstile
 from app.services.usuario_pagamentos import criar_pagamento_para_novo_usuario
 from app.services.password_reset_email import enviar_email_recuperacao_senha
 from app.services.email_verificacao import (
@@ -95,14 +105,28 @@ def _aplicar_preferencias_comunicacao(
         usuario.comunicacao_consentimento_em = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+async def _checar_turnstile(request: Request, token: str | None) -> None:
+    if not turnstile_habilitado():
+        return
+    ip = request.client.host if request.client else None
+    if not await verificar_turnstile(token, ip):
+        raise HTTPException(
+            status_code=400,
+            detail="Não foi possível confirmar que você não é um robô. Recarregue a página e tente de novo.",
+        )
+
+
 @router.post("/registrar", response_model=Token)
 async def registrar(
     usuario_data: UsuarioCreate,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_register),
 ):
     """Registra novo usuário"""
+
+    await _checar_turnstile(request, usuario_data.turnstile_token)
 
     logger.info("Registrando novo usuário (tipo=%s)", usuario_data.tipo)
 
@@ -261,14 +285,17 @@ async def compra_rapida(
     return _token_response(novo_usuario, response)
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token | TotpChallengeResponse)
 async def login(
     credenciais: UsuarioLogin,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_login),
 ):
     """Login de usuário"""
+
+    await _checar_turnstile(request, credenciais.turnstile_token)
 
     email = str(credenciais.email).strip().lower()
     logger.info("Tentativa de login")
@@ -306,6 +333,9 @@ async def login(
     if not verify_password(credenciais.senha, usuario.senha_hash):
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
 
+    if usuario.totp_ativado:
+        return TotpChallengeResponse(login_token=create_2fa_challenge_token(usuario.id))
+
     access_token = _issue_token(usuario)
     set_auth_cookie(response, access_token)
 
@@ -316,13 +346,38 @@ async def login(
     }
 
 
+@router.post("/2fa/verificar-login", response_model=Token)
+async def verificar_login_2fa(
+    body: TotpVerificarLoginRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_login),
+):
+    """Segunda etapa do login quando a conta tem 2FA ativado."""
+    usuario_id = decode_2fa_challenge_token(body.login_token)
+    if not usuario_id:
+        raise HTTPException(status_code=401, detail="Sessão de login expirada. Faça login novamente.")
+
+    usuario = db.get(Usuario, usuario_id)
+    if not usuario or not usuario.ativo or not usuario.totp_ativado:
+        raise HTTPException(status_code=401, detail="Sessão de login expirada. Faça login novamente.")
+
+    if not verificar_totp_ou_recovery(db, usuario, body.codigo):
+        raise HTTPException(status_code=401, detail="Código inválido.")
+
+    return _token_response(usuario, response)
+
+
 @router.post("/solicitar-recuperacao-senha")
 async def solicitar_recuperacao_senha(
     body: SolicitarRecuperacaoSenhaRequest,
+    request: Request,
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_login),
 ):
     """Envia link de recuperação por e-mail (resposta genérica por segurança)."""
+    await _checar_turnstile(request, body.turnstile_token)
+
     email = str(body.email).strip().lower()
     usuario = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
     msg = "Se o e-mail estiver cadastrado e tiver senha, você receberá instruções em instantes."
@@ -654,6 +709,47 @@ async def atualizar_perfil(
     db.refresh(usuario)
 
     return UsuarioResponse.model_validate(usuario)
+
+
+@router.post("/2fa/iniciar", response_model=TotpSetupResponse)
+async def iniciar_2fa(
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Gera o segredo TOTP e o QR Code para escanear no app autenticador."""
+    try:
+        dados = iniciar_totp(db, usuario)
+    except TotpError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return TotpSetupResponse(**dados)
+
+
+@router.post("/2fa/ativar", response_model=TotpAtivarResponse)
+async def ativar_2fa(
+    body: TotpAtivarRequest,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Confirma o primeiro código do app autenticador e ativa o 2FA."""
+    try:
+        recovery_codes = confirmar_totp(db, usuario, body.codigo)
+    except TotpError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return TotpAtivarResponse(recovery_codes=recovery_codes)
+
+
+@router.post("/2fa/desativar")
+async def desativar_2fa(
+    body: TotpDesativarRequest,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Desativa o 2FA (exige um código TOTP ou de recuperação válido)."""
+    try:
+        desativar_totp(db, usuario, body.codigo)
+    except TotpError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {"message": "2FA desativado."}
 
 
 async def get_usuario_atual_opcional(

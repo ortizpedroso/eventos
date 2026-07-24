@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     # CORS — evitar "*" por defeito (defina origens reais em produção).
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173"
 
+    # Cloudflare Turnstile (anti-bot em login/cadastro/recuperação de senha).
+    # Vazio = feature desligada (não bloqueia); defina para habilitar a verificação.
+    TURNSTILE_SECRET_KEY: str = ""
+
     # Só confiar em X-Forwarded-For quando a API estiver atrás de reverse proxy fidedigno.
     TRUST_FORWARDED_HEADERS: bool = False
 

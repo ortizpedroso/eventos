@@ -67,12 +67,19 @@ export type Usuario = {
   aceita_comunicacao_whatsapp?: boolean;
   telefone?: string | null;
   comunicacao_consentimento_em?: string | null;
+  totp_ativado?: boolean;
 };
 
 export type TokenResponse = {
   access_token: string;
   token_type: string;
   usuario: Usuario;
+};
+
+/** Resposta do /api/auth/login quando a conta tem 2FA ativado (segunda etapa pendente). */
+export type LoginTotpChallenge = {
+  requires_2fa: true;
+  login_token: string;
 };
 
 export type AsaasPixPayload = {
