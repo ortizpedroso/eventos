@@ -1,12 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.7  
-**Data:** 2026-07-22  
+**Versão:** 1.8
+**Data:** 2026-07-24
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `eceec57` (PR #44 + #45 mergeados). **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Bloqueio pagamentos:** conta mãe Asaas precisa ser **CNPJ** (configuração operacional pendente). **Testes reais (§2.8):** após CNPJ + deploy.
+> **Produção (VPS):** `main` em `3988ec1`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Bloqueio pagamentos:** conta mãe Asaas precisa ser **CNPJ** (configuração operacional pendente — status não confirmado nesta revisão, ver §7). **Testes reais (§2.8):** após CNPJ + deploy.
+>
+> **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
 ---
 
@@ -119,7 +121,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (241 testes) |
+| `api` | `pytest` (265 testes) |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -187,7 +189,8 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 | P7 | Central `/ajuda`, blog, documentação API | [x] |
 | P8 | Wizard evento 3 passos, checklist publicação, tour organizador | [x] |
 | P9 | Portaria: QR local, feedback som/vibração, rate limit | [x] |
-| P10 | SEO: sitemap, robots, metadata | [x] |
+| P10 | SEO: sitemap dinâmico (inclui páginas de evento), robots, metadata, JSON-LD `Event` + `BreadcrumbList`, canonical por página, OG image padrão | [x] |
+| P11 | Formulários de auth: `autoComplete` correto, indicador de força de senha no cadastro | [x] |
 
 **Fora do escopo desta publicação:** múltiplos operadores, formulário custom inscrição, importação CSV, certificados, PWA equipe, Apple/Google Wallet, NFSe automática, modo `linked`/`both`, sandbox Asaas em produção.
 
@@ -195,15 +198,64 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 
 ## 5. Segurança
 
+### 5.1 Autenticação e sessão
+
 | Item | Onde |
 |------|------|
 | Proxy admin só via cookie | `api/admin/proxy` |
-| Middleware sessão + CSP nonce | `middleware.ts`, `csp.ts` |
+| Sessão + CSP nonce (Next.js "proxy", antigo `middleware.ts`) | `frontend/src/proxy.ts`, `frontend/src/lib/csp.ts` |
 | Verificação e-mail compra rápida | `email_verificacao.py` |
 | Rotação token portaria | `evento_portaria.py` |
-| Rate limit portaria | `rate_limit.py` |
 | Mensagens API em português | `api-errors.ts` |
 | White-label pagamentos (sem marca do provedor) | `api-errors.ts`, `mensagens_publicas.py`, `documentacao/api/page.tsx` |
+| Senhas com bcrypt | `services/auth.py` |
+| JWT com `token_version` (invalida sessões antigas ao trocar senha/desativar conta) | `services/auth.py` |
+
+### 5.2 2FA — TOTP (adicionado v1.8)
+
+- **Organizador:** TOTP opt-in (`Usuario.totp_ativado`), segredo cifrado em repouso (`totp_secret`), 8 códigos de recuperação de uso único (hash bcrypt). Login em duas etapas quando ativo: senha correta emite token de desafio de 5 min (`create_2fa_challenge_token`), segunda etapa em `POST /api/auth/2fa/verificar-login`. Gestão em `/organizador/perfil` → `SegurancaDoisFatores`.
+  - Implementação TOTP própria (RFC 6238, HMAC-SHA1), validada contra `pyotp` como referência — sem dependência nova.
+  - Endpoints: `POST /api/auth/2fa/{iniciar,ativar,desativar}`, `POST /api/auth/2fa/verificar-login`.
+  - Arquivos: `app/services/totp.py`, `app/services/organizador_2fa.py`.
+- **Admin:** TOTP opcional na camada Next.js (`ADMIN_TOTP_SECRET`, opt-in) — o admin usa uma chave compartilhada (`PLATFORM_ADMIN_API_KEY`), não contas individuais, então o 2FA é verificado em `frontend/src/app/api/admin/session/route.ts` antes de aceitar a chave, com rate limit de 8 tentativas/min por IP.
+  - Implementação TOTP em TypeScript (Node `crypto`) em `frontend/src/lib/admin-totp.ts`, validada contra a implementação Python.
+
+### 5.3 CAPTCHA — Cloudflare Turnstile (adicionado v1.8)
+
+Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (frontend); desligado por padrão, não bloqueia nada se não configurado. Verificação server-side em `app/services/turnstile.py`, aplicado em `/api/auth/{login,registrar,solicitar-recuperacao-senha}`. Widget: `frontend/src/components/turnstile-widget.tsx`.
+
+### 5.4 Rate limiting (`app/deps/rate_limit.py`)
+
+| Bucket | Limite | Observação |
+|---|---|---|
+| `auth_login` | 8/min por IP | Reduzido de 30/min (07/2026) — dificulta força bruta |
+| `auth_register` | 10/min por IP | |
+| `financeiro_saque` | 5/min por IP | Adicionado v1.8 |
+| `checkout_criar`, `checkin_validar`, `portaria_*`, `lista_publica` | ver código | Inalterados |
+| Portaria/admin (Next.js) | 8/min por IP | TOTP do admin — implementado em memória no `route.ts` |
+
+### 5.5 Dados sensíveis em repouso (adicionado v1.8)
+
+- **CPF/CNPJ de repasse do organizador** (`Usuario.asaas_repasse_cpf_cnpj`) cifrado em repouso (LGPD) — coluna `Text` (era `String(14)`), migração `20260724_000042`.
+- **Esquema `enc:v2`** em `app/utils/secret_storage.py`: salt aleatório por-registro (32 bytes) + PBKDF2-SHA256 600k iterações. Legado `enc:v1` (salt estático) continua sendo decifrado, re-cifrado para v2 na próxima escrita. `migrate_encryption()` disponível para rotação de `SECRET_KEY`.
+- Validação de dígito verificador (CPF/CNPJ) antes de criar conta de recebimento — `app/utils/cpf.py` (`documento_valido`).
+
+### 5.6 Webhooks e concorrência (adicionado v1.8)
+
+- **Webhook Asaas:** token validado *antes* de ler o corpo (anti-DoS); limite de 512KB no payload; deduplicação atômica (`INSERT` + `flush()`) *antes* do processamento do evento — elimina janela de corrida entre dois webhooks concorrentes do mesmo `event_id`.
+- **TOCTOU corrigido no saque:** `financeiro_organizador.py::solicitar_saque` recalcula o saldo liberado *dentro* do lock pessimista (`with_for_update`), não antes.
+- **Lock no pagamento:** `marcar_ingressos_pi_pagos` usa `FOR UPDATE` — evita que webhook e polling PIX confirmem o mesmo pagamento simultaneamente.
+- **Idempotency key da cobrança** inclui o billing type (`cob_{id}_{bucket}_{pix|credit_card}`) — troca de método de pagamento na mesma janela de 10min não reaproveita cache do Asaas.
+- **SQLite bloqueado em produção** (`config/settings.py`) — os locks acima exigem Postgres.
+
+### 5.7 Admin e superfícies de ataque (adicionado v1.8)
+
+- Audit log (`admin_action=...`) em: atualizar assinatura, publicar/pausar evento, ativar/desativar usuário, disparar campanha.
+- `SmtpTestBody.destino` usa `EmailStr` (era validação manual de `"@" in destino`).
+- Exportação CSV de contatos protegida contra CSV/formula injection (prefixo `'` em campos iniciados por `=+-@`).
+- CORS: `allow_methods`/`allow_headers` restritos à lista real usada pela API (era `"*"`).
+- Reembolso com `valor=0.0` bloqueado (`pagamento_asaas.py`).
+- HMAC do QR de check-in fortalecido de 12 para 20 caracteres (48→80 bits) em **novos** códigos; assinatura legada de 12 chars ainda aceita para não invalidar ingressos já emitidos antes da mudança (`ingresso_checkin.py`).
 
 ---
 
@@ -264,9 +316,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (241 testes)
+- [x] `pytest` verde (265 testes)
 - [x] `npm run build` verde
-- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas` verdes (PR #44 e #45)
+- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml` (verde na última execução local: `pytest` 265/265, `npm run build` OK)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 - [x] OpenAPI exportado sem paths `subconta` (`export-openapi.py` white-label)
 - [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
@@ -276,13 +328,13 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] PR #42, #43, #44 e #45 mergeados em `main` (`eceec57`)
-- [ ] Conta mãe Asaas em **CNPJ** + `ASAAS_API_KEY` / `ASAAS_PLATFORM_WALLET_ID` atualizados
-- [ ] Deploy VPS: `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`
-- [ ] Migration `20260722_000038_onboarding_tracker` aplicada (`alembic upgrade head`)
+- [x] `main` em `3988ec1` — inclui auditoria completa de segurança/SEO/UX (v1.8): 2FA, CAPTCHA, cifra de CPF/CNPJ, correções de concorrência (TOCTOU/webhook), SEO técnico, limpeza de 29 PRs obsoletas
+- [ ] Conta mãe Asaas em **CNPJ** + `ASAAS_API_KEY` / `ASAAS_PLATFORM_WALLET_ID` atualizados *(status não confirmado nesta revisão — confirmar antes de marcar)*
+- [ ] Deploy VPS com o commit `3988ec1` (ou mais recente): `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`
+- [ ] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (`alembic upgrade head` roda automaticamente no deploy)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj: ok`
 
-**Validado anteriormente no VPS (`df3942c` — revalidar após deploy `eceec57`):**
+**Validado anteriormente no VPS (revalidar após deploy do commit atual `3988ec1`):**
 
 - [x] `.env` produção preenchido
 - [x] `ASAAS_ENVIRONMENT=production` e `ASAAS_ONBOARDING_MODE=baas`
@@ -312,6 +364,10 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | UI financeiro | `organizador-repasses-painel.tsx` |
 | Conta / perfil | `conta-shell.tsx`, `perfil-tabs.tsx`, `conta/layout.tsx`, `organizador/perfil/layout.tsx` |
 | White-label | `api-errors.ts`, `mensagens_publicas.py`, `documentacao/api/page.tsx`, `export-openapi.py` |
+| 2FA (organizador + admin) | `services/totp.py`, `services/organizador_2fa.py`, `components/seguranca-2fa.tsx`, `lib/admin-totp.ts`, `app/api/admin/session/route.ts` |
+| CAPTCHA | `services/turnstile.py`, `components/turnstile-widget.tsx` |
+| Cifra em repouso (CPF/CNPJ, API keys) | `utils/secret_storage.py` (esquema `enc:v2`), `utils/cpf.py` |
+| SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `app/eventos/[slug]/page.tsx` (JSON-LD) |
 | Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh` |
@@ -324,3 +380,14 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 ## 9. Extensões (não bloqueiam publicação)
 
 Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2E_MOCK`), scripts de setup de webhook, comprovante de transferência, backfill de ledger, modo `linked` legado (apenas dev).
+
+---
+
+## 10. Changelog da spec
+
+| Versão | Data | Mudanças |
+|---|---|---|
+| 1.8 | 2026-07-24 | Auditoria completa de segurança/SEO/UX: 2FA (organizador+admin), CAPTCHA Turnstile, cifra `enc:v2` de CPF/CNPJ, correções TOCTOU/webhook/CSV-injection, SEO técnico (JSON-LD, sitemap dinâmico, canonical), indicador de força de senha. Fechadas 29 PRs obsoletas cujo conteúdo já estava incorporado à `main`. Testes: 241 → 265. |
+| 1.7 | 2026-07-22 | Versão anterior (conta de recebimento BaaS, onboarding tracker, white-label de mensagens). |
+
+**Regra a partir da v1.8:** qualquer mudança relevante no código (nova feature, correção de segurança, mudança de contrato de API) deve vir acompanhada de uma atualização desta spec no mesmo commit/PR, com nova linha no changelog acima.
