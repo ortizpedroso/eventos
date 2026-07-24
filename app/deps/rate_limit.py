@@ -21,7 +21,8 @@ _redis_client: object | None | bool = None  # None=não tentado, False=falhou, o
 
 # bucket -> (máximo de pedidos, janela em segundos)
 _LIMITS: dict[str, tuple[int, int]] = {
-    "auth_login": (30, 60),
+    # Reduzido de 30/60s para dificultar força bruta (auditoria 07/2026).
+    "auth_login": (8, 60),
     "auth_register": (10, 60),
     "checkout_criar": (25, 60),
     "checkin_validar": (120, 60),
