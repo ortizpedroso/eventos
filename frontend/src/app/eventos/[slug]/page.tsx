@@ -18,6 +18,7 @@ export async function generateMetadata({
     return {
       title: `${evento.nome} | EventosBR`,
       description: desc || `Ingressos para ${evento.nome}`,
+      alternates: { canonical: `/eventos/${evento.slug}` },
       openGraph: {
         title: evento.nome,
         description: desc || undefined,
@@ -29,6 +30,43 @@ export async function generateMetadata({
   } catch {
     return { title: "Evento | EventosBR" };
   }
+}
+
+/** JSON-LD schema.org/Event — habilita rich results de eventos no Google. */
+function buildEventoJsonLd(evento: NonNullable<Awaited<ReturnType<typeof getEventoPublicoBySlug>>>) {
+  const base = (process.env.NEXT_PUBLIC_LAN_ORIGIN || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
+  const img = resolveEventoImagemSrc(evento.imagem_url);
+  const preco = evento.preco_compra ?? evento.preco_ingresso ?? 0;
+
+  const jsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: evento.nome,
+    description: evento.descricao?.trim().slice(0, 500) || undefined,
+    startDate: evento.data_inicio,
+    endDate: evento.data_fim || undefined,
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventStatus: "https://schema.org/EventScheduled",
+    location: {
+      "@type": "Place",
+      name: evento.local,
+      address: evento.cidade || evento.local,
+    },
+    image: img ? [img.startsWith("http") ? img : `${base}${img}`] : undefined,
+    url: `${base}/eventos/${evento.slug}`,
+    offers: {
+      "@type": "Offer",
+      url: `${base}/eventos/${evento.slug}`,
+      priceCurrency: "BRL",
+      price: preco,
+      availability:
+        evento.compra_disponivel === false
+          ? "https://schema.org/SoldOut"
+          : "https://schema.org/InStock",
+    },
+  };
+
+  return JSON.stringify(jsonLd);
 }
 
 export default async function EventoPage({
@@ -59,12 +97,20 @@ export default async function EventoPage({
   }
 
   return (
-    <EventoPublicClient
-      key={slug}
-      slug={slug}
-      initialEvento={initialEvento}
-      alteracaoGuardada={alteracaoGuardada}
-      ingressoRetomarId={ingressoRetomar ?? null}
-    />
+    <>
+      {initialEvento ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: buildEventoJsonLd(initialEvento) }}
+        />
+      ) : null}
+      <EventoPublicClient
+        key={slug}
+        slug={slug}
+        initialEvento={initialEvento}
+        alteracaoGuardada={alteracaoGuardada}
+        ingressoRetomarId={ingressoRetomar ?? null}
+      />
+    </>
   );
 }
