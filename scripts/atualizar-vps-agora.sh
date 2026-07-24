@@ -171,8 +171,6 @@ _live_web_commit() {
     || true
 }
 
-<<<<<<< Updated upstream
-=======
 _tenant_route_ok() {
   # 404 + JSON é resposta correta quando o subdomínio não existe (curl -f falharia no 404).
   local resp code body
@@ -183,7 +181,6 @@ _tenant_route_ok() {
   [ "$code" = "404" ] && printf '%s' "$body" | grep -q 'Organizador não encontrado'
 }
 
->>>>>>> Stashed changes
 api_live="$(_live_api_commit)"
 web_live="$(_live_web_commit)"
 echo "  API commit: ${api_live:-?} (esperado: ${COMMIT})"
@@ -209,12 +206,7 @@ else
   echo "  OK  frontend na versão correta"
 fi
 
-<<<<<<< Updated upstream
-if curl -fsS --max-time 20 "https://${DOMAIN}/api/public/tenant?subdomain=__deploy_check__" 2>/dev/null \
-  | grep -q 'Organizador não encontrado'; then
-=======
 if _tenant_route_ok; then
->>>>>>> Stashed changes
   echo "  OK  rota white-label /api/public/tenant"
 else
   echo "  FALHA  rota /api/public/tenant ausente ou resposta inesperada"

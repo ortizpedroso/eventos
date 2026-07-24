@@ -56,10 +56,6 @@ else
   ok=1
 fi
 
-<<<<<<< Updated upstream
-if curl -fsS --max-time 20 "${URL}/api/public/tenant?subdomain=__check__" 2>/dev/null \
-  | grep -q 'Organizador não encontrado'; then
-=======
 _tenant_route_ok() {
   local resp code body
   resp="$(curl -sS --max-time 20 -w $'\n%{http_code}' \
@@ -70,7 +66,6 @@ _tenant_route_ok() {
 }
 
 if _tenant_route_ok; then
->>>>>>> Stashed changes
   echo "  OK      rota /api/public/tenant"
 else
   echo "  FALHA  rota /api/public/tenant ausente"
