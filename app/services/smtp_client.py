@@ -16,10 +16,17 @@ def smtp_configured() -> bool:
     return bool((settings.EMAIL_USER or "").strip() and (settings.EMAIL_PASSWORD or "").strip())
 
 
-def format_from_header() -> str:
-    name = (settings.EMAIL_FROM_NAME or "EventosBR").strip() or "EventosBR"
+def format_from_header(site_name: str | None = None) -> str:
+    name = (site_name or settings.EMAIL_FROM_NAME or "EventosBR").strip() or "EventosBR"
     user = (settings.EMAIL_USER or "").strip()
     return formataddr((name, user)) if user else name
+
+
+def format_from_header_branded(db=None) -> str:
+    from app.services.email_branding import get_email_branding
+
+    branding = get_email_branding(db)
+    return format_from_header(branding.site_name)
 
 
 def send_email(
@@ -39,7 +46,7 @@ def send_email(
 
     msg = EmailMessage()
     msg["Subject"] = assunto
-    msg["From"] = format_from_header()
+    msg["From"] = format_from_header_branded()
     msg["To"] = to
     msg.set_content(corpo_texto)
     if corpo_html:
@@ -60,12 +67,21 @@ def send_email(
 
 def send_test_email(destino: str) -> bool:
     """E-mail de teste para validar SMTP (scripts e painel admin)."""
+    from app.services.email_branding import build_email_html, format_email_subject, get_email_branding
+
+    branding = get_email_branding()
+    body = (
+        "<p>Este é um e-mail de teste da plataforma.</p>"
+        "<p>Se você recebeu esta mensagem, o SMTP está configurado corretamente.</p>"
+    )
+    html = build_email_html(title="Teste SMTP", body_html=body, branding=branding)
     return send_email(
         destino=destino,
-        assunto="Teste SMTP — EventosBR",
+        assunto=format_email_subject("Teste SMTP", branding),
         corpo_texto=(
-            "Este é um e-mail de teste da plataforma EventosBR.\n\n"
+            f"Este é um e-mail de teste da plataforma {branding.site_name}.\n\n"
             "Se você recebeu esta mensagem, o SMTP está configurado corretamente.\n\n"
-            "— EventosBR"
+            f"— {branding.site_name}"
         ),
+        corpo_html=html,
     )

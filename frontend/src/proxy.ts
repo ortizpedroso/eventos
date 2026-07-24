@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { buildContentSecurityPolicy } from "@/lib/csp";
 import { fetchMiddlewareSession } from "@/lib/middleware-api";
+import { extractSubdomain, fetchTenantBySubdomain } from "@/lib/organizer-tenant";
 
 const AUTH_COOKIE = "eventosbr_session";
 const ADMIN_COOKIE = "eventosbr_admin_key";
@@ -73,6 +74,20 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const headers = withNonce(request, nonce);
+
+  const baseDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN?.trim();
+  const host = request.headers.get("host") ?? "";
+  if (baseDomain && (pathname === "/" || pathname === "/eventos")) {
+    const sub = extractSubdomain(host, baseDomain);
+    if (sub) {
+      const tenant = await fetchTenantBySubdomain(sub);
+      if (tenant?.slug) {
+        const dest = new URL(`/produtor/${tenant.slug}`, request.url);
+        if (pathname === "/eventos") dest.pathname = `/produtor/${tenant.slug}`;
+        return finish(NextResponse.redirect(dest), nonce);
+      }
+    }
+  }
 
   if (pathname.startsWith("/api/admin/proxy")) {
     if (!request.cookies.get(ADMIN_COOKIE)?.value) {

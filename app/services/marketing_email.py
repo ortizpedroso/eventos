@@ -7,13 +7,11 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+from app.services.email_branding import build_email_html, get_email_branding, link_style
+from app.services.smtp_client import format_from_header_branded, smtp_configured
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
-
-
-def _smtp_configured() -> bool:
-    return bool((settings.EMAIL_USER or "").strip() and (settings.EMAIL_PASSWORD or "").strip())
 
 
 def enviar_email_marketing_sync(
@@ -24,21 +22,21 @@ def enviar_email_marketing_sync(
     mensagem: str,
     link_preferencias: str,
 ) -> bool:
+    branding = get_email_branding()
     corpo_html = mensagem.replace("\n", "<br/>")
-    html = (
-        '<div style="font-family:sans-serif;max-width:560px;color:#18181b">'
+    body = (
         f"<p>Olá, <strong>{nome}</strong>!</p>"
-        f'<div>{corpo_html}</div>'
+        f"<div>{corpo_html}</div>"
         f'<p style="font-size:12px;color:#71717a">'
-        f"Você recebeu porque aceitou comunicações da EventosBR. "
-        f'<a href="{link_preferencias}" style="color:#047857">Alterar preferências</a>.'
+        f"Você recebeu porque aceitou comunicações da {branding.site_name}. "
+        f'<a href="{link_preferencias}" style="{link_style(branding)}">Alterar preferências</a>.'
         "</p>"
-        "</div>"
     )
+    html = build_email_html(title=assunto[:200], body_html=body, branding=branding)
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = assunto[:200]
-    msg["From"] = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_USER}>"
+    msg["From"] = format_from_header_branded()
     msg["To"] = destino
     msg.attach(
         MIMEText(
@@ -49,13 +47,14 @@ def enviar_email_marketing_sync(
     )
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    if not _smtp_configured():
+    if not smtp_configured():
         logger.info("Marketing e-mail → %s (SMTP não configurado; simulado OK)", destino)
         return True
 
     try:
         with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-            server.starttls()
+            if settings.EMAIL_USE_TLS:
+                server.starttls()
             server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
             server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
         return True

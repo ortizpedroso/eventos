@@ -2,15 +2,18 @@ import logging
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
+from pathlib import Path
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 load_dotenv()
 
-from app.routes import admin, auth, checkin, eventos, financeiro, ingressos, listas, notificacoes, organizador, pagamentos, portaria, produtor, public, relatorios, simuladores, webhooks
+from app.routes import admin, assets, auth, checkin, eventos, financeiro, ingressos, listas, notificacoes, organizador, pagamentos, portaria, produtor, public, relatorios, simuladores, webhooks
 from app.models import create_tables, get_db
 from app.middleware.request_id import RequestIdMiddleware
 from config.settings import settings
@@ -121,6 +124,11 @@ app.include_router(simuladores.router, prefix="/api/simuladores", tags=["Simulad
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(public.router, prefix="/api/public", tags=["Público"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
+app.include_router(assets.router, prefix="/api", tags=["Assets"])
+
+_upload_root = Path(settings.UPLOAD_DIR or "uploads")
+_upload_root.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_upload_root)), name="uploads")
 
 
 @app.get("/health")

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { ImagemAssetField } from "@/components/imagem-asset-field";
 import { adminFetch } from "@/lib/admin-api";
 
 export type PlatformSettingsForm = {
@@ -205,32 +206,29 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
         <h3 className="sm:col-span-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
           Visual (logo, favicon, cores)
         </h3>
-        <label className="sm:col-span-2 grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">Logo (navbar — URL https ou data:image)</span>
-          <input
-            className="input font-mono text-xs"
-            value={form.logo_url}
-            onChange={(e) => setField("logo_url", e.target.value)}
-            placeholder="https://…/logo.svg ou cole data:image/png;base64,…"
-          />
-        </label>
-        <label className="sm:col-span-2 grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">Logo clara (rodapé escuro)</span>
-          <input
-            className="input font-mono text-xs"
-            value={form.logo_light_url}
-            onChange={(e) => setField("logo_light_url", e.target.value)}
-          />
-        </label>
-        <label className="sm:col-span-2 grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">Favicon (URL)</span>
-          <input
-            className="input font-mono text-xs"
-            value={form.favicon_url}
-            onChange={(e) => setField("favicon_url", e.target.value)}
-            placeholder="https://…/favicon.ico"
-          />
-        </label>
+        <ImagemAssetField
+          id="logo_url"
+          label="Logo (navbar)"
+          hint="URL https ou envie um arquivo (máx. 1,25 MB)."
+          value={form.logo_url}
+          onChange={(v) => setField("logo_url", v)}
+          uploadUrl="/api/admin/proxy/assets/upload"
+        />
+        <ImagemAssetField
+          id="logo_light_url"
+          label="Logo clara (rodapé escuro)"
+          value={form.logo_light_url}
+          onChange={(v) => setField("logo_light_url", v)}
+          uploadUrl="/api/admin/proxy/assets/upload"
+        />
+        <ImagemAssetField
+          id="favicon_url"
+          label="Favicon"
+          value={form.favicon_url}
+          onChange={(v) => setField("favicon_url", v)}
+          uploadUrl="/api/admin/proxy/assets/upload"
+          accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml"
+        />
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-zinc-800">Cor principal</span>
           <div className="flex items-center gap-2">

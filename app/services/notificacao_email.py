@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 from queue import Empty, Queue
 
 from app.services.redis_conn import get_redis_optional
-from app.services.smtp_client import format_from_header, smtp_configured
+from app.services.smtp_client import format_from_header_branded, smtp_configured
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def _send_sync(destino: str, assunto: str, html: str) -> bool:
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = assunto
-        msg["From"] = format_from_header()
+        msg["From"] = format_from_header_branded()
         msg["To"] = destino
         msg.attach(MIMEText(html, "html", "utf-8"))
         with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as smtp:
