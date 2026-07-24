@@ -90,24 +90,23 @@ echo "[3/9] Sync senha Postgres com .env..."
 
 LATEST_MIGRATION="$(ls alembic/versions/*.py | xargs -n1 basename | sort | tail -1)"
 echo ""
-echo "[4/9] Build API (migração mais recente no código: ${LATEST_MIGRATION})..."
-docker compose -f "$COMPOSE" build api
+echo "[4/9] Build API (--no-cache, commit ${COMMIT}, migração ${LATEST_MIGRATION})..."
+docker compose -f "$COMPOSE" build --no-cache api
 
-_migration_in_image() {
-  docker compose -f "$COMPOSE" run --rm --no-deps --entrypoint sh api \
-    -c "test -f alembic/versions/${LATEST_MIGRATION}" >/dev/null 2>&1
+_verify_api_image() {
+  docker compose -f "$COMPOSE" run --rm --no-deps --entrypoint sh api -c '
+    test -f app/routes/assets.py &&
+    test -f app/services/email_branding.py &&
+    test -f alembic/versions/20260724_000040_organizer_brand.py
+  ' >/dev/null 2>&1
 }
 
-if ! _migration_in_image; then
-  echo "  AVISO: imagem da API sem ${LATEST_MIGRATION} (cache desatualizado) — rebuild --no-cache..."
-  docker compose -f "$COMPOSE" build --no-cache api
-  if ! _migration_in_image; then
-    echo "ERRO: a imagem ainda não contém ${LATEST_MIGRATION} mesmo após --no-cache." >&2
-    echo "      git HEAD local: $(git rev-parse HEAD)" >&2
-    exit 1
-  fi
+if ! _verify_api_image; then
+  echo "ERRO: imagem da API sem código white-label (assets/email_branding/migration 000040)." >&2
+  echo "      git HEAD local: $(git rev-parse HEAD)" >&2
+  exit 1
 fi
-echo "  OK  imagem da API contém ${LATEST_MIGRATION}"
+echo "  OK  imagem da API contém código white-label + ${LATEST_MIGRATION}"
 
 docker compose -f "$COMPOSE" up -d --force-recreate api
 
@@ -158,6 +157,53 @@ else
   ok=1
 fi
 
+_live_api_commit() {
+  curl -fsS --max-time 20 "https://${DOMAIN}/api/public/version" 2>/dev/null \
+    | python3 -c "import json,sys; print(json.load(sys.stdin).get('git_commit',''))" 2>/dev/null \
+    || true
+}
+
+_live_web_commit() {
+  curl -fsS --max-time 20 "https://${DOMAIN}/" 2>/dev/null \
+    | grep -o 'data-eventosbr-build="[^"]*"' \
+    | head -1 \
+    | sed 's/data-eventosbr-build="//;s/"$//' \
+    || true
+}
+
+api_live="$(_live_api_commit)"
+web_live="$(_live_web_commit)"
+echo "  API commit: ${api_live:-?} (esperado: ${COMMIT})"
+echo "  Web commit: ${web_live:-?} (esperado: ${COMMIT})"
+
+if [ -z "$api_live" ] || [ "$api_live" = "unknown" ]; then
+  echo "  FALHA  /api/public/version não respondeu ou commit desconhecido"
+  ok=1
+elif [ "$api_live" != "$COMMIT" ]; then
+  echo "  FALHA  API ainda no commit antigo — container pode não ter sido recriado"
+  ok=1
+else
+  echo "  OK  API na versão correta"
+fi
+
+if [ -z "$web_live" ]; then
+  echo "  FALHA  build marker do frontend ausente"
+  ok=1
+elif [ "$web_live" != "$COMMIT" ]; then
+  echo "  FALHA  frontend ainda no commit antigo"
+  ok=1
+else
+  echo "  OK  frontend na versão correta"
+fi
+
+if curl -fsS --max-time 20 "https://${DOMAIN}/api/public/tenant?subdomain=__deploy_check__" 2>/dev/null \
+  | grep -q 'Organizador não encontrado'; then
+  echo "  OK  rota white-label /api/public/tenant"
+else
+  echo "  FALHA  rota /api/public/tenant ausente ou resposta inesperada"
+  ok=1
+fi
+
 if [ -x ./scripts/verify-production.sh ]; then
   ./scripts/verify-production.sh || echo "  AVISO: verify-production retornou erro — revise manualmente"
 fi
@@ -165,7 +211,11 @@ fi
 echo ""
 if [ "$ok" -eq 0 ]; then
   echo "✅ SITE NO AR: https://${DOMAIN}"
+  echo "   Admin → aba Configurações: upload de logo/favicon"
+  echo "   Organizador → Perfil → seção Marca (white-label)"
 else
-  echo "❌ /ready falhou — logs: docker compose -f $COMPOSE logs api --tail=60" >&2
+  echo "❌ Deploy incompleto — versão em produção não bate com ${COMMIT}" >&2
+  echo "   Logs API: docker compose -f $COMPOSE logs api --tail=60" >&2
+  echo "   Logs Web: docker compose -f $COMPOSE logs web --tail=60" >&2
   exit 1
 fi

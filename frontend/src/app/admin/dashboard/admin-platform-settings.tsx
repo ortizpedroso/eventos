@@ -141,8 +141,12 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
       <div>
         <h2 className="text-lg font-semibold text-zinc-900">Configurações da plataforma</h2>
         <p className="mt-1 max-w-2xl text-sm text-zinc-600">
-          Personalize a marca do site (white-label): logo, cores, favicon, e-mail de contato e redes
-          sociais. As alterações aparecem na navbar, rodapé e botões principais.
+          Personalize a marca do site (white-label): envie logo e favicon, ajuste cores, e-mail de contato e redes
+          sociais. As alterações aparecem na navbar, rodapé, e-mails e botões principais.
+        </p>
+        <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-950">
+          <strong>Onde usar:</strong> em cada campo de imagem, clique em <strong>Enviar arquivo</strong> ou cole uma
+          URL <code className="rounded bg-white px-1">https://</code>. Salve ao final da página.
         </p>
       </div>
 

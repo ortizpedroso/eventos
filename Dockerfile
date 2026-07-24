@@ -16,7 +16,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia código
+ARG GIT_COMMIT=dev
 COPY . .
+ENV GIT_COMMIT=$GIT_COMMIT
 RUN chown -R appuser:appuser /app
 
 USER appuser
