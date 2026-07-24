@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 from typing import Literal
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session, joinedload
 
 from app.deps.platform_admin import require_platform_admin
@@ -58,6 +61,10 @@ async def admin_atualizar_assinatura(
         renovar_assinatura_meses(db, usuario, meses=body.meses)
     else:
         cancelar_assinatura(db, usuario)
+    logger.info(
+        "admin_action=atualizar_assinatura usuario_id=%s plano=%s meses=%s",
+        usuario_id, body.plano_tarifa, body.meses,
+    )
     return {"id": usuario.id, "plano_tarifa": usuario.plano_tarifa, "assinatura_valida_ate": usuario.assinatura_valida_ate}
 
 
@@ -68,7 +75,7 @@ async def status_setup():
 
 
 class SmtpTestBody(BaseModel):
-    destino: str
+    destino: EmailStr
 
 
 @router.post("/smtp-test")
@@ -81,9 +88,7 @@ async def testar_smtp(body: SmtpTestBody):
             status_code=503,
             detail="SMTP não configurado. Defina EMAIL_USER e EMAIL_PASSWORD no .env da API.",
         )
-    destino = body.destino.strip()
-    if "@" not in destino:
-        raise HTTPException(status_code=400, detail="E-mail de destino inválido.")
+    destino = str(body.destino).strip()
     ok = send_test_email(destino)
     if not ok:
         raise HTTPException(status_code=502, detail="Falha ao enviar e-mail de teste.")
@@ -137,6 +142,10 @@ async def atualizar_publicacao_evento(
     evento.publicado = body.publicado
     db.commit()
     db.refresh(evento)
+    logger.info(
+        "admin_action=atualizar_publicacao evento_id=%s publicado=%s",
+        evento_id, body.publicado,
+    )
     return {
         "id": evento.id,
         "slug": evento.slug,
@@ -203,6 +212,10 @@ async def atualizar_status_usuario(
         usuario.token_version = int(usuario.token_version or 0) + 1
     db.commit()
     db.refresh(usuario)
+    logger.info(
+        "admin_action=atualizar_status_usuario usuario_id=%s ativo=%s",
+        usuario_id, body.ativo,
+    )
     return {
         "id": usuario.id,
         "email": usuario.email,
@@ -225,6 +238,14 @@ async def listar_contatos(
         if q:
             usuarios, _ = buscar_contatos_marketing(db, canal=canal, q=q, limit=5000, offset=0)
         rows = [usuario_para_export_row(u) for u in usuarios]
+
+        def _csv_safe(value: str | None) -> str:
+            """Prefixo ' em campos que iniciam com =+-@ para evitar CSV/formula injection."""
+            v = str(value or "").strip()
+            if v and v[0] in ("=", "+", "-", "@", "\t", "\r"):
+                return "'" + v
+            return v
+
         buf = io.StringIO()
         w = csv.writer(buf, delimiter=";", lineterminator="\n")
         w.writerow(
@@ -234,9 +255,9 @@ async def listar_contatos(
             w.writerow(
                 [
                     r["id"],
-                    r["nome"],
-                    r["email"],
-                    r["telefone"] or "",
+                    _csv_safe(r["nome"]),
+                    _csv_safe(r["email"]),
+                    _csv_safe(r["telefone"] or ""),
                     r["tipo"],
                     "sim" if r["aceita_comunicacao_email"] else "nao",
                     "sim" if r["aceita_comunicacao_whatsapp"] else "nao",
@@ -292,6 +313,10 @@ async def criar_campanha_marketing(
     if body.disparar_agora:
         try:
             campanha = disparar_campanha(db, campanha.id)
+            logger.info(
+                "admin_action=disparar_campanha campanha_id=%s canal=%s",
+                campanha.id, body.canal,
+            )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
     return CampanhaResponse.model_validate(campanha)
@@ -316,6 +341,7 @@ async def disparar_campanha_marketing(campanha_id: str, db: Session = Depends(ge
         campanha = disparar_campanha(db, campanha_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    logger.info("admin_action=disparar_campanha campanha_id=%s canal=%s", campanha.id, campanha.canal)
     return CampanhaResponse.model_validate(campanha)
 
 
