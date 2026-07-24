@@ -1,12 +1,20 @@
-"""Perfil público do organizador (/produtor/[slug])."""
+"""Página pública do produtor/organizador (/produtor/[slug])."""
 
 from __future__ import annotations
+
+import re
 
 from slugify import slugify
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Evento, Ingresso, Usuario
+
+_SUBDOMAIN_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
+_HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
+RESERVED_SUBDOMAINS = frozenset(
+    {"www", "api", "admin", "app", "mail", "smtp", "cdn", "static", "dev", "staging", "test"}
+)
 
 
 def slug_publico_unico(db: Session, nome: str, usuario_id: str | None = None) -> str:
@@ -30,6 +38,40 @@ def garantir_slug_publico(db: Session, usuario: Usuario) -> str:
     usuario.slug_publico = slug
     db.commit()
     return slug
+
+
+def validar_brand_subdomain(value: str | None) -> str | None:
+    if value is None:
+        return None
+    s = value.strip().lower()
+    if not s:
+        return None
+    if len(s) < 3 or len(s) > 63 or not _SUBDOMAIN_RE.match(s):
+        raise ValueError("Subdomínio inválido (3–63 caracteres, letras minúsculas, números e hífen)")
+    if s in RESERVED_SUBDOMAINS:
+        raise ValueError("Subdomínio reservado pela plataforma")
+    return s
+
+
+def validar_brand_color(value: str | None) -> str | None:
+    if value is None:
+        return None
+    s = value.strip()
+    if not s:
+        return None
+    if not _HEX_COLOR.match(s):
+        raise ValueError("Cor deve ser hexadecimal (#RRGGBB)")
+    return s.lower()
+
+
+def _brand_payload(org: Usuario) -> dict:
+    return {
+        "brand_name": org.brand_name,
+        "brand_logo_url": org.brand_logo_url,
+        "brand_primary_color": org.brand_primary_color,
+        "brand_primary_color_dark": org.brand_primary_color_dark,
+        "brand_subdomain": org.brand_subdomain,
+    }
 
 
 def montar_perfil_publico(db: Session, slug: str) -> dict | None:
@@ -64,11 +106,13 @@ def montar_perfil_publico(db: Session, slug: str) -> dict | None:
     occ = contar_ocupacao_por_lotes(db, lote_ids)
     eventos_out = [montar_evento_response(db, e, ocupacao_por_lote=occ).model_dump() for e in eventos]
 
+    display_name = (org.brand_name or org.nome or "").strip() or org.nome
+
     return {
         "slug": org.slug_publico,
-        "nome": org.nome,
+        "nome": display_name,
         "bio": org.bio,
-        "foto_url": org.foto_url,
+        "foto_url": org.foto_url or org.brand_logo_url,
         "social_instagram": org.social_instagram,
         "social_whatsapp": org.social_whatsapp,
         "social_site": org.social_site,
@@ -77,4 +121,34 @@ def montar_perfil_publico(db: Session, slug: str) -> dict | None:
             "ingressos_pagos": int(total_ingressos_pagos),
         },
         "eventos": eventos_out,
+        **_brand_payload(org),
+    }
+
+
+def resolver_tenant_por_subdomain(db: Session, subdomain: str) -> dict | None:
+    try:
+        sub = validar_brand_subdomain(subdomain)
+    except ValueError:
+        return None
+    if not sub:
+        return None
+    org = (
+        db.query(Usuario)
+        .filter(
+            Usuario.brand_subdomain == sub,
+            Usuario.tipo == "organizador",
+            Usuario.ativo.is_(True),
+        )
+        .first()
+    )
+    if not org or not org.slug_publico:
+        return None
+    display_name = (org.brand_name or org.nome or "").strip() or org.nome
+    return {
+        "slug": org.slug_publico,
+        "subdomain": sub,
+        "nome": display_name,
+        "brand_logo_url": org.brand_logo_url or org.foto_url,
+        "brand_primary_color": org.brand_primary_color,
+        "brand_primary_color_dark": org.brand_primary_color_dark,
     }

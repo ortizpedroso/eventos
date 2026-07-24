@@ -7,6 +7,7 @@ import logging
 from urllib.parse import quote
 
 from app.models import Usuario
+from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
 from app.services.notificacao_email import enqueue_email_simples
 from app.utils.html_escape import esc
 from config.settings import settings
@@ -39,18 +40,20 @@ def enviar_email_conta_aprovada(usuario: Usuario, *, tracking_id: str | None = N
     destino = (usuario.email or "").strip()
     if not destino:
         return False
+    branding = get_email_branding()
     link = _conta_repasse_url(tracking_id)
-    html = (
-        '<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#18181b">'
-        '<h2 style="color:#047857">Conta criada com sucesso</h2>'
+    body = (
         f"<p>Olá, <strong>{esc(usuario.nome or '')}</strong>!</p>"
         "<p>Sua conta de recebimento foi aprovada. Você já pode publicar eventos pagos e receber "
         "repasses automaticamente em cada venda.</p>"
-        f'<p><a href="{link}" style="color:#047857">Abrir Financeiro</a></p>'
-        '<p style="font-size:11px;color:#a1a1aa">EventosBR — eventosbr.app.br</p>'
-        "</div>"
+        f'<p><a href="{link}" style="{link_style(branding)}">Abrir Financeiro</a></p>'
     )
-    ok = enqueue_email_simples(destino, "Conta de recebimento aprovada — EventosBR", html)
+    html = build_email_html(title="Conta criada com sucesso", body_html=body, branding=branding)
+    ok = enqueue_email_simples(
+        destino,
+        format_email_subject("Conta de recebimento aprovada", branding),
+        html,
+    )
     if ok:
         usuario.onboarding_conta_email_event = "APPROVED"
     return ok
@@ -67,18 +70,20 @@ def enviar_email_conta_reprovada(
     destino = (usuario.email or "").strip()
     if not destino:
         return False
+    branding = get_email_branding()
     link = f"{_financeiro_url()}?reenviar=1"
-    html = (
-        '<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#18181b">'
-        '<h2 style="color:#b91c1c">Não foi possível criar sua conta</h2>'
+    body = (
         f"<p>Olá, <strong>{esc(usuario.nome or '')}</strong>!</p>"
         "<p>A análise da sua conta de recebimento não foi aprovada pelos motivos abaixo:</p>"
         f"{_lista_motivos_html(motivos)}"
-        f'<p><a href="{link}" style="color:#047857">Reenviar dados no Financeiro</a></p>'
-        '<p style="font-size:11px;color:#a1a1aa">EventosBR — eventosbr.app.br</p>'
-        "</div>"
+        f'<p><a href="{link}" style="{link_style(branding)}">Reenviar dados no Financeiro</a></p>'
     )
-    ok = enqueue_email_simples(destino, "Conta de recebimento não aprovada — EventosBR", html)
+    html = build_email_html(title="Não foi possível criar sua conta", body_html=body, branding=branding, error=True)
+    ok = enqueue_email_simples(
+        destino,
+        format_email_subject("Conta de recebimento não aprovada", branding),
+        html,
+    )
     if ok:
         usuario.onboarding_conta_email_event = "REJECTED"
     return ok
@@ -90,17 +95,19 @@ def enviar_email_assinatura_contratada(usuario: Usuario) -> bool:
     destino = (usuario.email or "").strip()
     if not destino:
         return False
+    branding = get_email_branding()
     link = _financeiro_url()
-    html = (
-        '<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#18181b">'
-        '<h2 style="color:#047857">Assinatura contratada com sucesso</h2>'
+    body = (
         f"<p>Olá, <strong>{esc(usuario.nome or '')}</strong>!</p>"
         "<p>Bem-vindo ao plano com taxa reduzida por ingresso. A assinatura já está ativa na sua conta.</p>"
-        f'<p><a href="{link}" style="color:#047857">Ver Financeiro</a></p>'
-        '<p style="font-size:11px;color:#a1a1aa">EventosBR — eventosbr.app.br</p>'
-        "</div>"
+        f'<p><a href="{link}" style="{link_style(branding)}">Ver Financeiro</a></p>'
     )
-    ok = enqueue_email_simples(destino, "Bem-vindo à assinatura EventosBR", html)
+    html = build_email_html(title="Assinatura contratada com sucesso", body_html=body, branding=branding)
+    ok = enqueue_email_simples(
+        destino,
+        format_email_subject("Bem-vindo à assinatura", branding),
+        html,
+    )
     if ok:
         usuario.assinatura_tracker_status = "SUBSCRIBED"
     return ok
@@ -112,18 +119,20 @@ def enviar_email_assinatura_falhou(usuario: Usuario, *, motivos: list[str]) -> b
     destino = (usuario.email or "").strip()
     if not destino:
         return False
+    branding = get_email_branding()
     link = _financeiro_url()
-    html = (
-        '<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#18181b">'
-        '<h2 style="color:#b91c1c">Assinatura não contratada</h2>'
+    body = (
         f"<p>Olá, <strong>{esc(usuario.nome or '')}</strong>!</p>"
         "<p>Não foi possível confirmar o pagamento da sua assinatura pelos motivos abaixo:</p>"
         f"{_lista_motivos_html(motivos)}"
-        f'<p><a href="{link}" style="color:#047857">Tentar novamente no Financeiro</a></p>'
-        '<p style="font-size:11px;color:#a1a1aa">EventosBR — eventosbr.app.br</p>'
-        "</div>"
+        f'<p><a href="{link}" style="{link_style(branding)}">Tentar novamente no Financeiro</a></p>'
     )
-    ok = enqueue_email_simples(destino, "Assinatura não contratada — EventosBR", html)
+    html = build_email_html(title="Assinatura não contratada", body_html=body, branding=branding, error=True)
+    ok = enqueue_email_simples(
+        destino,
+        format_email_subject("Assinatura não contratada", branding),
+        html,
+    )
     if ok:
         usuario.assinatura_tracker_status = "PAYMENT_FAILED"
         usuario.assinatura_tracker_falha_motivos = json.dumps(motivos, ensure_ascii=False)

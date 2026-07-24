@@ -7,6 +7,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.models import FinanceiroSaque, Usuario, UsuarioNotificacao
+from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
 from app.services.notificacao_email import enqueue_email_simples
 from app.utils.html_escape import assunto_email_seguro, esc
 from app.utils.privacy import mask_pix_chave
@@ -39,6 +40,7 @@ def notificar_saque_pago(db: Session, saque: FinanceiroSaque, *, usuario: Usuari
     if not org:
         return
 
+    branding = get_email_branding(db)
     valor_fmt = f"R$ {float(saque.valor):.2f}".replace(".", ",")
     data_fmt = _fmt_data_hora(saque.processado_em)
     chave_mascarada = mask_pix_chave(saque.pix_chave, saque.pix_tipo)
@@ -56,9 +58,7 @@ def notificar_saque_pago(db: Session, saque: FinanceiroSaque, *, usuario: Usuari
 
     destino = (org.email or "").strip()
     if destino:
-        html = (
-            '<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#18181b">'
-            '<h2 style="color:#047857">Saque confirmado</h2>'
+        body = (
             f"<p>Olá, <strong>{esc(org.nome or '')}</strong>!</p>"
             f"<p>Sua transferência via Pix foi concluída com sucesso.</p>"
             '<table style="width:100%;border-collapse:collapse;margin:16px 0">'
@@ -68,11 +68,10 @@ def notificar_saque_pago(db: Session, saque: FinanceiroSaque, *, usuario: Usuari
             f'<tr><td style="padding:4px 0;color:#71717a">ID do saque</td><td style="padding:4px 0;text-align:right">{esc(saque.id)}</td></tr>'
             f'<tr><td style="padding:4px 0;color:#71717a">ID da transferência (Asaas)</td><td style="padding:4px 0;text-align:right">{esc(saque.asaas_transfer_id or "—")}</td></tr>'
             "</table>"
-            f'<p><a href="{link}" style="color:#047857">Ver extrato no Financeiro</a></p>'
-            '<p style="font-size:11px;color:#a1a1aa">EventosBR — eventosbr.app.br</p>'
-            "</div>"
+            f'<p><a href="{link}" style="{link_style(branding)}">Ver extrato no Financeiro</a></p>'
         )
-        assunto = f"Saque de {assunto_email_seguro(valor_fmt)} confirmado — EventosBR"
+        html = build_email_html(title="Saque confirmado", body_html=body, branding=branding)
+        assunto = format_email_subject(f"Saque de {assunto_email_seguro(valor_fmt)} confirmado", branding)
         enqueue_email_simples(destino, assunto, html)
 
     logger.info("Notificação de saque pago enviada: saque=%s organizador=%s", saque.id, org.id)
@@ -83,6 +82,7 @@ def notificar_saque_falhou(db: Session, saque: FinanceiroSaque, *, usuario: Usua
     if not org:
         return
 
+    branding = get_email_branding(db)
     valor_fmt = f"R$ {float(saque.valor):.2f}".replace(".", ",")
     data_fmt = _fmt_data_hora(saque.atualizado_em)
     motivo = (saque.observacao or "Motivo não informado pelo banco.").strip()
@@ -100,9 +100,7 @@ def notificar_saque_falhou(db: Session, saque: FinanceiroSaque, *, usuario: Usua
 
     destino = (org.email or "").strip()
     if destino:
-        html = (
-            '<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#18181b">'
-            '<h2 style="color:#b91c1c">Saque não concluído</h2>'
+        body = (
             f"<p>Olá, <strong>{esc(org.nome or '')}</strong>!</p>"
             f"<p>Sua transferência via Pix não pôde ser realizada. O valor já retornou ao seu saldo disponível para saque.</p>"
             '<table style="width:100%;border-collapse:collapse;margin:16px 0">'
@@ -111,11 +109,10 @@ def notificar_saque_falhou(db: Session, saque: FinanceiroSaque, *, usuario: Usua
             f'<tr><td style="padding:4px 0;color:#71717a">Motivo</td><td style="padding:4px 0;text-align:right">{esc(motivo)}</td></tr>'
             f'<tr><td style="padding:4px 0;color:#71717a">ID do saque</td><td style="padding:4px 0;text-align:right">{esc(saque.id)}</td></tr>'
             "</table>"
-            f'<p><a href="{link}" style="color:#047857">Solicitar novo saque no Financeiro</a></p>'
-            '<p style="font-size:11px;color:#a1a1aa">EventosBR — eventosbr.app.br</p>'
-            "</div>"
+            f'<p><a href="{link}" style="{link_style(branding)}">Solicitar novo saque no Financeiro</a></p>'
         )
-        assunto = f"Saque de {assunto_email_seguro(valor_fmt)} não concluído — EventosBR"
+        html = build_email_html(title="Saque não concluído", body_html=body, branding=branding, error=True)
+        assunto = format_email_subject(f"Saque de {assunto_email_seguro(valor_fmt)} não concluído", branding)
         enqueue_email_simples(destino, assunto, html)
 
     logger.info("Notificação de saque falhou enviada: saque=%s organizador=%s", saque.id, org.id)

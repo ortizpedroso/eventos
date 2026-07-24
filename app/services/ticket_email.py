@@ -12,8 +12,9 @@ from queue import Empty, Queue
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import Ingresso
+from app.models import Evento, Ingresso
 from app.utils.html_escape import esc
+from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
 from app.services.ingresso_qr import gerar_qr_png_bytes, ingresso_qr_payload
 from app.services.redis_conn import get_redis_optional
 from config.database import SessionLocal
@@ -30,18 +31,19 @@ _worker_started = False
 _stop_worker = threading.Event()
 
 
-from app.services.smtp_client import format_from_header, smtp_configured
+from app.services.smtp_client import format_from_header_branded, smtp_configured
 
 
-def _build_html(ingresso: Ingresso, qr_cid: str) -> str:
+def _build_html(ingresso: Ingresso, qr_cid: str, db) -> str:
     evento = ingresso.evento
+    branding = get_email_branding(db)
     valor_fmt = f"{ingresso.valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
     link = f"{base}/conta/ingressos/{ingresso.id}"
-    return (
-        '<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#18181b">'
-        f"<h2 style=\"color:#047857\">{evento.nome}</h2>"
-        f"<p>Olá, <strong>{ingresso.participante_nome}</strong>!</p>"
+    org = getattr(evento, "organizador", None)
+    org_name = (org.brand_name or org.nome) if org else None
+    body = (
+        f"<p>Olá, <strong>{esc(ingresso.participante_nome)}</strong>!</p>"
         f"<p>Seu ingresso está confirmado. Apresente o QR Code na entrada.</p>"
         f"<p><strong>Data:</strong> {evento.data_inicio}<br/>"
         f"<strong>Local:</strong> {evento.local}<br/>"
@@ -49,9 +51,14 @@ def _build_html(ingresso: Ingresso, qr_cid: str) -> str:
         f'<p style="text-align:center"><img src="cid:{qr_cid}" alt="QR Code" width="200" height="200"/></p>'
         f'<p style="font-size:12px;color:#71717a">Código para digitar na portaria:<br/>'
         f'<span style="font-family:monospace;word-break:break-all">{esc(ingresso_qr_payload(ingresso.id))}</span></p>'
-        f'<p><a href="{link}" style="color:#047857">Ver ingresso na conta</a></p>'
+        f'<p><a href="{link}" style="{link_style(branding)}">Ver ingresso na conta</a></p>'
         f'<p style="font-size:11px;color:#a1a1aa">Reembolso: até 10 dias em Minha conta → Pagamentos.</p>'
-        "</div>"
+    )
+    return build_email_html(
+        title=evento.nome,
+        body_html=body,
+        branding=branding,
+        organizer_name=org_name,
     )
 
 
@@ -60,7 +67,7 @@ def _send_sync(ingresso_id: str) -> bool:
     try:
         ingresso = (
             db.query(Ingresso)
-            .options(joinedload(Ingresso.evento))
+            .options(joinedload(Ingresso.evento).joinedload(Evento.organizador))
             .filter(Ingresso.id == ingresso_id, Ingresso.status == "pago")
             .first()
         )
@@ -75,11 +82,12 @@ def _send_sync(ingresso_id: str) -> bool:
 
         qr_bytes = gerar_qr_png_bytes(ingresso.id)
         qr_cid = "ingresso_qr"
-        html = _build_html(ingresso, qr_cid)
+        html = _build_html(ingresso, qr_cid, db)
+        branding = get_email_branding(db)
 
         msg = MIMEMultipart("related")
-        msg["Subject"] = f"Seu ingresso — {ingresso.evento.nome}"
-        msg["From"] = format_from_header()
+        msg["Subject"] = format_email_subject(f"Seu ingresso — {ingresso.evento.nome}", branding)
+        msg["From"] = format_from_header_branded(db)
         msg["To"] = destino
 
         alt = MIMEMultipart("alternative")
@@ -225,13 +233,14 @@ def _send_comunicado_sync(evento_id: str, assunto: str, mensagem: str) -> int:
     try:
         ingressos = (
             db.query(Ingresso)
-            .options(joinedload(Ingresso.evento))
+            .options(joinedload(Ingresso.evento).joinedload(Evento.organizador))
             .filter(
                 Ingresso.evento_id == evento_id,
                 Ingresso.status.in_(("pago", "usado")),
             )
             .all()
         )
+        branding = get_email_branding(db)
         vistos: set[str] = set()
         base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
 
@@ -245,20 +254,25 @@ def _send_comunicado_sync(evento_id: str, assunto: str, mensagem: str) -> int:
             corpo = esc(mensagem).replace("\n", "<br/>")
             ev_nome = esc(ing.evento.nome)
             part_nome = esc(ing.participante_nome or "participante")
-            html = (
-                '<div style="font-family:sans-serif;max-width:560px;color:#18181b">'
-                f'<h2 style="color:#047857">{ev_nome}</h2>'
+            org = getattr(ing.evento, "organizador", None)
+            org_name = (org.brand_name or org.nome) if org else None
+            body = (
                 f"<p>Olá, <strong>{part_nome}</strong>!</p>"
                 f'<div style="margin:16px 0;line-height:1.5">{corpo}</div>'
                 f'<p style="font-size:12px;color:#71717a">Seus ingressos continuam disponíveis em '
-                f'<a href="{base}/conta/ingressos" style="color:#047857">Minha conta → Ingressos</a>.</p>'
-                f'<p style="font-size:11px;color:#a1a1aa">Mensagem enviada pelo organizador do evento.</p>'
-                "</div>"
+                f'<a href="{base}/conta/ingressos" style="{link_style(branding)}">Minha conta → Ingressos</a>.</p>'
+            )
+            html = build_email_html(
+                title=ev_nome,
+                body_html=body,
+                branding=branding,
+                organizer_name=org_name,
+                footer_note="Mensagem enviada pelo organizador do evento.",
             )
 
             msg = MIMEMultipart("alternative")
             msg["Subject"] = assunto[:200]
-            msg["From"] = format_from_header()
+            msg["From"] = format_from_header_branded(db)
             msg["To"] = destino
             msg.attach(MIMEText(mensagem, "plain", "utf-8"))
             msg.attach(MIMEText(html, "html", "utf-8"))

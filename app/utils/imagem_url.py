@@ -25,6 +25,8 @@ def validar_imagem_url(v: object) -> str | None:
         raise ValueError(f"imagem_url excede {_MAX_IMAGEM_URL_LEN} caracteres")
     if _DATA_IMAGE_RE.match(s):
         return s
+    if s.startswith("/uploads/"):
+        return s
     parsed = urlparse(s)
     if parsed.scheme not in ("https", "http"):
         raise ValueError("imagem_url deve usar http(s):// ou data:image/*")

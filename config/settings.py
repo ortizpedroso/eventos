@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     EMAIL_USE_TLS: bool = True
     # Links em e-mails e QR (ex.: http://localhost:3000)
     FRONTEND_PUBLIC_URL: str = "http://localhost:3000"
+    # Domínio base para subdomínios de organizador (ex.: eventosbr.app.br)
+    PLATFORM_BASE_DOMAIN: str = ""
+    # Armazenamento local de uploads (logo, favicon, fotos)
+    UPLOAD_DIR: str = "uploads"
+    # URL pública dos uploads; padrão = FRONTEND_PUBLIC_URL (proxy /uploads → API)
+    UPLOAD_PUBLIC_BASE_URL: str = ""
 
     # Redis (rate limit distribuído; opcional se indisponível)
     REDIS_URL: str = "redis://localhost:6379"

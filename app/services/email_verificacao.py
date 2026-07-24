@@ -9,7 +9,9 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.models import Usuario
+from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
 from app.services.smtp_client import send_email, smtp_configured
+from app.utils.html_escape import esc
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -46,16 +48,27 @@ def enviar_email_verificacao(*, destino: str, nome: str, link: str) -> bool:
         )
         return False
 
+    branding = get_email_branding()
+    body = (
+        f"<p>Olá, <strong>{esc(nome or 'participante')}</strong>!</p>"
+        f"<p>Confirme que este e-mail é seu para proteger sua conta e ingressos na {esc(branding.site_name)}.</p>"
+        f'<p><a href="{link}" style="{link_style(branding)}">Confirmar e-mail</a> '
+        f"(válido por {VERIFICACAO_VALIDADE_HORAS} horas)</p>"
+        "<p>Se você não fez uma compra conosco, ignore este e-mail.</p>"
+    )
+    html = build_email_html(title="Confirme seu e-mail", body_html=body, branding=branding)
+
     return send_email(
         destino=destino,
-        assunto="Confirme seu e-mail — EventosBR",
+        assunto=format_email_subject("Confirme seu e-mail", branding),
         corpo_texto=(
             f"Olá, {nome or 'participante'}!\n\n"
-            f"Confirme que este e-mail é seu para proteger sua conta e ingressos na EventosBR.\n\n"
+            f"Confirme que este e-mail é seu para proteger sua conta e ingressos na {branding.site_name}.\n\n"
             f"Link (válido por {VERIFICACAO_VALIDADE_HORAS} horas):\n{link}\n\n"
             "Se você não fez uma compra conosco, ignore este e-mail.\n\n"
-            "— EventosBR"
+            f"— {branding.site_name}"
         ),
+        corpo_html=html,
     )
 
 

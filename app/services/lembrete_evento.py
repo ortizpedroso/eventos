@@ -10,7 +10,8 @@ from email.mime.text import MIMEText
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import Ingresso
+from app.models import Evento, Ingresso
+from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
 from app.utils.html_escape import esc
 from config.database import SessionLocal
 from config.settings import settings
@@ -22,32 +23,40 @@ _stop_event = threading.Event()
 _thread: threading.Thread | None = None
 
 
-from app.services.smtp_client import format_from_header, smtp_configured
+from app.services.smtp_client import format_from_header_branded, smtp_configured
 
 
-def _build_html(ingresso: Ingresso) -> str:
+def _build_html(ingresso: Ingresso, db: Session) -> str:
     evento = ingresso.evento
+    branding = get_email_branding(db)
     base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
     link = f"{base}/conta/ingressos/{ingresso.id}"
-    return (
-        '<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#18181b">'
-        f"<h2 style=\"color:#047857\">Amanhã: {esc(evento.nome)}</h2>"
+    org = getattr(evento, "organizador", None)
+    org_name = (org.brand_name or org.nome) if org else None
+    body = (
         f"<p>Olá, <strong>{esc(ingresso.participante_nome or '')}</strong>!</p>"
         f"<p>Este é um lembrete do seu ingresso. O evento começa em breve.</p>"
         f"<p><strong>Data:</strong> {evento.data_inicio}<br/>"
         f"<strong>Local:</strong> {esc(evento.local)}</p>"
-        f'<p><a href="{link}" style="color:#047857">Abrir ingresso com QR Code</a></p>'
-        "</div>"
+        f'<p><a href="{link}" style="{link_style(branding)}">Abrir ingresso com QR Code</a></p>'
+    )
+    return build_email_html(
+        title=f"Amanhã: {evento.nome}",
+        body_html=body,
+        branding=branding,
+        organizer_name=org_name,
     )
 
 
-def _enviar_lembrete(ingresso: Ingresso) -> bool:
+def _enviar_lembrete(ingresso: Ingresso, db: Session) -> bool:
     destino = (ingresso.participante_email or "").strip()
     if not destino:
         return False
-    msg = MIMEText(_build_html(ingresso), "html", "utf-8")
-    msg["Subject"] = f"Lembrete: {ingresso.evento.nome} é amanhã"
-    msg["From"] = format_from_header()
+    branding = get_email_branding(db)
+    html = _build_html(ingresso, db)
+    msg = MIMEText(html, "html", "utf-8")
+    msg["Subject"] = format_email_subject(f"Lembrete: {ingresso.evento.nome} é amanhã", branding)
+    msg["From"] = format_from_header_branded(db)
     msg["To"] = destino
     with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
         if settings.EMAIL_USE_TLS:
@@ -71,7 +80,7 @@ def enviar_lembretes_pendentes() -> int:
     try:
         candidatos = (
             db.query(Ingresso)
-            .options(joinedload(Ingresso.evento))
+            .options(joinedload(Ingresso.evento).joinedload(Evento.organizador))
             .join(Ingresso.evento)
             .filter(
                 Ingresso.status == "pago",
@@ -84,7 +93,7 @@ def enviar_lembretes_pendentes() -> int:
             if inicio is None or not (janela_inicio <= inicio <= janela_fim):
                 continue
             try:
-                if _enviar_lembrete(ing):
+                if _enviar_lembrete(ing, db):
                     ing.lembrete_enviado_em = agora
                     enviados += 1
             except Exception:
