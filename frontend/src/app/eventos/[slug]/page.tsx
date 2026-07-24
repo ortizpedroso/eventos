@@ -69,6 +69,20 @@ function buildEventoJsonLd(evento: NonNullable<Awaited<ReturnType<typeof getEven
   return JSON.stringify(jsonLd);
 }
 
+/** JSON-LD BreadcrumbList — trilha de navegação nos resultados do Google. */
+function buildBreadcrumbJsonLd(evento: { nome: string; slug: string }) {
+  const base = (process.env.NEXT_PUBLIC_LAN_ORIGIN || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: base },
+      { "@type": "ListItem", position: 2, name: "Eventos", item: `${base}/eventos` },
+      { "@type": "ListItem", position: 3, name: evento.nome, item: `${base}/eventos/${evento.slug}` },
+    ],
+  });
+}
+
 export default async function EventoPage({
   params,
   searchParams,
@@ -99,10 +113,16 @@ export default async function EventoPage({
   return (
     <>
       {initialEvento ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: buildEventoJsonLd(initialEvento) }}
-        />
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: buildEventoJsonLd(initialEvento) }}
+          />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: buildBreadcrumbJsonLd(initialEvento) }}
+          />
+        </>
       ) : null}
       <EventoPublicClient
         key={slug}
