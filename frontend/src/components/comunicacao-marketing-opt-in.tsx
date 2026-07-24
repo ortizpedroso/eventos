@@ -25,7 +25,7 @@ export function ComunicacaoMarketingOptIn({
       <legend className="px-1 text-sm font-semibold text-zinc-900">
         Comunicações da EventosBR (opcional)
       </legend>
-      <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+      <p className="mt-1 text-justify text-xs leading-relaxed text-zinc-600">
         Novidades sobre eventos na plataforma, dicas para organizadores e ofertas. Pode alterar a
         qualquer momento no perfil. Não inclui e-mails do ingresso nem avisos do organizador do seu
         evento.
