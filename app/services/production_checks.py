@@ -50,14 +50,10 @@ def build_setup_status() -> dict:
     cors_ok = _cors_https_ok(cors, production)
     sk_ok = _ok_secret(settings.SECRET_KEY, 32)
 
-    # Spec §6 — obrigatórios em produção
+    # Spec §6 — obrigatórios em produção (baas OU linked são aceitos; "both" também).
     asaas_env = (settings.ASAAS_ENVIRONMENT or "").strip().lower()
     asaas_env_ok = (asaas_env == "production") if production else True
-    onboarding_ok = settings.asaas_onboarding_mode == "baas" if production else settings.asaas_onboarding_mode in (
-        "baas",
-        "linked",
-        "both",
-    )
+    onboarding_ok = settings.asaas_onboarding_mode in ("baas", "linked", "both")
     manual_wallet_ok = (not settings.ASAAS_ALLOW_MANUAL_WALLET) if production else True
     asaas_disabled_ok = (not settings.ASAAS_DISABLED) if production else True
     postgres_ok = _postgres_password_ok()
