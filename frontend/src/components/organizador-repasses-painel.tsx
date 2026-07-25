@@ -631,6 +631,21 @@ export function OrganizadorRepassesPainel() {
             Use a conta de recebimento do <strong>organizador</strong>, não a conta da plataforma
             EventosBR. Cada organizador precisa da própria conta para receber repasses via split.
           </p>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-950">
+            <span>Ainda não tem uma conta de recebimento?</span>
+            <a
+              href="https://www.asaas.com/onboarding/createAccount?customerSignUpOriginChannel=EVENTOSBR"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold underline underline-offset-2"
+            >
+              Criar conta gratuita (abre em nova aba) →
+            </a>
+          </div>
+          <p className="text-xs text-zinc-600">
+            Depois de criar a conta, acesse <strong>Integrações → Chave de API</strong> dentro dela,
+            copie a chave e cole abaixo — nós buscamos o ID automaticamente.
+          </p>
           <label className="grid gap-1 text-sm">
             <span className="text-xs text-zinc-600">
               Chave de acesso (recomendado — busca o ID automaticamente)
