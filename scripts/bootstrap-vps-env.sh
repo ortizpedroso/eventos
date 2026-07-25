@@ -33,13 +33,14 @@ _rand() {
   openssl rand -base64 "$nbytes" | tr -d '\n=' | tr '+/' '-_'
 }
 
-old_asaas_key="" old_asaas_wh="" old_asaas_wallet="" old_email_pass="" old_google=""
+old_asaas_key="" old_asaas_wh="" old_asaas_wallet="" old_email_pass="" old_google="" old_onboarding_mode=""
 if [ -f "$ENV_FILE" ]; then
   old_asaas_key="$(env_get ASAAS_API_KEY "$ENV_FILE" || true)"
   old_asaas_wh="$(env_get ASAAS_WEBHOOK_TOKEN "$ENV_FILE" || true)"
   old_asaas_wallet="$(env_get ASAAS_PLATFORM_WALLET_ID "$ENV_FILE" || true)"
   old_email_pass="$(env_get EMAIL_PASSWORD "$ENV_FILE" || true)"
   old_google="$(env_get GOOGLE_OAUTH_CLIENT_ID "$ENV_FILE" || true)"
+  old_onboarding_mode="$(env_get ASAAS_ONBOARDING_MODE "$ENV_FILE" || true)"
 fi
 
 SECRET_KEY="$(env_get SECRET_KEY "$ENV_FILE" || true)"
@@ -109,7 +110,7 @@ _write_env "ASAAS_DISABLED"               "$ASAAS_DISABLED"
 _write_env "ASAAS_PLATFORM_WALLET_ID"     "$ASAAS_PLATFORM_WALLET_ID"
 _write_env "ASAAS_CREATE_SUBACCOUNT_ON_REGISTER" "false"
 _write_env "ASAAS_ALLOW_MANUAL_WALLET"    "false"
-_write_env "ASAAS_ONBOARDING_MODE"        "baas"
+_write_env "ASAAS_ONBOARDING_MODE"        "${old_onboarding_mode:-baas}"
 printf '\n' >> "$ENV_FILE"
 
 _write_env "SECRET_KEY"                   "$SECRET_KEY"

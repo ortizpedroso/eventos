@@ -67,6 +67,8 @@ if [[ -f .env ]]; then
     echo "  AVISO  PAYMENT_PROVIDER deve ser 'asaas' (atual: ${payment_provider:-vazio})"
     fail=1
   fi
+  onboarding_mode="$(env_get ASAAS_ONBOARDING_MODE || true)"
+  echo "  INFO  ASAAS_ONBOARDING_MODE=${onboarding_mode:-baas} (baas exige CNPJ da conta mãe; linked/both não exigem)"
   asaas_disabled="$(env_get ASAAS_DISABLED || true)"
   if [[ "${asaas_disabled:-false}" == "true" ]]; then
     echo "  AVISO  ASAAS_DISABLED=true — pagamentos desligados"
