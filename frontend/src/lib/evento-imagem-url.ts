@@ -48,3 +48,28 @@ export function resolveEventoImagemSrc(raw: string | null | undefined): string |
 function stripTrailingUrlJunk(url: string): string {
   return url.replace(/["')\]]+$/g, "").replace(/[.,;]+\s*$/g, "").trim();
 }
+
+/**
+ * true se o host da imagem estiver liberado no next.config.ts (remotePatterns) — só nesse
+ * caso é seguro usar next/image; URLs externas arbitrárias (organizador colou um link
+ * qualquer) continuam usando <img> cru, senão o Next quebra em runtime.
+ */
+export function isOptimizableImageHost(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname;
+    if (host === "images.unsplash.com") return true;
+    const r2Host = (() => {
+      const raw = process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.trim();
+      if (!raw) return null;
+      try {
+        return new URL(raw).hostname;
+      } catch {
+        return null;
+      }
+    })();
+    return r2Host != null && host === r2Host;
+  } catch {
+    return false;
+  }
+}
