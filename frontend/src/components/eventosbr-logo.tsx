@@ -41,7 +41,7 @@ export function EventosBRLogo({ className = "", showWordmark = true, variant = "
       <Image
         src={src}
         alt="EventosBR"
-        width={248}
+        width={282}
         height={52}
         className="h-9 w-auto sm:h-10"
         priority
