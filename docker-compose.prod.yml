@@ -88,6 +88,8 @@ services:
         NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
         NEXT_PUBLIC_BUILD_SHA: ${GIT_COMMIT:-dev}
         NEXT_PUBLIC_PLATFORM_DOMAIN: ${DOMAIN}
+        # Mesma variável usada pela API (R2_PUBLIC_URL) — só precisa ser definida uma vez no .env.
+        NEXT_PUBLIC_R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
     restart: unless-stopped
     environment:
       INTERNAL_API_URL: http://api:8000
