@@ -114,10 +114,18 @@ def test_frontend_url_obrigatorio_em_producao():
     assert s["ready_for_production"] is False
 
 
-def test_onboarding_baas_obrigatorio_em_producao():
+def test_onboarding_linked_aceito_em_producao():
+    """A partir de 07/2026: 'linked' também é válido em produção (não só 'baas')."""
     with patch.multiple(settings, ENVIRONMENT="production", ASAAS_ONBOARDING_MODE="linked"):
         s = build_setup_status()
-    assert s["checks"]["asaas_onboarding_mode"] == "pendente"
+    assert s["checks"]["asaas_onboarding_mode"] == "ok"
+
+
+def test_onboarding_invalido_bloqueado_em_producao():
+    with patch.multiple(settings, ENVIRONMENT="production", ASAAS_ONBOARDING_MODE="modo-inexistente"):
+        s = build_setup_status()
+    # asaas_onboarding_mode inválido cai no default "baas" (ver Settings.asaas_onboarding_mode) — continua ok.
+    assert s["checks"]["asaas_onboarding_mode"] == "ok"
 
 
 def test_asaas_disabled_bloqueado_em_producao():
