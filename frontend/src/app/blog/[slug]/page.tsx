@@ -20,7 +20,7 @@ export default async function BlogPostPage({ params }: Props) {
   return (
     <article className="pb-16 pt-8 sm:pb-24 sm:pt-12">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
-        <Link href="/blog" className="text-sm font-medium text-emerald-800 hover:underline">
+        <Link href="/blog" className="text-sm font-medium text-emerald-700 hover:underline">
           ← Blog
         </Link>
         <header className="content-prose mt-4">

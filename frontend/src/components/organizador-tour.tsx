@@ -73,7 +73,7 @@ export function OrganizadorTour() {
         role="dialog"
         aria-labelledby="tour-title"
       >
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
           Tour rápido · {passo + 1}/{STEPS.length}
         </p>
         <h2 id="tour-title" className="mt-1 text-lg font-bold text-zinc-900">

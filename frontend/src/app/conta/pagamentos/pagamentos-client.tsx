@@ -147,7 +147,7 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
           </div>
           {destaque?.evento.mensagem_confirmacao ? (
             <div className="rounded-md border border-emerald-600 bg-white p-4 text-sm shadow-sm ring-1 ring-emerald-600">
-              <p className="font-semibold text-emerald-800">Confirmação de inscrição</p>
+              <p className="font-semibold text-emerald-700">Confirmação de inscrição</p>
               <p className="mt-2 whitespace-pre-line text-zinc-800">
                 {destaque.evento.mensagem_confirmacao}
               </p>

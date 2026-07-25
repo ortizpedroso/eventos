@@ -193,7 +193,7 @@ export function EventoCuponsEditor({ eventoId }: Props) {
               className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2"
             >
               <span>
-                <strong className="font-mono text-emerald-900">{c.codigo}</strong>
+                <strong className="font-mono text-emerald-700">{c.codigo}</strong>
                 {" · "}
                 {c.tipo === "percentual"
                   ? `${(c.valor * 100).toFixed(0)}%`

@@ -242,6 +242,19 @@ export function EventoPublicClient({
 
   return (
     <div className={`space-y-6${evento.publicado ? " pb-24 lg:pb-0" : ""}`}>
+      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+        <Link href="/" className="hover:text-zinc-800 hover:underline">
+          Início
+        </Link>
+        <span aria-hidden="true">/</span>
+        <Link href="/eventos" className="hover:text-zinc-800 hover:underline">
+          Eventos
+        </Link>
+        <span aria-hidden="true">/</span>
+        <span className="max-w-[60vw] truncate text-zinc-700" aria-current="page">
+          {evento.nome}
+        </span>
+      </nav>
       <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-600">
         <Link className="hover:underline" href="/eventos">
           ← Voltar aos eventos
@@ -252,7 +265,7 @@ export function EventoPublicClient({
         me.id === evento.organizador_id ? (
           <Link
             href={`/eventos/${slug}/editar`}
-            className="font-medium text-emerald-800 hover:underline"
+            className="font-medium text-emerald-700 hover:underline"
           >
             Editar evento
           </Link>
@@ -261,7 +274,7 @@ export function EventoPublicClient({
 
       {alteracaoGuardada ? (
         <div
-          className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-justify text-emerald-900"
+          className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-left text-emerald-900"
           role="status"
         >
           Alteração salva com sucesso.
@@ -269,7 +282,7 @@ export function EventoPublicClient({
       ) : null}
 
       {!evento.publicado ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-justify text-amber-900">
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-left text-amber-900">
           <strong>Evento pausado.</strong> Só você (organizador) vê esta página enquanto logado.
           Não aparece na listagem pública e não é possível comprar ingressos até republicar.
         </div>
@@ -393,7 +406,7 @@ export function EventoPublicClient({
             </aside>
 
             <section
-              className="order-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-1 [&_dd]:text-justify [&_p]:text-justify"
+              className="order-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-1 [&_dd]:text-left [&_p]:text-left"
               aria-labelledby="sobre-evento-titulo"
             >
               <h2 id="sobre-evento-titulo" className="text-lg font-semibold text-zinc-900">
@@ -418,7 +431,7 @@ export function EventoPublicClient({
                 </div>
                 <div>
                   <dt className="font-medium text-zinc-800">Ingresso</dt>
-                  <dd className="font-semibold text-emerald-800">{precoFmt}</dd>
+                  <dd className="font-semibold text-emerald-700">{precoFmt}</dd>
                 </div>
               </dl>
               {evento.ingresso_lotes && evento.ingresso_lotes.length > 0 ? (
@@ -444,7 +457,7 @@ export function EventoPublicClient({
                             <span className="tabular-nums text-zinc-700">
                               {l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} · {cap}
                               {atual ? (
-                                <span className="ml-1 text-emerald-800"> (à venda)</span>
+                                <span className="ml-1 text-emerald-700"> (à venda)</span>
                               ) : !l.ativo ? (
                                 <span className="ml-1 text-zinc-500"> (inativo)</span>
                               ) : null}
@@ -460,10 +473,10 @@ export function EventoPublicClient({
               </p>
               {descricaoLonga ? (
                 <details className="mt-3">
-                  <summary className="cursor-pointer text-sm font-medium text-emerald-800 hover:underline">
+                  <summary className="cursor-pointer text-sm font-medium text-emerald-700 hover:underline">
                     Ler descrição completa
                   </summary>
-                  <p className="mt-3 whitespace-pre-line text-justify text-sm leading-6 text-zinc-800">
+                  <p className="mt-3 whitespace-pre-line text-left text-sm leading-6 text-zinc-800">
                     {evento.descricao}
                   </p>
                 </details>
@@ -476,7 +489,7 @@ export function EventoPublicClient({
         </div>
       ) : (
         <section
-          className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm [&_dd]:text-justify [&_p]:text-justify"
+          className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm [&_dd]:text-left [&_p]:text-left"
           aria-labelledby="sobre-evento-titulo-pausado"
         >
           <h2 id="sobre-evento-titulo-pausado" className="text-lg font-semibold text-zinc-900">
@@ -501,7 +514,7 @@ export function EventoPublicClient({
             </div>
             <div>
               <dt className="font-medium text-zinc-800">Ingresso</dt>
-              <dd className="font-semibold text-emerald-800">{precoFmt}</dd>
+              <dd className="font-semibold text-emerald-700">{precoFmt}</dd>
             </div>
           </dl>
           {evento.ingresso_lotes && evento.ingresso_lotes.length > 0 ? (
@@ -526,7 +539,7 @@ export function EventoPublicClient({
                         <span className="tabular-nums text-zinc-700">
                           {l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} · {cap}
                           {atual ? (
-                            <span className="ml-1 text-emerald-800"> (à venda)</span>
+                            <span className="ml-1 text-emerald-700"> (à venda)</span>
                           ) : !l.ativo ? (
                             <span className="ml-1 text-zinc-500"> (inativo)</span>
                           ) : null}
@@ -537,7 +550,7 @@ export function EventoPublicClient({
               </ul>
             </div>
           ) : null}
-          <p className="mt-5 whitespace-pre-line border-t border-zinc-100 pt-5 text-justify text-sm leading-6 text-zinc-800">
+          <p className="mt-5 whitespace-pre-line border-t border-zinc-100 pt-5 text-left text-sm leading-6 text-zinc-800">
             {evento.descricao}
           </p>
         </section>

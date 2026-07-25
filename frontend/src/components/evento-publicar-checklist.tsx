@@ -92,7 +92,7 @@ export function EventoPublicarChecklist(props: ChecklistInput) {
 
   return (
     <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-      <p className="text-sm font-semibold text-emerald-950">Checklist antes de publicar</p>
+      <p className="text-sm font-semibold text-emerald-700">Checklist antes de publicar</p>
       <ul className="mt-3 space-y-2">
         {items.map((item) => (
           <li key={item.id} className="flex items-start gap-2 text-sm">
@@ -116,7 +116,7 @@ export function EventoPublicarChecklist(props: ChecklistInput) {
           Complete os itens obrigatórios em vermelho antes de criar o evento.
         </p>
       ) : (
-        <p className="mt-3 text-xs text-emerald-900">Tudo pronto para criar o evento.</p>
+        <p className="mt-3 text-xs text-emerald-700">Tudo pronto para criar o evento.</p>
       )}
     </div>
   );

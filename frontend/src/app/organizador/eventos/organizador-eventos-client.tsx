@@ -188,12 +188,12 @@ export function OrganizadorEventosClient() {
       <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Meus eventos</h1>
       <p className="mt-2 text-sm text-zinc-600">
         Do mais recente ao mais antigo. Só os marcados como <strong className="text-zinc-800">Publicado</strong>{" "}
-        aparecem na página <Link href="/eventos" className="font-medium text-emerald-800 underline-offset-2 hover:underline">Eventos</Link> para qualquer pessoa comprar ingresso.
+        aparecem na página <Link href="/eventos" className="font-medium text-emerald-700 underline-offset-2 hover:underline">Eventos</Link> para qualquer pessoa comprar ingresso.
       </p>
 
       {mostrarOnboarding ? (
         <div className="mt-6 rounded-2xl border border-emerald-300 bg-white p-4 shadow-sm ring-1 ring-emerald-200">
-          <p className="text-sm font-semibold text-emerald-950">Primeiros passos como organizador</p>
+          <p className="text-sm font-semibold text-emerald-700">Primeiros passos como organizador</p>
           <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-zinc-700">
             <li>Crie o evento com lotes e preços</li>
             <li>Publique na vitrine para liberar vendas</li>
@@ -218,7 +218,7 @@ export function OrganizadorEventosClient() {
         <strong className="font-semibold">Pausado</strong> = continua na sua lista, mas{" "}
         <strong className="font-semibold">não</strong> entra na vitrine nem permite venda pública até republicar.
         {qtdPausados > 0 ? (
-          <span className="mt-1 block text-emerald-900">
+          <span className="mt-1 block text-emerald-700">
             Neste momento você tem <strong className="font-semibold">{qtdPausados}</strong>{" "}
             {qtdPausados === 1 ? "evento pausado" : "eventos pausados"}.
           </span>
@@ -299,7 +299,7 @@ export function OrganizadorEventosClient() {
                       <span className="font-medium text-zinc-700">Criado em:</span> {criado}
                     </p>
                   </div>
-                  <p className="mt-3 text-sm font-semibold text-emerald-800">Ingresso a partir de {preco}</p>
+                  <p className="mt-3 text-sm font-semibold text-emerald-700">Ingresso a partir de {preco}</p>
                   {stats ? (
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-900">

@@ -669,7 +669,7 @@ export function ComprarIngresso({
               ) : null}
               <CheckoutPrecoDetalhe precoIngresso={precoReaisCheckout} destaque />
               {cupomPreview && cupomPreview.desconto_centavos > 0 ? (
-                <p className="text-xs text-emerald-800">
+                <p className="text-xs text-emerald-700">
                   Preço original{" "}
                   {(precoUnitario * quantidade).toLocaleString("pt-BR", {
                     style: "currency",
@@ -719,8 +719,8 @@ export function ComprarIngresso({
             </>
           ) : (
             <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-3 py-3 text-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">Cortesia</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-900">{precoFmt}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Cortesia</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-700">{precoFmt}</p>
             </div>
           )}
 
@@ -909,7 +909,7 @@ export function ComprarIngresso({
 
           {timerFmt && !timerExpirou ? (
             <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-              <svg className="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-4 w-4 shrink-0 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
               </svg>
               <span>

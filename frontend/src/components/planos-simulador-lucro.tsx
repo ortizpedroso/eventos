@@ -75,7 +75,7 @@ function BreakdownPlano({
           <span>Total de taxas</span>
           <span>− {formatBrl(cenario.taxaTotal)}</span>
         </li>
-        <li className="flex justify-between gap-2 font-semibold text-emerald-800">
+        <li className="flex justify-between gap-2 font-semibold text-emerald-700">
           <span>Valor líquido a receber</span>
           <span>{formatBrl(cenario.liquido)}</span>
         </li>

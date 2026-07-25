@@ -444,14 +444,14 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
           Validação na entrada
         </h1>
         {tituloEvento ? (
-          <p className="mt-1 text-base font-medium text-emerald-800">{tituloEvento}</p>
+          <p className="mt-1 text-base font-medium text-emerald-700">{tituloEvento}</p>
         ) : null}
         <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${modoFesta ? "text-zinc-300" : "text-zinc-600"}`}>
           Leia o QR do ingresso ou cole o código <strong>EBR1:…</strong>. Cada ingresso só entra uma
           vez.
         </p>
         {modo === "organizador" && !modoFesta ? (
-          <p className="mt-2 text-xs font-medium text-emerald-800">
+          <p className="mt-2 text-xs font-medium text-emerald-700">
             No dia do evento, ative o <strong>Modo festa</strong> para tela cheia e leitura mais rápida na
             portaria.
           </p>
@@ -591,7 +591,7 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
           onSubmit={onSubmit}
           className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm sm:p-6"
         >
-          <label htmlFor="checkin-codigo" className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+          <label htmlFor="checkin-codigo" className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
             Código do ingresso
           </label>
           <input
@@ -610,7 +610,7 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
           <button
             type="button"
             onClick={() => void colarCodigo()}
-            className="mt-2 text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"
+            className="mt-2 text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
           >
             Colar da área de transferência
           </button>
@@ -635,7 +635,7 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
             onSubmit={onSubmitBusca}
             className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm sm:p-6"
           >
-            <label htmlFor="checkin-busca" className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+            <label htmlFor="checkin-busca" className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
               Nome, e-mail ou CPF
             </label>
             <input

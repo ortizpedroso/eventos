@@ -134,7 +134,7 @@ export function CheckoutTermoResponsabilidade({
 
           Versão {TERMO_COMPRA_VERSAO}. Dúvidas: consulte{" "}
 
-          <Link href="/termos" className="text-emerald-800 underline">
+          <Link href="/termos" className="text-emerald-700 underline">
 
             Termos de uso
 
@@ -142,7 +142,7 @@ export function CheckoutTermoResponsabilidade({
 
           e{" "}
 
-          <Link href="/privacidade" className="text-emerald-800 underline">
+          <Link href="/privacidade" className="text-emerald-700 underline">
 
             Privacidade
 
@@ -170,7 +170,7 @@ export function CheckoutTermoResponsabilidade({
 
           }}
 
-          className="mt-2 text-xs font-medium text-emerald-800 underline-offset-2 hover:underline"
+          className="mt-2 text-xs font-medium text-emerald-700 underline-offset-2 hover:underline"
 
         >
 

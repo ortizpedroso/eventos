@@ -209,7 +209,7 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
           </p>
         ) : null}
         {sucesso ? (
-          <p className="mt-3 text-xs text-emerald-800" role="status">
+          <p className="mt-3 text-xs text-emerald-700" role="status">
             {sucesso}
           </p>
         ) : null}
@@ -313,7 +313,7 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
         </p>
       ) : null}
       {sucesso ? (
-        <p className="mt-3 text-xs text-emerald-800" role="status">
+        <p className="mt-3 text-xs text-emerald-700" role="status">
           {sucesso}
         </p>
       ) : null}

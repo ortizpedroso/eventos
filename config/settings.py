@@ -70,6 +70,15 @@ class Settings(BaseSettings):
     # Vazio = feature desligada (não bloqueia); defina para habilitar a verificação.
     TURNSTILE_SECRET_KEY: str = ""
 
+    # Cloudflare R2 (armazenamento de imagens de capa de evento) — opcional.
+    # Vazio = upload de arquivo cai de volta para data:image em base64 no banco (comportamento legado).
+    R2_ACCOUNT_ID: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = "eventosbr"
+    # URL pública para servir os arquivos (r2.dev de teste, ou domínio próprio em produção).
+    R2_PUBLIC_URL: str = ""
+
     # Só confiar em X-Forwarded-For quando a API estiver atrás de reverse proxy fidedigno.
     TRUST_FORWARDED_HEADERS: bool = False
 
@@ -143,6 +152,20 @@ class Settings(BaseSettings):
 
     def permite_subconta_baas(self) -> bool:
         return self.asaas_onboarding_mode in ("baas", "both")
+
+    @property
+    def r2_endpoint_url(self) -> str:
+        return f"https://{self.R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if self.R2_ACCOUNT_ID else ""
+
+    @property
+    def r2_configured(self) -> bool:
+        return bool(
+            self.R2_ACCOUNT_ID
+            and self.R2_ACCESS_KEY_ID
+            and self.R2_SECRET_ACCESS_KEY
+            and self.R2_BUCKET_NAME
+            and self.R2_PUBLIC_URL
+        )
 
 
 settings = Settings()

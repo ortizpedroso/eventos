@@ -102,7 +102,7 @@ export function CheckoutConfirmacaoIngresso({
       <p className="checkout-check-pop" aria-hidden>
         ✓
       </p>
-      <h2 className="text-lg font-semibold text-emerald-900" data-testid="checkout-confirmacao">
+      <h2 className="text-lg font-semibold text-emerald-700" data-testid="checkout-confirmacao">
         Compra confirmada{quantidade > 1 ? ` — ${quantidade} ingressos` : ""}!
       </h2>
       <p className="text-sm text-zinc-600">{eventoNome}</p>
@@ -113,7 +113,7 @@ export function CheckoutConfirmacaoIngresso({
 
       {mensagemConfirmacao ? (
         <div className="mx-auto max-w-md rounded-md border border-emerald-600 bg-white p-4 text-left text-sm shadow-sm ring-1 ring-emerald-600">
-          <p className="font-semibold text-emerald-800">Confirmação de inscrição</p>
+          <p className="font-semibold text-emerald-700">Confirmação de inscrição</p>
           <p className="mt-2 whitespace-pre-line text-zinc-800">{mensagemConfirmacao}</p>
         </div>
       ) : null}
@@ -139,7 +139,7 @@ export function CheckoutConfirmacaoIngresso({
       ) : !aguardando ? (
         <p className="text-sm text-zinc-500">
           O QR Code estará disponível em{" "}
-          <Link href={`/conta/ingressos/${ingressoId}`} className="font-medium text-emerald-800 underline">
+          <Link href={`/conta/ingressos/${ingressoId}`} className="font-medium text-emerald-700 underline">
             Meus ingressos
           </Link>{" "}
           assim que o pagamento for confirmado.

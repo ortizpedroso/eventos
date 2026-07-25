@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 
+import { getApiBaseUrl } from "@/lib/api";
 import { EVENTO_BANNER_MEDIDAS_RESUMO, EVENTO_BANNER_RECOMMENDED } from "@/lib/evento-imagem-spec";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 
-/** Alinhado ao backend (Pydantic `imagem_url` até ~2M). Data URL cresce ~33% em relação ao ficheiro. */
-const MAX_FILE_BYTES = Math.floor(1.25 * 1024 * 1024);
-const MAX_DATA_URL_CHARS = 2_600_000;
+/** Alinhado ao backend (app/services/r2_storage.py::MAX_UPLOAD_BYTES). */
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 type Props = {
   id?: string;
@@ -21,9 +21,11 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [dimWarning, setDimWarning] = useState<string | null>(null);
+  // Não dá mais pra inferir a origem pelo formato do valor (upload e URL colada geram
+  // ambos uma URL http normal agora) — rastreamos explicitamente.
+  const [viaArquivo, setViaArquivo] = useState(false);
 
-  const isDataUrl = value.trim().toLowerCase().startsWith("data:image/");
-  const urlModo = !isDataUrl;
+  const urlModo = !viaArquivo;
   const displaySrc = resolveEventoImagemSrc(value);
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -35,7 +37,7 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
-      setHint("Arquivo muito grande (máx. 1,25 MB). Comprima a imagem ou use a opção URL.");
+      setHint("Arquivo muito grande (máx. 5 MB). Comprima a imagem ou use a opção URL.");
       return;
     }
     setBusy(true);
@@ -69,29 +71,41 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
         // GIF animado ou formato que createImageBitmap não lê
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const res = String(reader.result ?? "");
-        if (res.length > MAX_DATA_URL_CHARS) {
-          setHint("A imagem ficou muito grande após codificação. Comprima o ficheiro ou use a opção URL.");
-          setBusy(false);
-          return;
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(`${getApiBaseUrl()}/api/organizador/eventos/upload-imagem`, {
+          method: "POST",
+          body: form,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          let msg = `Erro ${res.status} ao enviar imagem`;
+          try {
+            const j = (await res.json()) as { detail?: string };
+            if (j.detail) msg = String(j.detail);
+          } catch {
+            /* ignore */
+          }
+          throw new Error(msg);
         }
-        onChange(res);
+        const data = (await res.json()) as { url?: string };
+        if (!data.url) throw new Error("Resposta inválida do servidor ao enviar imagem.");
+        onChange(data.url);
+        setViaArquivo(true);
         setDimWarning(dimWarn);
+      } catch (err) {
+        setHint(err instanceof Error ? err.message : "Não foi possível enviar o arquivo.");
+      } finally {
         setBusy(false);
-      };
-      reader.onerror = () => {
-        setHint("Não foi possível ler o arquivo.");
-        setBusy(false);
-      };
-      reader.readAsDataURL(file);
+      }
     })();
   }
 
   function limparImagem() {
     setHint(null);
     setDimWarning(null);
+    setViaArquivo(false);
     onChange("");
   }
 
@@ -103,18 +117,18 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
         </label>
         <p className="mt-1 text-xs text-zinc-500">
           Escolha <strong className="font-medium text-zinc-700">uma</strong> das duas formas abaixo. A mesma imagem
-          aparece na vitrine <Link href="/eventos" className="font-medium text-emerald-800 underline-offset-2 hover:underline">/eventos</Link> e no topo da página pública do evento.
+          aparece na vitrine <Link href="/eventos" className="font-medium text-emerald-700 underline-offset-2 hover:underline">/eventos</Link> e no topo da página pública do evento.
         </p>
       </div>
 
       <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-3 text-xs leading-relaxed text-emerald-950 ring-1 ring-emerald-200/70 sm:text-sm">
-        <p className="font-semibold text-emerald-900">Medidas para o banner e para a vitrine</p>
+        <p className="font-semibold text-emerald-700">Medidas para o banner e para a vitrine</p>
         <ul className="mt-2 list-inside list-disc space-y-0.5 marker:text-emerald-700">
           {EVENTO_BANNER_MEDIDAS_RESUMO.map((line) => (
             <li key={line}>{line}</li>
           ))}
-          <li>Ficheiro local: até 1,25 MB (JPG, PNG, WebP ou GIF).</li>
-          <li>URL: ligação direta a um ficheiro de imagem (recomendado se for maior ou já estiver na cloud).</li>
+          <li>Ficheiro local: até 5 MB (JPG, PNG, WebP ou GIF).</li>
+          <li>URL: ligação direta a um ficheiro de imagem (ex.: já hospedado em outro serviço).</li>
         </ul>
       </div>
 
@@ -147,7 +161,7 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
               <p>De momento a imagem veio de um <strong>ficheiro</strong> carregado.</p>
               <button
                 type="button"
-                className="mt-2 text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"
+                className="mt-2 text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
                 onClick={limparImagem}
               >
                 Remover ficheiro para voltar a colar uma URL
@@ -165,8 +179,7 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
         <div>
           <h3 className="text-sm font-semibold text-zinc-900">Opção 2 — Enviar ficheiro do computador</h3>
           <p className="mt-1 text-xs text-zinc-600">
-            Respeite as medidas acima para o melhor resultado. O ficheiro fica guardado no formulário (não enviamos
-            para um servidor de ficheiros separado — use URL se precisar de CDN).
+            Respeite as medidas acima para o melhor resultado. O ficheiro é enviado e hospedado automaticamente.
           </p>
           <button
             type="button"

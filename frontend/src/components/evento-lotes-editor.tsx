@@ -198,9 +198,9 @@ export function EventoLotesEditor({ rows, onChange, className = "", showCalculad
             onChange={(e) => setEventoGratuito(e.target.checked)}
             className="mt-0.5 rounded border-emerald-400 text-emerald-700 focus:ring-emerald-600"
           />
-          <span className="text-sm text-emerald-950">
+          <span className="text-sm text-emerald-700">
             <strong className="font-semibold">Evento gratuito</strong>
-            <span className="mt-0.5 block text-xs leading-relaxed text-emerald-900/90">
+            <span className="mt-0.5 block text-xs leading-relaxed text-emerald-700/90">
               Participantes não pagam ingresso (cortesia). No checkout é pedido quem autorizou a
               cortesia — só para seu controle interno. Você também pode usar o tipo{" "}
               <em>Cortesia (grátis)</em> em um lote específico, junto com lotes pagos.
@@ -338,7 +338,7 @@ export function EventoLotesEditor({ rows, onChange, className = "", showCalculad
         ))}
       </div>
 
-      <button type="button" onClick={addRow} className="text-sm font-medium text-emerald-800 hover:underline">
+      <button type="button" onClick={addRow} className="text-sm font-medium text-emerald-700 hover:underline">
         + Adicionar lote
       </button>
     </div>

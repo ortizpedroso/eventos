@@ -61,7 +61,7 @@ export function ListaInteresseForm({ slug }: Props) {
           {loading ? "…" : "Avisar-me"}
         </button>
       </div>
-      {msg ? <p className="mt-2 text-xs text-emerald-800">{msg}</p> : null}
+      {msg ? <p className="mt-2 text-xs text-emerald-700">{msg}</p> : null}
     </form>
   );
 }

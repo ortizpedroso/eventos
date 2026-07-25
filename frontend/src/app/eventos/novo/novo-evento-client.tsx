@@ -58,7 +58,7 @@ type CriarEventoPayload = {
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800">{children}</h2>
+    <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">{children}</h2>
   );
 }
 
@@ -310,14 +310,14 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                 />
               </div>
               <div className="rounded-2xl border border-emerald-600 bg-gradient-to-b from-emerald-50/90 to-white p-4 shadow-sm ring-1 ring-emerald-600 sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                   Sua página pública
                 </p>
-                <p className="mt-2 break-all font-mono text-sm text-emerald-950">
+                <p className="mt-2 break-all font-mono text-sm text-emerald-700">
                   <span className="text-zinc-600">{origin || "…"}</span>
                   /eventos/{slugPrev}
                 </p>
-                <p className="mt-2 text-xs leading-relaxed text-emerald-900/90">
+                <p className="mt-2 text-xs leading-relaxed text-emerald-700/90">
                   O slug é gerado a partir do nome. Se já existir outro evento com o mesmo slug, o
                   sistema acrescenta um número ao final (ex.: <span className="font-mono">-1</span>
                   ).
@@ -591,7 +591,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
         <p className="mt-8 text-center text-sm text-zinc-500 sm:text-left">
           <Link
             href={voltarHref}
-            className="font-medium text-emerald-800 hover:text-emerald-900 hover:underline"
+            className="font-medium text-emerald-700 hover:text-emerald-700 hover:underline"
           >
             {painel ? "← Voltar aos meus eventos" : "← Ver todos os eventos"}
           </Link>

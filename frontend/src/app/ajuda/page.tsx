@@ -42,7 +42,7 @@ export default function AjudaPage() {
         <ul className="mt-8 space-y-4">
           {topicos.map((t) => (
             <li key={t.href} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <Link href={t.href} className="text-base font-semibold text-emerald-900 no-underline hover:underline">
+              <Link href={t.href} className="text-base font-semibold text-emerald-700 no-underline hover:underline">
                 {t.titulo}
               </Link>
               <p className="mt-1 text-sm">{t.descricao}</p>

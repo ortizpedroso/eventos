@@ -31,7 +31,7 @@ _EXT_BY_TYPE = {
     "image/vnd.microsoft.icon": ".ico",
 }
 
-_SAFE_SUBDIR = re.compile(r"^[a-z0-9_-]{1,32}$")
+_SAFE_SUBDIR = re.compile(r"^[a-z0-9_-]{1,32}(/[a-z0-9_-]{1,32})?$")
 
 
 def upload_root() -> Path:

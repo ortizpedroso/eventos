@@ -21,7 +21,7 @@ export function EventoMapaLocal({ local, cidade }: Props) {
         href={mapsUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-3 inline-flex text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"
+        className="mt-3 inline-flex text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
       >
         Abrir no Google Maps
       </a>

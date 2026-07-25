@@ -76,7 +76,7 @@ export function EventoWizardSimuladorLiquido({
             <span>− {formatBrl(acrescimo)}</span>
           </li>
         ) : null}
-        <li className="flex justify-between gap-2 border-t border-dashed border-zinc-200 pt-1.5 font-medium text-emerald-900">
+        <li className="flex justify-between gap-2 border-t border-dashed border-zinc-200 pt-1.5 font-medium text-emerald-700">
           <span>Você recebe</span>
           <span>{formatBrl(liquidoAbsorvendo)}</span>
         </li>

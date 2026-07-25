@@ -64,7 +64,7 @@ export function IngressoPrecoCalculadora({
         </div>
         <Link
           href="/planos"
-          className="shrink-0 text-xs font-medium text-emerald-800 underline-offset-2 hover:underline"
+          className="shrink-0 text-xs font-medium text-emerald-700 underline-offset-2 hover:underline"
         >
           Ver planos
         </Link>
@@ -118,7 +118,7 @@ export function IngressoPrecoCalculadora({
 
       {detalhe && liquido != null ? (
         <div className="mt-4 space-y-3 rounded-lg border border-emerald-100 bg-white/90 p-3 text-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">Resultado</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Resultado</p>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-zinc-600">Preço sugerido para venda</span>
             <span className="text-xl font-bold text-zinc-900">{formatBrl(detalhe.precoVenda)}</span>
@@ -138,7 +138,7 @@ export function IngressoPrecoCalculadora({
             </li>
             <li className="flex justify-between gap-2">
               <span>Você recebe (líquido)</span>
-              <span className="font-semibold text-emerald-800">{formatBrl(detalhe.liquidoOrganizador)}</span>
+              <span className="font-semibold text-emerald-700">{formatBrl(detalhe.liquidoOrganizador)}</span>
             </li>
           </ul>
           {onAplicarPreco ? (

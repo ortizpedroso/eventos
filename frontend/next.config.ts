@@ -10,6 +10,18 @@ if (apiTarget.endsWith("/api")) {
   apiTarget = apiTarget.slice(0, -4).replace(/\/+$/, "");
 }
 
+// Domínio público de imagens (R2 pub-xxxx.r2.dev hoje; domínio próprio no futuro,
+// bastando trocar NEXT_PUBLIC_R2_PUBLIC_URL — sem editar código).
+const r2PublicHostname = (() => {
+  const raw = process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.trim();
+  if (!raw) return null;
+  try {
+    return new URL(raw).hostname;
+  } catch {
+    return null;
+  }
+})();
+
 const nextConfig: NextConfig = {
   /**
    * Monorepo local: raiz do repo (lockfile acima de `frontend/`).
@@ -26,6 +38,9 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      ...(r2PublicHostname
+        ? [{ protocol: "https" as const, hostname: r2PublicHostname }]
+        : []),
     ],
   },
   async headers() {

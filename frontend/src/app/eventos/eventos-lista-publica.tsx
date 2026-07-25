@@ -488,7 +488,7 @@ export function EventosListaPublica({
               cidadeRef.current = "";
               router.replace(pathname, { scroll: false });
             }}
-            className="font-medium text-emerald-800 underline-offset-2 hover:underline"
+            className="font-medium text-emerald-700 underline-offset-2 hover:underline"
           >
             Limpar filtros
           </button>

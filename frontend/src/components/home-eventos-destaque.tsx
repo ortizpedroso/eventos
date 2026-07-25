@@ -25,7 +25,7 @@ export function HomeEventosDestaque({ initialEventos = null }: Props) {
         </div>
         <Link
           href="/eventos"
-          className="text-sm font-semibold text-emerald-800 underline-offset-2 hover:underline"
+          className="text-sm font-semibold text-emerald-700 underline-offset-2 hover:underline"
         >
           Ver todos →
         </Link>

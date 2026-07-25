@@ -273,7 +273,7 @@ export function EditarEventoClient({ slug }: Props) {
   if (me === null) {
     return (
       <div className="mx-auto mt-10 max-w-2xl space-y-4">
-        <Link href="/auth" className="text-sm text-emerald-800 underline">
+        <Link href="/auth" className="text-sm text-emerald-700 underline">
           Inicie sessão
         </Link>
         <p className="text-sm text-zinc-700">É necessário estar autenticado para editar um evento.</p>
@@ -327,11 +327,11 @@ export function EditarEventoClient({ slug }: Props) {
   return (
     <div className="mx-auto mt-10 w-full max-w-2xl">
       <nav className="mb-4 text-sm text-zinc-600" aria-label="Navegação">
-        <Link href="/organizador/eventos" className="hover:text-emerald-800 hover:underline">
+        <Link href="/organizador/eventos" className="hover:text-emerald-700 hover:underline">
           Painel
         </Link>
         <span className="mx-1.5 text-zinc-400">/</span>
-        <Link href="/organizador/eventos" className="hover:text-emerald-800 hover:underline">
+        <Link href="/organizador/eventos" className="hover:text-emerald-700 hover:underline">
           Meus eventos
         </Link>
         <span className="mx-1.5 text-zinc-400">/</span>
@@ -605,7 +605,7 @@ export function EditarEventoClient({ slug }: Props) {
                 type="button"
                 onClick={() => void baixarListaInteresse()}
                 disabled={csvBusy}
-                className="mt-3 text-sm font-medium text-emerald-800 underline disabled:opacity-60"
+                className="mt-3 text-sm font-medium text-emerald-700 underline disabled:opacity-60"
               >
                 {csvBusy ? "Gerando CSV…" : "Baixar CSV"}
               </button>

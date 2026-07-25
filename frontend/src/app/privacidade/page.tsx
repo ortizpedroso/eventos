@@ -32,7 +32,7 @@ export default function PrivacidadePage() {
               O responsável pelo tratamento dos dados pessoais tratados através deste site e da respetiva API é
               a entidade que opera a marca EventosBR (doravante &quot;nós&quot; ou &quot;plataforma&quot;). Para
               exercer direitos ou dúvidas, utilize o contacto indicado na página{" "}
-              <Link href="/sobre" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+              <Link href="/sobre" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
                 Sobre
               </Link>{" "}
               ou o e-mail público de suporte, quando disponível.
@@ -152,7 +152,7 @@ export default function PrivacidadePage() {
         </div>
 
         <p className="mt-12 text-center text-sm text-zinc-500">
-          <Link href="/" className="text-emerald-800 underline-offset-2 hover:underline">
+          <Link href="/" className="text-emerald-700 underline-offset-2 hover:underline">
             ← Voltar ao início
           </Link>
         </p>

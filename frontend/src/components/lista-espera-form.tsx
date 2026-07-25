@@ -49,7 +49,7 @@ export function ListaEsperaForm({ slug }: Props) {
           {loading ? "…" : "Entrar na fila"}
         </button>
       </div>
-      {msg ? <p className="mt-2 text-xs text-emerald-800">{msg}</p> : null}
+      {msg ? <p className="mt-2 text-xs text-emerald-700">{msg}</p> : null}
     </form>
   );
 }

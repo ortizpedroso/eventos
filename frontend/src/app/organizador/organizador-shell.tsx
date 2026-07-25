@@ -97,7 +97,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 md:pb-8 lg:flex-row lg:gap-10 pb-24 lg:pb-8">
         <aside className="hidden shrink-0 lg:block lg:w-56">
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50/90 to-white p-3 shadow-sm ring-1 ring-emerald-200/80 lg:sticky lg:top-24">
-            <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+            <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
               Painel
             </p>
             <nav className="flex flex-col gap-1" aria-label="Navegação do organizador">

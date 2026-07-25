@@ -476,9 +476,9 @@ export function OrganizadorRepassesPainel() {
         <>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-              <p className="text-xs text-emerald-800">Disponível para saque</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-900">{fmt(disponivel)}</p>
-              <p className="mt-1 text-[11px] text-emerald-800">
+              <p className="text-xs text-emerald-700">Disponível para saque</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-700">{fmt(disponivel)}</p>
+              <p className="mt-1 text-[11px] text-emerald-700">
                 Liberado {carenciaH}h após confirmação do pagamento
               </p>
             </div>
@@ -616,7 +616,7 @@ export function OrganizadorRepassesPainel() {
       ) : null}
 
       {status?.repasse_aprovado ? (
-        <p className="mt-4 text-sm text-emerald-800">
+        <p className="mt-4 text-sm text-emerald-700">
           Conta de recebimento ativa — vendas e repasses automáticos.{" "}
           <Link href="/organizador/financeiro/conta-repasse" className="font-medium underline">
             Ver detalhes da conta
@@ -665,7 +665,7 @@ export function OrganizadorRepassesPainel() {
               <button
                 type="button"
                 disabled={busy || buscandoWallet}
-                className="rounded-lg border border-emerald-700 bg-white px-3 py-2 text-sm font-medium text-emerald-900"
+                className="rounded-lg border border-emerald-700 bg-white px-3 py-2 text-sm font-medium text-emerald-700"
                 onClick={() => void buscarWalletPelaApiKey()}
               >
                 {buscandoWallet ? "Buscando…" : "Buscar ID"}
@@ -673,7 +673,7 @@ export function OrganizadorRepassesPainel() {
             </div>
           </label>
           {walletPreview ? (
-            <p className="text-xs text-emerald-800">
+            <p className="text-xs text-emerald-700">
               {walletPreview.account_name || walletPreview.account_email || "Conta"} · ID{" "}
               <span className="font-mono">{walletPreview.wallet_id}</span>
             </p>
@@ -904,7 +904,7 @@ export function OrganizadorRepassesPainel() {
                     <td className="px-4 py-2 text-zinc-700">{g.ingressos}</td>
                     <td className="px-4 py-2 text-zinc-700">{fmt(g.receita_bruta)}</td>
                     <td className="px-4 py-2 text-zinc-500">{fmt(g.taxa_plataforma)}</td>
-                    <td className="px-4 py-2 font-medium text-emerald-800">{fmt(g.liquido)}</td>
+                    <td className="px-4 py-2 font-medium text-emerald-700">{fmt(g.liquido)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -985,7 +985,7 @@ export function OrganizadorRepassesPainel() {
                 </div>
                 {m.tipo === "venda" ? (
                   <div className="text-right text-xs">
-                    <p className="font-semibold text-emerald-800">+ {fmt(m.liquido)}</p>
+                    <p className="font-semibold text-emerald-700">+ {fmt(m.liquido)}</p>
                     <p className="text-zinc-500">Taxa {fmt(m.taxa_plataforma)}</p>
                   </div>
                 ) : m.tipo === "estorno" ? (
@@ -1000,7 +1000,7 @@ export function OrganizadorRepassesPainel() {
                     {m.status === "pago" ? (
                       <button
                         type="button"
-                        className="mt-1 text-xs text-emerald-800 underline"
+                        className="mt-1 text-xs text-emerald-700 underline"
                         onClick={async () => {
                           try {
                             const c = await apiFetch<Record<string, unknown>>(

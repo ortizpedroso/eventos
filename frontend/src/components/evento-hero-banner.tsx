@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useState } from "react";
 
 import { EventoCategoriaBadge } from "@/components/evento-categoria-badge";
+import { isOptimizableImageHost } from "@/lib/evento-imagem-url";
 
 type Props = {
   nome: string;
@@ -58,6 +60,7 @@ export function EventoHeroBanner({
   precoFmt,
 }: Props) {
   const [shareHint, setShareHint] = useState<string | null>(null);
+  const otimizavel = isOptimizableImageHost(imagemUrl);
 
   const compartilhar = useCallback(async () => {
     setShareHint(null);
@@ -80,18 +83,29 @@ export function EventoHeroBanner({
       aria-label="Resumo do evento"
     >
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imagemUrl}
-          alt=""
-          className="h-full w-full scale-110 object-cover opacity-50 blur-3xl saturate-125"
-        />
+        {otimizavel ? (
+          <Image
+            src={imagemUrl}
+            alt=""
+            fill
+            sizes="100vw"
+            priority
+            className="scale-110 object-cover opacity-50 blur-3xl saturate-125"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- host externo arbitrário, fora do remotePatterns
+          <img
+            src={imagemUrl}
+            alt=""
+            className="h-full w-full scale-110 object-cover opacity-50 blur-3xl saturate-125"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/65 to-black/80" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-center lg:gap-12">
-          <div className="order-1 flex flex-col gap-4 lg:order-1 [&_p]:text-justify">
+          <div className="order-1 flex flex-col gap-4 lg:order-1 [&_p]:text-left">
             <div className="flex flex-wrap items-center gap-2">
               <EventoCategoriaBadge categoria={categoria} variant="hero" />
             </div>
@@ -116,9 +130,13 @@ export function EventoHeroBanner({
           </div>
 
           <div className="order-2 flex flex-col items-center gap-3 lg:order-2 lg:items-end">
-            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/20 bg-black/20 shadow-2xl ring-1 ring-white/10">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imagemUrl} alt={nome} className="aspect-video w-full object-cover" />
+            <div className="relative aspect-video w-full max-w-md overflow-hidden rounded-2xl border border-white/20 bg-black/20 shadow-2xl ring-1 ring-white/10">
+              {otimizavel ? (
+                <Image src={imagemUrl} alt={nome} fill sizes="(min-width: 1024px) 28rem, 100vw" className="object-cover" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- host externo arbitrário, fora do remotePatterns
+                <img src={imagemUrl} alt={nome} className="h-full w-full object-cover" />
+              )}
             </div>
             <button
               type="button"

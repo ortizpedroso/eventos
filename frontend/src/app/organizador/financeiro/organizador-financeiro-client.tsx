@@ -300,7 +300,7 @@ export function OrganizadorFinanceiroClient() {
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Financeiro</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
           Acompanhe vendas por período, saldo com carência de 48h e solicite transferências Pix direto na plataforma —{" "}
-          <Link href="/planos" className="font-medium text-emerald-800 underline underline-offset-2">
+          <Link href="/planos" className="font-medium text-emerald-700 underline underline-offset-2">
             ver planos
           </Link>
           .
@@ -409,7 +409,7 @@ export function OrganizadorFinanceiroClient() {
             </div>
             <div>
               <p className="text-xs text-zinc-500">Total repassado</p>
-              <p className="text-xl font-bold text-emerald-800">{fmtBRL(data.financeiro.liquido_estimado)}</p>
+              <p className="text-xl font-bold text-emerald-700">{fmtBRL(data.financeiro.liquido_estimado)}</p>
             </div>
           </div>
           <p className="mt-3 text-[11px] text-zinc-500">{AVISO_LEGAL_TAXAS}</p>

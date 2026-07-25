@@ -25,7 +25,7 @@ function IconCheck({ className }: { className?: string }) {
 function Feature({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex gap-x-3 text-sm text-zinc-600">
-      <IconCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+      <IconCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
       <span>{children}</span>
     </li>
   );
@@ -85,8 +85,8 @@ export function PlanosPricingCards({ compact = false }: Props) {
       </div>
 
       <div className="card-interactive h-full rounded-2xl border border-emerald-800 bg-gradient-to-b from-emerald-50/80 to-white p-8 shadow-md ring-2 ring-emerald-800">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Mais lucro</p>
-        <h3 className="mt-1 text-xl font-semibold text-emerald-900">Assinatura mensal</h3>
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Mais lucro</p>
+        <h3 className="mt-1 text-xl font-semibold text-emerald-700">Assinatura mensal</h3>
         <div className="mt-6 space-y-2">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-2xl font-bold text-zinc-900">{formatBrl(MENSALIDADE_ASSINATURA_MENSAL)}</span>
