@@ -498,7 +498,7 @@ export default function AuthClient({
                       ) : null}
                     </label>
                     {mode === "login" ? (
-                      <Link href="/auth?mode=forgot" className="text-xs font-medium text-emerald-800 hover:underline">
+                      <Link href="/auth?mode=forgot" className="text-xs font-medium text-emerald-700 hover:underline">
                         Esqueci minha senha
                       </Link>
                     ) : null}

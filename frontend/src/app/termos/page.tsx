@@ -105,7 +105,7 @@ export default function TermosPage() {
             <h2 className="text-lg font-semibold text-zinc-900">9. Contacto</h2>
             <p className="mt-3 text-justify">
               Questões sobre estes termos podem ser enviadas através dos meios indicados na página{" "}
-              <Link href="/sobre" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+              <Link href="/sobre" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
                 Sobre
               </Link>{" "}
               ou no endereço de contacto público, quando publicado.
@@ -114,7 +114,7 @@ export default function TermosPage() {
         </div>
 
         <p className="mt-12 text-center text-sm text-zinc-500">
-          <Link href="/" className="text-emerald-800 underline-offset-2 hover:underline">
+          <Link href="/" className="text-emerald-700 underline-offset-2 hover:underline">
             ← Voltar ao início
           </Link>
         </p>

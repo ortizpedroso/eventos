@@ -42,7 +42,7 @@ export function EventoCardVitrine({ evento: e }: Props) {
         <p className="mt-2 text-xs text-zinc-600">
           {fmtInicio} · {e.local}
         </p>
-        <p className="mt-auto pt-4 text-sm font-semibold text-emerald-800">
+        <p className="mt-auto pt-4 text-sm font-semibold text-emerald-700">
           {vendasAbertas ? `A partir de ${preco}` : "Vendas encerradas"}
         </p>
       </div>

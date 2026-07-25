@@ -265,7 +265,7 @@ export function EventoPublicClient({
         me.id === evento.organizador_id ? (
           <Link
             href={`/eventos/${slug}/editar`}
-            className="font-medium text-emerald-800 hover:underline"
+            className="font-medium text-emerald-700 hover:underline"
           >
             Editar evento
           </Link>
@@ -431,7 +431,7 @@ export function EventoPublicClient({
                 </div>
                 <div>
                   <dt className="font-medium text-zinc-800">Ingresso</dt>
-                  <dd className="font-semibold text-emerald-800">{precoFmt}</dd>
+                  <dd className="font-semibold text-emerald-700">{precoFmt}</dd>
                 </div>
               </dl>
               {evento.ingresso_lotes && evento.ingresso_lotes.length > 0 ? (
@@ -457,7 +457,7 @@ export function EventoPublicClient({
                             <span className="tabular-nums text-zinc-700">
                               {l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} · {cap}
                               {atual ? (
-                                <span className="ml-1 text-emerald-800"> (à venda)</span>
+                                <span className="ml-1 text-emerald-700"> (à venda)</span>
                               ) : !l.ativo ? (
                                 <span className="ml-1 text-zinc-500"> (inativo)</span>
                               ) : null}
@@ -473,7 +473,7 @@ export function EventoPublicClient({
               </p>
               {descricaoLonga ? (
                 <details className="mt-3">
-                  <summary className="cursor-pointer text-sm font-medium text-emerald-800 hover:underline">
+                  <summary className="cursor-pointer text-sm font-medium text-emerald-700 hover:underline">
                     Ler descrição completa
                   </summary>
                   <p className="mt-3 whitespace-pre-line text-left text-sm leading-6 text-zinc-800">
@@ -514,7 +514,7 @@ export function EventoPublicClient({
             </div>
             <div>
               <dt className="font-medium text-zinc-800">Ingresso</dt>
-              <dd className="font-semibold text-emerald-800">{precoFmt}</dd>
+              <dd className="font-semibold text-emerald-700">{precoFmt}</dd>
             </div>
           </dl>
           {evento.ingresso_lotes && evento.ingresso_lotes.length > 0 ? (
@@ -539,7 +539,7 @@ export function EventoPublicClient({
                         <span className="tabular-nums text-zinc-700">
                           {l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} · {cap}
                           {atual ? (
-                            <span className="ml-1 text-emerald-800"> (à venda)</span>
+                            <span className="ml-1 text-emerald-700"> (à venda)</span>
                           ) : !l.ativo ? (
                             <span className="ml-1 text-zinc-500"> (inativo)</span>
                           ) : null}

@@ -52,7 +52,7 @@ export function CompraInfoConfianca() {
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-3 text-xs leading-relaxed text-emerald-950 sm:col-span-2">
-          <p className="font-semibold text-emerald-900">Reembolso em até 10 dias</p>
+          <p className="font-semibold text-emerald-700">Reembolso em até 10 dias</p>
           <p className="mt-1">
             Após a compra, cancele e peça reembolso em Minha conta → Pagamentos, dentro do prazo legal,
             sem precisar falar com o organizador (se o ingresso não tiver sido usado na entrada).
@@ -67,12 +67,12 @@ export function CompraInfoConfianca() {
             {denunciaMailto ? (
               <a
                 href={denunciaMailto}
-                className="font-medium text-emerald-800 underline-offset-2 hover:underline"
+                className="font-medium text-emerald-700 underline-offset-2 hover:underline"
               >
                 Denunciar
               </a>
             ) : (
-              <Link href="/privacidade#denunciar" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+              <Link href="/privacidade#denunciar" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
                 Denunciar
               </Link>
             )}
@@ -82,7 +82,7 @@ export function CompraInfoConfianca() {
               <span className="text-zinc-500">
                 {" "}
                 — veja como comunicar na{" "}
-                <Link href="/privacidade#denunciar" className="text-emerald-800 underline-offset-2 hover:underline">
+                <Link href="/privacidade#denunciar" className="text-emerald-700 underline-offset-2 hover:underline">
                   política de privacidade
                 </Link>
                 .
@@ -116,20 +116,20 @@ export function CompraInfoConfianca() {
             dados sensíveis de pagamento.
           </p>
           <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-zinc-100 pt-3 text-zinc-500">
-            <Link href="/termos" className="text-emerald-800 underline-offset-2 hover:underline">
+            <Link href="/termos" className="text-emerald-700 underline-offset-2 hover:underline">
               Termos de uso
             </Link>
-            <Link href="/privacidade" className="text-emerald-800 underline-offset-2 hover:underline">
+            <Link href="/privacidade" className="text-emerald-700 underline-offset-2 hover:underline">
               Privacidade
             </Link>
             <span>
               Precisa de ajuda?{" "}
               {contatoMailto ? (
-                <a href={contatoMailto} className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+                <a href={contatoMailto} className="font-medium text-emerald-700 underline-offset-2 hover:underline">
                   Fale connosco
                 </a>
               ) : (
-                <Link href="/sobre" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+                <Link href="/sobre" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
                   Fale connosco
                 </Link>
               )}

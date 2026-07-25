@@ -795,7 +795,7 @@ export function AdminDashboardClient() {
                   {c.status === "rascunho" || c.status === "concluida" || c.status === "erro" ? (
                     <button
                       type="button"
-                      className="mt-2 text-xs font-medium text-emerald-800 underline"
+                      className="mt-2 text-xs font-medium text-emerald-700 underline"
                       disabled={busy}
                       onClick={() => void dispararExistente(c.id)}
                     >

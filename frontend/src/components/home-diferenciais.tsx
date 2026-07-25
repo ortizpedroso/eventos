@@ -31,7 +31,7 @@ export function HomeDiferenciais() {
             href={item.href}
             className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
           >
-            <h3 className="font-semibold text-emerald-800">{item.titulo}</h3>
+            <h3 className="font-semibold text-emerald-700">{item.titulo}</h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-600">{item.descricao}</p>
             <span className="mt-3 inline-block text-sm font-medium text-emerald-700">Saiba mais →</span>
           </Link>

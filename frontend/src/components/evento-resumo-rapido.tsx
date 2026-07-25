@@ -47,7 +47,7 @@ export function EventoResumoRapido({
         </div>
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Preço</p>
-          <p className="mt-0.5 text-lg font-bold text-emerald-800">{precoFmt}</p>
+          <p className="mt-0.5 text-lg font-bold text-emerald-700">{precoFmt}</p>
           {pago ? (
             <p className="text-[11px] text-zinc-600">
               Valor do ingresso. Parcelamento, quando disponível, pode incluir acréscimo no checkout.{" "}

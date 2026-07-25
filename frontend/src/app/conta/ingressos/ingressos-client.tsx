@@ -168,7 +168,7 @@ export function IngressosClient() {
                 )}
                 <Link
                   href={`/conta/ingressos/${it.id}`}
-                  className="text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"
+                  className="text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
                 >
                   Opções do ingresso (PDF / e-mail) →
                 </Link>

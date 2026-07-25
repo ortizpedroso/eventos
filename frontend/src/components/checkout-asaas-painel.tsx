@@ -316,8 +316,8 @@ export function CheckoutAsaasPainel({
   return (
     <form onSubmit={iniciar} className="space-y-4">
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 text-sm" data-testid="checkout-taxas">
-        <p className="font-medium text-emerald-900">Resumo</p>
-        <ul className="mt-2 space-y-1 text-xs text-emerald-950">
+        <p className="font-medium text-emerald-700">Resumo</p>
+        <ul className="mt-2 space-y-1 text-xs text-emerald-700">
           <li className="flex justify-between gap-2">
             <span>Ingresso</span>
             <span>{formatBrl(valorBase)}</span>
@@ -332,17 +332,17 @@ export function CheckoutAsaasPainel({
               Sem acréscimo ao comprador — custo absorvido pelo organizador.
             </li>
           ) : null}
-          <li className="flex justify-between gap-2 border-t border-emerald-200/80 pt-1 font-semibold text-emerald-900">
+          <li className="flex justify-between gap-2 border-t border-emerald-200/80 pt-1 font-semibold text-emerald-700">
             <span>Total a pagar</span>
             <span>{formatBrl(totalPagar)}</span>
           </li>
           {metodo === "card" && parcelas > 1 && cotacao.valorParcela ? (
-            <li className="text-emerald-800">
+            <li className="text-emerald-700">
               {parcelas}x de <strong>{formatBrl(cotacao.valorParcela)}</strong>
             </li>
           ) : null}
         </ul>
-        <p className="mt-2 text-[11px] text-emerald-800/80">{AVISO_LEGAL_TAXAS}</p>
+        <p className="mt-2 text-[11px] text-emerald-700/80">{AVISO_LEGAL_TAXAS}</p>
       </div>
 
       {countdown ? <p className="text-xs text-amber-800">Reserva expira em {countdown}</p> : null}

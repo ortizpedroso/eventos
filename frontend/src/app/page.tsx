@@ -88,7 +88,7 @@ export default function Home() {
           <p className="mt-4 text-lg text-zinc-600">
             Comece de graça, venda com taxa por ingresso ou reduza ainda mais as taxas com assinatura.
           </p>
-          <Link href="/planos" className="mt-4 inline-block text-sm font-medium text-emerald-800 underline-offset-2 hover:underline">
+          <Link href="/planos" className="mt-4 inline-block text-sm font-medium text-emerald-700 underline-offset-2 hover:underline">
             Ver detalhes em Planos →
           </Link>
         </div>

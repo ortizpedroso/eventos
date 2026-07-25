@@ -32,7 +32,7 @@ export function HomeHeroExplorar() {
       <p className="mt-4 text-center text-sm text-zinc-500">
         <Link
           href="/eventos"
-          className="font-medium text-emerald-800 underline-offset-2 hover:underline"
+          className="font-medium text-emerald-700 underline-offset-2 hover:underline"
         >
           Ver todos os eventos e buscar por nome
         </Link>

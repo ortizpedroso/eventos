@@ -99,13 +99,13 @@ export default async function ApiReferenciaPage() {
       </p>
       <p className="mt-2 text-sm text-zinc-500">
         Versão {spec?.info?.version || "1.0.0"} · Esquema completo em{" "}
-        <a href="/openapi.json" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+        <a href="/openapi.json" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
           /openapi.json
         </a>
         .
       </p>
       <p className="mt-4 text-sm text-zinc-600">
-        <Link href="/documentacao" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+        <Link href="/documentacao" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
           ← Voltar à documentação
         </Link>
       </p>

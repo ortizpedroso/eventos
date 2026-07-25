@@ -24,19 +24,19 @@ export function CheckoutPrecoDetalhe({ precoIngresso, destaque = false, classNam
     >
       {destaque ? (
         <>
-          <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">Preço do ingresso</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-900">{formatBrl(precoIngresso)}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Preço do ingresso</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-700">{formatBrl(precoIngresso)}</p>
         </>
       ) : (
-        <p className="text-sm font-semibold text-emerald-900">Ingresso: {formatBrl(precoIngresso)}</p>
+        <p className="text-sm font-semibold text-emerald-700">Ingresso: {formatBrl(precoIngresso)}</p>
       )}
-      <p className="mt-2 text-xs text-emerald-950/90">
+      <p className="mt-2 text-xs text-emerald-700/90">
         O valor final no checkout pode incluir acréscimo de parcelamento, quando disponível. Pagamento processado por
         processador certificado — {labelPagamentoSeguro().toLowerCase()}.
       </p>
-      <p className="mt-2 text-[11px] text-emerald-800/70">{AVISO_LEGAL_TAXAS}</p>
-      <p className="mt-2 text-[11px] text-emerald-800/70">
-        <Link href="/ajuda/parcelamento-e-taxas" className="underline underline-offset-2 hover:text-emerald-900">
+      <p className="mt-2 text-[11px] text-emerald-700/70">{AVISO_LEGAL_TAXAS}</p>
+      <p className="mt-2 text-[11px] text-emerald-700/70">
+        <Link href="/ajuda/parcelamento-e-taxas" className="underline underline-offset-2 hover:text-emerald-700">
           Saiba mais sobre parcelamento e taxas
         </Link>
       </p>

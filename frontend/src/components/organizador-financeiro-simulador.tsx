@@ -104,7 +104,7 @@ export function OrganizadorFinanceiroSimulador({ planoTarifa = "padrao" }: Props
             <span>Total de taxas</span>
             <span>− {formatBrl(sim.taxa)}</span>
           </li>
-          <li className="flex justify-between gap-2 font-semibold text-emerald-800">
+          <li className="flex justify-between gap-2 font-semibold text-emerald-700">
             <span>Valor líquido a receber (repassar parcelamento)</span>
             <span>{formatBrl(sim.liquido)}</span>
           </li>

@@ -82,7 +82,7 @@ export function NotificacoesClient() {
                   {n.link ? (
                     <Link
                       href={n.link}
-                      className="mt-2 inline-block text-xs font-medium text-emerald-800 underline"
+                      className="mt-2 inline-block text-xs font-medium text-emerald-700 underline"
                     >
                       Ver detalhes
                     </Link>
@@ -92,7 +92,7 @@ export function NotificacoesClient() {
                   <button
                     type="button"
                     onClick={() => void marcarLida(n.id)}
-                    className="shrink-0 text-xs font-medium text-emerald-800 underline"
+                    className="shrink-0 text-xs font-medium text-emerald-700 underline"
                   >
                     Marcar como lida
                   </button>

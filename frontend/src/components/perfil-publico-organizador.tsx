@@ -114,7 +114,7 @@ export function PerfilPublicoOrganizador() {
 
       {slug ? (
         <p className="mt-2 text-sm">
-          <Link href={`/produtor/${slug}`} className="font-medium text-emerald-800 underline">
+          <Link href={`/produtor/${slug}`} className="font-medium text-emerald-700 underline">
             Ver página pública
           </Link>
           {brandSubdomain ? (
@@ -134,7 +134,7 @@ export function PerfilPublicoOrganizador() {
         </p>
       ) : null}
       {saved ? (
-        <p className="mt-3 text-sm text-emerald-800" role="status">
+        <p className="mt-3 text-sm text-emerald-700" role="status">
           Perfil público salvo.
         </p>
       ) : null}

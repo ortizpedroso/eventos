@@ -61,7 +61,7 @@ export function SiteFooter() {
 
           <div className="grid gap-10 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-2">
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-500/90">Plataforma</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/90">Plataforma</h2>
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link href="/eventos" className="text-zinc-400 hover:text-emerald-300">Explorar eventos</Link></li>
                 <li><Link href="/planos" className="text-zinc-400 hover:text-emerald-300">Planos e preços</Link></li>
@@ -73,7 +73,7 @@ export function SiteFooter() {
               </ul>
             </div>
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-500/90">Empresa</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/90">Empresa</h2>
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link href="/sobre" className="text-zinc-400 hover:text-emerald-300">Sobre nós</Link></li>
                 <li><Link href="/termos" className="text-zinc-400 hover:text-emerald-300">Termos de uso</Link></li>
@@ -84,7 +84,7 @@ export function SiteFooter() {
 
           {socialLinks.length > 0 ? (
             <div className="lg:col-span-3">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-500/90">Redes sociais</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/90">Redes sociais</h2>
               <ul className="mt-5 flex flex-wrap gap-3">
                 {socialLinks.map(({ href, label, Icon }) => (
                   <li key={label}>

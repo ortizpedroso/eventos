@@ -228,7 +228,7 @@ export function OrganizadorRelatoriosClient() {
         </p>
         <p className="mt-2 text-sm text-zinc-500">
           Quer o detalhe de cada cobrança? Veja também{" "}
-          <Link href="/organizador/perfil/pagamentos" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+          <Link href="/organizador/perfil/pagamentos" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
             Meus pagamentos
           </Link>
           .
@@ -237,7 +237,7 @@ export function OrganizadorRelatoriosClient() {
 
       <div className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm ring-1 ring-emerald-200/60 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-6 sm:p-5">
         <div className="grid gap-2">
-          <label htmlFor="rel-dias" className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+          <label htmlFor="rel-dias" className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
             Período do gráfico de vendas
           </label>
           <select
@@ -252,7 +252,7 @@ export function OrganizadorRelatoriosClient() {
           </select>
         </div>
         <div className="grid flex-1 gap-2 sm:min-w-[14rem]">
-          <label htmlFor="rel-evento" className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+          <label htmlFor="rel-evento" className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
             Filtrar por evento (opcional)
           </label>
           <select
@@ -327,7 +327,7 @@ export function OrganizadorRelatoriosClient() {
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-sm ring-1 ring-emerald-100">
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                   Ingressos confirmados
                 </p>
                 <p className="mt-2 text-3xl font-bold tabular-nums text-zinc-900">{pagos}</p>
@@ -348,7 +348,7 @@ export function OrganizadorRelatoriosClient() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
                   Receita confirmada (total)
                 </p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-800 sm:text-3xl">
+                <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-700 sm:text-3xl">
                   {fmtBRL(data.resumo.receita_confirmada)}
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">Soma dos ingressos com status “pago”.</p>
@@ -387,7 +387,7 @@ export function OrganizadorRelatoriosClient() {
                 </div>
                 <div>
                   <p className="text-xs text-zinc-500">Líquido estimado</p>
-                  <p className="text-xl font-bold text-emerald-800">
+                  <p className="text-xl font-bold text-emerald-700">
                     {fmtBRL(data.financeiro.liquido_estimado)}
                   </p>
                 </div>
@@ -408,7 +408,7 @@ export function OrganizadorRelatoriosClient() {
             <div className="mt-4 flex flex-wrap items-baseline gap-6">
               <div>
                 <p className="text-xs text-zinc-500">Receita confirmada no mês</p>
-                <p className="text-xl font-bold tabular-nums text-emerald-800">
+                <p className="text-xl font-bold tabular-nums text-emerald-700">
                   {fmtBRL(data.mes_atual.receita_confirmada)}
                 </p>
               </div>
@@ -473,7 +473,7 @@ export function OrganizadorRelatoriosClient() {
                         <span className="ml-1 text-xs font-normal text-amber-700">(pausado)</span>
                       ) : null}
                     </span>
-                    <span className="shrink-0 tabular-nums text-emerald-800">{fmtBRL(e.receita_paga)}</span>
+                    <span className="shrink-0 tabular-nums text-emerald-700">{fmtBRL(e.receita_paga)}</span>
                   </div>
                   <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-emerald-100">
                     <div

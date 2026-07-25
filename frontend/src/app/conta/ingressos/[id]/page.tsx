@@ -296,7 +296,7 @@ export default function IngressoDetalhePage() {
     return (
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
         <p className="text-sm text-zinc-600">Ingresso inválido.</p>
-        <Link href="/conta/ingressos" className="mt-4 inline-block text-sm text-emerald-800 underline">
+        <Link href="/conta/ingressos" className="mt-4 inline-block text-sm text-emerald-700 underline">
           Voltar aos meus ingressos
         </Link>
       </div>
@@ -377,8 +377,8 @@ export default function IngressoDetalhePage() {
           id="qr-ingresso"
           className="mb-8 scroll-mt-24 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-6 text-center shadow-sm"
         >
-          <h2 className="text-lg font-semibold text-emerald-950">QR Code único deste ingresso</h2>
-          <p className="mt-1 text-sm text-emerald-900/80">
+          <h2 className="text-lg font-semibold text-emerald-700">QR Code único deste ingresso</h2>
+          <p className="mt-1 text-sm text-emerald-700/80">
             Cada ingresso tem um código diferente. Na portaria, o organizador valida uma única vez.
           </p>
           {qrUrl ? (
@@ -395,7 +395,7 @@ export default function IngressoDetalhePage() {
           )}
           {ingresso.codigo_checkin ? (
             <div className="mx-auto mt-4 max-w-md rounded-lg border border-emerald-200 bg-white p-4 text-left">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                 Código para digitar na portaria
               </p>
               <p className="mt-2 break-all font-mono text-sm font-medium text-zinc-900">

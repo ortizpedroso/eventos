@@ -107,7 +107,7 @@ export function ImagemAssetField({
       ) : (
         <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
           Imagem carregada localmente.{" "}
-          <button type="button" className="font-medium text-emerald-800 underline" onClick={limpar}>
+          <button type="button" className="font-medium text-emerald-700 underline" onClick={limpar}>
             Remover
           </button>
         </div>

@@ -143,7 +143,7 @@ export function ComunicadosClient() {
         <p className="text-sm text-zinc-600">
           Nenhum evento com participantes elegíveis ainda. Quando houver vendas confirmadas, o
           evento aparecerá aqui para você enviar avisos.{" "}
-          <Link href="/organizador/eventos" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+          <Link href="/organizador/eventos" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
             Ver meus eventos
           </Link>
         </p>
@@ -240,7 +240,7 @@ export function ComunicadosClient() {
             </p>
           ) : null}
           {msg ? (
-            <p className="text-sm text-emerald-800" role="status">
+            <p className="text-sm text-emerald-700" role="status">
               {msg}
             </p>
           ) : null}

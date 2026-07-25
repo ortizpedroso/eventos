@@ -85,7 +85,7 @@ export function PlanosSimuladorComprador() {
               <strong>{formatBrl(selecionada.cotacao.totalPagar)}</strong>
             </li>
             {selecionada.cotacao.valorParcela ? (
-              <li className="flex justify-between gap-2 text-emerald-900">
+              <li className="flex justify-between gap-2 text-emerald-700">
                 <span>Valor por parcela</span>
                 <strong>
                   {selecionada.parcelas}x de {formatBrl(selecionada.cotacao.valorParcela)}

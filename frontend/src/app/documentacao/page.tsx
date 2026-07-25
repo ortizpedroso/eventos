@@ -53,7 +53,7 @@ export default function DocumentacaoPage() {
             código-fonte.
           </p>
           <p className="mt-4 text-sm text-zinc-500">
-            <Link href="/" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+            <Link href="/" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
               ← Voltar ao início
             </Link>
           </p>
@@ -293,7 +293,7 @@ export default function DocumentacaoPage() {
               <p>
                 <Link
                   href="/documentacao/api"
-                  className="font-medium text-emerald-800 underline-offset-2 hover:underline"
+                  className="font-medium text-emerald-700 underline-offset-2 hover:underline"
                 >
                   → Ver referência da API (/documentacao/api)
                 </Link>

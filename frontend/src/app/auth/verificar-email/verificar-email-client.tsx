@@ -60,7 +60,7 @@ export function VerificarEmailClient() {
             <Link href="/conta/ingressos" className="btn-success px-4 py-2 text-sm">
               Meus ingressos
             </Link>
-            <Link href="/eventos" className="text-sm font-medium text-emerald-800 underline">
+            <Link href="/eventos" className="text-sm font-medium text-emerald-700 underline">
               Explorar eventos
             </Link>
           </div>
@@ -71,7 +71,7 @@ export function VerificarEmailClient() {
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {message}
           </p>
-          <Link href="/conta/perfil" className="text-sm font-medium text-emerald-800 underline">
+          <Link href="/conta/perfil" className="text-sm font-medium text-emerald-700 underline">
             Ir ao perfil para reenviar confirmação
           </Link>
         </div>
