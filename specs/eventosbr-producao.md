@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.9
+**Versão:** 1.10
 **Data:** 2026-07-24
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `3988ec1`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Bloqueio pagamentos:** conta mãe Asaas precisa ser **CNPJ** (configuração operacional pendente — status não confirmado nesta revisão, ver §7). **Testes reais (§2.8):** após CNPJ + deploy.
+> **Produção (VPS):** `main` em `e6df57d`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -328,13 +328,14 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] `main` em `3988ec1` — inclui auditoria completa de segurança/SEO/UX (v1.8): 2FA, CAPTCHA, cifra de CPF/CNPJ, correções de concorrência (TOCTOU/webhook), SEO técnico, limpeza de 29 PRs obsoletas
-- [ ] Conta mãe Asaas em **CNPJ** + `ASAAS_API_KEY` / `ASAAS_PLATFORM_WALLET_ID` atualizados *(status não confirmado nesta revisão — confirmar antes de marcar)*
-- [ ] Deploy VPS com o commit `3988ec1` (ou mais recente): `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`
-- [ ] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (`alembic upgrade head` roda automaticamente no deploy)
-- [ ] `GET /api/admin/setup` → `asaas_platform_cnpj: ok`
+- [x] `main` em `e6df57d` — inclui onboarding modo `linked` (lançamento sem CNPJ), fix de scroll no painel organizador/conta
+- [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
+- [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
+- [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
+- [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
+- [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
 
-**Validado anteriormente no VPS (revalidar após deploy do commit atual `3988ec1`):**
+**Validado no VPS em produção (deploy `e6df57d`, 25/07/2026 — todas as verificações OK):**
 
 - [x] `.env` produção preenchido
 - [x] `ASAAS_ENVIRONMENT=production` e `ASAAS_ONBOARDING_MODE=baas`
@@ -387,6 +388,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.10 | 2026-07-25 | `/review` final: onboarding `linked` validado em produção (deploy `e6df57d`, todas verificações OK). Fix adicional: scroll não resetava ao topo no painel organizador/conta (gap entre `AppNavLink scroll={false}` e exclusão do `ScrollToTop`). CNPJ da conta mãe reclassificado de "bloqueio de lançamento" para "pendência futura" (só necessário para reativar `baas`). |
 | 1.9 | 2026-07-25 | Modo `linked` liberado para produção (sem exigir CNPJ) — ver spec dedicada `specs/onboarding-linked-lancamento.md`. Correção de regressão: `loading.tsx` global reintroduzia flash de navegação já resolvido anteriormente (revertido). |
 | 1.8 | 2026-07-24 | Auditoria completa de segurança/SEO/UX: 2FA (organizador+admin), CAPTCHA Turnstile, cifra `enc:v2` de CPF/CNPJ, correções TOCTOU/webhook/CSV-injection, SEO técnico (JSON-LD, sitemap dinâmico, canonical), indicador de força de senha. Fechadas 29 PRs obsoletas cujo conteúdo já estava incorporado à `main`. Testes: 241 → 265. |
 | 1.7 | 2026-07-22 | Versão anterior (conta de recebimento BaaS, onboarding tracker, white-label de mensagens). |
