@@ -41,8 +41,8 @@ export function EventosBRLogo({ className = "", showWordmark = true, variant = "
       <Image
         src={src}
         alt="EventosBR"
-        width={282}
-        height={52}
+        width={180}
+        height={44}
         className="h-9 w-auto sm:h-10"
         priority
         unoptimized={src.startsWith("http")}
