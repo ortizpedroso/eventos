@@ -1,8 +1,8 @@
 # Spec: Onboarding de repasse em modo `linked` para o lançamento
 
-**Versão:** 1.0
+**Versão:** 1.1
 **Data:** 2026-07-25
-**Status:** ✅ Implementado
+**Status:** ✅ Implementado e validado em produção
 
 ## 1. Objetivo
 
@@ -38,8 +38,8 @@ Permitir o lançamento comercial da plataforma **sem CNPJ da conta mãe Asaas**,
 - [x] Link de criação de conta Asaas visível no formulário de vínculo (`organizador-repasses-painel.tsx`)
 - [x] `pytest` verde (266 testes)
 - [x] `npm run build` (produção) sem erros
-- [ ] `.env` de produção atualizado com `ASAAS_ONBOARDING_MODE=linked` (ação operacional, fora do escopo do `/build` — feita no deploy)
-- [ ] Validação manual no VPS: organizador consegue colar chave de API, ver o `walletId` retornado e confirmar o vínculo
+- [x] `.env` de produção atualizado com `ASAAS_ONBOARDING_MODE=linked` — confirmado em produção (25/07/2026)
+- [x] Validação manual no VPS: fluxo funcionando, confirmado pelo usuário ("a parte do Asaas deu certo na atualização")
 
 ## 6. Fora de escopo (não construído nesta spec)
 
