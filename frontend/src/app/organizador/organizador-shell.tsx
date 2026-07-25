@@ -16,6 +16,7 @@ const navDesktop = [
   { href: "/organizador/comunicados", label: "Comunicados", tour: "org-comunicados" },
   { href: "/organizador/checkin", label: "Check-in", tour: "org-checkin" },
   { href: "/organizador/financeiro", label: "Financeiro", tour: "org-financeiro" },
+  { href: "/organizador/whitelabel", label: "Whitelabel", tour: "org-whitelabel" },
 ] as const;
 
 const navMobilePrincipal = [
@@ -29,6 +30,7 @@ const navMobileMais = [
   { href: "/organizador/perfil", label: "Perfil" },
   { href: "/organizador/comunicados", label: "Comunicados" },
   { href: "/organizador/financeiro", label: "Financeiro" },
+  { href: "/organizador/whitelabel", label: "Whitelabel" },
 ] as const;
 
 function isActive(pathname: string, href: string) {

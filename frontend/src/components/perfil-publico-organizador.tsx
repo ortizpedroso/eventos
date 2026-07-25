@@ -106,7 +106,7 @@ export function PerfilPublicoOrganizador() {
   const slug = perfil?.slug_publico;
 
   return (
-    <section className="mt-8 rounded-lg border border-zinc-200 bg-zinc-50/50 p-4">
+    <section className="rounded-lg border border-zinc-200 bg-zinc-50/50 p-4">
       <h2 className="text-lg font-semibold text-zinc-900">Página pública do organizador</h2>
       <p className="mt-1 text-sm text-zinc-600">
         Bio, foto, marca e redes exibidas em <code className="text-xs">/produtor/seu-slug</code>.
