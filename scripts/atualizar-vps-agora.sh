@@ -56,6 +56,24 @@ _needs_bootstrap() {
 echo ""
 echo "[1/9] .env..."
 if _needs_bootstrap; then
+  # Trava de segurança: nunca reescrever silenciosamente um .env que já tem uma
+  # ASAAS_API_KEY que parece real (chaves de produção do Asaas têm 100+ caracteres).
+  # Incidente 25/07/2026: validate-env-production.sh falhou por um motivo não
+  # relacionado ao Asaas, bootstrap-vps-env.sh rodou e apagou API key/wallet/senha
+  # de e-mail reais, silenciosamente, sem qualquer confirmação.
+  _current_asaas_key="$(env_get ASAAS_API_KEY .env 2>/dev/null || true)"
+  if [ -f .env ] && [ "${#_current_asaas_key}" -gt 40 ] && [ "${EVENTOSBR_FORCE_BOOTSTRAP:-}" != "1" ]; then
+    echo "" >&2
+    echo "ERRO: .env atual já tem uma ASAAS_API_KEY que parece real (${#_current_asaas_key} chars)," >&2
+    echo "mas alguma outra validação falhou (rode manualmente para ver qual):" >&2
+    echo "  ./scripts/validate-env-production.sh" >&2
+    echo "" >&2
+    echo "Recusando reescrever o .env automaticamente para não apagar segredos reais." >&2
+    echo "Corrija o campo específico que falhou acima, ou force a reescrita completa com:" >&2
+    echo "  EVENTOSBR_FORCE_BOOTSTRAP=1 bash scripts/atualizar-vps-agora.sh" >&2
+    echo "(faça isso só se tiver certeza — rode ./scripts/backup-prod-env.sh antes)." >&2
+    exit 1
+  fi
   ./scripts/bootstrap-vps-env.sh
 elif [ -f .env.prod-backup ] || [ -f .env.asaas-prod-backup ]; then
   asaas_key="$(env_get ASAAS_API_KEY .env 2>/dev/null || true)"
