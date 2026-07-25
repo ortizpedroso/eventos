@@ -289,16 +289,14 @@ export function EventoPublicClient({
       ) : null}
 
       {imagemBanner ? (
-        <div className="-mx-4 w-[calc(100%+2rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] lg:-mx-8 lg:w-[calc(100%+4rem)]">
-          <EventoHeroBanner
-            nome={evento.nome}
-            categoria={evento.categoria}
-            imagemUrl={imagemBanner}
-            local={evento.local}
-            fmtInicio={fmtInicio}
-            precoFmt={precoFmt}
-          />
-        </div>
+        <EventoHeroBanner
+          nome={evento.nome}
+          categoria={evento.categoria}
+          imagemUrl={imagemBanner}
+          local={evento.local}
+          fmtInicio={fmtInicio}
+          precoFmt={precoFmt}
+        />
       ) : null}
 
       {evento.publicado ? (
