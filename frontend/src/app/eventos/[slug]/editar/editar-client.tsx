@@ -24,6 +24,8 @@ import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade
 import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
 import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import { apiFetch, getApiBaseUrl } from "@/lib/api";
+import { onlyDigits } from "@/lib/cpf";
+import { formatTelefoneBrMask } from "@/lib/telefone-br";
 import type { PlanoTarifaId } from "@/lib/tarifas-plataforma";
 import type { Evento, Usuario } from "@/lib/types";
 
@@ -37,6 +39,8 @@ type SalvarPayload = {
   local: string;
   cidade?: string | null;
   imagem_url?: string | null;
+  contato_telefone: string;
+  contato_email: string;
   preco_ingresso: number;
   ingresso_lotes: ReturnType<typeof lotesRowsToApiPayload>;
   categoria: string;
@@ -62,6 +66,8 @@ export function EditarEventoClient({ slug }: Props) {
   const [nomeParaSlug, setNomeParaSlug] = useState("");
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
+  const [contatoTelefone, setContatoTelefone] = useState("");
+  const [contatoEmail, setContatoEmail] = useState("");
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>([]);
   const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
   const [parcelamentoMax, setParcelamentoMax] = useState(2);
@@ -155,6 +161,8 @@ export function EditarEventoClient({ slug }: Props) {
           setEvento(ev);
           setNomeParaSlug(ev.nome);
           setImagemUrl(ev.imagem_url ?? "");
+          setContatoTelefone(ev.contato_telefone ?? "");
+          setContatoEmail(ev.contato_email ?? "");
           setLoteRows(eventoLotesToRows(ev));
           setParcelamentoHabilitado(ev.parcelamento_habilitado ?? false);
           setParcelamentoMax(ev.parcelamento_max ?? 2);
@@ -233,6 +241,8 @@ export function EditarEventoClient({ slug }: Props) {
       local: String(formData.get("local") ?? ""),
       cidade: String(formData.get("cidade") ?? "").trim() || null,
       imagem_url: imagemUrl.trim() || null,
+      contato_telefone: onlyDigits(contatoTelefone, 13),
+      contato_email: contatoEmail.trim(),
       preco_ingresso,
       ingresso_lotes: lotesPayload,
       categoria: String(formData.get("categoria") ?? "Outros"),
@@ -463,6 +473,39 @@ export function EditarEventoClient({ slug }: Props) {
               defaultValue={evento.cidade ?? ""}
               placeholder="Ex.: São Paulo"
             />
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-zinc-800" htmlFor="contato_telefone">
+                Telefone de contato
+              </label>
+              <input
+                className="h-10 rounded-md border border-zinc-300 px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                id="contato_telefone"
+                inputMode="tel"
+                required
+                autoComplete="tel"
+                placeholder="(11) 99999-9999"
+                value={formatTelefoneBrMask(contatoTelefone)}
+                onChange={(e) => setContatoTelefone(onlyDigits(e.target.value, 13))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-zinc-800" htmlFor="contato_email">
+                Email de contato
+              </label>
+              <input
+                className="h-10 rounded-md border border-zinc-300 px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                id="contato_email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="contato@seudominio.com.br"
+                value={contatoEmail}
+                onChange={(e) => setContatoEmail(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="grid gap-2">

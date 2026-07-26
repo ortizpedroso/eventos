@@ -24,6 +24,8 @@ export type Evento = {
   local: string;
   cidade?: string | null;
   imagem_url?: string | null;
+  contato_telefone?: string | null;
+  contato_email?: string | null;
   /** Menor preço entre lotes ativos (sincronizado na API). */
   preco_ingresso: number;
   /** Preço do lote atualmente à venda; igual a `preco_ingresso` se só houver um lote elegível. */

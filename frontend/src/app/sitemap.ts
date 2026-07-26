@@ -11,6 +11,7 @@ const rotasEstaticas = [
   "/planos",
   "/sobre",
   "/ajuda",
+  "/contato",
   "/blog",
   "/documentacao",
   "/documentacao/api",

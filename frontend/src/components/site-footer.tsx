@@ -5,6 +5,7 @@ import Link from "next/link";
 import { EventosBRLogo } from "@/components/eventosbr-logo";
 import { usePlatformSettings } from "@/components/platform-settings-provider";
 import { hrefCadastroOrganizador } from "@/lib/criar-evento-routes";
+import { formatTelefoneBrMask } from "@/lib/telefone-br";
 
 function IconInstagram({ className }: { className?: string }) {
   return (
@@ -31,6 +32,7 @@ export function SiteFooter() {
   const platform = usePlatformSettings();
   const year = new Date().getFullYear();
   const emailContato = platform.contact_email?.trim();
+  const telefoneContato = platform.contact_phone?.replace(/\D/g, "").trim();
 
   const socialLinks = [
     { href: socialLink(platform.social_instagram_url), label: "Instagram", Icon: IconInstagram },
@@ -57,6 +59,13 @@ export function SiteFooter() {
                 </a>
               </p>
             ) : null}
+            {telefoneContato ? (
+              <p className="mt-1 text-sm">
+                <a href={`tel:+55${telefoneContato}`} className="text-emerald-400 hover:text-emerald-300">
+                  {formatTelefoneBrMask(telefoneContato)}
+                </a>
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-10 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-2">
@@ -67,6 +76,7 @@ export function SiteFooter() {
                 <li><Link href="/planos" className="text-zinc-400 hover:text-emerald-300">Planos e preços</Link></li>
                 <li><Link href="/funcionalidades" className="text-zinc-400 hover:text-emerald-300">Funcionalidades</Link></li>
                 <li><Link href="/ajuda" className="text-zinc-400 hover:text-emerald-300">Central de ajuda</Link></li>
+                <li><Link href="/contato" className="text-zinc-400 hover:text-emerald-300">Fale conosco</Link></li>
                 <li><Link href="/blog" className="text-zinc-400 hover:text-emerald-300">Blog</Link></li>
                 <li><Link href="/documentacao/api" className="text-zinc-400 hover:text-emerald-300">Documentação da API</Link></li>
                 <li><Link href={hrefCadastroOrganizador} className="text-zinc-400 hover:text-emerald-300">Publicar evento</Link></li>

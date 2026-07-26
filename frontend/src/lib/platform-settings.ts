@@ -3,6 +3,7 @@ export type PlatformSettings = {
   site_tagline: string | null;
   footer_description: string | null;
   contact_email: string | null;
+  contact_phone: string | null;
   support_email: string | null;
   logo_url: string | null;
   logo_light_url: string | null;
@@ -22,6 +23,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   footer_description:
     "Ingressos, reembolsos e repasses com transparência — do primeiro clique ao dia do evento.",
   contact_email: process.env.NEXT_PUBLIC_EMAIL_CONTATO?.trim() || null,
+  contact_phone: null,
   support_email: process.env.NEXT_PUBLIC_EMAIL_DENUNCIAS?.trim() || null,
   logo_url: process.env.NEXT_PUBLIC_LOGO_URL?.trim() || null,
   logo_light_url: null,

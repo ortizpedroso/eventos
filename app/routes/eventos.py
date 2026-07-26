@@ -67,6 +67,8 @@ async def criar_evento(
         local=evento_data.local,
         cidade=resolver_cidade(evento_data.cidade, evento_data.local),
         imagem_url=evento_data.imagem_url,
+        contato_telefone=evento_data.contato_telefone,
+        contato_email=evento_data.contato_email,
         preco_ingresso=evento_data.preco_ingresso,
         categoria=evento_data.categoria.strip() or "Outros",
         mensagem_confirmacao=evento_data.mensagem_confirmacao,
@@ -149,6 +151,8 @@ async def atualizar_evento(
     evento.local = body.local
     evento.cidade = resolver_cidade(body.cidade, body.local)
     evento.imagem_url = body.imagem_url
+    evento.contato_telefone = body.contato_telefone
+    evento.contato_email = body.contato_email
     evento.preco_ingresso = body.preco_ingresso
     evento.categoria = body.categoria.strip() or "Outros"
     evento.mensagem_confirmacao = body.mensagem_confirmacao

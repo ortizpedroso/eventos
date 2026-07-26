@@ -25,6 +25,8 @@ import { parseEventoConfigFromForm } from "@/lib/evento-config-avancada";
 import { EVENTO_CATEGORIAS, slugFromNome } from "@/lib/eventos";
 import { apiFetch } from "@/lib/api";
 import { moedaBrlFromNumber } from "@/lib/moeda-brl";
+import { onlyDigits } from "@/lib/cpf";
+import { formatTelefoneBrMask } from "@/lib/telefone-br";
 import { parseValorMonetarioInput, type PlanoTarifaId } from "@/lib/tarifas-plataforma";
 
 const CATEGORIAS = EVENTO_CATEGORIAS;
@@ -42,6 +44,8 @@ type CriarEventoPayload = {
   local: string;
   cidade?: string | null;
   imagem_url?: string | null;
+  contato_telefone: string;
+  contato_email: string;
   preco_ingresso: number;
   ingresso_lotes: ReturnType<typeof lotesRowsToApiPayload>;
   categoria: string;
@@ -117,6 +121,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [formDescricao, setFormDescricao] = useState("");
   const [formDataInicio, setFormDataInicio] = useState("");
   const [formLocal, setFormLocal] = useState("");
+  const [contatoTelefone, setContatoTelefone] = useState("");
+  const [contatoEmail, setContatoEmail] = useState("");
   const [formPublicado, setFormPublicado] = useState(false);
   const [repasseAprovado, setRepasseAprovado] = useState(false);
   const [parcelamentoHabilitado, setParcelamentoHabilitado] = useState(false);
@@ -235,6 +241,8 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
       local: String(formData.get("local") ?? ""),
       cidade: String(formData.get("cidade") ?? "").trim() || null,
       imagem_url: imagemUrl.trim() || null,
+      contato_telefone: onlyDigits(contatoTelefone, 13),
+      contato_email: contatoEmail.trim(),
       preco_ingresso,
       ingresso_lotes: lotesPayload,
       categoria: String(formData.get("categoria") ?? "Outros"),
@@ -407,6 +415,41 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
                   name="cidade"
                   placeholder="Ex.: São Paulo — ou deixe vazio para inferir do local"
                 />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium text-zinc-800" htmlFor="contato_telefone">
+                    Telefone de contato
+                  </label>
+                  <input
+                    className={inputClass}
+                    id="contato_telefone"
+                    inputMode="tel"
+                    required
+                    autoComplete="tel"
+                    placeholder="(11) 99999-9999"
+                    value={formatTelefoneBrMask(contatoTelefone)}
+                    onChange={(e) => setContatoTelefone(onlyDigits(e.target.value, 13))}
+                  />
+                  <p className="text-xs text-zinc-500">
+                    Usado pela plataforma e, se necessário, pelo comprador para falar sobre este evento.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium text-zinc-800" htmlFor="contato_email">
+                    Email de contato
+                  </label>
+                  <input
+                    className={inputClass}
+                    id="contato_email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    placeholder="contato@seudominio.com.br"
+                    value={contatoEmail}
+                    onChange={(e) => setContatoEmail(e.target.value)}
+                  />
+                </div>
               </div>
             </section>
             </div>

@@ -13,6 +13,7 @@ class PlatformSettings(Base):
     site_tagline = Column(String(255), nullable=True)
     footer_description = Column(Text, nullable=True)
     contact_email = Column(String(255), nullable=True)
+    contact_phone = Column(String(20), nullable=True)
     support_email = Column(String(255), nullable=True)
     logo_url = Column(Text, nullable=True)
     logo_light_url = Column(Text, nullable=True)

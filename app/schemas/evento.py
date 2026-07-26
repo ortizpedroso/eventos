@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.utils.imagem_url import validar_imagem_url
 from app.utils.evento_categorias import normalizar_categoria_evento
@@ -37,7 +37,11 @@ class IngressoLoteWrite(BaseModel):
             if self.preco < 0:
                 raise ValueError("preço da cortesia não pode ser negativo")
         elif self.preco < INGRESSO_MINIMO_PAGO_REAIS:
-            raise ValueError(f"preço mínimo de R$ {INGRESSO_MINIMO_PAGO_REAIS:.2f} para lotes pagos")
+            raise ValueError(
+                f"preço mínimo de R$ {INGRESSO_MINIMO_PAGO_REAIS:.2f} para lotes pagos "
+                f'— para ingresso grátis, marque o tipo como "cortesia" ou use a opção '
+                f'"Evento gratuito"'
+            )
         return self
 
 
@@ -66,6 +70,9 @@ class CriarEventoRequest(BaseModel):
     local: str
     cidade: str | None = None
     imagem_url: Optional[str] = Field(default=None, max_length=2048)
+    # Contato do evento — obrigatório (quem o comprador ou a plataforma podem acionar sobre este evento).
+    contato_telefone: str = Field(min_length=8, max_length=20)
+    contato_email: EmailStr
     # Reais (ex.: 49.9). Mínimo de R$ 10 para ingressos pagos.
     preco_ingresso: float = Field(ge=0, le=500_000)
     categoria: str = Field(default="Outros", min_length=1, max_length=80)
@@ -95,6 +102,14 @@ class CriarEventoRequest(BaseModel):
         if v not in (12, 24, 48):
             raise ValueError("lista_espera_prazo_horas deve ser 12, 24 ou 48")
         return v
+
+    @field_validator("contato_telefone", mode="before")
+    @classmethod
+    def _contato_telefone(cls, v: object) -> str:
+        digitos = "".join(ch for ch in str(v or "") if ch.isdigit())
+        if len(digitos) < 10 or len(digitos) > 13:
+            raise ValueError("telefone de contato inválido (informe DDD + número)")
+        return digitos
 
     @field_validator("imagem_url", mode="before")
     @classmethod
@@ -137,6 +152,8 @@ class EventoResponse(BaseModel):
     local: str
     cidade: str | None = None
     imagem_url: Optional[str]
+    contato_telefone: str | None = None
+    contato_email: str | None = None
     preco_ingresso: float
     categoria: str
     mensagem_confirmacao: Optional[str]
@@ -240,6 +257,8 @@ def montar_evento_response(
         "local": evento.local,
         "cidade": getattr(evento, "cidade", None),
         "imagem_url": evento.imagem_url,
+        "contato_telefone": getattr(evento, "contato_telefone", None),
+        "contato_email": getattr(evento, "contato_email", None),
         "preco_ingresso": evento.preco_ingresso,
         "categoria": evento.categoria,
         "mensagem_confirmacao": evento.mensagem_confirmacao,

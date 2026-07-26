@@ -28,6 +28,7 @@ class PlatformSettingsPublic(BaseModel):
     site_tagline: str | None = None
     footer_description: str | None = None
     contact_email: str | None = None
+    contact_phone: str | None = None
     support_email: str | None = None
     logo_url: str | None = None
     logo_light_url: str | None = None
@@ -46,6 +47,7 @@ class PlatformSettingsUpdate(BaseModel):
     site_tagline: str | None = Field(default=None, max_length=255)
     footer_description: str | None = None
     contact_email: str | None = Field(default=None, max_length=255)
+    contact_phone: str | None = Field(default=None, max_length=20)
     support_email: str | None = Field(default=None, max_length=255)
     logo_url: str | None = None
     logo_light_url: str | None = None

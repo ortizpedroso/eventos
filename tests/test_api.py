@@ -228,6 +228,8 @@ class TestEventos:
                 "imagem_url": None,
                 "preco_ingresso": 75.5,
                 "categoria": "Tecnologia",
+                "contato_telefone": "11987654321",
+                "contato_email": "contato@teste.com",
                 "mensagem_confirmacao": "Obrigado pela inscrição!",
             }
         )
@@ -248,6 +250,8 @@ class TestEventos:
                 "local": "São Paulo, SP",
                 "preco_ingresso": 10,
                 "categoria": "CategoriaInexistente",
+                "contato_telefone": "11987654321",
+                "contato_email": "contato@teste.com",
             },
         )
         assert response.status_code == 422
@@ -263,6 +267,8 @@ class TestEventos:
                 "local": "Centro",
                 "preco_ingresso": 35,
                 "categoria": "Gastronomia",
+                "contato_telefone": "11987654321",
+                "contato_email": "contato@teste.com",
             },
         )
         assert response.status_code == 200
@@ -282,6 +288,8 @@ class TestEventos:
                 "imagem_url": None,
                 "preco_ingresso": 100,
                 "categoria": "Outros",
+                "contato_telefone": "11987654321",
+                "contato_email": "contato@teste.com",
                 "ingresso_lotes": [
                     {"nome": "1º lote", "preco": 40, "ordem": 1, "ativo": True},
                     {"nome": "2º lote", "preco": 80, "ordem": 2, "ativo": True},
@@ -307,6 +315,8 @@ class TestEventos:
                 "imagem_url": None,
                 "preco_ingresso": 50,
                 "categoria": "Música",
+                "contato_telefone": "11987654321",
+                "contato_email": "contato@teste.com",
             },
         )
         assert response.status_code == 200
@@ -328,6 +338,8 @@ class TestEventos:
                 "imagem_url": None,
                 "preco_ingresso": 10,
                 "categoria": "Outros",
+                "contato_telefone": "11987654321",
+                "contato_email": "contato@teste.com",
                 "publicado": True,
                 "ingresso_lotes": [{"nome": "Geral", "preco": 10, "ordem": 1, "ativo": True}],
             }

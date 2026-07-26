@@ -10,6 +10,7 @@ export type PlatformSettingsForm = {
   site_tagline: string;
   footer_description: string;
   contact_email: string;
+  contact_phone: string;
   support_email: string;
   logo_url: string;
   logo_light_url: string;
@@ -29,6 +30,7 @@ const EMPTY: PlatformSettingsForm = {
   site_tagline: "",
   footer_description: "",
   contact_email: "",
+  contact_phone: "",
   support_email: "",
   logo_url: "",
   logo_light_url: "",
@@ -49,6 +51,7 @@ function toForm(data: PlatformSettingsForm): PlatformSettingsForm {
     site_tagline: data.site_tagline ?? "",
     footer_description: data.footer_description ?? "",
     contact_email: data.contact_email ?? "",
+    contact_phone: data.contact_phone ?? "",
     support_email: data.support_email ?? "",
     logo_url: data.logo_url ?? "",
     logo_light_url: data.logo_light_url ?? "",
@@ -68,6 +71,7 @@ function payloadFromForm(form: PlatformSettingsForm): Record<string, string | nu
     site_tagline: trim(form.site_tagline),
     footer_description: trim(form.footer_description),
     contact_email: trim(form.contact_email),
+    contact_phone: trim(form.contact_phone),
     support_email: trim(form.support_email),
     logo_url: trim(form.logo_url),
     logo_light_url: trim(form.logo_light_url),
@@ -202,6 +206,16 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             className="input"
             value={form.support_email}
             onChange={(e) => setField("support_email", e.target.value)}
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-zinc-800">Telefone de contato</span>
+          <input
+            type="tel"
+            className="input"
+            value={form.contact_phone}
+            onChange={(e) => setField("contact_phone", e.target.value)}
+            placeholder="(11) 99999-9999"
           />
         </label>
       </section>

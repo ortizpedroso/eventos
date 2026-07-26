@@ -65,6 +65,8 @@ def _criar_evento(org_token: str, publicado: bool = True) -> dict:
             "local": "SP",
             "preco_ingresso": 30,
             "categoria": "Outros",
+            "contato_telefone": "11987654321",
+            "contato_email": "contato@teste.com",
             "publicado": publicado,
             "ingresso_lotes": [{"nome": "Geral", "preco": 30, "ordem": 1, "ativo": True}],
         },
