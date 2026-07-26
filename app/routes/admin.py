@@ -40,6 +40,10 @@ class UsuarioAtivoUpdate(BaseModel):
     ativo: bool
 
 
+class UsuarioAdminUpdate(BaseModel):
+    is_platform_admin: bool
+
+
 class AssinaturaAdminUpdate(BaseModel):
     plano_tarifa: Literal["padrao", "assinatura"] = "assinatura"
     meses: int = Field(default=1, ge=1, le=24)
@@ -188,6 +192,8 @@ async def listar_usuarios_plataforma(
                 "nome": u.nome,
                 "tipo": u.tipo,
                 "ativo": bool(u.ativo),
+                "is_platform_admin": bool(u.is_platform_admin),
+                "totp_ativado": bool(u.totp_ativado),
                 "telefone": u.telefone,
                 "aceita_comunicacao_email": bool(u.aceita_comunicacao_email),
                 "aceita_comunicacao_whatsapp": bool(u.aceita_comunicacao_whatsapp),
@@ -221,6 +227,37 @@ async def atualizar_status_usuario(
         "email": usuario.email,
         "nome": usuario.nome,
         "ativo": bool(usuario.ativo),
+    }
+
+
+@router.patch("/usuarios/{usuario_id}/admin")
+async def atualizar_admin_usuario(
+    usuario_id: str,
+    body: UsuarioAdminUpdate,
+    db: Session = Depends(get_db),
+):
+    """Concede/revoga o papel de administrador da plataforma para uma conta.
+
+    Acesso admin via sessão de usuário (não via chave estática) exige 2FA ativo —
+    conceder is_platform_admin=True não ativa 2FA automaticamente; a própria pessoa
+    precisa ativar na tela de segurança antes de conseguir acessar o painel assim.
+    """
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    usuario.is_platform_admin = body.is_platform_admin
+    db.commit()
+    db.refresh(usuario)
+    logger.info(
+        "admin_action=atualizar_admin_usuario usuario_id=%s is_platform_admin=%s",
+        usuario_id, body.is_platform_admin,
+    )
+    return {
+        "id": usuario.id,
+        "email": usuario.email,
+        "nome": usuario.nome,
+        "is_platform_admin": bool(usuario.is_platform_admin),
+        "totp_ativado": bool(usuario.totp_ativado),
     }
 
 

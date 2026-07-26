@@ -28,8 +28,8 @@ class TotpError(Exception):
 
 
 def iniciar_totp(db: Session, usuario: Usuario) -> dict:
-    if usuario.tipo != "organizador":
-        raise TotpError("2FA disponível apenas para contas de organizador.")
+    if usuario.tipo != "organizador" and not usuario.is_platform_admin:
+        raise TotpError("2FA disponível para contas de organizador ou administradores da plataforma.")
     if usuario.totp_ativado:
         raise TotpError("2FA já está ativado nesta conta.")
 
