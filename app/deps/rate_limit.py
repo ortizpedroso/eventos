@@ -32,6 +32,7 @@ _LIMITS: dict[str, tuple[int, int]] = {
     "checkin_buscar": (60, 60),
     "lista_publica": (20, 60),
     "financeiro_saque": (5, 60),
+    "contato_publico": (5, 60),
 }
 
 
