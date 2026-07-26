@@ -7,6 +7,7 @@ import { InputValorBrl } from "@/components/input-valor-brl";
 import { isoToDatetimeLocalValue } from "@/lib/eventos";
 import { moedaBrlFromNumber } from "@/lib/moeda-brl";
 import { parseValorMonetarioInput } from "@/lib/tarifas-plataforma";
+import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import type { Evento, IngressoTipo } from "@/lib/types";
 
 export const TIPOS_LOTE: { value: IngressoTipo; label: string }[] = [
@@ -282,6 +283,15 @@ export function EventoLotesEditor({ rows, onChange, className = "", showCalculad
                   placeholder={row.tipo === "cortesia" ? "0,00" : "49,90"}
                   onChange={(masked) => setRow(i, { preco: masked })}
                 />
+                {row.tipo !== "cortesia" &&
+                row.preco.trim() &&
+                (parseValorMonetarioInput(row.preco) ?? Infinity) < INGRESSO_MINIMO_PAGO_REAIS ? (
+                  <span className="font-normal text-amber-700" role="alert">
+                    Preço mínimo R$ {INGRESSO_MINIMO_PAGO_REAIS.toFixed(2)} para lotes pagos. Pra
+                    ingresso grátis, marque &quot;Evento gratuito&quot; acima ou troque o tipo pra
+                    &quot;Cortesia&quot;.
+                  </span>
+                ) : null}
               </label>
               <label className="grid gap-0.5 text-xs font-medium text-zinc-700">
                 Ordem
