@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 import { AppNavLink } from "@/components/app-nav-link";
 import { OrganizadorTour } from "@/components/organizador-tour";
+import { fetchSession } from "@/lib/api";
 
 const navDesktop = [
   { href: "/organizador/eventos", label: "Meus eventos", tour: "org-eventos" },
@@ -87,12 +88,23 @@ function mobileIcon(href: string, className: string) {
 export function OrganizadorShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [menuMaisAberto, setMenuMaisAberto] = useState(false);
+  const [ehAdminPlataforma, setEhAdminPlataforma] = useState(false);
+
+  useEffect(() => {
+    void fetchSession().then((u) => setEhAdminPlataforma(Boolean(u?.is_platform_admin)));
+  }, []);
 
   useEffect(() => {
     setMenuMaisAberto(false);
   }, [pathname]);
 
-  const maisAtivo = navMobileMais.some((item) => isActive(pathname, item.href));
+  const itemAdmin = { href: "/admin/dashboard", label: "Administração", tour: "org-admin" };
+  const navDesktopFinal = ehAdminPlataforma ? [...navDesktop, itemAdmin] : navDesktop;
+  const navMobileMaisFinal = ehAdminPlataforma
+    ? [...navMobileMais, { href: itemAdmin.href, label: itemAdmin.label }]
+    : navMobileMais;
+
+  const maisAtivo = navMobileMaisFinal.some((item) => isActive(pathname, item.href));
 
   return (
     <>
@@ -103,7 +115,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
               Painel
             </p>
             <nav className="flex flex-col gap-1" aria-label="Navegação do organizador">
-              {navDesktop.map((item) => {
+              {navDesktopFinal.map((item) => {
                 const active = isActive(pathname, item.href);
                 return (
                   <AppNavLink
@@ -174,7 +186,7 @@ export function OrganizadorShell({ children }: { children: ReactNode }) {
                 Mais opções
               </p>
               <div className="grid gap-1">
-                {navMobileMais.map((item) => {
+                {navMobileMaisFinal.map((item) => {
                   const active = isActive(pathname, item.href);
                   return (
                     <AppNavLink

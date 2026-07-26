@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verificarCodigoTotp } from "@/lib/admin-totp";
 
 const ADMIN_COOKIE = "eventosbr_admin_key";
+const AUTH_COOKIE = "eventosbr_session";
 const COOKIE_MAX_AGE = 60 * 60 * 4;
 
 function internalApiOrigin(): string {
@@ -107,8 +108,27 @@ export async function DELETE() {
 
 export async function GET() {
   const jar = await cookies();
-  return NextResponse.json({
-    unlocked: Boolean(jar.get(ADMIN_COOKIE)?.value),
-    totp_required: Boolean(adminTotpSecret()),
-  });
+  if (jar.get(ADMIN_COOKIE)?.value) {
+    return NextResponse.json({ unlocked: true, totp_required: Boolean(adminTotpSecret()) });
+  }
+
+  // Login integrado (specs/admin-integrado-usuario.md): se a pessoa já está logada
+  // normalmente numa conta com is_platform_admin+2FA, não precisa colar chave nenhuma.
+  const sessionCookie = jar.get(AUTH_COOKIE)?.value?.trim();
+  if (sessionCookie) {
+    try {
+      const base = internalApiOrigin();
+      const probe = await fetch(`${base}/api/admin/marketing/contatos?limit=1`, {
+        headers: { accept: "application/json", cookie: `${AUTH_COOKIE}=${sessionCookie}` },
+        cache: "no-store",
+      });
+      if (probe.ok) {
+        return NextResponse.json({ unlocked: true, totp_required: false });
+      }
+    } catch {
+      // rede indisponível — cai para "não desbloqueado", mostra a tela de chave normalmente
+    }
+  }
+
+  return NextResponse.json({ unlocked: false, totp_required: Boolean(adminTotpSecret()) });
 }

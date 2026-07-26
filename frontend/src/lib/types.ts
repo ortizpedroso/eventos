@@ -70,6 +70,7 @@ export type Usuario = {
   telefone?: string | null;
   comunicacao_consentimento_em?: string | null;
   totp_ativado?: boolean;
+  is_platform_admin?: boolean;
 };
 
 export type TokenResponse = {
