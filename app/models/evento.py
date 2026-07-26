@@ -20,6 +20,10 @@ class Evento(Base):
     local = Column(String)
     cidade = Column(String(120), nullable=True, index=True)
     imagem_url = Column(Text, nullable=True)
+    # Contato específico do evento (obrigatório em novos eventos — ver schemas/evento.py).
+    # Nullable no banco para não quebrar eventos criados antes deste campo existir.
+    contato_telefone = Column(String(20), nullable=True)
+    contato_email = Column(String(255), nullable=True)
 
     categoria = Column(String(80), nullable=False, default="Outros")
     mensagem_confirmacao = Column(Text, nullable=True)

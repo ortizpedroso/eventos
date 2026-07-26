@@ -99,6 +99,8 @@ def test_fluxo_compra_split_organizador_distinto_plataforma():
                 "local": "SP",
                 "preco_ingresso": 50,
                 "categoria": "Outros",
+                "contato_telefone": "11987654321",
+                "contato_email": "contato@teste.com",
                 "publicado": True,
                 "ingresso_lotes": [{"nome": "Geral", "preco": 50, "ordem": 1, "ativo": True}],
             },
