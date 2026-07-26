@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const ADMIN_COOKIE = "eventosbr_admin_key";
+const AUTH_COOKIE = "eventosbr_session";
 
 function internalApiOrigin(): string {
   const internal = process.env.INTERNAL_API_URL?.trim();
@@ -35,7 +36,8 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ path: st
 
 async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }, method: string) {
   const key = await adminKey();
-  if (!key) {
+  const sessionCookie = req.cookies.get(AUTH_COOKIE)?.value?.trim() || null;
+  if (!key && !sessionCookie) {
     return NextResponse.json({ detail: "Sessão admin não iniciada." }, { status: 401 });
   }
 
@@ -47,7 +49,14 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
 
   const headers = new Headers();
   headers.set("accept", "application/json");
-  headers.set("X-Platform-Admin-Key", key);
+  if (key) {
+    headers.set("X-Platform-Admin-Key", key);
+  } else if (sessionCookie) {
+    // Sem a chave especial — repassa a sessão normal do usuário (login integrado,
+    // ver specs/admin-integrado-usuario.md). O backend decide se essa conta tem
+    // is_platform_admin=True e 2FA ativo.
+    headers.set("cookie", `${AUTH_COOKIE}=${sessionCookie}`);
+  }
   const ct = req.headers.get("content-type");
   if (ct) headers.set("content-type", ct);
 

@@ -58,6 +58,8 @@ type UsuarioAdmin = {
   nome: string;
   tipo: string;
   ativo: boolean;
+  is_platform_admin?: boolean;
+  totp_ativado?: boolean;
   telefone: string | null;
   data_criacao: string | null;
 };
@@ -282,6 +284,37 @@ export function AdminDashboardClient() {
     }
   }
 
+  async function alternarAdminPlataforma(u: UsuarioAdmin) {
+    const novoValor = !u.is_platform_admin;
+    if (
+      u.is_platform_admin &&
+      !window.confirm(
+        `Remover o acesso administrativo de ${u.nome} (${u.email})? Isso não pode ser desfeito por essa pessoa sem outro admin.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await adminFetch(`/api/admin/usuarios/${u.id}/admin`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ is_platform_admin: novoValor }),
+      });
+      setMsg(
+        novoValor
+          ? `${u.nome} agora é administrador da plataforma.`
+          : `${u.nome} não é mais administrador da plataforma.`,
+      );
+      await carregarUsuarios();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao atualizar papel de administrador");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const todosSelecionados = useMemo(
     () => contatos.length > 0 && contatos.every((c) => selecionados.has(c.id)),
     [contatos, selecionados],
@@ -354,9 +387,13 @@ export function AdminDashboardClient() {
       <div className="mx-auto max-w-md px-4 py-12">
         <h1 className="text-xl font-bold text-zinc-900">Painel admin</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          Use o mesmo valor de <code className="rounded bg-zinc-100 px-1">PLATFORM_ADMIN_API_KEY</code> no{" "}
-          <code className="rounded bg-zinc-100 px-1">.env</code> da API (Docker: reinicie o container{" "}
-          <code className="rounded bg-zinc-100 px-1">api</code> após alterar).
+          Se sua conta já tem acesso administrativo (com 2FA ativado), <strong>faça login
+          normalmente</strong> pelo site — você já cai direto aqui, sem precisar colar chave.
+        </p>
+        <p className="mt-2 text-sm text-zinc-600">
+          Sem conta com acesso admin ainda? Use o valor de{" "}
+          <code className="rounded bg-zinc-100 px-1">PLATFORM_ADMIN_API_KEY</code> no{" "}
+          <code className="rounded bg-zinc-100 px-1">.env</code> da API (acesso de emergência).
         </p>
         <input
           type="password"
@@ -611,6 +648,7 @@ export function AdminDashboardClient() {
                   <th className="py-2 pr-2">Usuário</th>
                   <th className="py-2 pr-2">Tipo</th>
                   <th className="py-2 pr-2">Status</th>
+                  <th className="py-2 pr-2">Admin</th>
                   <th className="py-2">Ação</th>
                 </tr>
               </thead>
@@ -629,6 +667,15 @@ export function AdminDashboardClient() {
                         <span className="text-red-700">Desativado</span>
                       )}
                     </td>
+                    <td className="py-2 pr-2">
+                      {u.is_platform_admin ? (
+                        <span className={u.totp_ativado ? "text-emerald-700" : "text-amber-700"}>
+                          Sim{u.totp_ativado ? "" : " (2FA pendente)"}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400">Não</span>
+                      )}
+                    </td>
                     <td className="py-2">
                       <button
                         type="button"
@@ -637,6 +684,14 @@ export function AdminDashboardClient() {
                         onClick={() => void alternarUsuarioAtivo(u)}
                       >
                         {u.ativo ? "Desativar" : "Reativar"}
+                      </button>
+                      <button
+                        type="button"
+                        className="ml-3 text-zinc-700 underline"
+                        disabled={busy}
+                        onClick={() => void alternarAdminPlataforma(u)}
+                      >
+                        {u.is_platform_admin ? "Remover admin" : "Tornar admin"}
                       </button>
                     </td>
                   </tr>

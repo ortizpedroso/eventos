@@ -85,6 +85,10 @@ class Usuario(Base):
     totp_ativado_em = Column(DateTime, nullable=True)
     # JSON com hashes bcrypt dos códigos de recuperação de uso único.
     totp_recovery_codes = Column(Text, nullable=True)
+    # Papel de administrador da plataforma — independente de `tipo` (cliente/organizador).
+    # Acesso ao painel admin via sessão normal exige is_platform_admin=True E totp_ativado=True
+    # (ver app/deps/platform_admin.py e specs/admin-integrado-usuario.md).
+    is_platform_admin = Column(Boolean, default=False, nullable=False)
 
     # Datas
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

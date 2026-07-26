@@ -3,6 +3,9 @@
 import { AppNavLink } from "@/components/app-nav-link";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+
+import { fetchSession } from "@/lib/api";
 
 const LINKS = [
   { href: "/conta/perfil", label: "Perfil" },
@@ -20,6 +23,15 @@ function isActive(pathname: string, href: string) {
 
 export function ContaShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [ehAdminPlataforma, setEhAdminPlataforma] = useState(false);
+
+  useEffect(() => {
+    void fetchSession().then((u) => setEhAdminPlataforma(Boolean(u?.is_platform_admin)));
+  }, []);
+
+  const links = ehAdminPlataforma
+    ? [...LINKS, { href: "/admin/dashboard", label: "Administração" } as const]
+    : LINKS;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 pb-24 lg:flex-row lg:gap-10 lg:pb-8">
@@ -32,7 +44,7 @@ export function ContaShell({ children }: { children: ReactNode }) {
             className="-mx-1 flex flex-row gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0"
             aria-label="Área da conta"
           >
-            {LINKS.map(({ href, label }) => {
+            {links.map(({ href, label }) => {
               const ativo = isActive(pathname, href);
               return (
                 <AppNavLink

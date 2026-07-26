@@ -75,6 +75,7 @@ class UsuarioResponse(BaseModel):
     telefone: str | None = None
     comunicacao_consentimento_em: datetime | None = None
     totp_ativado: bool = False
+    is_platform_admin: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
