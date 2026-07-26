@@ -1,7 +1,8 @@
 # Reverse proxy — HTTPS automático (Let's Encrypt).
 # Defina no .env: DOMAIN=seudominio.com.br  ACME_EMAIL=admin@seudominio.com.br
 #
-# /api/* → API FastAPI (pagamentos, webhooks Asaas)
+# /api/admin/session e /api/admin/proxy/* → Next.js (rotas próprias do painel admin)
+# /api/* (resto) → API FastAPI (pagamentos, webhooks Asaas, etc.)
 # /health e /ready → readiness/liveness para monitoramento externo
 # resto → Next.js
 
@@ -20,6 +21,15 @@ www.{$DOMAIN} {
 	@health path /health /ready
 	handle @health {
 		reverse_proxy api:8000
+	}
+
+	# Rotas do próprio Next.js (não do FastAPI) — precisam vir ANTES da regra
+	# genérica @api abaixo, senão o Caddy manda tudo /api/* pro backend e essas
+	# duas nunca são alcançadas (bug: /admin/dashboard sempre dava "Not Found"
+	# ao validar a chave, porque a API não tem rota /api/admin/session).
+	@admin_frontend path /api/admin/session /api/admin/proxy/*
+	handle @admin_frontend {
+		reverse_proxy web:3000
 	}
 
 	@api path /api/*
