@@ -27,7 +27,7 @@ www.{$DOMAIN} {
 	# genérica @api abaixo, senão o Caddy manda tudo /api/* pro backend e essas
 	# duas nunca são alcançadas (bug: /admin/dashboard sempre dava "Not Found"
 	# ao validar a chave, porque a API não tem rota /api/admin/session).
-	@admin_frontend path /api/admin/session /api/admin/proxy/*
+	@admin_frontend path /api/admin/session /api/admin/proxy/**
 	handle @admin_frontend {
 		reverse_proxy web:3000
 	}
