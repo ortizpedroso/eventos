@@ -61,6 +61,7 @@ export const defaultMetadata: Metadata = buildMetadata({
   site_tagline: null,
   footer_description: null,
   contact_email: null,
+  contact_phone: null,
   support_email: null,
   logo_url: null,
   logo_light_url: null,
