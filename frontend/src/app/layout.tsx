@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 
+import { BackToTopButton } from "@/components/back-to-top-button";
 import { BuildMarker } from "@/components/build-marker";
 import { EarlyScrollReset } from "@/components/early-scroll-reset";
 import { Navbar } from "@/components/navbar";
@@ -56,6 +57,7 @@ export default async function RootLayout({
           </main>
 
           <SiteFooter />
+          <BackToTopButton />
         </PlatformSettingsProvider>
       </body>
     </html>

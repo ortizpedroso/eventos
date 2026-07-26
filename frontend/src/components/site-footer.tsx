@@ -52,25 +52,11 @@ export function SiteFooter() {
               {platform.footer_description ||
                 "Ingressos, reembolsos e repasses com transparência — do primeiro clique ao dia do evento."}
             </p>
-            {emailContato ? (
-              <p className="mt-3 text-sm">
-                <a href={`mailto:${emailContato}`} className="text-emerald-400 hover:text-emerald-300">
-                  {emailContato}
-                </a>
-              </p>
-            ) : null}
-            {telefoneContato ? (
-              <p className="mt-1 text-sm">
-                <a href={`tel:+55${telefoneContato}`} className="text-emerald-400 hover:text-emerald-300">
-                  {formatTelefoneBrMask(telefoneContato)}
-                </a>
-              </p>
-            ) : null}
           </div>
 
           <div className="grid gap-10 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-2">
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/90">Plataforma</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-500">Plataforma</h2>
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link href="/eventos" className="text-zinc-400 hover:text-emerald-300">Explorar eventos</Link></li>
                 <li><Link href="/planos" className="text-zinc-400 hover:text-emerald-300">Planos e preços</Link></li>
@@ -83,7 +69,7 @@ export function SiteFooter() {
               </ul>
             </div>
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/90">Empresa</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-500">Empresa</h2>
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link href="/sobre" className="text-zinc-400 hover:text-emerald-300">Sobre nós</Link></li>
                 <li><Link href="/termos" className="text-zinc-400 hover:text-emerald-300">Termos de uso</Link></li>
@@ -92,24 +78,40 @@ export function SiteFooter() {
             </div>
           </div>
 
-          {socialLinks.length > 0 ? (
+          {emailContato || telefoneContato || socialLinks.length > 0 ? (
             <div className="lg:col-span-3">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/90">Redes sociais</h2>
-              <ul className="mt-5 flex flex-wrap gap-3">
-                {socialLinks.map(({ href, label, Icon }) => (
-                  <li key={label}>
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={label}
-                      className="flex h-11 min-w-[2.75rem] items-center justify-center rounded-xl border border-zinc-700/90 bg-zinc-900/80 px-3 text-zinc-300 hover:border-emerald-500/60 hover:text-emerald-300"
-                    >
-                      {Icon ? <Icon className="h-[1.125rem] w-[1.125rem]" /> : <span className="text-xs font-semibold">{label}</span>}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-500">Contato</h2>
+              {emailContato ? (
+                <p className="mt-4 text-sm">
+                  <a href={`mailto:${emailContato}`} className="text-emerald-400 hover:text-emerald-300">
+                    {emailContato}
+                  </a>
+                </p>
+              ) : null}
+              {telefoneContato ? (
+                <p className="mt-1.5 text-sm">
+                  <a href={`tel:+55${telefoneContato}`} className="text-emerald-400 hover:text-emerald-300">
+                    {formatTelefoneBrMask(telefoneContato)}
+                  </a>
+                </p>
+              ) : null}
+              {socialLinks.length > 0 ? (
+                <ul className="mt-5 flex flex-wrap gap-3">
+                  {socialLinks.map(({ href, label, Icon }) => (
+                    <li key={label}>
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={label}
+                        className="flex h-11 min-w-[2.75rem] items-center justify-center rounded-xl border border-zinc-700/90 bg-zinc-900/80 px-3 text-zinc-300 hover:border-emerald-500/60 hover:text-emerald-300"
+                      >
+                        {Icon ? <Icon className="h-[1.125rem] w-[1.125rem]" /> : <span className="text-xs font-semibold">{label}</span>}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
         </div>
