@@ -176,6 +176,26 @@ export function SegurancaDoisFatores({ ativado, onChanged }: SegurancaDoisFatore
               </div>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              const conteudo =
+                "EventosBR — códigos de recuperação do 2FA\n" +
+                "Cada código só pode ser usado uma vez. Guarde em local seguro.\n\n" +
+                recoveryCodes.join("\n") +
+                "\n";
+              const blob = new Blob([conteudo], { type: "text/plain" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "eventosbr-codigos-recuperacao-2fa.txt";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="btn-outline text-sm"
+          >
+            Baixar códigos (.txt)
+          </button>
           <button type="button" onClick={finalizarAtivacao} className="btn-success">
             Já guardei meus códigos
           </button>
