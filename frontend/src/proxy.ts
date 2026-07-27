@@ -90,7 +90,12 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api/admin/proxy")) {
-    if (!request.cookies.get(ADMIN_COOKIE)?.value) {
+    // Admin integrado à conta (specs/admin-integrado-usuario.md): aceita a chave
+    // estática OU uma sessão de usuário normal — a decisão real (is_platform_admin
+    // + 2FA) é validada depois, no backend. Aqui só barra quem não tem nenhum dos dois.
+    const temChave = Boolean(request.cookies.get(ADMIN_COOKIE)?.value);
+    const temSessao = Boolean(request.cookies.get(AUTH_COOKIE)?.value);
+    if (!temChave && !temSessao) {
       return finish(
         NextResponse.json({ detail: "Sessão admin não iniciada." }, { status: 401 }),
         nonce,
@@ -104,7 +109,9 @@ export async function proxy(request: NextRequest) {
     pathname !== "/admin" &&
     pathname !== "/admin/dashboard"
   ) {
-    if (!request.cookies.get(ADMIN_COOKIE)?.value) {
+    const temChave = Boolean(request.cookies.get(ADMIN_COOKIE)?.value);
+    const temSessao = Boolean(request.cookies.get(AUTH_COOKIE)?.value);
+    if (!temChave && !temSessao) {
       return finish(NextResponse.redirect(new URL("/admin/dashboard", request.url)), nonce);
     }
   }
