@@ -128,6 +128,18 @@ class TotpDesativarRequest(BaseModel):
     codigo: str = Field(min_length=6, max_length=9)
 
 
+class TornarOrganizadorRequest(BaseModel):
+    telefone: str = Field(min_length=8, max_length=20)
+
+    @field_validator("telefone", mode="before")
+    @classmethod
+    def _telefone(cls, v: object) -> str:
+        digitos = "".join(ch for ch in str(v or "") if ch.isdigit())
+        if len(digitos) < 10 or len(digitos) > 13:
+            raise ValueError("telefone inválido (informe DDD + número)")
+        return digitos
+
+
 class TotpChallengeResponse(BaseModel):
     requires_2fa: bool = True
     login_token: str
