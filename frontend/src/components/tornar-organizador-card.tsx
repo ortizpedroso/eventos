@@ -9,11 +9,12 @@ import { formatTelefoneBrMask } from "@/lib/telefone-br";
 
 type Props = {
   telefoneAtual: string | null;
+  autoAbrir?: boolean;
 };
 
-export function TornarOrganizadorCard({ telefoneAtual }: Props) {
+export function TornarOrganizadorCard({ telefoneAtual, autoAbrir = false }: Props) {
   const router = useRouter();
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(autoAbrir);
   const [telefone, setTelefone] = useState(telefoneAtual ? onlyDigits(telefoneAtual, 13) : "");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -53,6 +54,12 @@ export function TornarOrganizadorCard({ telefoneAtual }: Props) {
   return (
     <section className="max-w-lg rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm sm:p-8">
       <h2 className="text-lg font-semibold text-emerald-950">Tornar-me organizador</h2>
+      {autoAbrir ? (
+        <p className="mt-1.5 rounded-md bg-white/70 px-3 py-2 text-sm text-emerald-900">
+          Pra criar e publicar eventos, sua conta precisa virar organizador — é rápido, só
+          confirme o telefone abaixo.
+        </p>
+      ) : null}
       <p className="mt-1.5 text-sm text-emerald-900">
         Confirme um telefone de contato — vamos usá-lo para falar com você sobre seus eventos.
       </p>
