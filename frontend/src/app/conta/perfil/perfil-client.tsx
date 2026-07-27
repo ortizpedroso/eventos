@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
@@ -20,6 +20,8 @@ function normalizarEmail(s: string) {
 export function PerfilClient() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const abrirTornarOrganizador = searchParams.get("tornar_organizador") === "1";
   const [user, setUser] = useState<Usuario | null>(() =>
     readContaCache<Usuario>(CONTA_CACHE_KEYS.perfil) ?? null,
   );
@@ -444,7 +446,9 @@ export function PerfilClient() {
         ) : null}
       </section>
 
-      {user.tipo === "cliente" ? <TornarOrganizadorCard telefoneAtual={user.telefone ?? null} /> : null}
+      {user.tipo === "cliente" ? (
+        <TornarOrganizadorCard telefoneAtual={user.telefone ?? null} autoAbrir={abrirTornarOrganizador} />
+      ) : null}
     </div>
   );
 }

@@ -4,11 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { NovoEventoForm } from "./novo-evento-client";
-import { fetchSession, logoutSession, peekSessionCache } from "@/lib/api";
-import {
-  authHrefParaCriarEvento,
-  authHrefPrecisaContaOrganizador,
-} from "@/lib/criar-evento-routes";
+import { fetchSession, peekSessionCache } from "@/lib/api";
+import { authHrefParaCriarEvento } from "@/lib/criar-evento-routes";
 
 export function NovoEventoGate() {
   const router = useRouter();
@@ -26,8 +23,10 @@ export function NovoEventoGate() {
         return;
       }
       if (u.tipo !== "organizador") {
-        await logoutSession();
-        router.replace(authHrefPrecisaContaOrganizador());
+        // Cliente com conta existente: manda pro fluxo de virar organizador (card em
+        // Perfil), SEM deslogar — antes isso deslogava e mandava criar conta nova,
+        // o que não faz sentido agora que dá pra converter a mesma conta.
+        router.replace("/conta/perfil?tornar_organizador=1");
         return;
       }
       setOk(true);

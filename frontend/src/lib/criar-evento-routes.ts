@@ -92,7 +92,7 @@ export function destinoPosAuth(
     return next;
   }
   if (nextRequerContaOrganizador(next)) {
-    return "/";
+    return "/conta/perfil?tornar_organizador=1";
   }
   return next;
 }
