@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { getApiBaseUrl } from "@/lib/api";
+import { comprimirImagem } from "@/lib/comprimir-imagem";
 import { EVENTO_BANNER_MEDIDAS_RESUMO, EVENTO_BANNER_RECOMMENDED } from "@/lib/evento-imagem-spec";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 
@@ -72,8 +73,12 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
       }
 
       try {
+        const arquivoComprimido = await comprimirImagem(file, {
+          maxWidth: EVENTO_BANNER_RECOMMENDED.widthIdeal,
+          maxHeight: EVENTO_BANNER_RECOMMENDED.heightIdeal,
+        });
         const form = new FormData();
-        form.append("file", file);
+        form.append("file", arquivoComprimido);
         const res = await fetch(`${getApiBaseUrl()}/api/organizador/eventos/upload-imagem`, {
           method: "POST",
           body: form,

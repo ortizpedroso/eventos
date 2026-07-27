@@ -227,25 +227,33 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
         <ImagemAssetField
           id="logo_url"
           label="Logo (navbar)"
-          hint="URL https ou envie um arquivo (máx. 1,25 MB)."
+          hint="Formato retangular (ideal: fundo transparente, PNG/WebP/SVG). URL https:// ou envie um arquivo."
           value={form.logo_url}
           onChange={(v) => setField("logo_url", v)}
           uploadUrl="/api/admin/proxy/assets/upload"
+          larguraAlvo={480}
+          alturaAlvo={120}
         />
         <ImagemAssetField
           id="logo_light_url"
           label="Logo clara (rodapé escuro)"
+          hint="Mesma logo, mas em versão clara — usada sobre fundo escuro (rodapé)."
           value={form.logo_light_url}
           onChange={(v) => setField("logo_light_url", v)}
           uploadUrl="/api/admin/proxy/assets/upload"
+          larguraAlvo={480}
+          alturaAlvo={120}
         />
         <ImagemAssetField
           id="favicon_url"
           label="Favicon"
+          hint="Quadrado (ideal: fundo transparente). Aparece na aba do navegador."
           value={form.favicon_url}
           onChange={(v) => setField("favicon_url", v)}
           uploadUrl="/api/admin/proxy/assets/upload"
           accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml"
+          larguraAlvo={256}
+          alturaAlvo={256}
         />
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-zinc-800">Cor principal</span>

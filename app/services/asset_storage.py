@@ -19,7 +19,7 @@ ALLOWED_IMAGE_TYPES = frozenset(
         "image/vnd.microsoft.icon",
     }
 )
-MAX_UPLOAD_BYTES = int(1.25 * 1024 * 1024)
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 _EXT_BY_TYPE = {
     "image/jpeg": ".jpg",
@@ -55,7 +55,7 @@ def save_image_upload(*, content: bytes, content_type: str, subdir: str) -> str:
     if content_type not in ALLOWED_IMAGE_TYPES:
         raise ValueError("Tipo de arquivo não permitido")
     if len(content) > MAX_UPLOAD_BYTES:
-        raise ValueError("Arquivo excede 1,25 MB")
+        raise ValueError(f"Arquivo excede {MAX_UPLOAD_BYTES // (1024 * 1024)}MB")
 
     ext = _EXT_BY_TYPE.get(content_type, ".bin")
     name = f"{uuid.uuid4().hex}{ext}"
