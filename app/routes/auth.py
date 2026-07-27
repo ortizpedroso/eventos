@@ -26,6 +26,7 @@ from app.schemas.usuario import (
     TotpDesativarRequest,
     TotpChallengeResponse,
     TotpVerificarLoginRequest,
+    TornarOrganizadorRequest,
 )
 from app.deps.rate_limit import rate_limit_login, rate_limit_oauth, rate_limit_register
 from app.services.oauth_verify import (
@@ -775,6 +776,36 @@ async def desativar_2fa(
     except TotpError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return {"message": "2FA desativado."}
+
+
+@router.post("/tornar-organizador", response_model=UsuarioResponse)
+async def tornar_organizador(
+    body: TornarOrganizadorRequest,
+    response: Response,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Converte uma conta cliente em organizador — sem precisar criar conta nova.
+
+    Quem já tinha ingressos comprados como cliente continua com esse histórico;
+    a conta passa a também poder criar/publicar eventos.
+    """
+    if usuario.tipo == "organizador":
+        raise HTTPException(status_code=400, detail="Esta conta já é de organizador.")
+    if usuario.tipo != "cliente":
+        raise HTTPException(status_code=400, detail="Tipo de conta não suportado para esta conversão.")
+
+    usuario.tipo = "organizador"
+    usuario.telefone = body.telefone
+    db.add(usuario)
+    db.commit()
+    db.refresh(usuario)
+
+    # O middleware cacheia o tipo por até 5 min (eventosbr_session_ok) — limpa aqui pra
+    # /organizador/* liberar na hora, sem esperar o cache expirar sozinho.
+    response.delete_cookie(key="eventosbr_session_ok", path="/")
+
+    return UsuarioResponse.model_validate(usuario)
 
 
 async def get_usuario_atual_opcional(
