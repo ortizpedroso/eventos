@@ -77,6 +77,7 @@ export default function AuthClient({
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [login2fa, setLogin2fa] = useState<{ loginToken: string } | null>(null);
   const [codigo2fa, setCodigo2fa] = useState("");
+  const [lembrarDispositivo, setLembrarDispositivo] = useState(true);
 
   const redirecionar = useCallback(
     (destino: string) => {
@@ -267,7 +268,11 @@ export default function AuthClient({
       const data = await apiFetch<TokenResponse>("/api/auth/2fa/verificar-login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ login_token: login2fa.loginToken, codigo: codigo2fa.trim() }),
+        body: JSON.stringify({
+          login_token: login2fa.loginToken,
+          codigo: codigo2fa.trim(),
+          lembrar_dispositivo: lembrarDispositivo,
+        }),
       });
       finishAuth(data);
     } catch (e2) {
@@ -326,6 +331,15 @@ export default function AuthClient({
               placeholder="000000"
             />
           </div>
+          <label className="flex items-center gap-2 text-sm text-zinc-700">
+            <input
+              type="checkbox"
+              checked={lembrarDispositivo}
+              onChange={(e) => setLembrarDispositivo(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-600"
+            />
+            Lembrar deste dispositivo por 30 dias (não pede o código de novo aqui)
+          </label>
           <button
             type="submit"
             disabled={loading}

@@ -38,11 +38,14 @@ from app.services.oauth_vincular import vincular_google_a_conta_email
 from app.services.auth import (
     create_access_token,
     create_2fa_challenge_token,
+    create_trusted_device_token,
     decode_2fa_challenge_token,
     decode_token,
     decode_token_payload,
+    decode_trusted_device_token,
     hash_password,
     verify_password,
+    TRUSTED_DEVICE_DIAS,
 )
 from app.services.organizador_2fa import TotpError, confirmar_totp, desativar_totp, iniciar_totp, verificar_totp_ou_recovery
 from app.services.turnstile import turnstile_habilitado, verificar_turnstile
@@ -54,7 +57,14 @@ from app.services.email_verificacao import (
     enviar_email_verificacao,
     preparar_verificacao_email,
 )
-from app.utils.auth_cookie import AUTH_COOKIE_NAME, clear_auth_cookie, set_auth_cookie
+from app.utils.auth_cookie import (
+    AUTH_COOKIE_NAME,
+    TRUSTED_DEVICE_COOKIE_NAME,
+    clear_auth_cookie,
+    clear_trusted_device_cookie,
+    set_auth_cookie,
+    set_trusted_device_cookie,
+)
 from app.utils.public_errors import PAGAMENTO_CLIENTE
 from config.settings import settings
 
@@ -334,6 +344,17 @@ async def login(
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
 
     if usuario.totp_ativado:
+        trusted_cookie = request.cookies.get(TRUSTED_DEVICE_COOKIE_NAME)
+        if trusted_cookie and decode_trusted_device_token(
+            trusted_cookie, usuario.id, int(usuario.token_version or 0)
+        ):
+            access_token = _issue_token(usuario)
+            set_auth_cookie(response, access_token)
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "usuario": UsuarioResponse.model_validate(usuario),
+            }
         return TotpChallengeResponse(login_token=create_2fa_challenge_token(usuario.id))
 
     access_token = _issue_token(usuario)
@@ -365,7 +386,11 @@ async def verificar_login_2fa(
     if not verificar_totp_ou_recovery(db, usuario, body.codigo):
         raise HTTPException(status_code=401, detail="Código inválido.")
 
-    return _token_response(usuario, response)
+    resultado = _token_response(usuario, response)
+    if body.lembrar_dispositivo:
+        trusted_token = create_trusted_device_token(usuario.id, int(usuario.token_version or 0))
+        set_trusted_device_cookie(response, trusted_token, TRUSTED_DEVICE_DIAS * 24 * 60 * 60)
+    return resultado
 
 
 @router.post("/solicitar-recuperacao-senha")

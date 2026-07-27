@@ -81,10 +81,11 @@ export function authHrefParaComprarIngresso(
 }
 
 export function destinoPosAuth(
-  usuario: { tipo: string },
+  usuario: { tipo: string; is_platform_admin?: boolean },
   next: string | null,
 ): string {
   if (!next || !isAllowedNextPath(next)) {
+    if (usuario.is_platform_admin) return "/admin/dashboard";
     return usuario.tipo === "organizador" ? "/organizador/eventos" : "/";
   }
   if (usuario.tipo === "organizador") {
