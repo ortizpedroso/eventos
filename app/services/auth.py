@@ -68,3 +68,32 @@ def decode_2fa_challenge_token(token: str) -> str | None:
     if not payload or payload.get("scope") != "2fa_pending":
         return None
     return payload.get("sub")
+
+
+TRUSTED_DEVICE_DIAS = 30
+
+
+def create_trusted_device_token(usuario_id: str, token_version: int) -> str:
+    """'Lembrar este dispositivo' — pula o desafio 2FA por até 30 dias neste navegador.
+
+    Amarrado a token_version: se o usuário desativar/reativar 2FA ou revogar sessões
+    (o que incrementa token_version), esse token de dispositivo também vira inválido
+    automaticamente, sem precisar de uma lista de revogação separada.
+    """
+    return create_access_token(
+        {"sub": usuario_id, "tv": token_version, "scope": "2fa_trusted"},
+        expires_delta=timedelta(days=TRUSTED_DEVICE_DIAS),
+    )
+
+
+def decode_trusted_device_token(token: str, usuario_id: str, token_version: int) -> bool:
+    """True se o token de dispositivo confiável é válido para este usuário/versão."""
+    payload = decode_token_payload(token)
+    if not payload or payload.get("scope") != "2fa_trusted":
+        return False
+    if payload.get("sub") != usuario_id:
+        return False
+    try:
+        return int(payload.get("tv", -1)) == int(token_version)
+    except (TypeError, ValueError):
+        return False

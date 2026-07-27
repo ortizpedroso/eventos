@@ -136,6 +136,7 @@ class TotpChallengeResponse(BaseModel):
 class TotpVerificarLoginRequest(BaseModel):
     login_token: str
     codigo: str = Field(min_length=6, max_length=9)
+    lembrar_dispositivo: bool = False
 
 
 class RedefinirSenhaRequest(BaseModel):

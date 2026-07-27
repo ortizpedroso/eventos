@@ -7,6 +7,7 @@ from fastapi import Response
 from config.settings import settings
 
 AUTH_COOKIE_NAME = "eventosbr_session"
+TRUSTED_DEVICE_COOKIE_NAME = "eventosbr_2fa_trusted"
 
 
 def _cookie_secure() -> bool:
@@ -33,6 +34,28 @@ def set_auth_cookie(response: Response, token: str) -> None:
 def clear_auth_cookie(response: Response) -> None:
     response.delete_cookie(
         key=AUTH_COOKIE_NAME,
+        path="/",
+        httponly=True,
+        secure=_cookie_secure(),
+        samesite="lax",
+    )
+
+
+def set_trusted_device_cookie(response: Response, token: str, max_age_seconds: int) -> None:
+    response.set_cookie(
+        key=TRUSTED_DEVICE_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=_cookie_secure(),
+        samesite="lax",
+        max_age=max_age_seconds,
+        path="/",
+    )
+
+
+def clear_trusted_device_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=TRUSTED_DEVICE_COOKIE_NAME,
         path="/",
         httponly=True,
         secure=_cookie_secure(),
