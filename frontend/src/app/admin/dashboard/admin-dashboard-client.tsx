@@ -254,7 +254,13 @@ export function AdminDashboardClient() {
     void carregarSetup();
     void carregarContatos();
     void carregarCampanhas();
-  }, [authed, carregarSetup, carregarContatos, carregarCampanhas]);
+    // Só deve rodar 1x ao autenticar; carregarContatos muda de identidade a cada tecla
+    // digitada na busca (depende de busca/filtroCanal) — incluir na lista fazia essas 3
+    // chamadas dispararem de novo em qualquer aba sempre que alguém digitasse em
+    // Contatos, sobrescrevendo error/msg de outras ações (ex: salvar Configurações
+    // parecia "não fazer nada").
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed]);
 
   useEffect(() => {
     if (!authed || tab !== "eventos") return;
