@@ -2,9 +2,10 @@
 
 import { useRef, useState } from "react";
 
+import { comprimirImagem } from "@/lib/comprimir-imagem";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 
-const MAX_FILE_BYTES = Math.floor(1.25 * 1024 * 1024);
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 type Props = {
   id?: string;
@@ -15,6 +16,9 @@ type Props = {
   uploadUrl: string;
   uploadHeaders?: Record<string, string>;
   accept?: string;
+  /** Dimensão recomendada/alvo (px) — usada tanto na dica visual quanto para comprimir antes do upload. */
+  larguraAlvo?: number;
+  alturaAlvo?: number;
 };
 
 export function ImagemAssetField({
@@ -26,6 +30,8 @@ export function ImagemAssetField({
   uploadUrl,
   uploadHeaders,
   accept = "image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon",
+  larguraAlvo = 512,
+  alturaAlvo = 512,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -36,20 +42,21 @@ export function ImagemAssetField({
   const displaySrc = resolveEventoImagemSrc(value);
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const fileOriginal = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
+    if (!fileOriginal) return;
+    if (!fileOriginal.type.startsWith("image/")) {
       setError("Escolha um arquivo de imagem.");
-      return;
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      setError("Arquivo muito grande (máx. 1,25 MB).");
       return;
     }
     setBusy(true);
     setError(null);
     try {
+      const file = await comprimirImagem(fileOriginal, { maxWidth: larguraAlvo, maxHeight: alturaAlvo });
+      if (file.size > MAX_FILE_BYTES) {
+        setError(`Arquivo muito grande mesmo após compressão (máx. ${(MAX_FILE_BYTES / (1024 * 1024)).toFixed(0)}MB). Tente uma imagem menor.`);
+        return;
+      }
       const form = new FormData();
       form.append("file", file);
       const res = await fetch(uploadUrl, {
@@ -89,6 +96,10 @@ export function ImagemAssetField({
         {label}
       </label>
       {hint ? <p className="text-xs text-zinc-500">{hint}</p> : null}
+      <p className="text-xs text-zinc-400">
+        Tamanho recomendado: {larguraAlvo}×{alturaAlvo}px. Enviamos maior? Redimensionamos e comprimimos
+        automaticamente antes de salvar.
+      </p>
       {urlModo ? (
         <input
           id={id}

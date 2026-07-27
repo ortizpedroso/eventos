@@ -473,7 +473,11 @@ export function AdminDashboardClient() {
             key={id}
             type="button"
             className={`rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-emerald-100 text-emerald-900" : "text-zinc-600"}`}
-            onClick={() => setTab(id)}
+            onClick={() => {
+              setError(null);
+              setMsg(null);
+              setTab(id);
+            }}
           >
             {label}
           </button>
