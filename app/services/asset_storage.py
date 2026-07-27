@@ -6,6 +6,7 @@ import re
 import uuid
 from pathlib import Path
 
+from app.utils.imagem_processamento import redimensionar_imagem
 from config.settings import settings
 
 ALLOWED_IMAGE_TYPES = frozenset(
@@ -49,13 +50,19 @@ def public_upload_url(relative_path: str) -> str:
     return f"{base}/uploads/{rel}"
 
 
-def save_image_upload(*, content: bytes, content_type: str, subdir: str) -> str:
+def save_image_upload(
+    *, content: bytes, content_type: str, subdir: str, max_width: int = 1024, max_height: int = 1024
+) -> str:
     if not _SAFE_SUBDIR.match(subdir):
         raise ValueError("subdir inválido")
     if content_type not in ALLOWED_IMAGE_TYPES:
         raise ValueError("Tipo de arquivo não permitido")
     if len(content) > MAX_UPLOAD_BYTES:
         raise ValueError(f"Arquivo excede {MAX_UPLOAD_BYTES // (1024 * 1024)}MB")
+
+    content, content_type = redimensionar_imagem(
+        content, content_type, max_width=max_width, max_height=max_height
+    )
 
     ext = _EXT_BY_TYPE.get(content_type, ".bin")
     name = f"{uuid.uuid4().hex}{ext}"

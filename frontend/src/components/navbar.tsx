@@ -51,6 +51,7 @@ export function Navbar() {
   const [loggedIn, setLoggedIn] = useState(() => peekSessionCache() != null);
   const [userNome, setUserNome] = useState<string | null>(() => peekSessionCache()?.nome ?? null);
   const [userTipo, setUserTipo] = useState<string | null>(() => peekSessionCache()?.tipo ?? null);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [buscaNav, setBuscaNav] = useState("");
@@ -62,6 +63,7 @@ export function Navbar() {
       setLoggedIn(Boolean(u));
       setUserNome(u?.nome ?? null);
       setUserTipo(u?.tipo ?? null);
+      setIsPlatformAdmin(Boolean(u?.is_platform_admin));
     }
     const onSync = () => void syncSession();
     void syncSession();
@@ -209,6 +211,16 @@ export function Navbar() {
                         onClick={() => setMenuOpen(false)}
                       >
                         Painel
+                      </Link>
+                    ) : null}
+                    {isPlatformAdmin ? (
+                      <Link
+                        href="/admin/dashboard"
+                        role="menuitem"
+                        className="block px-4 py-2.5 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Administração
                       </Link>
                     ) : null}
                     <Link
