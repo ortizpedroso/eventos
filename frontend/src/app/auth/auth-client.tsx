@@ -115,7 +115,7 @@ export default function AuthClient({
       const forcarLogin = sp.get("login") === "1";
       if (u && !forcarLogin) {
         setAguardandoRedirect(true);
-        redirecionar(destinoPosAuth(u, sp.get("next")));
+        redirecionar(destinoPosAuth(u, sp.get("next") || nextParam || null));
         return;
       }
       setSessaoVerificada(true);
