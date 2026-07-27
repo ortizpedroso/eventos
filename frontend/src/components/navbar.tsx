@@ -109,7 +109,6 @@ export function Navbar() {
   }, [menuOpen]);
 
   const isOrganizador = loggedIn && userTipo === "organizador";
-  const navClienteOuCarregando = loggedIn && (userTipo === null || userTipo === "cliente");
 
   const mobileLink =
     "block rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-emerald-50 hover:text-emerald-950";
@@ -151,49 +150,22 @@ export function Navbar() {
               className="hidden min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-zinc-600 md:flex lg:gap-x-6"
               aria-label="Principal (ambiente de trabalho)"
             >
-              {/* Logado como cliente ou carregando: apenas Eventos */}
-              {navClienteOuCarregando ? (
-                <>
-                  <Link href="/eventos" className={navLinkClass("/eventos")}>
-                    Eventos
-                  </Link>
-                  <NavbarCategoriasMenu compact />
-                </>
-              ) : isOrganizador ? (
-                /* Logado como organizador: sem Painel/Pagamentos/Ingressos no topo */
-                <>
-                  <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
-                    Funcionalidades
-                  </Link>
-                  <Link href="/planos" className={navLinkClass("/planos")}>
-                    Planos
-                  </Link>
-                  <Link href="/eventos" className={navLinkClass("/eventos")}>
-                    Eventos
-                  </Link>
-                  <NavbarCategoriasMenu compact />
-                  <Link href="/sobre" className={navLinkClass("/sobre")}>
-                    Sobre
-                  </Link>
-                </>
-              ) : (
-                /* Deslogado */
-                <>
-                  <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
-                    Funcionalidades
-                  </Link>
-                  <Link href="/planos" className={navLinkClass("/planos")}>
-                    Planos
-                  </Link>
-                  <Link href="/eventos" className={navLinkClass("/eventos")}>
-                    Eventos
-                  </Link>
-                  <NavbarCategoriasMenu compact />
-                  <Link href="/sobre" className={navLinkClass("/sobre")}>
-                    Sobre
-                  </Link>
-                </>
-              )}
+              {/* Cliente, organizador ou deslogado: mesmo menu completo — um cliente pode
+                  querer se tornar organizador um dia, então Funcionalidades/Planos/Sobre
+                  ficam sempre visíveis, não só antes de logar. */}
+              <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
+                Funcionalidades
+              </Link>
+              <Link href="/planos" className={navLinkClass("/planos")}>
+                Planos
+              </Link>
+              <Link href="/eventos" className={navLinkClass("/eventos")}>
+                Eventos
+              </Link>
+              <NavbarCategoriasMenu compact />
+              <Link href="/sobre" className={navLinkClass("/sobre")}>
+                Sobre
+              </Link>
             </nav>
           </div>
 
@@ -295,46 +267,21 @@ export function Navbar() {
                 aria-label="Buscar eventos"
               />
             </form>
-            {navClienteOuCarregando ? (
-              <div className="flex flex-col gap-0.5">
-                <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Eventos
-                </Link>
-                <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
-              </div>
-            ) : isOrganizador ? (
-              <div className="flex flex-col gap-0.5">
-                <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Funcionalidades
-                </Link>
-                <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Planos
-                </Link>
-                <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Eventos
-                </Link>
-                <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
-                <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Sobre
-                </Link>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-0.5">
-                <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Funcionalidades
-                </Link>
-                <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Planos
-                </Link>
-                <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Eventos
-                </Link>
-                <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
-                <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                  Sobre
-                </Link>
-              </div>
-            )}
+            <div className="flex flex-col gap-0.5">
+              <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                Funcionalidades
+              </Link>
+              <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                Planos
+              </Link>
+              <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                Eventos
+              </Link>
+              <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
+              <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                Sobre
+              </Link>
+            </div>
           </nav>
         ) : null}
       </div>
