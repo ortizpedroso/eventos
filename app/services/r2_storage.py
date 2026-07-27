@@ -15,6 +15,7 @@ import boto3
 from botocore.client import Config as BotoConfig
 from botocore.exceptions import BotoCoreError, ClientError
 
+from app.utils.imagem_processamento import redimensionar_imagem
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,9 @@ def upload_imagem_evento(content: bytes, content_type: str, *, prefixo: str = "e
         raise R2UploadError("Arquivo vazio.")
     if len(content) > MAX_UPLOAD_BYTES:
         raise R2UploadError(f"Arquivo maior que {MAX_UPLOAD_BYTES // (1024 * 1024)}MB.")
+
+    content, ct = redimensionar_imagem(content, ct, max_width=1920, max_height=1080)
+    ext = ALLOWED_CONTENT_TYPES.get(ct, ext)
 
     key = f"{prefixo}/{uuid.uuid4().hex}.{ext}"
 
