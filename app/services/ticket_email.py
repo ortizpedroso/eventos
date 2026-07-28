@@ -23,11 +23,13 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 _REDIS_QUEUE_KEY = "eventosbr:q:ticket_email"
+_REDIS_PROCESSING_KEY = "eventosbr:q:ticket_email:processing"
 _REDIS_ATTEMPTS_PREFIX = "eventosbr:email:att:"
 
 _memory_queue: Queue[str] = Queue()
 _worker_lock = threading.Lock()
 _worker_started = False
+_worker_thread: threading.Thread | None = None
 _stop_worker = threading.Event()
 
 
@@ -151,15 +153,54 @@ def _dequeue_next() -> str | None:
     r = get_redis_optional()
     if _use_redis_queue() and r:
         try:
-            item = r.brpop(_REDIS_QUEUE_KEY, timeout=2)
+            # blmove (não brpop): move atomicamente pra lista "processing" em vez de
+            # descartar — se o processo morrer no meio do envio (ex: deploy reiniciando
+            # o container), o item some da fila principal mas continua recuperável na
+            # lista de processamento (ver _recuperar_orfaos_processing, chamada no
+            # início do worker). Sem isso, um e-mail podia ser retirado da fila e
+            # perdido pra sempre se o container reiniciasse durante o envio SMTP.
+            item = r.blmove(_REDIS_QUEUE_KEY, _REDIS_PROCESSING_KEY, timeout=2, src="RIGHT", dest="LEFT")
             if item:
-                return item[1]
+                return item
         except Exception:
             logger.exception("Falha ao ler fila Redis de e-mail")
     try:
         return _memory_queue.get(timeout=0.5)
     except Empty:
         return None
+
+
+def _marcar_processado(ingresso_id: str) -> None:
+    """Remove da lista 'processing' após o envio terminar (sucesso ou falha já reenfileirada)."""
+    r = get_redis_optional()
+    if _use_redis_queue() and r:
+        try:
+            r.lrem(_REDIS_PROCESSING_KEY, 1, ingresso_id)
+        except Exception:
+            logger.exception("Falha ao remover %s da lista de processamento", ingresso_id)
+
+
+def _recuperar_orfaos_processing() -> None:
+    """Ao iniciar o worker, devolve pra fila principal qualquer item deixado em
+    'processing' por um processo anterior que morreu no meio do envio (deploy,
+    crash, etc.) — sem isso esses e-mails ficariam perdidos silenciosamente."""
+    r = get_redis_optional()
+    if not (_use_redis_queue() and r):
+        return
+    try:
+        recuperados = 0
+        while True:
+            item = r.rpoplpush(_REDIS_PROCESSING_KEY, _REDIS_QUEUE_KEY)
+            if item is None:
+                break
+            recuperados += 1
+        if recuperados:
+            logger.warning(
+                "Worker de e-mail: %s ingresso(s) órfão(s) recuperado(s) de um processo anterior",
+                recuperados,
+            )
+    except Exception:
+        logger.exception("Falha ao recuperar itens órfãos da fila de e-mail")
 
 
 def _schedule_retry(ingresso_id: str) -> None:
@@ -198,26 +239,42 @@ def _worker_loop() -> None:
         ingresso_id = _dequeue_next()
         if not ingresso_id:
             continue
-        ok = _send_sync(ingresso_id)
-        if not ok:
-            _schedule_retry(ingresso_id)
+        try:
+            ok = _send_sync(ingresso_id)
+            if not ok:
+                _schedule_retry(ingresso_id)
+        finally:
+            _marcar_processado(ingresso_id)
 
 
 def start_ticket_email_worker() -> None:
-    global _worker_started
+    global _worker_started, _worker_thread
     with _worker_lock:
-        if _worker_started:
+        if _worker_started and _worker_thread is not None and _worker_thread.is_alive():
             return
+        _recuperar_orfaos_processing()
         _stop_worker.clear()
         t = threading.Thread(target=_worker_loop, name="ticket-email-worker", daemon=True)
         t.start()
+        _worker_thread = t
         _worker_started = True
         backend = "redis" if _use_redis_queue() else "memória"
         logger.info("Worker de e-mail de ingressos iniciado (%s)", backend)
 
 
-def stop_ticket_email_worker() -> None:
+def stop_ticket_email_worker(*, aguardar_segundos: float = 25.0) -> None:
+    """Sinaliza parada e ESPERA o envio em andamento terminar (até aguardar_segundos)
+    antes de deixar o processo encerrar — evita perder um e-mail cujo SMTP já estava
+    em andamento no exato momento do shutdown (ex: durante um deploy)."""
     _stop_worker.set()
+    if _worker_thread is not None and _worker_thread.is_alive():
+        _worker_thread.join(timeout=aguardar_segundos)
+        if _worker_thread.is_alive():
+            logger.warning(
+                "Worker de e-mail não encerrou em %.0fs — pode haver um envio em andamento "
+                "não confirmado (fica recuperável na lista de processamento do Redis).",
+                aguardar_segundos,
+            )
 
 
 def enqueue_ticket_email(ingresso_id: str) -> None:
