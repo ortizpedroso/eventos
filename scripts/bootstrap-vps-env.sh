@@ -119,7 +119,7 @@ printf '\n' >> "$ENV_FILE"
 
 _write_env "EMAIL_SERVER"                 "smtp.hostinger.com"
 _write_env "EMAIL_PORT"                   "465"
-_write_env "EMAIL_USER"                   "noreply@${DOMAIN}"
+_write_env "EMAIL_USER"                   "contato@${DOMAIN}"
 _write_env "EMAIL_PASSWORD"               "$EMAIL_PASSWORD"
 _write_env "EMAIL_FROM_NAME"              "EventosBR"
 _write_env "EMAIL_USE_TLS"                "false"
