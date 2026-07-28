@@ -77,7 +77,16 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      { source: "/api/:path*", destination: `${apiTarget}/api/:path*` },
+      // Exclui /api/admin/session e /api/admin/proxy/* — são rotas do PRÓPRIO Next.js
+      // (não existem no FastAPI). Sem essa exclusão, esse rewrite intercepta a
+      // requisição ANTES do Next.js chegar a tentar casar com essas rotas de
+      // app/api/admin/{session,proxy}/route.ts, e manda tudo direto pro backend —
+      // que responde 404 pra um caminho que nunca existiu lá (bug: 'Not Found' em
+      // toda chamada do painel admin, mesmo com sessão/chave válidas).
+      {
+        source: "/api/:path((?!admin/session|admin/proxy).*)",
+        destination: `${apiTarget}/api/:path`,
+      },
       { source: "/uploads/:path*", destination: `${apiTarget}/uploads/:path*` },
     ];
   },
