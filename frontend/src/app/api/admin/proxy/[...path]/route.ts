@@ -1,6 +1,13 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
+// Nunca cachear — cada chamada deve sempre ir buscar dados frescos no backend,
+// mesmo repetindo a MESMA URL+query string (ex: contatos/campanhas com os mesmos
+// parâmetros de busca sempre). Não depender só da detecção automática via cookies().
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 const ADMIN_COOKIE = "eventosbr_admin_key";
 const AUTH_COOKIE = "eventosbr_session";
 

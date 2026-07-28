@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { verificarCodigoTotp } from "@/lib/admin-totp";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 const ADMIN_COOKIE = "eventosbr_admin_key";
 const AUTH_COOKIE = "eventosbr_session";
 const COOKIE_MAX_AGE = 60 * 60 * 4;
