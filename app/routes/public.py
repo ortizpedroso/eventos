@@ -113,16 +113,20 @@ async def enviar_contato(
             registro.email_enviado = True
             db.commit()
         else:
-            logger.warning(
-                "Contato público salvo (id=%s) mas falha SMTP para %s",
+            logger.error(
+                "Contato público salvo (id=%s) mas FALHA SMTP para %s — verifique .env (senha com # precisa aspas)",
                 registro.id,
                 destino,
             )
     else:
-        logger.warning(
-            "Contato público salvo (id=%s) mas sem destino/SMTP configurado (destino=%s)",
+        logger.error(
+            "Contato público salvo (id=%s) mas sem destino/SMTP (destino=%s, smtp=%s)",
             registro.id,
             destino,
+            smtp_configured(),
         )
 
-    return {"message": "Mensagem enviada com sucesso. Responderemos em breve."}
+    return {
+        "message": "Mensagem recebida com sucesso. Responderemos em breve.",
+        "email_enviado": email_ok,
+    }

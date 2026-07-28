@@ -118,6 +118,7 @@ class TestFormularioContatoPublico:
                 },
             )
         assert r.status_code == 200, r.text
+        assert "recebida" in r.json()["message"].lower()
         mock_send.assert_called_once()
         assert mock_send.call_args.kwargs["destino"] == "dono@eventosbr.app.br"
         assert mock_send.call_args.kwargs["reply_to"] == "visitante@teste.com"

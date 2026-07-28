@@ -78,7 +78,7 @@ fi
 _write_env() {
   local key="$1"
   local val="$2"
-  printf '%s=%s\n' "$key" "$val" >> "$ENV_FILE"
+  printf '%s=%s\n' "$key" "$(env_format_for_file "$val")" >> "$ENV_FILE"
 }
 
 : > "$ENV_FILE"
