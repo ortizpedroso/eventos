@@ -130,6 +130,18 @@ def main() -> int:
     prot = httpx.get(f"{WEB}/organizador/eventos", follow_redirects=False, timeout=15)
     record(results, "Bloqueio /organizador sem login", "/auth" in (prot.headers.get("location") or ""))
     record(results, "Proxy admin sem cookie", httpx.get(f"{WEB}/api/admin/proxy/setup", timeout=15).status_code == 401)
+    # Caminho com 2+ segmentos após /proxy/ — se o Caddy mandar direto pro FastAPI, vira 404.
+    nested = httpx.get(
+        f"{WEB}/api/admin/proxy/marketing/contatos",
+        params={"limit": 1, "offset": 0, "formato": "json", "canal": "qualquer"},
+        timeout=15,
+    )
+    record(
+        results,
+        "Proxy admin (subcaminho) sem cookie → 401, não 404",
+        nested.status_code == 401,
+        f"status={nested.status_code} (404 = Caddyfile não encaminha pro Next.js)",
+    )
 
     c.close()
     ok_n = sum(1 for _, ok, _ in results if ok)

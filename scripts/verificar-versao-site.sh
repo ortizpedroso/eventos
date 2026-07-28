@@ -72,6 +72,19 @@ else
   ok=1
 fi
 
+# Proxy admin: subcaminhos (ex. marketing/contatos) devem ir pro Next.js (401 sem sessão),
+# não pro FastAPI (404 "Not Found" genérico).
+_admin_proxy_nested_code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' \
+  "${URL}/api/admin/proxy/marketing/contatos?limit=1&offset=0&formato=json&canal=qualquer" 2>/dev/null || echo 000)"
+if [ "$_admin_proxy_nested_code" = "401" ]; then
+  echo "  OK      proxy admin (subcaminho) → Next.js (401 sem auth)"
+elif [ "$_admin_proxy_nested_code" = "404" ]; then
+  echo "  FALHA  proxy admin (subcaminho) → 404 (Caddyfile: recarregue Caddy após atualizar)"
+  ok=1
+else
+  echo "  AVISO   proxy admin (subcaminho) respondeu ${_admin_proxy_nested_code} (esperado 401)"
+fi
+
 echo ""
 if [[ $ok -eq 0 ]]; then
   echo "Site ATUALIZADO (${EXPECTED})."
