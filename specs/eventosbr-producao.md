@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.11
+**Versão:** 1.12
 **Data:** 2026-07-28
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `e8911b2`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
+> **Produção (VPS):** `main` em `a74aac1`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -98,6 +98,43 @@ Status `manual` e `linked` aplicam-se só a ambientes de desenvolvimento com fla
 - Conta de recebimento / saques: `ACCOUNT_STATUS_*`
 - Autorização de transferência Pix: `https://eventosbr.app.br/api/webhooks/asaas/transfer-auth`
 
+### 2.6.1 Incidente resolvido: token do webhook dessincronizado (2026-07-28)
+
+`ASAAS_WEBHOOK_TOKEN` no `.env` da VPS ficou diferente do token cadastrado no
+painel do Asaas (Integrações → Webhooks → campo "Token de autenticação") —
+webhook penalizado, todos os eventos retornando 401 "Invalid token" por horas.
+**Os dois valores precisam ser idênticos manualmente** — não há sincronização
+automática entre o `.env` e a configuração do painel Asaas. Se o token for
+regenerado de um lado, precisa ser copiado pro outro. Diagnóstico rápido:
+`grep ASAAS_WEBHOOK_TOKEN .env` na VPS vs. o campo no painel Asaas.
+
+### 2.6.2 Filas de e-mail — confiabilidade (adicionado v1.12)
+
+Dois bugs reais corrigidos em `ticket_email.py` e `notificacao_email.py`
+(e-mail de ingresso e e-mail simples — onboarding/saque/lista de espera/lista
+de interesse): a API sempre respondia "enfileirado com sucesso", mas o
+e-mail podia nunca chegar.
+
+1. **`notificacao_email.py` — bug mais grave**: `blpop` + `.decode()` no
+   resultado, mas o cliente Redis usa `decode_responses=True` (já devolve
+   `str`, não `bytes`) — `.decode()` numa string levanta `AttributeError`,
+   capturada pelo `except` genérico do worker, e o payload (já removido da
+   fila por `blpop`, que é destrutivo) se perdia **em toda mensagem**
+   enfileirada via Redis por esse serviço.
+2. **`ticket_email.py`**: `brpop` remove o item da fila assim que retirado —
+   se o container da API reiniciar (deploy) no meio do envio SMTP, o item já
+   saiu da fila e não tem como recuperar.
+
+**Correção (mesmo padrão nos dois arquivos):** `blpop`/`brpop` (destrutivo)
+trocado por `blmove` movendo pra uma lista `...processing` — só sai de lá
+quando o envio termina de fato. Ao iniciar o worker, itens deixados em
+`processing` por um processo anterior que morreu no meio são devolvidos pra
+fila principal. `start_*_worker()` passa a checar `thread.is_alive()` (não só
+uma flag booleana) — antes, se a thread morresse por qualquer motivo, o
+worker nunca mais reiniciava. `stop_*_worker()` agora espera (join, até 25s)
+o envio em andamento terminar antes do processo sair, em vez de matar a
+thread na hora — relevante porque deploys da API são frequentes.
+
 ### 2.7 Testes automatizados (código — não cobram de verdade)
 
 ```bash
@@ -121,7 +158,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (300 testes) |
+| `api` | `pytest` (310 testes) |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -350,9 +387,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (300 testes)
+- [x] `pytest` verde (310 testes)
 - [x] `npm run build` verde
-- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml` (verde na última execução local: `pytest` 300/300, `npm run build` OK)
+- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml` (verde na última execução local: `pytest` 310/310, `npm run build` OK)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 - [x] OpenAPI exportado sem paths `subconta` (`export-openapi.py` white-label)
 - [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
@@ -362,7 +399,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] `main` em `e8911b2` — inclui admin integrado à conta do usuário, menu unificado, conversão cliente→organizador, formulário de contato público, compressão de imagem, e correção definitiva do roteamento Caddy/Next.js do painel admin (ver 5.1.2)
+- [x] `main` em `a74aac1` — inclui a correção das filas de e-mail (item 2.6.2) além de tudo da v1.11 (admin integrado à conta do usuário, menu unificado, conversão cliente→organizador, formulário de contato público, compressão de imagem, correção definitiva do roteamento Caddy/Next.js do painel admin)
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
@@ -425,6 +462,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.12 | 2026-07-28 | **Dois bugs reais de e-mail "perdido silenciosamente" corrigidos** (2.6.2): `notificacao_email.py` fazia `.decode()` num valor que o Redis já devolve como string (`AttributeError` engolida pelo `except` genérico — todo e-mail de onboarding/saque/lista de espera/interesse enfileirado via Redis se perdia); `ticket_email.py` perdia o e-mail do ingresso se o container reiniciasse no meio do envio (`brpop` destrutivo). Corrigido com padrão de fila confiável (`blmove` + lista `processing` + recuperação de órfãos ao reiniciar o worker) nos dois arquivos. Incidente documentado à parte (2.6.1): token do webhook Asaas dessincronizado entre `.env` e painel Asaas, causando 401 por horas — token não sincroniza automaticamente, precisa copiar manualmente dos dois lados quando um muda. Testes: 300 → 310. |
 | 1.11 | 2026-07-28 | **Admin integrado à conta do usuário** (login normal + 2FA, `is_platform_admin`, chave estática vira só emergência — spec dedicada `specs/admin-integrado-usuario.md`). "Lembrar dispositivo" (30 dias sem novo desafio 2FA). Menu do site unificado (cliente via o mesmo menu que organizador/deslogado, antes só via "Eventos"). Conversão cliente→organizador sem criar conta nova (`/api/auth/tornar-organizador` + card em Perfil). Contato (telefone/e-mail) obrigatório na criação de evento; telefone nas Configurações da plataforma; formulário público `/contato`. Compressão/redimensionamento de imagem no navegador e no servidor (Pillow). Rodapé reorganizado + botão de voltar ao topo. **Correção definitiva de uma investigação longa** ("Not Found" persistente no painel admin): rewrite genérico `/api/*` engolindo rotas do próprio Next.js + glob `**` não suportado pelo matcher `path` do Caddy 2 — ver 5.1.2 para não repetir. Testes: 265 → 300. |
 | 1.10 | 2026-07-25 | `/review` final: onboarding `linked` validado em produção (deploy `e6df57d`, todas verificações OK). Fix adicional: scroll não resetava ao topo no painel organizador/conta (gap entre `AppNavLink scroll={false}` e exclusão do `ScrollToTop`). CNPJ da conta mãe reclassificado de "bloqueio de lançamento" para "pendência futura" (só necessário para reativar `baas`). |
 | 1.9 | 2026-07-25 | Modo `linked` liberado para produção (sem exigir CNPJ) — ver spec dedicada `specs/onboarding-linked-lancamento.md`. Correção de regressão: `loading.tsx` global reintroduzia flash de navegação já resolvido anteriormente (revertido). |
