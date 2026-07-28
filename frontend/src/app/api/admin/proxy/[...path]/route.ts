@@ -47,6 +47,10 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
   const url = new URL(`${base}/api/admin/${suffix}`);
   req.nextUrl.searchParams.forEach((v, k) => url.searchParams.set(k, v));
 
+  console.error(
+    `[admin-proxy] path=${JSON.stringify(path)} suffix="${suffix}" base="${base}" url="${url.toString()}"`,
+  );
+
   const headers = new Headers();
   headers.set("accept", "application/json");
   if (key) {
@@ -69,6 +73,8 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
     body,
     cache: "no-store",
   });
+
+  console.error(`[admin-proxy] upstream status=${upstream.status} para url="${url.toString()}"`);
 
   const text = await upstream.text();
   return new NextResponse(text || null, {
