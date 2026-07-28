@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.10
-**Data:** 2026-07-24
+**Versão:** 1.11
+**Data:** 2026-07-28
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `e6df57d`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
+> **Produção (VPS):** `main` em `e8911b2`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -121,7 +121,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (265 testes) |
+| `api` | `pytest` (300 testes) |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -174,6 +174,13 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
   - `documentacao/page.tsx` e `documentacao/api/page.tsx` — sem `wallet_id`, paths sanitizados na UI
   - `scripts/export-openapi.py` — summaries/descriptions sem marca do provedor em `openapi.json`
 
+### 3.1 Menu unificado + conversão cliente → organizador (adicionado v1.11)
+
+- **Navbar** (`components/navbar.tsx`): cliente, organizador e deslogado veem o **mesmo menu completo** (Funcionalidades, Planos, Eventos, Categorias, Sobre) — antes cliente via só "Eventos", escondendo o caminho para virar organizador.
+- **`POST /api/auth/tornar-organizador`**: converte conta `cliente` → `organizador` sem criar conta nova (mantém histórico de compras). Exige confirmar/informar telefone. Bloqueado se a conta já for organizador. Limpa o cookie de cache do middleware (`eventosbr_session_ok`) na hora, pra `/organizador/*` liberar sem esperar o TTL de 5 min.
+- **`TornarOrganizadorCard`** (`components/tornar-organizador-card.tsx`): card "Crie o seu próprio evento" em `/conta/perfil`, visível só para `tipo=cliente`. Pode abrir automaticamente via `?tornar_organizador=1`.
+- Duas rotas que antes **deslogavam** um cliente tentando acessar área de organizador (assumindo que os tipos nunca se convertiam) foram corrigidas para redirecionar (sem deslogar) para o fluxo de conversão: `novo-evento-gate.tsx` (`/eventos/novo`) e `destinoPosAuth` (usado por `/cadastro` e páginas de auth com `?next=/organizador/*`).
+
 ---
 
 ## 4. UX — Produto (checklist publicação)
@@ -191,6 +198,10 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 | P9 | Portaria: QR local, feedback som/vibração, rate limit | [x] |
 | P10 | SEO: sitemap dinâmico (inclui páginas de evento), robots, metadata, JSON-LD `Event` + `BreadcrumbList`, canonical por página, OG image padrão | [x] |
 | P11 | Formulários de auth: `autoComplete` correto, indicador de força de senha no cadastro | [x] |
+| P12 | Contato/telefone obrigatórios na criação de evento; e-mail/telefone/redes sociais configuráveis nas Configurações da plataforma (admin) | [x] |
+| P13 | Formulário público "Fale conosco" (`/contato`), com Turnstile + rate limit | [x] |
+| P14 | Upload de imagem (logo/favicon/capa de evento) comprimido/redimensionado no navegador **e** no servidor (Pillow) — nunca amplia, preserva transparência | [x] |
+| P15 | Rodapé: contato + redes sociais agrupados à direita; botão flutuante de voltar ao topo | [x] |
 
 **Fora do escopo desta publicação:** múltiplos operadores, formulário custom inscrição, importação CSV, certificados, PWA equipe, Apple/Google Wallet, NFSe automática, modo `linked`/`both`, sandbox Asaas em produção.
 
@@ -202,7 +213,7 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 
 | Item | Onde |
 |------|------|
-| Proxy admin só via cookie | `api/admin/proxy` |
+| Proxy admin: sessão de usuário (`is_platform_admin`+2FA) OU chave estática (emergência) | `api/admin/proxy`, `app/deps/platform_admin.py` |
 | Sessão + CSP nonce (Next.js "proxy", antigo `middleware.ts`) | `frontend/src/proxy.ts`, `frontend/src/lib/csp.ts` |
 | Verificação e-mail compra rápida | `email_verificacao.py` |
 | Rotação token portaria | `evento_portaria.py` |
@@ -210,6 +221,27 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 | White-label pagamentos (sem marca do provedor) | `api-errors.ts`, `mensagens_publicas.py`, `documentacao/api/page.tsx` |
 | Senhas com bcrypt | `services/auth.py` |
 | JWT com `token_version` (invalida sessões antigas ao trocar senha/desativar conta) | `services/auth.py` |
+| "Lembrar dispositivo" (30 dias sem novo desafio 2FA) | `services/auth.py` (`create/decode_trusted_device_token`), amarrado a `token_version` |
+
+### 5.1.1 Admin integrado à conta do usuário (adicionado v1.11)
+
+Ver spec dedicada: `specs/admin-integrado-usuario.md`. Resumo:
+
+- `Usuario.is_platform_admin` (bool, independente de `tipo` cliente/organizador) — uma conta pode ser organizador+admin ou cliente+admin.
+- Acesso ao painel via **login normal** (e-mail/senha) exige `is_platform_admin=True` **e** `totp_ativado=True`; sem 2FA, acesso bloqueado com mensagem explicando o motivo (não é mais preciso colar a chave todo login).
+- `PLATFORM_ADMIN_API_KEY` mantida como **acesso de emergência** (sem exigir 2FA).
+- TOTP liberado para `tipo=organizador` **OU** `is_platform_admin=True` (antes só organizador podia ativar).
+- Gerenciamento: `PATCH /api/admin/usuarios/{id}/admin` — conceder/revogar o papel; primeiro admin definido via `scripts/set_platform_admin.py <email>` (rodado manualmente uma vez).
+- Login de conta admin redireciona automaticamente para `/admin/dashboard` (`destinoPosAuth`). Item "Administração" aparece no dropdown do usuário (navbar) e no menu lateral (organizador/conta shells) quando `is_platform_admin=true`.
+
+### 5.1.2 Roteamento Caddy + Next.js — lição aprendida (adicionado v1.11)
+
+**Causa raiz de uma investigação bem longa** ("Not Found" persistente no painel admin, mesmo com sessão/chave válidas): duas armadilhas independentes, ambas no `deploy/caddy/Caddyfile`:
+
+1. **Regra genérica `/api/:path*` no `next.config.ts` engolindo rotas do próprio Next.js.** `app/api/admin/session` e `app/api/admin/proxy/[...path]` são rotas do Next.js (não existem no FastAPI) — mas o rewrite `{ source: "/api/:path*", destination: \`\${apiTarget}/api/:path*\` }` intercepta e manda **tudo** que começa com `/api/` direto pro backend, antes do Next.js sequer tentar casar com essas duas rotas. Corrigido com regex negativo excluindo os dois prefixos: `source: "/api/:path((?!admin/session|admin/proxy).*)"`.
+2. **`**` (glob de múltiplos níveis) não é reconhecido pelo matcher `path` do Caddy 2** — `/api/admin/proxy/**` casava só o primeiro nível (`/proxy/setup`), não caminhos mais profundos (`/proxy/marketing/contatos`), fazendo esses caírem na regra genérica `@api` e ir direto pro FastAPI (que não tem essa rota — 404). O correto no Caddy 2 é um **prefixo com asterisco colado, sem barra antes**: `/api/admin/proxy*` (não `/api/admin/proxy/*` nem `/api/admin/proxy/**`).
+
+Ambas as correções têm comentários extensos no próprio `Caddyfile` e em `next.config.ts` explicando os erros comuns, para não repetir. `scripts/atualizar-vps-agora.sh`, `scripts/verificar-versao-site.sh` e `scripts/qa-funcional.py` ganharam checagens automáticas para detectar regressão nesse roteamento.
 
 ### 5.2 2FA — TOTP (adicionado v1.8)
 
@@ -217,7 +249,9 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
   - Implementação TOTP própria (RFC 6238, HMAC-SHA1), validada contra `pyotp` como referência — sem dependência nova.
   - Endpoints: `POST /api/auth/2fa/{iniciar,ativar,desativar}`, `POST /api/auth/2fa/verificar-login`.
   - Arquivos: `app/services/totp.py`, `app/services/organizador_2fa.py`.
-- **Admin:** TOTP opcional na camada Next.js (`ADMIN_TOTP_SECRET`, opt-in) — o admin usa uma chave compartilhada (`PLATFORM_ADMIN_API_KEY`), não contas individuais, então o 2FA é verificado em `frontend/src/app/api/admin/session/route.ts` antes de aceitar a chave, com rate limit de 8 tentativas/min por IP.
+- **Admin (dois mecanismos, coexistindo — v1.11):**
+  1. **Principal:** login normal (e-mail/senha) de uma conta com `is_platform_admin=True` e `totp_ativado=True` — mesmo TOTP de organizador, ver 5.1.1.
+  2. **Emergência:** chave compartilhada (`PLATFORM_ADMIN_API_KEY`) + TOTP opcional em separado (`ADMIN_TOTP_SECRET`, opt-in) verificado em `frontend/src/app/api/admin/session/route.ts` antes de aceitar a chave, com rate limit de 8 tentativas/min por IP.
   - Implementação TOTP em TypeScript (Node `crypto`) em `frontend/src/lib/admin-totp.ts`, validada contra a implementação Python.
 
 ### 5.3 CAPTCHA — Cloudflare Turnstile (adicionado v1.8)
@@ -316,9 +350,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (265 testes)
+- [x] `pytest` verde (300 testes)
 - [x] `npm run build` verde
-- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml` (verde na última execução local: `pytest` 265/265, `npm run build` OK)
+- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml` (verde na última execução local: `pytest` 300/300, `npm run build` OK)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 - [x] OpenAPI exportado sem paths `subconta` (`export-openapi.py` white-label)
 - [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
@@ -328,7 +362,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] `main` em `e6df57d` — inclui onboarding modo `linked` (lançamento sem CNPJ), fix de scroll no painel organizador/conta
+- [x] `main` em `e8911b2` — inclui admin integrado à conta do usuário, menu unificado, conversão cliente→organizador, formulário de contato público, compressão de imagem, e correção definitiva do roteamento Caddy/Next.js do painel admin (ver 5.1.2)
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
@@ -366,6 +400,9 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Conta / perfil | `conta-shell.tsx`, `perfil-tabs.tsx`, `conta/layout.tsx`, `organizador/perfil/layout.tsx` |
 | White-label | `api-errors.ts`, `mensagens_publicas.py`, `documentacao/api/page.tsx`, `export-openapi.py` |
 | 2FA (organizador + admin) | `services/totp.py`, `services/organizador_2fa.py`, `components/seguranca-2fa.tsx`, `lib/admin-totp.ts`, `app/api/admin/session/route.ts` |
+| Admin integrado à conta | `deps/platform_admin.py`, `routes/admin.py` (`/usuarios/{id}/admin`), `scripts/set_platform_admin.py`, `components/tornar-organizador-card.tsx`, `specs/admin-integrado-usuario.md` |
+| Contato do evento / plataforma | `schemas/evento.py` (contato_telefone/email), `models/platform_settings.py`, `routes/public.py` (`/contato`), `app/contato/` |
+| Compressão de imagem | `lib/comprimir-imagem.ts` (navegador), `utils/imagem_processamento.py` (servidor, Pillow) |
 | CAPTCHA | `services/turnstile.py`, `components/turnstile-widget.tsx` |
 | Cifra em repouso (CPF/CNPJ, API keys) | `utils/secret_storage.py` (esquema `enc:v2`), `utils/cpf.py` |
 | SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `app/eventos/[slug]/page.tsx` (JSON-LD) |
@@ -388,6 +425,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.11 | 2026-07-28 | **Admin integrado à conta do usuário** (login normal + 2FA, `is_platform_admin`, chave estática vira só emergência — spec dedicada `specs/admin-integrado-usuario.md`). "Lembrar dispositivo" (30 dias sem novo desafio 2FA). Menu do site unificado (cliente via o mesmo menu que organizador/deslogado, antes só via "Eventos"). Conversão cliente→organizador sem criar conta nova (`/api/auth/tornar-organizador` + card em Perfil). Contato (telefone/e-mail) obrigatório na criação de evento; telefone nas Configurações da plataforma; formulário público `/contato`. Compressão/redimensionamento de imagem no navegador e no servidor (Pillow). Rodapé reorganizado + botão de voltar ao topo. **Correção definitiva de uma investigação longa** ("Not Found" persistente no painel admin): rewrite genérico `/api/*` engolindo rotas do próprio Next.js + glob `**` não suportado pelo matcher `path` do Caddy 2 — ver 5.1.2 para não repetir. Testes: 265 → 300. |
 | 1.10 | 2026-07-25 | `/review` final: onboarding `linked` validado em produção (deploy `e6df57d`, todas verificações OK). Fix adicional: scroll não resetava ao topo no painel organizador/conta (gap entre `AppNavLink scroll={false}` e exclusão do `ScrollToTop`). CNPJ da conta mãe reclassificado de "bloqueio de lançamento" para "pendência futura" (só necessário para reativar `baas`). |
 | 1.9 | 2026-07-25 | Modo `linked` liberado para produção (sem exigir CNPJ) — ver spec dedicada `specs/onboarding-linked-lancamento.md`. Correção de regressão: `loading.tsx` global reintroduzia flash de navegação já resolvido anteriormente (revertido). |
 | 1.8 | 2026-07-24 | Auditoria completa de segurança/SEO/UX: 2FA (organizador+admin), CAPTCHA Turnstile, cifra `enc:v2` de CPF/CNPJ, correções TOCTOU/webhook/CSV-injection, SEO técnico (JSON-LD, sitemap dinâmico, canonical), indicador de força de senha. Fechadas 29 PRs obsoletas cujo conteúdo já estava incorporado à `main`. Testes: 241 → 265. |
