@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     EMAIL_FROM_NAME: str = "EventosBR"
     # STARTTLS na porta 587 (Gmail, Hostinger). false só para relay local sem TLS.
     EMAIL_USE_TLS: bool = True
+    # SSL implícito na porta 465 (Hostinger). Se true, ignora STARTTLS.
+    EMAIL_USE_SSL: bool = False
     # Links em e-mails e QR (ex.: http://localhost:3000)
     FRONTEND_PUBLIC_URL: str = "http://localhost:3000"
     # Domínio base para subdomínios de organizador (ex.: eventosbr.app.br)

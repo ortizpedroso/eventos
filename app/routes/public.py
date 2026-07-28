@@ -77,32 +77,52 @@ async def enviar_contato(
             detail="Não foi possível confirmar que você não é um robô. Recarregue a página e tente de novo.",
         )
 
+    from app.models.contato_site_mensagem import ContatoSiteMensagem
     from app.services.smtp_client import send_email, smtp_configured
+
+    registro = ContatoSiteMensagem(
+        nome=body.nome.strip(),
+        email=str(body.email).strip(),
+        assunto=body.assunto.strip(),
+        mensagem=body.mensagem.strip(),
+        email_enviado=False,
+    )
+    db.add(registro)
+    db.commit()
+    db.refresh(registro)
 
     settings_pub = get_public_settings(db)
     destino = settings_pub.contact_email or settings_pub.support_email
-    if not destino or not smtp_configured():
-        logger.warning("Contato público recebido, mas sem e-mail de destino/SMTP configurado.")
-        raise HTTPException(
-            status_code=503,
-            detail="Não foi possível enviar sua mensagem agora. Tente novamente mais tarde.",
+    email_ok = False
+    if destino and smtp_configured():
+        corpo = (
+            f"Nova mensagem pelo formulário de contato do site.\n\n"
+            f"Nome: {body.nome}\n"
+            f"E-mail: {body.email}\n"
+            f"Assunto: {body.assunto}\n\n"
+            f"Mensagem:\n{body.mensagem}\n"
+        )
+        email_ok = send_email(
+            destino=destino,
+            assunto=f"[Contato site] {body.assunto}",
+            corpo_texto=corpo,
+            reply_to=str(body.email),
+            db=db,
+        )
+        if email_ok:
+            registro.email_enviado = True
+            db.commit()
+        else:
+            logger.warning(
+                "Contato público salvo (id=%s) mas falha SMTP para %s",
+                registro.id,
+                destino,
+            )
+    else:
+        logger.warning(
+            "Contato público salvo (id=%s) mas sem destino/SMTP configurado (destino=%s)",
+            registro.id,
+            destino,
         )
 
-    corpo = (
-        f"Nova mensagem pelo formulário de contato do site.\n\n"
-        f"Nome: {body.nome}\n"
-        f"E-mail: {body.email}\n"
-        f"Assunto: {body.assunto}\n\n"
-        f"Mensagem:\n{body.mensagem}\n"
-    )
-    ok = send_email(
-        destino=destino,
-        assunto=f"[Contato site] {body.assunto}",
-        corpo_texto=corpo,
-    )
-    if not ok:
-        raise HTTPException(
-            status_code=503,
-            detail="Não foi possível enviar sua mensagem agora. Tente novamente mais tarde.",
-        )
     return {"message": "Mensagem enviada com sucesso. Responderemos em breve."}

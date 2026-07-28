@@ -82,7 +82,7 @@ class TestContatoObrigatorioEvento:
 
 
 class TestFormularioContatoPublico:
-    def test_contato_sem_email_configurado_falha(self, monkeypatch):
+    def test_contato_salva_mesmo_sem_smtp(self, monkeypatch):
         monkeypatch.setattr(settings, "TURNSTILE_SECRET_KEY", "")
         with patch("app.routes.public.get_public_settings") as mock_settings:
             mock_settings.return_value.contact_email = None
@@ -96,7 +96,8 @@ class TestFormularioContatoPublico:
                     "mensagem": "Mensagem de teste com mais de dez caracteres.",
                 },
             )
-        assert r.status_code == 503
+        assert r.status_code == 200, r.text
+        assert "sucesso" in r.json()["message"].lower()
 
     def test_contato_envia_email_com_sucesso(self, monkeypatch):
         monkeypatch.setattr(settings, "TURNSTILE_SECRET_KEY", "")
@@ -119,6 +120,7 @@ class TestFormularioContatoPublico:
         assert r.status_code == 200, r.text
         mock_send.assert_called_once()
         assert mock_send.call_args.kwargs["destino"] == "dono@eventosbr.app.br"
+        assert mock_send.call_args.kwargs["reply_to"] == "visitante@teste.com"
 
     def test_contato_mensagem_curta_rejeitada(self):
         r = client.post(

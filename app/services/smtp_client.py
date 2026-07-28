@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import smtplib
+import ssl
+from contextlib import contextmanager
 from email.message import EmailMessage
 from email.utils import formataddr
 
@@ -14,6 +16,15 @@ logger = logging.getLogger(__name__)
 
 def smtp_configured() -> bool:
     return bool((settings.EMAIL_USER or "").strip() and (settings.EMAIL_PASSWORD or "").strip())
+
+
+def smtp_use_ssl() -> bool:
+    """Porta 465 usa SSL implícito; 587 usa STARTTLS (EMAIL_USE_TLS)."""
+    if settings.EMAIL_USE_SSL:
+        return True
+    if settings.EMAIL_PORT == 465:
+        return True
+    return False
 
 
 def format_from_header(site_name: str | None = None) -> str:
@@ -29,12 +40,34 @@ def format_from_header_branded(db=None) -> str:
     return format_from_header(branding.site_name)
 
 
+@contextmanager
+def _smtp_session():
+    """Abre conexão SMTP (STARTTLS na 587 ou SSL na 465)."""
+    host = settings.EMAIL_SERVER
+    port = settings.EMAIL_PORT
+    timeout = 30
+    use_ssl = smtp_use_ssl()
+
+    if use_ssl:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(host, port, timeout=timeout, context=context) as server:
+            yield server
+        return
+
+    with smtplib.SMTP(host, port, timeout=timeout) as server:
+        if settings.EMAIL_USE_TLS:
+            server.starttls(context=ssl.create_default_context())
+        yield server
+
+
 def send_email(
     *,
     destino: str,
     assunto: str,
     corpo_texto: str,
     corpo_html: str | None = None,
+    reply_to: str | None = None,
+    db=None,
 ) -> bool:
     """Envia e-mail transacional. Retorna False se SMTP não estiver configurado."""
     to = (destino or "").strip()
@@ -46,22 +79,31 @@ def send_email(
 
     msg = EmailMessage()
     msg["Subject"] = assunto
-    msg["From"] = format_from_header_branded()
+    msg["From"] = format_from_header_branded(db)
     msg["To"] = to
+    reply = (reply_to or "").strip()
+    if reply:
+        msg["Reply-To"] = reply
     msg.set_content(corpo_texto)
     if corpo_html:
         msg.add_alternative(corpo_html, subtype="html")
 
+    mode = "SSL" if smtp_use_ssl() else ("STARTTLS" if settings.EMAIL_USE_TLS else "plain")
     try:
-        with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-            if settings.EMAIL_USE_TLS:
-                server.starttls()
+        with _smtp_session() as server:
             server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
             server.send_message(msg)
         logger.info("E-mail enviado para %s (%s)", to, assunto)
         return True
     except Exception:
-        logger.exception("Falha ao enviar e-mail para %s (%s)", to, assunto)
+        logger.exception(
+            "Falha ao enviar e-mail para %s (%s) via %s:%s modo=%s",
+            to,
+            assunto,
+            settings.EMAIL_SERVER,
+            settings.EMAIL_PORT,
+            mode,
+        )
         return False
 
 
