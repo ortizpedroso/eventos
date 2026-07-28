@@ -2,7 +2,7 @@
 
 **Versão:** 1.0
 **Data:** 2026-07-25
-**Status:** 📝 Aprovada para build
+**Status:** ✅ Implementada e validada em produção (v1.11 da spec principal)
 
 ## 1. Objetivo
 
@@ -85,20 +85,20 @@ a aceitar **qualquer uma** das duas formas:
 
 ## 5. Definição de "concluído"
 
-- [ ] Migração: `usuarios.is_platform_admin` (bool, default false)
-- [ ] `organizador_2fa.py`: TOTP liberado para `tipo == "organizador" OR is_platform_admin`
-- [ ] `require_platform_admin` aceita sessão de usuário (JWT/cookie) com
+- [x] Migração: `usuarios.is_platform_admin` (bool, default false)
+- [x] `organizador_2fa.py`: TOTP liberado para `tipo == "organizador" OR is_platform_admin`
+- [x] `require_platform_admin` aceita sessão de usuário (JWT/cookie) com
       `is_platform_admin=True and totp_ativado=True`, além da chave estática
-- [ ] Endpoint(s) para listar usuários e alternar `is_platform_admin` (só acessível por
+- [x] Endpoint(s) para listar usuários e alternar `is_platform_admin` (só acessível por
       quem já é admin)
-- [ ] Frontend: item de menu condicional (organizador-shell e conta-shell) para quem tem
+- [x] Frontend: item de menu condicional (organizador-shell e conta-shell) para quem tem
       `is_platform_admin=True`
-- [ ] Frontend: tela de gerenciamento de admins dentro do painel
-- [ ] `scripts/set_platform_admin.py`
-- [ ] Testes: acesso negado sem 2FA, acesso liberado com 2FA ativo, toggle de admin por
+- [x] Frontend: tela de gerenciamento de admins dentro do painel
+- [x] `scripts/set_platform_admin.py`
+- [x] Testes: acesso negado sem 2FA, acesso liberado com 2FA ativo, toggle de admin por
       outro admin, chave antiga (`X-Platform-Admin-Key`) continua funcionando sem 2FA
-- [ ] `pytest` verde, `tsc`/`eslint`/build de produção sem erros
-- [ ] Migração validada contra Postgres real (upgrade → downgrade → upgrade)
+- [x] `pytest` verde, `tsc`/`eslint`/build de produção sem erros
+- [x] Migração validada contra Postgres real (upgrade → downgrade → upgrade)
 
 ## 6. Fora de escopo (nesta versão)
 
