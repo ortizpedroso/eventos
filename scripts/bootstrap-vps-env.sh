@@ -78,7 +78,7 @@ fi
 _write_env() {
   local key="$1"
   local val="$2"
-  printf '%s=%s\n' "$key" "$val" >> "$ENV_FILE"
+  printf '%s=%s\n' "$key" "$(env_format_for_file "$val")" >> "$ENV_FILE"
 }
 
 : > "$ENV_FILE"
@@ -118,11 +118,12 @@ _write_env "PLATFORM_ADMIN_API_KEY"       "$PLATFORM_ADMIN_API_KEY"
 printf '\n' >> "$ENV_FILE"
 
 _write_env "EMAIL_SERVER"                 "smtp.hostinger.com"
-_write_env "EMAIL_PORT"                   "587"
-_write_env "EMAIL_USER"                   "noreply@${DOMAIN}"
+_write_env "EMAIL_PORT"                   "465"
+_write_env "EMAIL_USER"                   "contato@${DOMAIN}"
 _write_env "EMAIL_PASSWORD"               "$EMAIL_PASSWORD"
 _write_env "EMAIL_FROM_NAME"              "EventosBR"
-_write_env "EMAIL_USE_TLS"                "true"
+_write_env "EMAIL_USE_TLS"                "false"
+_write_env "EMAIL_USE_SSL"                "true"
 printf '\n' >> "$ENV_FILE"
 
 _write_env "REDIS_URL"                    "redis://redis:6379"
