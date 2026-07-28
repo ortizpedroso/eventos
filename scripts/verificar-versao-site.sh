@@ -72,6 +72,17 @@ else
   ok=1
 fi
 
+_admin_proxy_nested_code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' \
+  "${URL}/api/admin/proxy/marketing/contatos?limit=1&offset=0&formato=json&canal=qualquer" 2>/dev/null || echo 000)"
+if [ "$_admin_proxy_nested_code" = "401" ]; then
+  echo "  OK      proxy admin subcaminho → Next.js (401 sem auth)"
+elif [ "$_admin_proxy_nested_code" = "404" ]; then
+  echo "  FALHA  proxy admin subcaminho → 404 (recarregue Caddy: docker compose -f docker-compose.prod.yml up -d --force-recreate caddy)"
+  ok=1
+else
+  echo "  AVISO   proxy admin subcaminho respondeu ${_admin_proxy_nested_code} (esperado 401)"
+fi
+
 echo ""
 if [[ $ok -eq 0 ]]; then
   echo "Site ATUALIZADO (${EXPECTED})."

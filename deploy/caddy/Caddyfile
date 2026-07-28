@@ -1,7 +1,7 @@
 # Reverse proxy — HTTPS automático (Let's Encrypt).
 # Defina no .env: DOMAIN=seudominio.com.br  ACME_EMAIL=admin@seudominio.com.br
 #
-# /api/admin/session e /api/admin/proxy/* → Next.js (rotas próprias do painel admin)
+# /api/admin/session e /api/admin/proxy/* (qualquer profundidade) → Next.js
 # /api/* (resto) → API FastAPI (pagamentos, webhooks Asaas, etc.)
 # /health e /ready → readiness/liveness para monitoramento externo
 # resto → Next.js
@@ -23,11 +23,16 @@ www.{$DOMAIN} {
 		reverse_proxy api:8000
 	}
 
-	# Rotas do próprio Next.js (não do FastAPI) — precisam vir ANTES da regra
-	# genérica @api abaixo, senão o Caddy manda tudo /api/* pro backend e essas
-	# duas nunca são alcançadas (bug: /admin/dashboard sempre dava "Not Found"
-	# ao validar a chave, porque a API não tem rota /api/admin/session).
-	@admin_frontend path /api/admin/session /api/admin/proxy/**
+	# Rotas do PRÓPRIO Next.js (app/api/admin/session + app/api/admin/proxy/[...path]).
+	# Precisam vir ANTES de @api, senão o Caddy manda /api/* direto pro FastAPI.
+	#
+	# ATENÇÃO — dois erros comuns que causam "Not Found" no painel admin:
+	# 1) `/api/admin/proxy/*`  → só 1 segmento (/proxy/setup), não /proxy/marketing/contatos
+	# 2) `/api/admin/proxy/**` → glob inválido no matcher `path` do Caddy 2
+	# 3) path + path_regexp no MESMO @matcher → AND (impossível casar)
+	#
+	# Correto: prefixo `/api/admin/proxy*` (Caddy: /foo* casa /foo/bar/baz).
+	@admin_frontend path /api/admin/session /api/admin/proxy*
 	handle @admin_frontend {
 		reverse_proxy web:3000
 	}
