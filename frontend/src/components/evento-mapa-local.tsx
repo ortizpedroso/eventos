@@ -21,7 +21,11 @@ export function EventoMapaLocal({ local, cidade }: Props) {
   if (!local?.trim()) return null;
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm" aria-labelledby="local-evento-heading">
+    <section
+      id="mapa"
+      className="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
+      aria-labelledby="local-evento-heading"
+    >
       <h2 id="local-evento-heading" className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
         Localização
       </h2>

@@ -110,12 +110,14 @@ def _send_sync(ingresso_id: str) -> bool:
         msg.attach(img)
 
         if not smtp_configured():
-            logger.info(
-                "E-mail ingresso %s → %s (SMTP não configurado; conteúdo gerado, não enviado)",
+            # False (não True): evita o worker marcar como "ok" e descartar sem
+            # entrega — sintoma "disse que enviou e nunca chegou".
+            logger.error(
+                "E-mail ingresso %s → %s NÃO enviado (SMTP não configurado)",
                 ingresso_id,
                 destino,
             )
-            return True
+            return False
 
         if not send_prebuilt_message(msg, destino=destino):
             return False

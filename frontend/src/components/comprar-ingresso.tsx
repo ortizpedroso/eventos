@@ -127,6 +127,22 @@ export function ComprarIngresso({
     return Math.max(1, max);
   }, [limiteIngressosPorCpf, loteAtual]);
 
+  const totalConfirmados = useMemo(
+    () => ingressoLotes.reduce((acc, l) => acc + (l.vendidos ?? 0), 0),
+    [ingressoLotes],
+  );
+
+  const loteRestantes = useMemo(() => {
+    if (loteAtual?.quantidade_maxima == null) return null;
+    return Math.max(0, loteAtual.quantidade_maxima - (loteAtual.vendidos ?? 0));
+  }, [loteAtual]);
+
+  const loteProgressoPct = useMemo(() => {
+    if (loteAtual?.quantidade_maxima == null || loteAtual.quantidade_maxima <= 0) return null;
+    const vendidos = Math.min(loteAtual.vendidos ?? 0, loteAtual.quantidade_maxima);
+    return Math.round((vendidos / loteAtual.quantidade_maxima) * 100);
+  }, [loteAtual]);
+
   useEffect(() => {
     if (quantidade > maxQuantidade) setQuantidade(maxQuantidade);
   }, [maxQuantidade, quantidade]);
@@ -590,13 +606,49 @@ export function ComprarIngresso({
               {logado ? "1. Dados do participante" : "1. Identifique-se para comprar"}
             </h2>
             <p className="mt-1 text-xs text-zinc-600">{eventoNome}</p>
+            {totalConfirmados >= 1 ? (
+              <p className="mt-2 text-xs font-medium text-zinc-700" role="status">
+                {totalConfirmados === 1
+                  ? "1 pessoa já garantiu lugar"
+                  : `${totalConfirmados.toLocaleString("pt-BR")} pessoas já garantiram lugar`}
+              </p>
+            ) : null}
             {loteNomeExibicao ? (
               <p className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
                 <span className="font-semibold">Ingresso selecionado:</span> {loteNomeExibicao} ·{" "}
                 {precoFmt}
               </p>
             ) : null}
+            {loteProgressoPct != null && loteRestantes != null ? (
+              <div className="mt-2 space-y-1.5" aria-label="Disponibilidade do lote">
+                <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-600">
+                  <span>
+                    {loteRestantes === 0
+                      ? "Lote esgotado"
+                      : loteRestantes === 1
+                        ? "Resta 1 ingresso neste lote"
+                        : `Restam ${loteRestantes.toLocaleString("pt-BR")} neste lote`}
+                  </span>
+                  <span className="tabular-nums text-zinc-500">{loteProgressoPct}%</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-zinc-200" aria-hidden>
+                  <div
+                    className="h-full rounded-full bg-emerald-600 transition-[width] duration-500 ease-out"
+                    style={{ width: `${Math.min(100, Math.max(0, loteProgressoPct))}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
+
+          {urgenciaAtivo && urgenciaBadge ? (
+            <p
+              className="inline-flex w-fit rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-950"
+              role="status"
+            >
+              {urgenciaBadge}
+            </p>
+          ) : null}
 
           {lotesElegiveis.length > 1 ? (
             <div className="space-y-2">
@@ -659,14 +711,6 @@ export function ComprarIngresso({
 
           {!ehCortesia ? (
             <>
-              {urgenciaAtivo && urgenciaBadge ? (
-                <p
-                  className="inline-flex w-fit rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-950"
-                  role="status"
-                >
-                  {urgenciaBadge}
-                </p>
-              ) : null}
               <CheckoutPrecoDetalhe precoIngresso={precoReaisCheckout} destaque />
               {cupomPreview && cupomPreview.desconto_centavos > 0 ? (
                 <p className="text-xs text-emerald-700">

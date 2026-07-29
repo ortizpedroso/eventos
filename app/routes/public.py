@@ -108,7 +108,11 @@ async def enviar_contato(
             smtp_configured(),
         )
 
+    # `email_enfileirado` = SMTP parece configurado e o job entrou na fila.
+    # O envio real (e `email_enviado` no banco) só ocorre no worker assíncrono.
+    enfileirado = bool(destino and smtp_configured())
     return {
-        "message": "Mensagem recebida com sucesso. Responderemos em breve.",
-        "email_enviado": bool(destino and smtp_configured()),
+        "message": "Sua mensagem foi enviada com sucesso!",
+        "email_enviado": enfileirado,  # compat: true = enfileirado (não "já entregue")
+        "email_enfileirado": enfileirado,
     }

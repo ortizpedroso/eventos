@@ -51,13 +51,7 @@ export function CompraInfoConfianca() {
       </h3>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-3 text-xs leading-relaxed text-emerald-950 sm:col-span-2">
-          <p className="font-semibold text-emerald-700">Reembolso em até 10 dias</p>
-          <p className="mt-1">
-            Após a compra, cancele e peça reembolso em Minha conta → Pagamentos, dentro do prazo legal,
-            sem precisar falar com o organizador (se o ingresso não tiver sido usado na entrada).
-          </p>
-        </div>
+        {/* Reembolso aparece só na zona de compra (EventoPoliticaReembolso) — evita repetição. */}
         <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs leading-relaxed text-zinc-600">
           <p className="flex items-start gap-2 font-medium text-zinc-800">
             <IconFlag className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />

@@ -1,6 +1,6 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.16
+**Versão:** 1.18
 **Data:** 2026-07-29
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
@@ -345,6 +345,13 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 | P14 | Upload de imagem (logo/favicon/capa de evento) comprimido/redimensionado no navegador **e** no servidor (Pillow) — nunca amplia, preserva transparência | [x] |
 | P15 | Rodapé: contato + redes sociais agrupados à direita; botão flutuante de voltar ao topo | [x] |
 | P16 | Mapa da página de evento sempre embutido (iframe), sem depender de chave de API do Google Maps configurada — usa `?output=embed` como padrão | [x] |
+| P17 | Página pública do evento sem informação repetitiva: meta única (quando/onde), preço/lote/urgência só na zona de compra (sticky), Sobre só com descrição; prova social “X pessoas…”, barra de restante do lote, compartilhar WhatsApp + copiar link | [x] |
+
+**Nota v1.17 (P17)**: implementado após análise de mercado (Diversos Ingressos, AppTicket,
+Guichê Web, Uticket, PagTickets, G-ticket, Sympla, etc.). Removidos o bloco
+`EventoResumoRapido` e a ficha Início/Local/Ingresso/Lotes do “Sobre”. Hero/meta
+não mostra mais preço. Reembolso aparece só na zona de compra (não duplicado no
+bloco de confiança). Ver `specs/proposta-melhorias-pagina-evento.md`.
 
 **Nota v1.16 sobre P16**: entre a v1.15 e este `/review`, um commit (`03883b5`) havia
 revertido esse comportamento por precaução (achando que o Google bloqueava o embed sem
@@ -576,6 +583,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.18 | 2026-07-29 | **E-mail “enviado” que não chegava**: worker de contato/e-mail simples descartava a mensagem da fila após falha SMTP **sem retry** (UI já tinha confirmado recebimento). Corrigido: retry com limite (`TICKET_EMAIL_MAX_ATTEMPTS`), Redis deixa de cachear falha de conexão pra sempre (retry em 15s), SMTP off deixa de retornar sucesso falso em ingresso/e-mail simples, formulário `/contato` deixa de dizer “enviada” (usa “recebida”). Página de evento P17 (A+B) mergeada. |
+| 1.17 | 2026-07-29 | **Página pública do evento (P17) — fases A+B**: anti-repetição (meta única quando/onde; preço/lote só na zona de compra sticky; Sobre = descrição; urgência só no checkout; reembolso uma vez) + prova social (“X pessoas já garantiram lugar”), barra de restante do lote, compartilhar WhatsApp/copiar link/`navigator.share`. Componentes: `evento-compartilhar.tsx`, `evento-meta-unica.tsx`; removido `evento-resumo-rapido.tsx`. Spec de proposta atualizada. |
 | 1.16 | 2026-07-29 | `/review` completo encontrou e `/build` corrigiu 8 lacunas: (1) CI do job `api` sem Redis causava 15 erros em testes de fila confiável — adicionado serviço Redis no workflow (2.7); (2) **regressão real do P16** (mapa embutido) reintroduzida por um commit anterior — restaurado o iframe sempre visível com fallback `?output=embed`, validado manualmente; (3) **bug real** em `export-openapi.py`: sanitização de white-label nunca alcançava o corpo das operações (summary/description dentro de `paths`) por falta de recursão — corrigido, e nomes de schema com a marca do provedor também renomeados (3, 2.6.3); (4) `ticket_email.py`, `notificacao_email.py`, `lembrete_evento.py`, `assinatura_email.py` e `marketing_email.py` migrados para o cliente SMTP compartilhado com fallback SSL/STARTTLS (2.6.6); (5) workers de e-mail simples e de contato agora iniciam no boot da API, não só no primeiro envio (2.6.6); (6) admin-integrado-usuario.md §3.2: cliente-admin sem tipo organizador não via a seção de ativação de 2FA na UI — corrigido; (7) admin-integrado-usuario.md §3.5: item "Administração" no menu, sem 2FA ativo, ia direto pra tela de colar chave em vez de orientar a ativação — corrigido com redirecionamento pra `/conta/perfil?ativar_2fa_admin=1` (ou `/organizador/perfil`) com banner explicativo; (8) admin-integrado-usuario.md §3.4/§4: aviso de confirmação ao remover o próprio acesso admin agora é específico (antes era o mesmo texto genérico usado pra remover qualquer usuário), e novo teste automatizado cobre o bloqueio imediato do painel após desativar o próprio 2FA. Testes: 318 → 322. Todos os itens validados manualmente (mapa embutido, fluxo de 2FA admin, aviso de auto-remoção) via `computerUse` em ambiente local. |
 | 1.15 | 2026-07-28 | Mapa da página de evento (`EventoMapaLocal`) sempre embutido (P16) — dependia de `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` estar configurada pra mostrar o iframe (nunca esteve, em produção), mostrando só o link "Abrir no Google Maps". Corrigido usando o formato de embed sem chave de API (`?output=embed`) como padrão. Formulário de criar/editar evento não precisou de mudança (só campos de texto local/cidade). |
 | 1.14 | 2026-07-28 | **Bug real corrigido**: `/contato` tratado como rota protegida (`startsWith("/conta")` casava por coincidência de string com `/contato`) — visitante deslogado era redirecionado pro login ao clicar "Fale conosco" (3.2). Destino pós-login revertido pra `/organizador/eventos` (não mais `/admin/dashboard` pra contas admin). `/admin/dashboard` ganhou menu lateral (`AdminShellWrapper`) e não mostra mais flash da tela de "colar chave" antes de confirmar a sessão. **Causa raiz do e-mail não chegar, encontrada e corrigida**: `EMAIL_USER`/`EMAIL_PASSWORD` eram de contas diferentes (`noreply@` vs senha de `contato@`) — autenticação SMTP sempre falhava (2.6.5). E-mail de confirmação ao remetente do "Fale conosco" implementado. |

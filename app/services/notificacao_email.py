@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from queue import Empty, Queue
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 _REDIS_KEY = "eventosbr:q:email_simples"
 _REDIS_PROCESSING_KEY = "eventosbr:q:email_simples:processing"
+_REDIS_ATTEMPTS_PREFIX = "eventosbr:q:email_simples:attempts:"
 _memory: Queue[str] = Queue()
 _worker_lock = threading.Lock()
 _worker_started = False
@@ -40,8 +42,10 @@ def _parse(payload: str) -> tuple[str, str, str]:
 
 def _send_sync(destino: str, assunto: str, html: str) -> bool:
     if not smtp_configured():
-        logger.info("E-mail simples (SMTP off): %s — %s", destino, assunto)
-        return True
+        # NÃO retornar True: isso fazia o worker achar que enviou e descartar a
+        # mensagem — UI/fluxo “sucesso” sem e-mail na caixa.
+        logger.error("E-mail simples NÃO enviado (SMTP off): %s — %s", destino, assunto)
+        return False
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = assunto
@@ -115,6 +119,49 @@ def _recuperar_orfaos_processing() -> None:
         logger.exception("Falha ao recuperar itens órfãos da fila de e-mail simples")
 
 
+_memory_attempts: dict[str, int] = {}
+
+
+def _schedule_retry(payload: str) -> None:
+    import hashlib
+
+    digest = hashlib.sha256(payload.encode("utf-8", errors="replace")).hexdigest()[:24]
+    r = get_redis_optional()
+    max_attempts = max(1, int(settings.TICKET_EMAIL_MAX_ATTEMPTS))
+    if r and _use_redis_queue():
+        key = f"{_REDIS_ATTEMPTS_PREFIX}{digest}"
+        try:
+            attempts = int(r.incr(key))
+            r.expire(key, 86_400)
+            if attempts < max_attempts:
+                time.sleep(min(attempts * 2, 15))
+                r.lpush(_REDIS_KEY, payload)
+                logger.warning(
+                    "E-mail simples reenfileirado (tentativa %s/%s)",
+                    attempts,
+                    max_attempts,
+                )
+            else:
+                logger.error("E-mail simples abandonado após %s tentativas", attempts)
+            return
+        except Exception:
+            logger.exception("Falha ao reenfileirar e-mail simples")
+
+    attempts = _memory_attempts.get(digest, 0) + 1
+    _memory_attempts[digest] = attempts
+    if attempts < max_attempts:
+        time.sleep(min(attempts * 2, 15))
+        _memory.put(payload)
+        logger.warning(
+            "E-mail simples reenfileirado em memória (tentativa %s/%s)",
+            attempts,
+            max_attempts,
+        )
+    else:
+        _memory_attempts.pop(digest, None)
+        logger.error("E-mail simples abandonado após %s tentativas (memória)", attempts)
+
+
 def _worker_loop() -> None:
     while not _stop_worker.is_set():
         payload = _dequeue_next()
@@ -122,8 +169,9 @@ def _worker_loop() -> None:
             continue
         try:
             destino, assunto, html = _parse(payload)
-            if destino:
-                _send_sync(destino, assunto, html)
+            ok = bool(destino) and _send_sync(destino, assunto, html)
+            if destino and not ok:
+                _schedule_retry(payload)
         finally:
             _marcar_processado(payload)
 
@@ -139,6 +187,10 @@ def start_email_simples_worker() -> None:
         t.start()
         _worker_thread = t
         _worker_started = True
+        logger.info(
+            "Worker de e-mail simples iniciado (%s)",
+            "redis" if _use_redis_queue() else "memória",
+        )
 
 
 def stop_email_simples_worker(*, aguardar_segundos: float = 25.0) -> None:
@@ -155,7 +207,8 @@ def enqueue_email_simples(destino: str, assunto: str, html: str) -> bool:
     payload = _payload(destino, assunto, html)
     r = get_redis_optional()
     if r and settings.TICKET_EMAIL_USE_REDIS:
-        r.rpush(_REDIS_KEY, payload)
+        # LEFT + blmove RIGHT = FIFO (igual ticket_email / contato).
+        r.lpush(_REDIS_KEY, payload)
     else:
         _memory.put(payload)
     return True

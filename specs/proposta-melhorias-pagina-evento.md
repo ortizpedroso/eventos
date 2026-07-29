@@ -1,11 +1,62 @@
-# Proposta: página de evento — o que o mercado faz e o que trazer pro EventosBR
+# Proposta: página pública do evento — mercado + modelo EventosBR
 
-**Data:** 29/07/2026 (atualizado com 2ª rodada de pesquisa)
-**Status:** 📋 Proposta para discussão — nada implementado ainda
+**Data:** 29/07/2026
+**Status:** ✅ Fases A + B implementadas (v1.17 / P17) — Fase C/D aguardando
+**Spec principal:** `specs/eventosbr-producao.md` §4 P17
 
 ---
 
-## 0. Achado estratégico importante (2ª rodada)
+## 1. Diagnóstico (antes)
+
+Data, local e preço apareciam 3–5 vezes (hero → resumo → Sobre → checkout → sticky → mapa).
+Urgência e reembolso também duplicavam.
+
+## 2. Modelo implementado (A + B)
+
+| Zona | Conteúdo |
+|------|----------|
+| Hero / Meta única | Título, categoria, **Quando** + **Onde** (âncora `#mapa`), CTA, WhatsApp / copiar / mais |
+| Comprar (sticky `lg:top-24`) | Preço, lote, reembolso curto, prova social, barra do lote, urgência, checkout |
+| Sobre | **Só descrição** |
+| Mapa `#mapa` | Endereço completo + embed |
+| Confiança | Sem repetir reembolso |
+| Sticky mobile | CTA + preço |
+
+### Arquivos
+
+- `evento-hero-banner.tsx` — sem preço; meta + share
+- `evento-meta-unica.tsx` — fallback sem imagem
+- `evento-compartilhar.tsx` — WhatsApp, copiar, Web Share
+- `evento-public-client.tsx` — orquestra A+B
+- `comprar-ingresso.tsx` — prova social + progresso do lote; urgência só aqui
+- `evento-politica-reembolso.tsx` — linha curta
+- `compra-info-confianca.tsx` — sem card de reembolso duplicado
+- `evento-mapa-local.tsx` — `id="mapa"`
+- **Removido:** `evento-resumo-rapido.tsx`
+
+## 3. Fases
+
+| Fase | Escopo | Status |
+|------|--------|--------|
+| **A** | Anti-repetição | ✅ |
+| **B** | Prova social, restante do lote, WhatsApp/copiar | ✅ |
+| **C** | FAQ, galeria, campos práticos (idade/portões) | 📋 Pendente |
+| **D** | Assentos, upsell, tema visual por evento | 📋 Depois |
+
+## 4. Critérios de review (A+B)
+
+- [x] Data/local não repetem no Sobre nem em resumo separado
+- [x] Preço não aparece no hero
+- [x] Urgência só na zona de compra
+- [x] Reembolso uma vez (compra)
+- [x] Local do hero/meta linka para `#mapa`
+- [x] Compartilhar WhatsApp + copiar link
+- [x] Sticky compra no desktop; barra mobile com CTA+preço
+- [x] Spec principal atualizada (P17 / v1.17)
+
+---
+
+## 5. Pesquisa de mercado que fundamentou o modelo acima
 
 Analisei diretamente 6 sites que você indicou (Diversos Ingressos, AppTicket, Guichê Web, Uticket, PagTickets, G-ticket) e percebi uma coisa importante: **a maioria deles NÃO é concorrente direto do jeito que a gente imaginava.**
 
