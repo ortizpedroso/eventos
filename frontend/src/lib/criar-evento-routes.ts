@@ -85,7 +85,9 @@ export function destinoPosAuth(
   next: string | null,
 ): string {
   if (!next || !isAllowedNextPath(next)) {
-    if (usuario.is_platform_admin) return "/admin/dashboard";
+    // Destino padrão é sempre pela conta (organizador/cliente), mesmo pra quem também
+    // é admin da plataforma — a pessoa acessa /admin/dashboard pelo item "Administração"
+    // do menu quando precisar, não como destino automático do login.
     return usuario.tipo === "organizador" ? "/organizador/eventos" : "/";
   }
   if (usuario.tipo === "organizador") {
