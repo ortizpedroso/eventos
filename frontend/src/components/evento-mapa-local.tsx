@@ -8,6 +8,13 @@ export function EventoMapaLocal({ local, cidade }: Props) {
   const mapsQuery = encodeURIComponent(endereco);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
   const embedKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY?.trim();
+  // Sem chave configurada (era o caso em produção — mapa nunca embutia, só o
+  // link "Abrir no Google Maps"), usa o formato de embed do Google Maps que
+  // NÃO exige chave de API (?output=embed) — sempre mostra o mapa na página,
+  // como pedido. Com a chave configurada, usa a versão oficial (mais estável).
+  const embedSrc = embedKey
+    ? `https://www.google.com/maps/embed/v1/place?key=${embedKey}&q=${mapsQuery}`
+    : `https://www.google.com/maps?q=${mapsQuery}&output=embed`;
 
   if (!local?.trim()) return null;
 
@@ -17,6 +24,15 @@ export function EventoMapaLocal({ local, cidade }: Props) {
         Localização
       </h2>
       <p className="mt-2 text-sm text-zinc-700">{endereco}</p>
+      <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200">
+        <iframe
+          title="Mapa do evento"
+          className="h-56 w-full"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          src={embedSrc}
+        />
+      </div>
       <a
         href={mapsUrl}
         target="_blank"
@@ -25,17 +41,6 @@ export function EventoMapaLocal({ local, cidade }: Props) {
       >
         Abrir no Google Maps
       </a>
-      {embedKey ? (
-        <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200">
-          <iframe
-            title="Mapa do evento"
-            className="h-56 w-full"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            src={`https://www.google.com/maps/embed/v1/place?key=${embedKey}&q=${mapsQuery}`}
-          />
-        </div>
-      ) : null}
     </section>
   );
 }
