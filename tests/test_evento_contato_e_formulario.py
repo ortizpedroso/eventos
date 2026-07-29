@@ -120,7 +120,7 @@ class TestFormularioContatoPublico:
                 },
             )
         assert r.status_code == 200, r.text
-        assert "recebida" in r.json()["message"].lower()
+        assert "enviada com sucesso" in r.json()["message"].lower()
         assert r.json()["email_enviado"] is True
         mock_enqueue.assert_called_once()
 

@@ -17,7 +17,7 @@ export function ContatoFormClient() {
     setEnviando(true);
     const form = new FormData(e.currentTarget);
     try {
-      const res = await apiFetch<{ message: string; email_enviado?: boolean }>("/api/public/contato", {
+      await apiFetch<{ message: string; email_enviado?: boolean }>("/api/public/contato", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -28,12 +28,9 @@ export function ContatoFormClient() {
           turnstile_token: turnstileToken,
         }),
       });
-      // Não dizer "enviada" — o SMTP roda em background; a API só confirma recebimento.
       setAviso({
         tipo: "sucesso",
-        texto:
-          res.message?.trim() ||
-          "Mensagem recebida com sucesso. Responderemos em breve.",
+        texto: "Sua mensagem foi enviada com sucesso!",
       });
       formRef.current?.reset();
       setTurnstileToken(null);

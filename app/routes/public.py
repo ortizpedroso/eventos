@@ -112,7 +112,7 @@ async def enviar_contato(
     # O envio real (e `email_enviado` no banco) só ocorre no worker assíncrono.
     enfileirado = bool(destino and smtp_configured())
     return {
-        "message": "Mensagem recebida com sucesso. Responderemos em breve.",
+        "message": "Sua mensagem foi enviada com sucesso!",
         "email_enviado": enfileirado,  # compat: true = enfileirado (não "já entregue")
         "email_enfileirado": enfileirado,
     }

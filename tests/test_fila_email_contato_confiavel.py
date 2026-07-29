@@ -103,6 +103,9 @@ class TestFilaConfiavelContato:
         assert interno.kwargs["destino"] == "dono@eventosbr.app.br"
         assert interno.kwargs["reply_to"] == "visitante@teste.com"
         assert confirmacao.kwargs["destino"] == "visitante@teste.com"
+        assert "Recebemos sua mensagem" in confirmacao.kwargs["assunto"]
+        assert "Visitante" in confirmacao.kwargs["corpo_texto"] or "Oi," in confirmacao.kwargs["corpo_texto"]
+        assert "Assunto teste" in (confirmacao.kwargs.get("corpo_html") or "")
 
         db = TestingSessionLocal()
         try:

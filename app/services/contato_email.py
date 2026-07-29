@@ -43,35 +43,69 @@ def _use_redis_queue() -> bool:
     return bool(settings.TICKET_EMAIL_USE_REDIS and get_redis_optional())
 
 
+def _primeiro_nome(nome: str) -> str:
+    parte = (nome or "").strip().split()
+    return parte[0] if parte else "olá"
+
+
 def _enviar_confirmacao_remetente(registro, db) -> None:
     """E-mail pro visitante confirmando que a mensagem chegou — best-effort, não
     bloqueia nem afeta o resultado do envio interno (já confirmado antes)."""
-    from app.services.email_branding import build_email_html, format_email_subject, get_email_branding
+    from app.services.email_branding import (
+        COLOR_MUTED,
+        COLOR_TEXT,
+        build_email_html,
+        format_email_subject,
+        get_email_branding,
+    )
     from app.services.smtp_client import send_email
+    from app.utils.html_escape import esc
 
     try:
         branding = get_email_branding(db)
+        primeiro = esc(_primeiro_nome(registro.nome))
+        assunto = esc((registro.assunto or "").strip() or "sua mensagem")
+        site = esc(branding.site_name)
+        accent = esc(branding.primary_color_dark)
+
         body = (
-            f"<p>Olá, {registro.nome}!</p>"
-            f"<p>Recebemos sua mensagem sobre <strong>{registro.assunto}</strong> e a "
-            f"equipe da {branding.site_name} vai analisar e entrar em contato em breve, "
-            f"por este e-mail.</p>"
-            f"<p>Se precisar, é só responder este e-mail direto.</p>"
+            f'<p style="margin:0 0 16px;font-size:16px;line-height:1.55;color:{COLOR_TEXT}">'
+            f"Oi, <strong>{primeiro}</strong> — sua mensagem já tem lugar reservado "
+            f"na nossa fila (e não, não é ingresso esgotado 😄).</p>"
+            f'<div style="margin:0 0 20px;padding:16px 18px;border-radius:12px;'
+            f"border:1px dashed {accent};background:#ecfdf5\">"
+            f'<p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.06em;'
+            f"text-transform:uppercase;color:{accent}\">Comprovante de conversa</p>"
+            f'<p style="margin:0;font-size:15px;line-height:1.5;color:{COLOR_TEXT}">'
+            f"Assunto: <strong>{assunto}</strong></p>"
+            f'<p style="margin:8px 0 0;font-size:13px;line-height:1.45;color:{COLOR_MUTED}">'
+            f"Status: <strong style=\"color:{accent}\">recebida pela equipe {site}</strong></p>"
+            f"</div>"
+            f'<p style="margin:0 0 12px;font-size:15px;line-height:1.55;color:{COLOR_TEXT}">'
+            f"Alguém de verdade vai ler o que você escreveu e responder por este mesmo e-mail "
+            f"em breve — sem robô de atendimento fingindo empatia.</p>"
+            f'<p style="margin:0 0 12px;font-size:15px;line-height:1.55;color:{COLOR_TEXT}">'
+            f"Enquanto isso, se lembrar de um detalhe, é só "
+            f"<strong>responder este e-mail</strong>: a conversa continua no mesmo fio.</p>"
+            f'<p style="margin:0;font-size:14px;line-height:1.5;color:{COLOR_MUTED}">'
+            f"Obrigado por falar com a gente. Curtimos quem chega com curiosidade "
+            f"(e também quem chega com pressa — a gente entende os dois).</p>"
         )
         html = build_email_html(
-            title="Recebemos sua mensagem",
+            title="Mensagem recebida — já estamos a caminho",
             body_html=body,
             branding=branding,
+            footer_note=f"{site} · sua mensagem importa — e não vai parar numa caixa sem nome",
         )
         send_email(
             destino=registro.email,
-            assunto=format_email_subject("Recebemos sua mensagem", branding),
+            assunto=format_email_subject("Recebemos sua mensagem — em breve falamos com você", branding),
             corpo_texto=(
-                f"Olá, {registro.nome}!\n\n"
-                f"Recebemos sua mensagem sobre \"{registro.assunto}\" e a equipe da "
-                f"{branding.site_name} vai analisar e entrar em contato em breve, por "
-                f"este e-mail.\n\n"
-                f"— {branding.site_name}"
+                f"Oi, {_primeiro_nome(registro.nome)}!\n\n"
+                f"Sua mensagem sobre \"{(registro.assunto or '').strip()}\" chegou na {branding.site_name}.\n"
+                f"A equipe vai ler com atenção e responder por este e-mail em breve.\n\n"
+                f"Se quiser acrescentar algo, é só responder esta mensagem.\n\n"
+                f"— Equipe {branding.site_name}"
             ),
             corpo_html=html,
             db=db,
