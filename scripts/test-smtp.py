@@ -41,6 +41,10 @@ def main() -> int:
         f"Enviando teste via {settings.EMAIL_SERVER}:{settings.EMAIL_PORT} "
         f"como {settings.EMAIL_USER} → {destino}"
     )
+    from app.services.smtp_client import smtp_use_ssl
+
+    modo = "SSL" if smtp_use_ssl() else ("STARTTLS" if settings.EMAIL_USE_TLS else "plain")
+    print(f"Modo SMTP: {modo}")
     if send_test_email(destino):
         print("OK — verifique a caixa de entrada.")
         return 0

@@ -17,7 +17,7 @@ export function ContatoFormClient() {
     setEnviando(true);
     const form = new FormData(e.currentTarget);
     try {
-      const data = await apiFetch<{ message: string }>("/api/public/contato", {
+      const data = await apiFetch<{ message: string; email_enviado?: boolean }>("/api/public/contato", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -43,7 +43,7 @@ export function ContatoFormClient() {
         className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900"
         role="status"
       >
-        <p className="font-semibold">Mensagem enviada com sucesso!</p>
+        <p className="font-semibold">Mensagem recebida com sucesso!</p>
         <p className="mt-1">Nossa equipe vai responder pelo e-mail que você informou.</p>
       </div>
     );

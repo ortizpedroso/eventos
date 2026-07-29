@@ -85,7 +85,7 @@ class SmtpTestBody(BaseModel):
 @router.post("/smtp-test")
 async def testar_smtp(body: SmtpTestBody):
     """Envia e-mail de teste para validar SMTP (requer X-Platform-Admin-Key)."""
-    from app.services.smtp_client import send_test_email, smtp_configured
+    from app.services.smtp_client import send_test_email, smtp_configured, smtp_use_ssl
 
     if not smtp_configured():
         raise HTTPException(
@@ -95,8 +95,51 @@ async def testar_smtp(body: SmtpTestBody):
     destino = str(body.destino).strip()
     ok = send_test_email(destino)
     if not ok:
-        raise HTTPException(status_code=502, detail="Falha ao enviar e-mail de teste.")
+        modo = "SSL" if smtp_use_ssl() else "STARTTLS"
+        raise HTTPException(
+            status_code=502,
+            detail=f"Falha ao enviar e-mail de teste (modo {modo}). Verifique EMAIL_SERVER, porta e senha.",
+        )
     return {"ok": True, "message": f"E-mail de teste enviado para {destino}."}
+
+
+@router.get("/contato/mensagens")
+async def listar_mensagens_contato(
+    q: str | None = Query(None, max_length=120),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """Mensagens recebidas pelo formulário Fale conosco (inclui as que falharam no SMTP)."""
+    from app.models.contato_site_mensagem import ContatoSiteMensagem
+
+    query = db.query(ContatoSiteMensagem)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            ContatoSiteMensagem.nome.ilike(like)
+            | ContatoSiteMensagem.email.ilike(like)
+            | ContatoSiteMensagem.assunto.ilike(like)
+        )
+    total = query.count()
+    rows = query.order_by(ContatoSiteMensagem.criado_em.desc()).offset(offset).limit(limit).all()
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "mensagens": [
+            {
+                "id": r.id,
+                "nome": r.nome,
+                "email": r.email,
+                "assunto": r.assunto,
+                "mensagem": r.mensagem,
+                "email_enviado": bool(r.email_enviado),
+                "criado_em": r.criado_em.isoformat() if r.criado_em else None,
+            }
+            for r in rows
+        ],
+    }
 
 
 @router.get("/eventos")
