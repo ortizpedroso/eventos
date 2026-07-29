@@ -1,7 +1,7 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.15
-**Data:** 2026-07-28
+**Versão:** 1.16
+**Data:** 2026-07-29
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
@@ -185,6 +185,28 @@ tempo real (resposta em menos de 1s, contra até ~90s antes).
   modos de conexão (SSL/STARTTLS) automaticamente, mas nenhum deles ajuda se
   as credenciais forem de contas diferentes.
 
+### 2.6.6 SMTP unificado em todos os fluxos de e-mail (v1.16)
+
+**Bug real corrigido**: apenas `contato_email.py` usava o cliente SMTP compartilhado
+(`smtp_client.py`, com fallback SSL 465/STARTTLS 587 — ver 2.6.3). `ticket_email.py`
+(ingresso), `notificacao_email.py` (onboarding/saque/listas), `lembrete_evento.py`,
+`assinatura_email.py` e `marketing_email.py` ainda abriam conexão `smtplib.SMTP` direta,
+sem o fallback — nesses fluxos, um SMTP configurado só para SSL implícito (porta 465,
+comum na Hostinger) falhava silenciosamente, enquanto `/contato` funcionava normalmente.
+
+**Correção**: `smtp_client.py` ganhou `send_prebuilt_message()` — mesma lógica de
+fallback de `send_email()`, mas aceita uma mensagem MIME já montada pelo chamador
+(necessário para o e-mail de ingresso, que anexa a imagem inline do QR code). Todos
+os cinco arquivos acima foram migrados para usar `smtp_client` (`send_email()` ou
+`send_prebuilt_message()`), eliminando toda chamada direta a `smtplib` fora do
+próprio `smtp_client.py`.
+
+**Também corrigido nesta versão**: workers de `notificacao_email.py`
+(`start_email_simples_worker()`) e `contato_email.py` (`start_contato_email_worker()`)
+agora iniciam no boot da API (`app/main.py`), igual a `ticket_email.py` — antes só o
+worker de ingresso iniciava eagerly; os outros dois só começavam a rodar (e a recuperar
+órfãos da lista `processing`) no primeiro e-mail enfileirado depois do deploy.
+
 ### 2.7 Testes automatizados (código — não cobram de verdade)
 
 ```bash
@@ -208,7 +230,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (318 testes) |
+| `api` | `pytest` (322 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -260,6 +282,14 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
   - `organizador-repasses-painel.tsx` — copy “conta de recebimento/repasses”
   - `documentacao/page.tsx` e `documentacao/api/page.tsx` — sem `wallet_id`, paths sanitizados na UI
   - `scripts/export-openapi.py` — summaries/descriptions sem marca do provedor em `openapi.json`
+    (**bug corrigido v1.16**: `_sanitizar_paths()` copiava o corpo de cada operação —
+    summary, description, requestBody, responses — sem chamar `_sanitizar_schema()`
+    nele, então o texto nunca era sanitizado apesar da função existir; `openapi.json`
+    exportado continuava com "Asaas Iniciar Cobranca" etc. Corrigido chamando
+    `_sanitizar_schema(spec)` em cada operação, sanitizando também `operationId`, e
+    renomeando definições de schema com a marca — `AsaasCobrancaRequest` →
+    `PagamentosCobrancaRequest` — com atualização de todos os `$ref`. Regressão coberta
+    por `tests/test_export_openapi_white_label.py`.)
 
 ### 3.1 Menu unificado + conversão cliente → organizador (adicionado v1.11)
 
@@ -315,6 +345,14 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 | P14 | Upload de imagem (logo/favicon/capa de evento) comprimido/redimensionado no navegador **e** no servidor (Pillow) — nunca amplia, preserva transparência | [x] |
 | P15 | Rodapé: contato + redes sociais agrupados à direita; botão flutuante de voltar ao topo | [x] |
 | P16 | Mapa da página de evento sempre embutido (iframe), sem depender de chave de API do Google Maps configurada — usa `?output=embed` como padrão | [x] |
+
+**Nota v1.16 sobre P16**: entre a v1.15 e este `/review`, um commit (`03883b5`) havia
+revertido esse comportamento por precaução (achando que o Google bloqueava o embed sem
+chave) — o fallback `?output=embed` sem chave voltou a mostrar só um link de texto, sem
+iframe algum, contrariando o requisito. Restaurado o iframe sempre visível (com ou sem
+chave configurada) mais o link "Abrir no Google Maps" sempre presente como saída
+garantida caso o Google mostre "conteúdo bloqueado" dentro do iframe — validado
+manualmente em `/eventos/evento-teste-mapa` (mapa real da Av. Paulista renderizado).
 
 **Fora do escopo desta publicação:** múltiplos operadores, formulário custom inscrição, importação CSV, certificados, PWA equipe, Apple/Google Wallet, NFSe automática, modo `linked`/`both`, sandbox Asaas em produção.
 
@@ -463,9 +501,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (318 testes)
+- [x] `pytest` verde (322 testes)
 - [x] `npm run build` verde
-- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml` (verde na última execução local: `pytest` 318/318, `npm run build` OK)
+- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 - [x] OpenAPI exportado sem paths `subconta` (`export-openapi.py` white-label)
 - [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
@@ -538,6 +576,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.16 | 2026-07-29 | `/review` completo encontrou e `/build` corrigiu 8 lacunas: (1) CI do job `api` sem Redis causava 15 erros em testes de fila confiável — adicionado serviço Redis no workflow (2.7); (2) **regressão real do P16** (mapa embutido) reintroduzida por um commit anterior — restaurado o iframe sempre visível com fallback `?output=embed`, validado manualmente; (3) **bug real** em `export-openapi.py`: sanitização de white-label nunca alcançava o corpo das operações (summary/description dentro de `paths`) por falta de recursão — corrigido, e nomes de schema com a marca do provedor também renomeados (3, 2.6.3); (4) `ticket_email.py`, `notificacao_email.py`, `lembrete_evento.py`, `assinatura_email.py` e `marketing_email.py` migrados para o cliente SMTP compartilhado com fallback SSL/STARTTLS (2.6.6); (5) workers de e-mail simples e de contato agora iniciam no boot da API, não só no primeiro envio (2.6.6); (6) admin-integrado-usuario.md §3.2: cliente-admin sem tipo organizador não via a seção de ativação de 2FA na UI — corrigido; (7) admin-integrado-usuario.md §3.5: item "Administração" no menu, sem 2FA ativo, ia direto pra tela de colar chave em vez de orientar a ativação — corrigido com redirecionamento pra `/conta/perfil?ativar_2fa_admin=1` (ou `/organizador/perfil`) com banner explicativo; (8) admin-integrado-usuario.md §3.4/§4: aviso de confirmação ao remover o próprio acesso admin agora é específico (antes era o mesmo texto genérico usado pra remover qualquer usuário), e novo teste automatizado cobre o bloqueio imediato do painel após desativar o próprio 2FA. Testes: 318 → 322. Todos os itens validados manualmente (mapa embutido, fluxo de 2FA admin, aviso de auto-remoção) via `computerUse` em ambiente local. |
 | 1.15 | 2026-07-28 | Mapa da página de evento (`EventoMapaLocal`) sempre embutido (P16) — dependia de `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` estar configurada pra mostrar o iframe (nunca esteve, em produção), mostrando só o link "Abrir no Google Maps". Corrigido usando o formato de embed sem chave de API (`?output=embed`) como padrão. Formulário de criar/editar evento não precisou de mudança (só campos de texto local/cidade). |
 | 1.14 | 2026-07-28 | **Bug real corrigido**: `/contato` tratado como rota protegida (`startsWith("/conta")` casava por coincidência de string com `/contato`) — visitante deslogado era redirecionado pro login ao clicar "Fale conosco" (3.2). Destino pós-login revertido pra `/organizador/eventos` (não mais `/admin/dashboard` pra contas admin). `/admin/dashboard` ganhou menu lateral (`AdminShellWrapper`) e não mostra mais flash da tela de "colar chave" antes de confirmar a sessão. **Causa raiz do e-mail não chegar, encontrada e corrigida**: `EMAIL_USER`/`EMAIL_PASSWORD` eram de contas diferentes (`noreply@` vs senha de `contato@`) — autenticação SMTP sempre falhava (2.6.5). E-mail de confirmação ao remetente do "Fale conosco" implementado. |
 | 1.13 | 2026-07-28 | **Incidente resolvido**: migração órfã (`20260728_000045`, de um branch paralelo nunca mergeado que aplicou schema direto na VPS compartilhada) travava todo deploy — sincronizada. Incorporado seletivamente desse mesmo branch: SMTP com SSL/fallback (porta 465 Hostinger), correção de senha com `#` sendo cortada no `.env`, e persistência do formulário de contato no banco (2.6.3). **Novo**: e-mail do formulário `/contato` agora é assíncrono (2.6.4) — antes a tela travava até ~90s esperando o SMTP synchronamente; agora responde em <1s e o envio acontece em segundo plano com a mesma fila confiável de 2.6.2. ⚠️ Senha real de e-mail encontrada exposta num script do branch paralelo (recomendado rotacionar). Testes: 310 → 317. |

@@ -100,6 +100,26 @@ a aceitar **qualquer uma** das duas formas:
 - [x] `pytest` verde, `tsc`/`eslint`/build de produção sem erros
 - [x] Migração validada contra Postgres real (upgrade → downgrade → upgrade)
 
+**Correções v1.16 (encontradas em `/review`, aplicadas por `/build`)** — os itens do
+backend acima já estavam corretos, mas três gaps de UX/edge-case do frontend e testes
+não estavam:
+
+- §3.2: `SegurancaDoisFatores` só aparecia para `user.tipo === "organizador"` — um
+  cliente com `is_platform_admin=True` não tinha como ativar o 2FA pela UI (o backend
+  já permitia). Corrigido em `perfil-client.tsx`.
+- §3.5: item "Administração" sem 2FA ativo ia direto pra `/admin/dashboard` (tela de
+  colar chave), não pra ativação de 2FA como a spec pede. Corrigido nos três pontos de
+  entrada (`conta-shell.tsx`, `organizador-shell.tsx`, `navbar.tsx`) — o link agora
+  aponta pra `/conta/perfil?ativar_2fa_admin=1` (ou `/organizador/perfil`), que exibe um
+  banner explicativo e rola até a seção de 2FA automaticamente.
+- §3.4/§4: confirmação ao remover o próprio acesso admin usava o mesmo texto genérico de
+  remover qualquer usuário. Corrigido em `admin-dashboard-client.tsx` — mensagem
+  específica quando `u.id === meuUsuarioId`. Também adicionado teste automatizado que
+  desativa o 2FA de uma conta admin e confirma bloqueio imediato do painel (§4).
+
+Validado manualmente via `computerUse`: fluxo completo (login sem 2FA → banner → ativar
+2FA → acesso liberado → auto-remoção com aviso específico).
+
 ## 6. Fora de escopo (nesta versão)
 
 - Remoção do `PLATFORM_ADMIN_API_KEY` (mantido como fallback, por decisão do usuário)
