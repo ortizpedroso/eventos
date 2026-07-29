@@ -80,14 +80,17 @@ class TestFilaConfiavel:
         assert r.lrange(notificacao_email._REDIS_PROCESSING_KEY, 0, -1) == []
 
     def test_enfileirar_e_processar_ponta_a_ponta(self, monkeypatch, _redis_disponivel):
+        """Com SMTP off o envio falha de verdade (não finge sucesso); com
+        MAX_ATTEMPTS=1 o worker abandona e limpa a fila sem ciclar."""
         monkeypatch.setattr(settings, "EMAIL_USER", "")
         monkeypatch.setattr(settings, "EMAIL_PASSWORD", "")
+        monkeypatch.setattr(settings, "TICKET_EMAIL_MAX_ATTEMPTS", 1)
         r = _redis_disponivel
 
         ok = notificacao_email.enqueue_email_simples("destino@teste.com", "Assunto teste", "<p>oi</p>")
         assert ok is True
 
-        for _ in range(30):
+        for _ in range(40):
             fila = r.lrange(notificacao_email._REDIS_KEY, 0, -1)
             processando = r.lrange(notificacao_email._REDIS_PROCESSING_KEY, 0, -1)
             if not fila and not processando:

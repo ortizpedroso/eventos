@@ -86,13 +86,10 @@ class TestFilaConfiavel:
         assert not ticket_email._worker_thread.is_alive()
 
     def test_enfileirar_e_processar_ponta_a_ponta_sem_smtp(self, monkeypatch, _redis_disponivel):
-        """Sem SMTP configurado, _send_sync deve retornar True (conteúdo gerado,
-        não enviado) e o worker deve consumir e limpar a fila normalmente."""
+        """Sem SMTP (ou ingresso inexistente) _send_sync retorna False; com
+        MAX_ATTEMPTS=1 o worker abandona e limpa 'processing' (não cicla)."""
         monkeypatch.setattr(settings, "EMAIL_USER", "")
         monkeypatch.setattr(settings, "EMAIL_PASSWORD", "")
-        # ingresso fake não existe no banco -> _send_sync sempre falha -> força só
-        # 1 tentativa (sem isso o item cicla fila<->processing entre retries com
-        # backoff crescente, e o teste ficaria não-determinístico/lento).
         monkeypatch.setattr(settings, "TICKET_EMAIL_MAX_ATTEMPTS", 1)
 
         r = _redis_disponivel
