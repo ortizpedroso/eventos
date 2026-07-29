@@ -6,14 +6,13 @@ Usado por onboarding, notificações de saque, lista de espera e lista de intere
 from __future__ import annotations
 
 import logging
-import smtplib
 import threading
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from queue import Empty, Queue
 
 from app.services.redis_conn import get_redis_optional
-from app.services.smtp_client import format_from_header_branded, smtp_configured
+from app.services.smtp_client import format_from_header_branded, send_prebuilt_message, smtp_configured
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -49,12 +48,7 @@ def _send_sync(destino: str, assunto: str, html: str) -> bool:
         msg["From"] = format_from_header_branded()
         msg["To"] = destino
         msg.attach(MIMEText(html, "html", "utf-8"))
-        with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as smtp:
-            if settings.EMAIL_USE_TLS:
-                smtp.starttls()
-            smtp.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-            smtp.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
-        return True
+        return send_prebuilt_message(msg, destino=destino)
     except Exception:
         logger.exception("Falha ao enviar e-mail simples para %s", destino)
         return False
@@ -134,7 +128,7 @@ def _worker_loop() -> None:
             _marcar_processado(payload)
 
 
-def _ensure_worker() -> None:
+def start_email_simples_worker() -> None:
     global _worker_started, _worker_thread
     with _worker_lock:
         if _worker_started and _worker_thread is not None and _worker_thread.is_alive():
@@ -157,7 +151,7 @@ def enqueue_email_simples(destino: str, assunto: str, html: str) -> bool:
     destino = destino.strip().lower()
     if not destino:
         return False
-    _ensure_worker()
+    start_email_simples_worker()
     payload = _payload(destino, assunto, html)
     r = get_redis_optional()
     if r and settings.TICKET_EMAIL_USE_REDIS:

@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import logging
-import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from app.services.email_branding import build_email_html, get_email_branding, link_style
-from app.services.smtp_client import format_from_header_branded, smtp_configured
-from config.settings import settings
+from app.services.smtp_client import format_from_header_branded, send_prebuilt_message, smtp_configured
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +50,7 @@ def enviar_email_marketing_sync(
         return True
 
     try:
-        with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-            if settings.EMAIL_USE_TLS:
-                server.starttls()
-            server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-            server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
-        return True
+        return send_prebuilt_message(msg, destino=destino)
     except Exception:
         logger.exception("Falha marketing e-mail → %s", destino)
         return False

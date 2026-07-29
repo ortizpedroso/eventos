@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import smtplib
 import threading
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
@@ -33,7 +32,7 @@ _worker_thread: threading.Thread | None = None
 _stop_worker = threading.Event()
 
 
-from app.services.smtp_client import format_from_header_branded, smtp_configured
+from app.services.smtp_client import format_from_header_branded, send_prebuilt_message, smtp_configured
 
 
 def _build_html(ingresso: Ingresso, qr_cid: str, db) -> str:
@@ -118,11 +117,8 @@ def _send_sync(ingresso_id: str) -> bool:
             )
             return True
 
-        with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-            if settings.EMAIL_USE_TLS:
-                server.starttls()
-            server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-            server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
+        if not send_prebuilt_message(msg, destino=destino):
+            return False
 
         logger.info("E-mail ingresso enviado: %s → %s", ingresso_id, destino)
         return True
@@ -338,12 +334,8 @@ def _send_comunicado_sync(evento_id: str, assunto: str, mensagem: str) -> int:
                 enviados += 1
                 continue
             try:
-                with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-                    if settings.EMAIL_USE_TLS:
-                        server.starttls()
-                    server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-                    server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
-                enviados += 1
+                if send_prebuilt_message(msg, destino=destino):
+                    enviados += 1
             except Exception:
                 logger.exception("Falha comunicado → %s", destino)
         return enviados

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import smtplib
 import threading
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
@@ -23,7 +22,7 @@ _stop_event = threading.Event()
 _thread: threading.Thread | None = None
 
 
-from app.services.smtp_client import format_from_header_branded, smtp_configured
+from app.services.smtp_client import format_from_header_branded, send_prebuilt_message, smtp_configured
 
 
 def _build_html(ingresso: Ingresso, db: Session) -> str:
@@ -58,12 +57,7 @@ def _enviar_lembrete(ingresso: Ingresso, db: Session) -> bool:
     msg["Subject"] = format_email_subject(f"Lembrete: {ingresso.evento.nome} é amanhã", branding)
     msg["From"] = format_from_header_branded(db)
     msg["To"] = destino
-    with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-        if settings.EMAIL_USE_TLS:
-            server.starttls()
-        server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-        server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
-    return True
+    return send_prebuilt_message(msg, destino=destino)
 
 
 def enviar_lembretes_pendentes() -> int:
