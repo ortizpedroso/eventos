@@ -78,7 +78,8 @@ async def enviar_contato(
         )
 
     from app.models.contato_site_mensagem import ContatoSiteMensagem
-    from app.services.smtp_client import send_email, smtp_configured
+    from app.services.contato_email import enqueue_contato_email
+    from app.services.smtp_client import smtp_configured
 
     registro = ContatoSiteMensagem(
         nome=body.nome.strip(),
@@ -93,31 +94,12 @@ async def enviar_contato(
 
     settings_pub = get_public_settings(db)
     destino = settings_pub.contact_email or settings_pub.support_email
-    email_ok = False
     if destino and smtp_configured():
-        corpo = (
-            f"Nova mensagem pelo formulário de contato do site.\n\n"
-            f"Nome: {body.nome}\n"
-            f"E-mail: {body.email}\n"
-            f"Assunto: {body.assunto}\n\n"
-            f"Mensagem:\n{body.mensagem}\n"
-        )
-        email_ok = send_email(
-            destino=destino,
-            assunto=f"[Contato site] {body.assunto}",
-            corpo_texto=corpo,
-            reply_to=str(body.email),
-            db=db,
-        )
-        if email_ok:
-            registro.email_enviado = True
-            db.commit()
-        else:
-            logger.error(
-                "Contato público salvo (id=%s) mas FALHA SMTP para %s — verifique .env (senha com # precisa aspas)",
-                registro.id,
-                destino,
-            )
+        # Enfileira e responde na hora — o envio real acontece em segundo plano
+        # (services/contato_email.py). Antes disso era síncrono aqui mesmo: se o
+        # SMTP demorasse ou falhasse (até ~90s tentando os modos de fallback), a
+        # tela do formulário ficava travada esperando a resposta.
+        enqueue_contato_email(registro.id)
     else:
         logger.error(
             "Contato público salvo (id=%s) mas sem destino/SMTP (destino=%s, smtp=%s)",
@@ -128,5 +110,5 @@ async def enviar_contato(
 
     return {
         "message": "Mensagem recebida com sucesso. Responderemos em breve.",
-        "email_enviado": email_ok,
+        "email_enviado": bool(destino and smtp_configured()),
     }
