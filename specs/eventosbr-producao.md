@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.13
+**Versão:** 1.14
 **Data:** 2026-07-28
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `863a1bb`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
+> **Produção (VPS):** `main` em `e1791be`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -167,6 +167,24 @@ lista `processing` + recuperação de órfãos) — a rota agora salva e enfilei
 atualiza `email_enviado` no banco quando termina. Validado com teste de
 tempo real (resposta em menos de 1s, contra até ~90s antes).
 
+### 2.6.5 Contato: confirmação ao remetente + causa raiz do e-mail não chegar (v1.14)
+
+- `contato_email.py`: depois do e-mail interno (pra plataforma) ser enviado
+  com sucesso, dispara um segundo e-mail pro próprio remetente confirmando o
+  recebimento ("recebemos sua mensagem, vamos responder em breve"). Falha
+  nessa confirmação não afeta o resultado do envio principal (best-effort).
+- Formulário `/contato`: mensagem na tela simplificada pra "Mensagem enviada
+  com sucesso!" (o detalhe completo vai só no e-mail de confirmação).
+- **Causa raiz real do e-mail nunca chegar** (incidente de produção,
+  resolvido): `EMAIL_USER` no `.env` estava `noreply@eventosbr.app.br`, mas a
+  senha configurada em `EMAIL_PASSWORD` era da caixa `contato@eventosbr.app.br`
+  — usuário e senha de contas diferentes, autenticação SMTP sempre rejeitada
+  (`535 authentication failed`). Corrigido alinhando `EMAIL_USER` com a caixa
+  cuja senha está de fato configurada. Lição: `EMAIL_USER`/`EMAIL_PASSWORD`
+  precisam ser da **mesma caixa de e-mail** — o serviço já tenta múltiplos
+  modos de conexão (SSL/STARTTLS) automaticamente, mas nenhum deles ajuda se
+  as credenciais forem de contas diferentes.
+
 ### 2.7 Testes automatizados (código — não cobram de verdade)
 
 ```bash
@@ -190,7 +208,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (317 testes) |
+| `api` | `pytest` (318 testes) |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -249,6 +267,31 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 - **`POST /api/auth/tornar-organizador`**: converte conta `cliente` → `organizador` sem criar conta nova (mantém histórico de compras). Exige confirmar/informar telefone. Bloqueado se a conta já for organizador. Limpa o cookie de cache do middleware (`eventosbr_session_ok`) na hora, pra `/organizador/*` liberar sem esperar o TTL de 5 min.
 - **`TornarOrganizadorCard`** (`components/tornar-organizador-card.tsx`): card "Crie o seu próprio evento" em `/conta/perfil`, visível só para `tipo=cliente`. Pode abrir automaticamente via `?tornar_organizador=1`.
 - Duas rotas que antes **deslogavam** um cliente tentando acessar área de organizador (assumindo que os tipos nunca se convertiam) foram corrigidas para redirecionar (sem deslogar) para o fluxo de conversão: `novo-evento-gate.tsx` (`/eventos/novo`) e `destinoPosAuth` (usado por `/cadastro` e páginas de auth com `?next=/organizador/*`).
+
+### 3.2 Correções de roteamento e painel admin (v1.14)
+
+- **Bug real**: `/contato` era tratado como rota protegida — a checagem usava
+  `pathname.startsWith("/conta")` puro, e `/contato` **também começa com essas
+  letras** ("conta" + "to", coincidência de string, não de rota). Visitante
+  deslogado clicando em "Fale conosco" caía em `/auth?next=/contato`. Corrigido
+  em dois lugares (`proxy.ts` middleware e `lib/api.ts` redirecionamento de
+  sessão expirada) com checagem de limite de segmento:
+  `pathname === "/conta" || pathname.startsWith("/conta/")`.
+- **Destino pós-login**: revertida a prioridade de `/admin/dashboard` para
+  contas `is_platform_admin` — volta a ser `/organizador/eventos` (organizador)
+  ou `/` (cliente) sempre; o acesso ao admin é via item "Administração" do
+  menu, não destino automático.
+- **`/admin/dashboard` não tinha menu lateral**: fica fora das árvores
+  `/organizador/*` e `/conta/*` — ao clicar em "Administração", o menu lateral
+  inteiro desaparecia (mesmo padrão do bug já corrigido em
+  `/eventos/[slug]/editar`). Corrigido com `AdminShellWrapper`
+  (`components/admin-shell-wrapper.tsx`) — escolhe `OrganizadorShell` ou
+  `ContaShell` conforme o tipo da conta logada, envolvendo `admin/layout.tsx`.
+- **Flash da tela "colar chave"**: `authed` começava em `false`, então essa
+  tela sempre renderizava primeiro, mesmo pra quem já tem acesso via login
+  normal — só depois da checagem assíncrona (`adminSessionInfo()`) resolver é
+  que o dashboard de verdade aparecia. Corrigido com um estado
+  `checandoSessao` (carregando neutro) no meio-tempo.
 
 ---
 
@@ -419,9 +462,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (317 testes)
+- [x] `pytest` verde (318 testes)
 - [x] `npm run build` verde
-- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml` (verde na última execução local: `pytest` 317/317, `npm run build` OK)
+- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml` (verde na última execução local: `pytest` 318/318, `npm run build` OK)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 - [x] OpenAPI exportado sem paths `subconta` (`export-openapi.py` white-label)
 - [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
@@ -431,7 +474,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] `main` em `863a1bb` — inclui SMTP com SSL/fallback + persistência do contato (2.6.3) + e-mail de contato assíncrono (2.6.4), além de tudo das versões anteriores (admin integrado à conta do usuário, menu unificado, conversão cliente→organizador, compressão de imagem, correção definitiva do roteamento Caddy/Next.js, correção das filas de e-mail)
+- [x] `main` em `e1791be` — inclui a correção de roteamento do /contato + menu/flash do admin (3.2), confirmação de contato + causa raiz SMTP resolvida (2.6.5), além de tudo das versões anteriores
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
@@ -494,6 +537,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.14 | 2026-07-28 | **Bug real corrigido**: `/contato` tratado como rota protegida (`startsWith("/conta")` casava por coincidência de string com `/contato`) — visitante deslogado era redirecionado pro login ao clicar "Fale conosco" (3.2). Destino pós-login revertido pra `/organizador/eventos` (não mais `/admin/dashboard` pra contas admin). `/admin/dashboard` ganhou menu lateral (`AdminShellWrapper`) e não mostra mais flash da tela de "colar chave" antes de confirmar a sessão. **Causa raiz do e-mail não chegar, encontrada e corrigida**: `EMAIL_USER`/`EMAIL_PASSWORD` eram de contas diferentes (`noreply@` vs senha de `contato@`) — autenticação SMTP sempre falhava (2.6.5). E-mail de confirmação ao remetente do "Fale conosco" implementado. |
 | 1.13 | 2026-07-28 | **Incidente resolvido**: migração órfã (`20260728_000045`, de um branch paralelo nunca mergeado que aplicou schema direto na VPS compartilhada) travava todo deploy — sincronizada. Incorporado seletivamente desse mesmo branch: SMTP com SSL/fallback (porta 465 Hostinger), correção de senha com `#` sendo cortada no `.env`, e persistência do formulário de contato no banco (2.6.3). **Novo**: e-mail do formulário `/contato` agora é assíncrono (2.6.4) — antes a tela travava até ~90s esperando o SMTP synchronamente; agora responde em <1s e o envio acontece em segundo plano com a mesma fila confiável de 2.6.2. ⚠️ Senha real de e-mail encontrada exposta num script do branch paralelo (recomendado rotacionar). Testes: 310 → 317. |
 | 1.12 | 2026-07-28 | **Dois bugs reais de e-mail "perdido silenciosamente" corrigidos** (2.6.2): `notificacao_email.py` fazia `.decode()` num valor que o Redis já devolve como string (`AttributeError` engolida pelo `except` genérico — todo e-mail de onboarding/saque/lista de espera/interesse enfileirado via Redis se perdia); `ticket_email.py` perdia o e-mail do ingresso se o container reiniciasse no meio do envio (`brpop` destrutivo). Corrigido com padrão de fila confiável (`blmove` + lista `processing` + recuperação de órfãos ao reiniciar o worker) nos dois arquivos. Incidente documentado à parte (2.6.1): token do webhook Asaas dessincronizado entre `.env` e painel Asaas, causando 401 por horas — token não sincroniza automaticamente, precisa copiar manualmente dos dois lados quando um muda. Testes: 300 → 310. |
 | 1.11 | 2026-07-28 | **Admin integrado à conta do usuário** (login normal + 2FA, `is_platform_admin`, chave estática vira só emergência — spec dedicada `specs/admin-integrado-usuario.md`). "Lembrar dispositivo" (30 dias sem novo desafio 2FA). Menu do site unificado (cliente via o mesmo menu que organizador/deslogado, antes só via "Eventos"). Conversão cliente→organizador sem criar conta nova (`/api/auth/tornar-organizador` + card em Perfil). Contato (telefone/e-mail) obrigatório na criação de evento; telefone nas Configurações da plataforma; formulário público `/contato`. Compressão/redimensionamento de imagem no navegador e no servidor (Pillow). Rodapé reorganizado + botão de voltar ao topo. **Correção definitiva de uma investigação longa** ("Not Found" persistente no painel admin): rewrite genérico `/api/*` engolindo rotas do próprio Next.js + glob `**` não suportado pelo matcher `path` do Caddy 2 — ver 5.1.2 para não repetir. Testes: 265 → 300. |
