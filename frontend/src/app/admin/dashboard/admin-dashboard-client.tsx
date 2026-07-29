@@ -114,12 +114,15 @@ export function AdminDashboardClient() {
   const [loginBusy, setLoginBusy] = useState(false);
   const [setupLoading, setSetupLoading] = useState(false);
   const [setupUnavailable, setSetupUnavailable] = useState(false);
+  const [checandoSessao, setChecandoSessao] = useState(true);
 
   useEffect(() => {
-    void adminSessionInfo().then(({ unlocked, totpRequired: req }) => {
-      setTotpRequired(req);
-      if (unlocked) setAuthed(true);
-    });
+    void adminSessionInfo()
+      .then(({ unlocked, totpRequired: req }) => {
+        setTotpRequired(req);
+        if (unlocked) setAuthed(true);
+      })
+      .finally(() => setChecandoSessao(false));
   }, []);
 
   const entrar = async () => {
@@ -386,6 +389,17 @@ export function AdminDashboardClient() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (checandoSessao) {
+    // Evita "piscar" a tela de colar chave antes de saber se a sessão (login normal
+    // + 2FA) já libera o acesso — sem isso, quem já tem acesso via conta via
+    // brevemente esse formulário mesmo sem precisar dele.
+    return (
+      <div className="mx-auto max-w-md px-4 py-12">
+        <p className="text-sm text-zinc-500">Carregando…</p>
+      </div>
+    );
   }
 
   if (!authed) {
