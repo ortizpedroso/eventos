@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.14
+**Versão:** 1.15
 **Data:** 2026-07-28
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `e1791be`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
+> **Produção (VPS):** `main` em `4918c5b`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -314,6 +314,7 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 | P13 | Formulário público "Fale conosco" (`/contato`), com Turnstile + rate limit | [x] |
 | P14 | Upload de imagem (logo/favicon/capa de evento) comprimido/redimensionado no navegador **e** no servidor (Pillow) — nunca amplia, preserva transparência | [x] |
 | P15 | Rodapé: contato + redes sociais agrupados à direita; botão flutuante de voltar ao topo | [x] |
+| P16 | Mapa da página de evento sempre embutido (iframe), sem depender de chave de API do Google Maps configurada — usa `?output=embed` como padrão | [x] |
 
 **Fora do escopo desta publicação:** múltiplos operadores, formulário custom inscrição, importação CSV, certificados, PWA equipe, Apple/Google Wallet, NFSe automática, modo `linked`/`both`, sandbox Asaas em produção.
 
@@ -474,7 +475,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] `main` em `e1791be` — inclui a correção de roteamento do /contato + menu/flash do admin (3.2), confirmação de contato + causa raiz SMTP resolvida (2.6.5), além de tudo das versões anteriores
+- [x] `main` em `4918c5b` — inclui mapa do evento sempre embutido na página (4.x), além de tudo das versões anteriores
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
@@ -537,6 +538,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.15 | 2026-07-28 | Mapa da página de evento (`EventoMapaLocal`) sempre embutido (P16) — dependia de `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` estar configurada pra mostrar o iframe (nunca esteve, em produção), mostrando só o link "Abrir no Google Maps". Corrigido usando o formato de embed sem chave de API (`?output=embed`) como padrão. Formulário de criar/editar evento não precisou de mudança (só campos de texto local/cidade). |
 | 1.14 | 2026-07-28 | **Bug real corrigido**: `/contato` tratado como rota protegida (`startsWith("/conta")` casava por coincidência de string com `/contato`) — visitante deslogado era redirecionado pro login ao clicar "Fale conosco" (3.2). Destino pós-login revertido pra `/organizador/eventos` (não mais `/admin/dashboard` pra contas admin). `/admin/dashboard` ganhou menu lateral (`AdminShellWrapper`) e não mostra mais flash da tela de "colar chave" antes de confirmar a sessão. **Causa raiz do e-mail não chegar, encontrada e corrigida**: `EMAIL_USER`/`EMAIL_PASSWORD` eram de contas diferentes (`noreply@` vs senha de `contato@`) — autenticação SMTP sempre falhava (2.6.5). E-mail de confirmação ao remetente do "Fale conosco" implementado. |
 | 1.13 | 2026-07-28 | **Incidente resolvido**: migração órfã (`20260728_000045`, de um branch paralelo nunca mergeado que aplicou schema direto na VPS compartilhada) travava todo deploy — sincronizada. Incorporado seletivamente desse mesmo branch: SMTP com SSL/fallback (porta 465 Hostinger), correção de senha com `#` sendo cortada no `.env`, e persistência do formulário de contato no banco (2.6.3). **Novo**: e-mail do formulário `/contato` agora é assíncrono (2.6.4) — antes a tela travava até ~90s esperando o SMTP synchronamente; agora responde em <1s e o envio acontece em segundo plano com a mesma fila confiável de 2.6.2. ⚠️ Senha real de e-mail encontrada exposta num script do branch paralelo (recomendado rotacionar). Testes: 310 → 317. |
 | 1.12 | 2026-07-28 | **Dois bugs reais de e-mail "perdido silenciosamente" corrigidos** (2.6.2): `notificacao_email.py` fazia `.decode()` num valor que o Redis já devolve como string (`AttributeError` engolida pelo `except` genérico — todo e-mail de onboarding/saque/lista de espera/interesse enfileirado via Redis se perdia); `ticket_email.py` perdia o e-mail do ingresso se o container reiniciasse no meio do envio (`brpop` destrutivo). Corrigido com padrão de fila confiável (`blmove` + lista `processing` + recuperação de órfãos ao reiniciar o worker) nos dois arquivos. Incidente documentado à parte (2.6.1): token do webhook Asaas dessincronizado entre `.env` e painel Asaas, causando 401 por horas — token não sincroniza automaticamente, precisa copiar manualmente dos dois lados quando um muda. Testes: 300 → 310. |
