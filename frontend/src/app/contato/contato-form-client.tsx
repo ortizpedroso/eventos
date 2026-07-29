@@ -1,23 +1,23 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import { apiFetch } from "@/lib/api";
 
 export function ContatoFormClient() {
   const [enviando, setEnviando] = useState(false);
-  const [enviado, setEnviado] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setErro(null);
+    setAviso(null);
     setEnviando(true);
     const form = new FormData(e.currentTarget);
     try {
-      const data = await apiFetch<{ message: string; email_enviado?: boolean }>("/api/public/contato", {
+      await apiFetch<{ message: string; email_enviado?: boolean }>("/api/public/contato", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -28,31 +28,42 @@ export function ContatoFormClient() {
           turnstile_token: turnstileToken,
         }),
       });
-      setEnviado(true);
-      void data;
+      setAviso({
+        tipo: "sucesso",
+        texto: "Mensagem recebida com sucesso! Você vai receber um e-mail de confirmação, e nossa equipe responde em breve.",
+      });
+      formRef.current?.reset();
+      setTurnstileToken(null);
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Não foi possível enviar sua mensagem. Tente novamente.");
+      setAviso({
+        tipo: "erro",
+        texto: err instanceof Error ? err.message : "Não foi possível enviar sua mensagem. Tente novamente.",
+      });
     } finally {
       setEnviando(false);
+      // Some sozinho depois de uns segundos — formulário fica pronto pra um novo envio,
+      // sem precisar recarregar a página.
+      setTimeout(() => setAviso(null), 6000);
     }
   }
 
-  if (enviado) {
-    return (
-      <div
-        className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900"
-        role="status"
-      >
-        <p className="font-semibold">Mensagem recebida com sucesso!</p>
-        <p className="mt-1">Nossa equipe vai responder pelo e-mail que você informou.</p>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={onSubmit} className="mt-6 space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      {erro ? (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{erro}</div>
+    <form
+      ref={formRef}
+      onSubmit={onSubmit}
+      className="mt-6 space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+    >
+      {aviso ? (
+        <div
+          role={aviso.tipo === "erro" ? "alert" : "status"}
+          className={
+            aviso.tipo === "sucesso"
+              ? "rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900"
+              : "rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          }
+        >
+          {aviso.texto}
+        </div>
       ) : null}
 
       <div className="grid gap-2">

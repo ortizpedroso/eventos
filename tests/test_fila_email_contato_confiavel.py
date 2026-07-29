@@ -93,9 +93,37 @@ class TestFilaConfiavelContato:
             ok = contato_email._send_sync(mensagem_id)
 
         assert ok is True
-        mock_send.assert_called_once()
-        assert mock_send.call_args.kwargs["reply_to"] == "visitante@teste.com"
+        # 2 envios: (1) notificação interna pra plataforma, (2) confirmação de
+        # recebimento pro visitante que mandou a mensagem.
+        assert mock_send.call_count == 2
+        interno, confirmacao = mock_send.call_args_list
+        assert interno.kwargs["destino"] == "dono@eventosbr.app.br"
+        assert interno.kwargs["reply_to"] == "visitante@teste.com"
+        assert confirmacao.kwargs["destino"] == "visitante@teste.com"
 
+        db = TestingSessionLocal()
+        try:
+            registro = db.get(ContatoSiteMensagem, mensagem_id)
+            assert registro.email_enviado is True
+        finally:
+            db.close()
+
+    def test_falha_na_confirmacao_nao_quebra_envio_principal(self):
+        """Se o e-mail de confirmação pro remetente falhar por qualquer motivo, o
+        envio principal (já confirmado com sucesso) não deve ser afetado."""
+        mensagem_id = _criar_registro()
+        with (
+            patch("app.services.platform_settings.get_public_settings") as mock_settings,
+            patch("app.services.smtp_client.smtp_configured", return_value=True),
+            patch("app.services.smtp_client.send_email") as mock_send,
+        ):
+            mock_settings.return_value.contact_email = "dono@eventosbr.app.br"
+            mock_settings.return_value.support_email = None
+            # 1ª chamada (interna) sucesso, 2ª (confirmação) explode
+            mock_send.side_effect = [True, Exception("falha simulada no SMTP")]
+            ok = contato_email._send_sync(mensagem_id)
+
+        assert ok is True
         db = TestingSessionLocal()
         try:
             registro = db.get(ContatoSiteMensagem, mensagem_id)

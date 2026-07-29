@@ -36,6 +36,43 @@ def _use_redis_queue() -> bool:
     return bool(settings.TICKET_EMAIL_USE_REDIS and get_redis_optional())
 
 
+def _enviar_confirmacao_remetente(registro, db) -> None:
+    """E-mail pro visitante confirmando que a mensagem chegou — best-effort, não
+    bloqueia nem afeta o resultado do envio interno (já confirmado antes)."""
+    from app.services.email_branding import build_email_html, format_email_subject, get_email_branding
+    from app.services.smtp_client import send_email
+
+    try:
+        branding = get_email_branding(db)
+        body = (
+            f"<p>Olá, {registro.nome}!</p>"
+            f"<p>Recebemos sua mensagem sobre <strong>{registro.assunto}</strong> e a "
+            f"equipe da {branding.site_name} vai analisar e entrar em contato em breve, "
+            f"por este e-mail.</p>"
+            f"<p>Se precisar, é só responder este e-mail direto.</p>"
+        )
+        html = build_email_html(
+            title="Recebemos sua mensagem",
+            body_html=body,
+            branding=branding,
+        )
+        send_email(
+            destino=registro.email,
+            assunto=format_email_subject("Recebemos sua mensagem", branding),
+            corpo_texto=(
+                f"Olá, {registro.nome}!\n\n"
+                f"Recebemos sua mensagem sobre \"{registro.assunto}\" e a equipe da "
+                f"{branding.site_name} vai analisar e entrar em contato em breve, por "
+                f"este e-mail.\n\n"
+                f"— {branding.site_name}"
+            ),
+            corpo_html=html,
+            db=db,
+        )
+    except Exception:
+        logger.exception("Falha ao enviar confirmação de recebimento pro remetente do contato %s", registro.id)
+
+
 def _send_sync(mensagem_id: str) -> bool:
     from app.models import get_db
     from app.models.contato_site_mensagem import ContatoSiteMensagem
@@ -75,6 +112,7 @@ def _send_sync(mensagem_id: str) -> bool:
         if ok:
             registro.email_enviado = True
             db.commit()
+            _enviar_confirmacao_remetente(registro, db)
         else:
             logger.error("Falha ao enviar e-mail do contato %s para %s", mensagem_id, destino)
         return ok

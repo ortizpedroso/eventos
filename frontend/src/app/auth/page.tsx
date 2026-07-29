@@ -23,7 +23,12 @@ export default async function AuthPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const forcarLogin = q(sp, "login") === "1";
+  const sessaoExpirada = q(sp, "expirado") === "1";
+  // Sessão expirada = a pessoa JÁ tinha conta e só precisa logar de novo — nunca
+  // forçar modo cadastro nesse caso, mesmo que o "next" aponte pra /organizador/*
+  // (senão um organizador cuja sessão expirou via alguma página /organizador/...
+  // cai na tela de CRIAR CONTA em vez de LOGIN, bug reportado pelo usuário).
+  const forcarLogin = q(sp, "login") === "1" || sessaoExpirada;
   const nextParam = normalizeAuthNext(q(sp, "next"));
   const destinoOrganizador = Boolean(nextParam && nextRequerContaOrganizador(nextParam));
 
@@ -50,7 +55,7 @@ export default async function AuthPage({
       modeParam={modeParam}
       fluxoOrganizador={fluxoOrganizador}
       precisaOrganizador={q(sp, "precisa") === "organizador"}
-      sessaoExpirada={q(sp, "expirado") === "1"}
+      sessaoExpirada={sessaoExpirada}
       tipoParam={q(sp, "tipo")}
       nextParam={nextParam}
     />
