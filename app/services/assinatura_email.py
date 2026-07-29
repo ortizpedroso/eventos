@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import smtplib
 from datetime import datetime
 from email.mime.text import MIMEText
 
@@ -14,7 +13,7 @@ from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
-from app.services.smtp_client import format_from_header_branded, smtp_configured
+from app.services.smtp_client import format_from_header_branded, send_prebuilt_message, smtp_configured
 
 
 def _financeiro_url() -> str:
@@ -57,12 +56,7 @@ def enviar_email_aviso_expiracao_assinatura(
     msg["To"] = destino
 
     try:
-        with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-            if settings.EMAIL_USE_TLS:
-                server.starttls()
-            server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-            server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
-        return True
+        return send_prebuilt_message(msg, destino=destino)
     except Exception:
         logger.exception("Falha ao enviar aviso de assinatura para %s", destino)
         return False
@@ -96,12 +90,7 @@ def enviar_email_renovacao_assinatura_gerada(usuario: Usuario, *, payment_id: st
     msg["To"] = destino
 
     try:
-        with smtplib.SMTP(settings.EMAIL_SERVER, settings.EMAIL_PORT, timeout=30) as server:
-            if settings.EMAIL_USE_TLS:
-                server.starttls()
-            server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-            server.sendmail(settings.EMAIL_USER, [destino], msg.as_string())
-        return True
+        return send_prebuilt_message(msg, destino=destino)
     except Exception:
         logger.exception("Falha ao enviar e-mail de renovação assinatura para %s", destino)
         return False

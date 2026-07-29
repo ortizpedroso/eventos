@@ -22,6 +22,7 @@ export function PerfilClient() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const abrirTornarOrganizador = searchParams.get("tornar_organizador") === "1";
+  const ativarTotpAdmin = searchParams.get("ativar_2fa_admin") === "1";
   const [user, setUser] = useState<Usuario | null>(() =>
     readContaCache<Usuario>(CONTA_CACHE_KEYS.perfil) ?? null,
   );
@@ -66,6 +67,12 @@ export function PerfilClient() {
       void carregarDoBanco({ silent: Boolean(readContaCache<Usuario>(CONTA_CACHE_KEYS.perfil)) });
     }
   }, [pathname, carregarDoBanco]);
+
+  useEffect(() => {
+    if (searchParams.get("ativar_2fa_admin") !== "1" || !user) return;
+    const el = document.getElementById("seguranca-2fa-secao");
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [searchParams, user]);
 
   async function onSubmit(formData: FormData) {
     if (!user) return;
@@ -441,8 +448,16 @@ export function PerfilClient() {
           </>
         )}
 
-        {user.tipo === "organizador" ? (
-          <SegurancaDoisFatores ativado={Boolean(user.totp_ativado)} onChanged={() => void carregarDoBanco()} />
+        {user.tipo === "organizador" || user.is_platform_admin ? (
+          <div id="seguranca-2fa-secao">
+            {ativarTotpAdmin && user.is_platform_admin && !user.totp_ativado ? (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Ative o 2FA para acessar o painel administrativo. Sua conta tem acesso
+                administrativo, mas o painel só libera depois que o 2FA estiver ativo.
+              </div>
+            ) : null}
+            <SegurancaDoisFatores ativado={Boolean(user.totp_ativado)} onChanged={() => void carregarDoBanco()} />
+          </div>
         ) : null}
       </section>
 

@@ -24,13 +24,20 @@ function isActive(pathname: string, href: string) {
 export function ContaShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [ehAdminPlataforma, setEhAdminPlataforma] = useState(false);
+  const [totpAtivado, setTotpAtivado] = useState(false);
 
   useEffect(() => {
-    void fetchSession().then((u) => setEhAdminPlataforma(Boolean(u?.is_platform_admin)));
+    void fetchSession().then((u) => {
+      setEhAdminPlataforma(Boolean(u?.is_platform_admin));
+      setTotpAtivado(Boolean(u?.totp_ativado));
+    });
   }, []);
 
+  // Spec admin-integrado-usuario.md §3.5: sem 2FA, o item continua visível mas
+  // leva à ativação do 2FA (com explicação) em vez do painel administrativo.
+  const hrefAdmin = totpAtivado ? "/admin/dashboard" : "/conta/perfil?ativar_2fa_admin=1";
   const links = ehAdminPlataforma
-    ? [...LINKS, { href: "/admin/dashboard", label: "Administração" } as const]
+    ? [...LINKS, { href: hrefAdmin, label: "Administração" } as const]
     : LINKS;
 
   return (

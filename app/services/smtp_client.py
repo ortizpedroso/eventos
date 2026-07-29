@@ -7,7 +7,7 @@ import smtplib
 import ssl
 from contextlib import contextmanager
 from dataclasses import dataclass
-from email.message import EmailMessage
+from email.message import EmailMessage, Message
 from email.utils import formataddr
 from typing import Iterator
 
@@ -92,34 +92,11 @@ def _smtp_session(mode: _SmtpMode) -> Iterator[smtplib.SMTP]:
         yield server
 
 
-def send_email(
-    *,
-    destino: str,
-    assunto: str,
-    corpo_texto: str,
-    corpo_html: str | None = None,
-    reply_to: str | None = None,
-    db=None,
-) -> bool:
-    """Envia e-mail transacional. Retorna False se SMTP não estiver configurado."""
-    to = (destino or "").strip()
-    if not to:
-        return False
-    if not smtp_configured():
-        logger.warning("SMTP não configurado — e-mail não enviado para %s", to)
-        return False
-
-    msg = EmailMessage()
-    msg["Subject"] = assunto
-    msg["From"] = format_from_header_branded(db)
-    msg["To"] = to
-    reply = (reply_to or "").strip()
-    if reply:
-        msg["Reply-To"] = reply
-    msg.set_content(corpo_texto)
-    if corpo_html:
-        msg.add_alternative(corpo_html, subtype="html")
-
+def _deliver(msg: Message, *, to: str, assunto: str) -> bool:
+    """Percorre os modos de conexão SMTP (configurado + fallbacks SSL/STARTTLS)
+    até um funcionar. Compartilhado por `send_email()` e `send_prebuilt_message()`
+    — mesma lógica de resiliência (porta 465 Hostinger etc.) para qualquer
+    mensagem MIME, incluindo as com anexos/imagens inline."""
     last_error: Exception | None = None
     for mode in _smtp_modes():
         try:
@@ -152,6 +129,52 @@ def send_email(
         exc_info=last_error,
     )
     return False
+
+
+def send_email(
+    *,
+    destino: str,
+    assunto: str,
+    corpo_texto: str,
+    corpo_html: str | None = None,
+    reply_to: str | None = None,
+    db=None,
+) -> bool:
+    """Envia e-mail transacional. Retorna False se SMTP não estiver configurado."""
+    to = (destino or "").strip()
+    if not to:
+        return False
+    if not smtp_configured():
+        logger.warning("SMTP não configurado — e-mail não enviado para %s", to)
+        return False
+
+    msg = EmailMessage()
+    msg["Subject"] = assunto
+    msg["From"] = format_from_header_branded(db)
+    msg["To"] = to
+    reply = (reply_to or "").strip()
+    if reply:
+        msg["Reply-To"] = reply
+    msg.set_content(corpo_texto)
+    if corpo_html:
+        msg.add_alternative(corpo_html, subtype="html")
+
+    return _deliver(msg, to=to, assunto=assunto)
+
+
+def send_prebuilt_message(msg: Message, *, destino: str) -> bool:
+    """Envia uma mensagem MIME já montada pelo chamador (ex: `MIMEMultipart` com
+    imagem inline do QR code do ingresso, ou comunicados) usando os mesmos modos
+    de conexão SSL/STARTTLS com fallback de `send_email()`. Retorna False se o
+    SMTP não estiver configurado."""
+    to = (destino or "").strip()
+    if not to:
+        return False
+    if not smtp_configured():
+        logger.warning("SMTP não configurado — e-mail não enviado para %s", to)
+        return False
+    assunto = msg.get("Subject", "") or ""
+    return _deliver(msg, to=to, assunto=assunto)
 
 
 def send_test_email(destino: str) -> bool:

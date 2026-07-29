@@ -114,6 +114,56 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Token"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TotpChallengeResponse"
+                    }
+                  ],
+                  "title": "Response Login Api Auth Login Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/2fa/verificar-login": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Verificar Login 2Fa",
+        "description": "Segunda etapa do login quando a conta tem 2FA ativado.",
+        "operationId": "verificar_login_2fa_api_auth_2fa_verificar_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpVerificarLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/Token"
                 }
               }
@@ -445,6 +495,172 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AtualizarPerfilRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/2fa/iniciar": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Iniciar 2Fa",
+        "description": "Gera o segredo TOTP e o QR Code para escanear no app autenticador.",
+        "operationId": "iniciar_2fa_api_auth_2fa_iniciar_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpSetupResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/2fa/ativar": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Ativar 2Fa",
+        "description": "Confirma o primeiro código do app autenticador e ativa o 2FA.",
+        "operationId": "ativar_2fa_api_auth_2fa_ativar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpAtivarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpAtivarResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/2fa/desativar": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Desativar 2Fa",
+        "description": "Desativa o 2FA (exige um código TOTP ou de recuperação válido).",
+        "operationId": "desativar_2fa_api_auth_2fa_desativar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpDesativarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/tornar-organizador": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Tornar Organizador",
+        "description": "Converte uma conta cliente em organizador — sem precisar criar conta nova.\n\nQuem já tinha ingressos comprados como cliente continua com esse histórico;\na conta passa a também poder criar/publicar eventos.",
+        "operationId": "tornar_organizador_api_auth_tornar_organizador_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TornarOrganizadorRequest"
               }
             }
           },
@@ -1998,14 +2214,14 @@
         "tags": [
           "Pagamentos"
         ],
-        "summary": "Asaas Iniciar Cobranca",
-        "description": "Gera cobrança Asaas (PIX, cartão ou fatura) para ingresso reservado.",
-        "operationId": "asaas_iniciar_cobranca_api_pagamentos_asaas_cobranca_post",
+        "summary": "pagamentos Iniciar Cobranca",
+        "description": "Gera cobrança pagamentos (PIX, cartão ou fatura) para ingresso reservado.",
+        "operationId": "pagamentos_iniciar_cobranca_api_pagamentos_pagamentos_cobranca_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AsaasCobrancaRequest"
+                "$ref": "#/components/schemas/PagamentosCobrancaRequest"
               }
             }
           },
@@ -2043,9 +2259,9 @@
         "tags": [
           "Pagamentos"
         ],
-        "summary": "Asaas Status Cobranca",
-        "description": "Consulta status da cobrança Asaas (polling PIX).",
-        "operationId": "asaas_status_cobranca_api_pagamentos_asaas_status__ingresso_id__get",
+        "summary": "pagamentos Status Cobranca",
+        "description": "Consulta status da cobrança pagamentos (polling PIX).",
+        "operationId": "pagamentos_status_cobranca_api_pagamentos_pagamentos_status__ingresso_id__get",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -2552,6 +2768,72 @@
         }
       }
     },
+    "/api/organizador/comunicados/eventos": {
+      "get": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Listar Eventos Comunicados",
+        "description": "Eventos com participantes elegíveis a comunicado (ingresso pago/usado + e-mail).",
+        "operationId": "listar_eventos_comunicados_api_organizador_comunicados_eventos_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 120,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventoComunicadoItem"
+                  },
+                  "title": "Response Listar Eventos Comunicados Api Organizador Comunicados Eventos Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/organizador/comunicados": {
       "post": {
         "tags": [
@@ -2602,8 +2884,8 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Status Organizador",
-        "operationId": "asaas_status_organizador_api_organizador_asaas_get",
+        "summary": "pagamentos Status Organizador",
+        "operationId": "pagamentos_status_organizador_api_organizador_pagamentos_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2624,13 +2906,13 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Criar Subconta",
-        "operationId": "asaas_criar_subconta_api_organizador_asaas_subconta_post",
+        "summary": "pagamentos Criar conta de recebimento",
+        "operationId": "pagamentos_criar_conta de recebimento_api_organizador_pagamentos_conta de recebimento_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AsaasSubcontaRequest"
+                "$ref": "#/components/schemas/PagamentosSubcontaRequest"
               }
             }
           },
@@ -2668,8 +2950,8 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Acompanhamento Repasse",
-        "operationId": "asaas_acompanhamento_repasse_api_organizador_asaas_acompanhamento_get",
+        "summary": "pagamentos Acompanhamento Repasse",
+        "operationId": "pagamentos_acompanhamento_repasse_api_organizador_pagamentos_acompanhamento_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2692,8 +2974,8 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Definir Wallet",
-        "operationId": "asaas_definir_wallet_api_organizador_asaas_wallet_put",
+        "summary": "pagamentos Definir Wallet",
+        "operationId": "pagamentos_definir_wallet_api_organizador_pagamentos_wallet_put",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -2722,7 +3004,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AsaasWalletRequest"
+                "$ref": "#/components/schemas/PagamentosWalletRequest"
               }
             }
           }
@@ -2754,13 +3036,13 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Consultar Wallet",
-        "operationId": "asaas_consultar_wallet_api_organizador_asaas_wallet_consultar_post",
+        "summary": "pagamentos Consultar Wallet",
+        "operationId": "pagamentos_consultar_wallet_api_organizador_pagamentos_wallet_consultar_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AsaasWalletConsultaRequest"
+                "$ref": "#/components/schemas/PagamentosWalletConsultaRequest"
               }
             }
           },
@@ -2798,14 +3080,14 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Reenviar Subconta",
+        "summary": "pagamentos Reenviar conta de recebimento",
         "description": "Reenvia dados ao processador após reprovação da conta de recebimento (KYC).",
-        "operationId": "asaas_reenviar_subconta_api_organizador_asaas_subconta_reenviar_post",
+        "operationId": "pagamentos_reenviar_conta de recebimento_api_organizador_pagamentos_conta de recebimento_reenviar_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AsaasSubcontaRequest"
+                "$ref": "#/components/schemas/PagamentosSubcontaRequest"
               }
             }
           },
@@ -2843,13 +3125,13 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Antecipacao",
-        "operationId": "asaas_antecipacao_api_organizador_asaas_antecipacao_put",
+        "summary": "pagamentos Antecipacao",
+        "operationId": "pagamentos_antecipacao_api_organizador_pagamentos_antecipacao_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AsaasAntecipacaoRequest"
+                "$ref": "#/components/schemas/PagamentosAntecipacaoRequest"
               }
             }
           },
@@ -2887,13 +3169,13 @@
         "tags": [
           "Organizador"
         ],
-        "summary": "Asaas Simular Antecipacao",
-        "operationId": "asaas_simular_antecipacao_api_organizador_asaas_antecipacao_simular_post",
+        "summary": "pagamentos Simular Antecipacao",
+        "operationId": "pagamentos_simular_antecipacao_api_organizador_pagamentos_antecipacao_simular_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AsaasSimularAntecipacaoRequest"
+                "$ref": "#/components/schemas/PagamentosSimularAntecipacaoRequest"
               }
             }
           },
@@ -3091,6 +3373,98 @@
             "OAuth2PasswordBearer": []
           }
         ]
+      }
+    },
+    "/api/organizador/onboarding/conta/{tracking_id}/status": {
+      "get": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Status Onboarding Conta",
+        "description": "Status dinâmico da criação de conta de recebimento (tracker).",
+        "operationId": "status_onboarding_conta_api_organizador_onboarding_conta__tracking_id__status_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tracking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tracking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizador/onboarding/assinatura/{subscription_id}/status": {
+      "get": {
+        "tags": [
+          "Organizador"
+        ],
+        "summary": "Status Onboarding Assinatura",
+        "description": "Status dinâmico da contratação de assinatura (tracker).",
+        "operationId": "status_onboarding_assinatura_api_organizador_onboarding_assinatura__subscription_id__status_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subscription Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/organizador/financeiro/saldo": {
@@ -4081,6 +4455,94 @@
         }
       }
     },
+    "/api/admin/contato/mensagens": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Listar Mensagens Contato",
+        "description": "Mensagens recebidas pelo formulário Fale conosco (inclui as que falharam no SMTP).",
+        "operationId": "listar_mensagens_contato_api_admin_contato_mensagens_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/eventos": {
       "get": {
         "tags": [
@@ -4413,6 +4875,73 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UsuarioAtivoUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios/{usuario_id}/admin": {
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Atualizar Admin Usuario",
+        "description": "Concede/revoga o papel de administrador da plataforma para uma conta.\n\nAcesso admin via sessão de usuário (não via chave estática) exige 2FA ativo —\nconceder is_platform_admin=True não ativa 2FA automaticamente; a própria pessoa\nprecisa ativar na tela de segurança antes de conseguir acessar o painel assim.",
+        "operationId": "atualizar_admin_usuario_api_admin_usuarios__usuario_id__admin_patch",
+        "parameters": [
+          {
+            "name": "usuario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Usuario Id"
+            }
+          },
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioAdminUpdate"
               }
             }
           }
@@ -4793,14 +5322,243 @@
         }
       }
     },
+    "/api/admin/settings": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Obter Configuracoes Plataforma",
+        "description": "Branding e contatos da plataforma (admin).",
+        "operationId": "obter_configuracoes_plataforma_api_admin_settings_get",
+        "parameters": [
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Atualizar Configuracoes Plataforma",
+        "description": "Atualiza branding da plataforma (white-label).",
+        "operationId": "atualizar_configuracoes_plataforma_api_admin_settings_patch",
+        "parameters": [
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformSettingsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/version": {
+      "get": {
+        "tags": [
+          "Público"
+        ],
+        "summary": "Deploy Version",
+        "description": "Versão em produção (commit + funcionalidades) — usado pelos scripts de deploy.",
+        "operationId": "deploy_version_api_public_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/platform": {
+      "get": {
+        "tags": [
+          "Público"
+        ],
+        "summary": "Platform Settings Public",
+        "description": "Branding da plataforma (logo, cores, contatos, redes).",
+        "operationId": "platform_settings_public_api_public_platform_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformSettingsPublic"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/tenant": {
+      "get": {
+        "tags": [
+          "Público"
+        ],
+        "summary": "Tenant Por Subdomain",
+        "description": "Resolve organizador pelo subdomínio (white-label).",
+        "operationId": "tenant_por_subdomain_api_public_tenant_get",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "title": "Subdomain"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/contato": {
+      "post": {
+        "tags": [
+          "Público"
+        ],
+        "summary": "Enviar Contato",
+        "description": "Formulário público 'Fale conosco' — encaminha para o e-mail de contato da plataforma.",
+        "operationId": "enviar_contato_api_public_contato_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContatoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/webhooks/pagamentos": {
       "post": {
         "tags": [
           "Webhooks"
         ],
-        "summary": "Asaas Webhook",
-        "description": "Recebe eventos do Asaas (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.).",
-        "operationId": "asaas_webhook_api_webhooks_asaas_post",
+        "summary": "pagamentos Webhook",
+        "description": "Recebe eventos do pagamentos (PAYMENT_RECEIVED, PAYMENT_CONFIRMED, etc.).",
+        "operationId": "pagamentos_webhook_api_webhooks_pagamentos_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4818,9 +5576,9 @@
         "tags": [
           "Webhooks"
         ],
-        "summary": "Asaas Transfer Auth",
-        "description": "Autorização de saques/transferências Asaas (BaaS — sem token SMS).\n\nO Asaas envia POST ~5s após criar a transferência. Resposta esperada:\n``{\"status\": \"APPROVED\"}`` ou ``{\"status\": \"REFUSED\", \"refuseReason\": \"...\"}``.",
-        "operationId": "asaas_transfer_auth_api_webhooks_asaas_transfer_auth_post",
+        "summary": "pagamentos Transfer Auth",
+        "description": "Autorização de saques/transferências pagamentos (BaaS — sem token SMS).\n\nO pagamentos envia POST ~5s após criar a transferência. Resposta esperada:\n``{\"status\": \"APPROVED\"}`` ou ``{\"status\": \"REFUSED\", \"refuseReason\": \"...\"}``.",
+        "operationId": "pagamentos_transfer_auth_api_webhooks_pagamentos_transfer_auth_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4872,6 +5630,152 @@
             }
           }
         }
+      }
+    },
+    "/api/admin/assets/upload": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Upload Asset Admin",
+        "operationId": "upload_asset_admin_api_admin_assets_upload_post",
+        "parameters": [
+          {
+            "name": "X-Platform-Admin-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Platform-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_asset_admin_api_admin_assets_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizador/assets/upload": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Upload Asset Organizador",
+        "operationId": "upload_asset_organizador_api_organizador_assets_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_asset_organizador_api_organizador_assets_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/organizador/eventos/upload-imagem": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Upload Imagem Evento Route",
+        "description": "Upload de imagem de capa de evento. Tenta R2 primeiro (host único, habilita next/image);\n\ncai para o storage local em disco (mesmo mecanismo de logo/perfil) se o R2 não estiver\nconfigurado ou falhar — nunca bloqueia o organizador por causa de uma dependência externa.",
+        "operationId": "upload_imagem_evento_route_api_organizador_eventos_upload_imagem_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_imagem_evento_route_api_organizador_eventos_upload_imagem_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
     "/health": {
@@ -4927,7 +5831,7 @@
   },
   "components": {
     "schemas": {
-      "AsaasAntecipacaoRequest": {
+      "PagamentosAntecipacaoRequest": {
         "properties": {
           "credit_card_automatic_enabled": {
             "type": "boolean",
@@ -4938,9 +5842,9 @@
         "required": [
           "credit_card_automatic_enabled"
         ],
-        "title": "AsaasAntecipacaoRequest"
+        "title": "pagamentosAntecipacaoRequest"
       },
-      "AsaasCobrancaRequest": {
+      "PagamentosCobrancaRequest": {
         "properties": {
           "ingresso_id": {
             "type": "string",
@@ -5020,9 +5924,9 @@
         "required": [
           "ingresso_id"
         ],
-        "title": "AsaasCobrancaRequest"
+        "title": "pagamentosCobrancaRequest"
       },
-      "AsaasContaRecebimentoRequest": {
+      "PagamentosContaRecebimentoRequest": {
         "properties": {
           "cpf_cnpj": {
             "type": "string",
@@ -5131,10 +6035,10 @@
           "numero",
           "bairro"
         ],
-        "title": "AsaasContaRecebimentoRequest",
+        "title": "pagamentosContaRecebimentoRequest",
         "description": "Alias de payload para criação de conta de recebimento (PF ou PJ)."
       },
-      "AsaasSimularAntecipacaoRequest": {
+      "PagamentosSimularAntecipacaoRequest": {
         "properties": {
           "valor_reais": {
             "type": "number",
@@ -5159,9 +6063,9 @@
         "required": [
           "valor_reais"
         ],
-        "title": "AsaasSimularAntecipacaoRequest"
+        "title": "pagamentosSimularAntecipacaoRequest"
       },
-      "AsaasSubcontaRequest": {
+      "PagamentosSubcontaRequest": {
         "properties": {
           "cpf_cnpj": {
             "type": "string",
@@ -5270,9 +6174,9 @@
           "numero",
           "bairro"
         ],
-        "title": "AsaasSubcontaRequest"
+        "title": "pagamentosconta de recebimentoRequest"
       },
-      "AsaasWalletConsultaRequest": {
+      "PagamentosWalletConsultaRequest": {
         "properties": {
           "api_key": {
             "type": "string",
@@ -5285,9 +6189,9 @@
         "required": [
           "api_key"
         ],
-        "title": "AsaasWalletConsultaRequest"
+        "title": "pagamentosWalletConsultaRequest"
       },
-      "AsaasWalletRequest": {
+      "PagamentosWalletRequest": {
         "properties": {
           "wallet_id": {
             "type": "string",
@@ -5318,7 +6222,7 @@
         "required": [
           "wallet_id"
         ],
-        "title": "AsaasWalletRequest"
+        "title": "pagamentosWalletRequest"
       },
       "AssinaturaAdminUpdate": {
         "properties": {
@@ -5413,6 +6317,17 @@
               }
             ],
             "title": "Imagem Url"
+          },
+          "contato_telefone": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 8,
+            "title": "Contato Telefone"
+          },
+          "contato_email": {
+            "type": "string",
+            "format": "email",
+            "title": "Contato Email"
           },
           "preco_ingresso": {
             "type": "number",
@@ -5525,6 +6440,8 @@
           "descricao",
           "data_inicio",
           "local",
+          "contato_telefone",
+          "contato_email",
           "preco_ingresso"
         ],
         "title": "AtualizarEventoRequest",
@@ -5608,6 +6525,48 @@
           "email"
         ],
         "title": "AtualizarPerfilRequest"
+      },
+      "Body_upload_asset_admin_api_admin_assets_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_asset_admin_api_admin_assets_upload_post"
+      },
+      "Body_upload_asset_organizador_api_organizador_assets_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_asset_organizador_api_organizador_assets_upload_post"
+      },
+      "Body_upload_imagem_evento_route_api_organizador_eventos_upload_imagem_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_imagem_evento_route_api_organizador_eventos_upload_imagem_post"
       },
       "CampanhaCreate": {
         "properties": {
@@ -6051,6 +7010,52 @@
         ],
         "title": "ComunicadoRequest"
       },
+      "ContatoRequest": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "assunto": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Assunto"
+          },
+          "mensagem": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 10,
+            "title": "Mensagem"
+          },
+          "turnstile_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turnstile Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "email",
+          "assunto",
+          "mensagem"
+        ],
+        "title": "ContatoRequest"
+      },
       "CriarEventoRequest": {
         "properties": {
           "nome": {
@@ -6104,6 +7109,17 @@
               }
             ],
             "title": "Imagem Url"
+          },
+          "contato_telefone": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 8,
+            "title": "Contato Telefone"
+          },
+          "contato_email": {
+            "type": "string",
+            "format": "email",
+            "title": "Contato Email"
           },
           "preco_ingresso": {
             "type": "number",
@@ -6210,6 +7226,8 @@
           "descricao",
           "data_inicio",
           "local",
+          "contato_telefone",
+          "contato_email",
           "preco_ingresso"
         ],
         "title": "CriarEventoRequest"
@@ -6495,6 +7513,45 @@
         "type": "object",
         "title": "EmailRequest"
       },
+      "EventoComunicadoItem": {
+        "properties": {
+          "evento_id": {
+            "type": "string",
+            "title": "Evento Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "publicado": {
+            "type": "boolean",
+            "title": "Publicado"
+          },
+          "data_inicio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Inicio"
+          },
+          "destinatarios": {
+            "type": "integer",
+            "title": "Destinatarios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evento_id",
+          "nome",
+          "publicado",
+          "destinatarios"
+        ],
+        "title": "EventoComunicadoItem"
+      },
       "EventoPublicadoUpdate": {
         "properties": {
           "publicado": {
@@ -6565,6 +7622,28 @@
               }
             ],
             "title": "Imagem Url"
+          },
+          "contato_telefone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contato Telefone"
+          },
+          "contato_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contato Email"
           },
           "preco_ingresso": {
             "type": "number",
@@ -7236,6 +8315,66 @@
               }
             ],
             "title": "Social Site"
+          },
+          "brand_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Name"
+          },
+          "brand_logo_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Logo Url"
+          },
+          "brand_primary_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 7
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Primary Color"
+          },
+          "brand_primary_color_dark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 7
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Primary Color Dark"
+          },
+          "brand_subdomain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 63
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Subdomain"
           }
         },
         "type": "object",
@@ -7267,6 +8406,360 @@
           "pix_chave"
         ],
         "title": "PixChaveRequest"
+      },
+      "PlatformSettingsPublic": {
+        "properties": {
+          "site_name": {
+            "type": "string",
+            "title": "Site Name"
+          },
+          "site_tagline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Tagline"
+          },
+          "footer_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footer Description"
+          },
+          "contact_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email"
+          },
+          "contact_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Phone"
+          },
+          "support_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support Email"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          },
+          "logo_light_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Light Url"
+          },
+          "favicon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favicon Url"
+          },
+          "primary_color": {
+            "type": "string",
+            "title": "Primary Color"
+          },
+          "primary_color_dark": {
+            "type": "string",
+            "title": "Primary Color Dark"
+          },
+          "social_instagram_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Instagram Url"
+          },
+          "social_whatsapp_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Whatsapp Url"
+          },
+          "social_linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Linkedin Url"
+          },
+          "social_x_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social X Url"
+          },
+          "social_youtube_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Youtube Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_name",
+          "primary_color",
+          "primary_color_dark"
+        ],
+        "title": "PlatformSettingsPublic"
+      },
+      "PlatformSettingsUpdate": {
+        "properties": {
+          "site_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Name"
+          },
+          "site_tagline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Tagline"
+          },
+          "footer_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footer Description"
+          },
+          "contact_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email"
+          },
+          "contact_phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Phone"
+          },
+          "support_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support Email"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          },
+          "logo_light_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Light Url"
+          },
+          "favicon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favicon Url"
+          },
+          "primary_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Color"
+          },
+          "primary_color_dark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Color Dark"
+          },
+          "social_instagram_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Instagram Url"
+          },
+          "social_whatsapp_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Whatsapp Url"
+          },
+          "social_linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Linkedin Url"
+          },
+          "social_x_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social X Url"
+          },
+          "social_youtube_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Youtube Url"
+          }
+        },
+        "type": "object",
+        "title": "PlatformSettingsUpdate"
       },
       "PortariaBuscarRequest": {
         "properties": {
@@ -7540,6 +9033,7 @@
         "properties": {
           "destino": {
             "type": "string",
+            "format": "email",
             "title": "Destino"
           }
         },
@@ -7555,6 +9049,17 @@
             "type": "string",
             "format": "email",
             "title": "Email"
+          },
+          "turnstile_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turnstile Token"
           }
         },
         "type": "object",
@@ -7584,6 +9089,146 @@
           "usuario"
         ],
         "title": "Token"
+      },
+      "TornarOrganizadorRequest": {
+        "properties": {
+          "telefone": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 8,
+            "title": "Telefone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "telefone"
+        ],
+        "title": "TornarOrganizadorRequest"
+      },
+      "TotpAtivarRequest": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Codigo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo"
+        ],
+        "title": "TotpAtivarRequest"
+      },
+      "TotpAtivarResponse": {
+        "properties": {
+          "recovery_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recovery Codes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recovery_codes"
+        ],
+        "title": "TotpAtivarResponse"
+      },
+      "TotpChallengeResponse": {
+        "properties": {
+          "requires_2fa": {
+            "type": "boolean",
+            "title": "Requires 2Fa",
+            "default": true
+          },
+          "login_token": {
+            "type": "string",
+            "title": "Login Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login_token"
+        ],
+        "title": "TotpChallengeResponse"
+      },
+      "TotpDesativarRequest": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "maxLength": 9,
+            "minLength": 6,
+            "title": "Codigo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo"
+        ],
+        "title": "TotpDesativarRequest"
+      },
+      "TotpSetupResponse": {
+        "properties": {
+          "secret": {
+            "type": "string",
+            "title": "Secret"
+          },
+          "otpauth_uri": {
+            "type": "string",
+            "title": "Otpauth Uri"
+          },
+          "qr_base64": {
+            "type": "string",
+            "title": "Qr Base64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "secret",
+          "otpauth_uri",
+          "qr_base64"
+        ],
+        "title": "TotpSetupResponse"
+      },
+      "TotpVerificarLoginRequest": {
+        "properties": {
+          "login_token": {
+            "type": "string",
+            "title": "Login Token"
+          },
+          "codigo": {
+            "type": "string",
+            "maxLength": 9,
+            "minLength": 6,
+            "title": "Codigo"
+          },
+          "lembrar_dispositivo": {
+            "type": "boolean",
+            "title": "Lembrar Dispositivo",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "login_token",
+          "codigo"
+        ],
+        "title": "TotpVerificarLoginRequest"
+      },
+      "UsuarioAdminUpdate": {
+        "properties": {
+          "is_platform_admin": {
+            "type": "boolean",
+            "title": "Is Platform Admin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_platform_admin"
+        ],
+        "title": "UsuarioAdminUpdate"
       },
       "UsuarioAtivoUpdate": {
         "properties": {
@@ -7640,6 +9285,17 @@
               }
             ],
             "title": "Telefone"
+          },
+          "turnstile_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turnstile Token"
           }
         },
         "type": "object",
@@ -7661,6 +9317,17 @@
           "senha": {
             "type": "string",
             "title": "Senha"
+          },
+          "turnstile_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turnstile Token"
           }
         },
         "type": "object",
@@ -7735,6 +9402,16 @@
               }
             ],
             "title": "Comunicacao Consentimento Em"
+          },
+          "totp_ativado": {
+            "type": "boolean",
+            "title": "Totp Ativado",
+            "default": false
+          },
+          "is_platform_admin": {
+            "type": "boolean",
+            "title": "Is Platform Admin",
+            "default": false
           }
         },
         "type": "object",
