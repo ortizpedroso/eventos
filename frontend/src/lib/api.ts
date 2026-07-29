@@ -122,10 +122,13 @@ export async function apiFetch<T>(
     if (pathOnly !== "/api/auth/me") {
       dispatchAuthSync();
       const here = window.location.pathname + window.location.search;
-      if (
-        (here.startsWith("/conta") || here.startsWith("/organizador")) &&
-        !here.startsWith("/auth")
-      ) {
+      const pathname = window.location.pathname;
+      // startsWith puro casava "/contato" com "/conta" — mesmo bug do middleware,
+      // corrigido aqui também (checagem de limite de segmento).
+      const dentroDeAreaProtegida =
+        pathname === "/organizador" || pathname.startsWith("/organizador/") ||
+        pathname === "/conta" || pathname.startsWith("/conta/");
+      if (dentroDeAreaProtegida && !pathname.startsWith("/auth")) {
         const login = new URL("/auth", window.location.origin);
         login.searchParams.set("next", here);
         login.searchParams.set("expirado", "1");

@@ -116,8 +116,12 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // startsWith puro casava "/contato" com "/conta" (mesmo prefixo de caracteres,
+  // rotas diferentes) — bug reportado: clicar em "Fale conosco" (pública) redirecionava
+  // pro login, tratando /contato como se fosse dentro da área protegida /conta/*.
   const isProtected =
-    pathname.startsWith("/organizador") || pathname.startsWith("/conta");
+    pathname === "/organizador" || pathname.startsWith("/organizador/") ||
+    pathname === "/conta" || pathname.startsWith("/conta/");
 
   if (!isProtected) {
     return finish(NextResponse.next({ request: { headers } }), nonce);
