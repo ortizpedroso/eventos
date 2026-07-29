@@ -52,6 +52,7 @@ async def lifespan(app: FastAPI):
     from app.services.production_checks import log_production_warnings
     from app.services.ticket_email import start_ticket_email_worker, stop_ticket_email_worker
     from app.services.notificacao_email import stop_email_simples_worker
+    from app.services.contato_email import stop_contato_email_worker
     from app.services.lembrete_evento import start_lembrete_worker, stop_lembrete_worker
     from app.services.lista_espera_cleanup import (
         start_lista_espera_cleanup_worker,
@@ -81,6 +82,7 @@ async def lifespan(app: FastAPI):
         stop_reserva_cleanup_worker()
         stop_ticket_email_worker()
         stop_email_simples_worker()
+        stop_contato_email_worker()
 
 
 _docs_on = settings.ENVIRONMENT == "development"

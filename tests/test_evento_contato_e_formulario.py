@@ -99,12 +99,14 @@ class TestFormularioContatoPublico:
         assert r.status_code == 200, r.text
         assert "sucesso" in r.json()["message"].lower()
 
-    def test_contato_envia_email_com_sucesso(self, monkeypatch):
+    def test_contato_enfileira_email_com_sucesso(self, monkeypatch):
+        """Envio agora é assíncrono (services/contato_email.py) — a rota só precisa
+        enfileirar e responder rápido, sem esperar o SMTP de verdade."""
         monkeypatch.setattr(settings, "TURNSTILE_SECRET_KEY", "")
         with (
             patch("app.routes.public.get_public_settings") as mock_settings,
             patch("app.services.smtp_client.smtp_configured", return_value=True),
-            patch("app.services.smtp_client.send_email", return_value=True) as mock_send,
+            patch("app.services.contato_email.enqueue_contato_email") as mock_enqueue,
         ):
             mock_settings.return_value.contact_email = "dono@eventosbr.app.br"
             mock_settings.return_value.support_email = None
@@ -119,9 +121,8 @@ class TestFormularioContatoPublico:
             )
         assert r.status_code == 200, r.text
         assert "recebida" in r.json()["message"].lower()
-        mock_send.assert_called_once()
-        assert mock_send.call_args.kwargs["destino"] == "dono@eventosbr.app.br"
-        assert mock_send.call_args.kwargs["reply_to"] == "visitante@teste.com"
+        assert r.json()["email_enviado"] is True
+        mock_enqueue.assert_called_once()
 
     def test_contato_mensagem_curta_rejeitada(self):
         r = client.post(
