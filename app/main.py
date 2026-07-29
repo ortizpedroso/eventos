@@ -66,25 +66,33 @@ async def lifespan(app: FastAPI):
     )
 
     log_production_warnings()
-    start_ticket_email_worker()
-    start_email_simples_worker()
-    start_contato_email_worker()
-    start_reserva_cleanup_worker()
-    start_lista_espera_cleanup_worker()
-    start_lembrete_worker()
-    start_assinatura_ciclo_worker()
-    start_repasse_status_sync_worker()
+    # Em ENVIRONMENT=test o TestClient sobe o lifespan em vários módulos.
+    # Workers em background competem com os testes de fila confiável quando
+    # esses testes monkeypatcham ENVIRONMENT/REDIS_URL: o mesmo thread passa a
+    # fazer blmove no Redis e "rouba" o item do _dequeue_next() sob teste.
+    # enqueue_* já chama start_*_worker() sob demanda — não precisamos do boot.
+    _start_bg_workers = settings.ENVIRONMENT != "test"
+    if _start_bg_workers:
+        start_ticket_email_worker()
+        start_email_simples_worker()
+        start_contato_email_worker()
+        start_reserva_cleanup_worker()
+        start_lista_espera_cleanup_worker()
+        start_lembrete_worker()
+        start_assinatura_ciclo_worker()
+        start_repasse_status_sync_worker()
     try:
         yield
     finally:
-        stop_repasse_status_sync_worker()
-        stop_assinatura_ciclo_worker()
-        stop_lembrete_worker()
-        stop_lista_espera_cleanup_worker()
-        stop_reserva_cleanup_worker()
-        stop_ticket_email_worker()
-        stop_email_simples_worker()
-        stop_contato_email_worker()
+        if _start_bg_workers:
+            stop_repasse_status_sync_worker()
+            stop_assinatura_ciclo_worker()
+            stop_lembrete_worker()
+            stop_lista_espera_cleanup_worker()
+            stop_reserva_cleanup_worker()
+            stop_ticket_email_worker()
+            stop_email_simples_worker()
+            stop_contato_email_worker()
 
 
 _docs_on = settings.ENVIRONMENT == "development"

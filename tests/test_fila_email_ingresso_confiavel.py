@@ -10,12 +10,16 @@ import pytest
 from app.services import ticket_email
 from app.services.redis_conn import get_redis_optional, reset_redis_client_for_tests
 from config.settings import settings
+from tests.fila_email_helpers import REDIS_URL_FILA_TESTES, parar_workers_email
 
 
 @pytest.fixture(autouse=True)
 def _redis_disponivel(monkeypatch):
     """Aponta pro Redis local do sandbox e garante limpeza das chaves de teste."""
-    monkeypatch.setattr(settings, "REDIS_URL", "redis://localhost:6379/0")
+    # Para workers antes de habilitar Redis — senão um worker vivo (de outro
+    # teste) começa a fazer blmove nas mesmas chaves e compete com _dequeue_next.
+    parar_workers_email()
+    monkeypatch.setattr(settings, "REDIS_URL", REDIS_URL_FILA_TESTES)
     monkeypatch.setattr(settings, "ENVIRONMENT", "development")
     monkeypatch.setattr(settings, "TICKET_EMAIL_USE_REDIS", True)
     reset_redis_client_for_tests()
@@ -23,6 +27,7 @@ def _redis_disponivel(monkeypatch):
     assert r is not None, "Redis precisa estar disponível para estes testes"
     r.delete(ticket_email._REDIS_QUEUE_KEY, ticket_email._REDIS_PROCESSING_KEY)
     yield r
+    parar_workers_email()
     r.delete(ticket_email._REDIS_QUEUE_KEY, ticket_email._REDIS_PROCESSING_KEY)
     reset_redis_client_for_tests()
 

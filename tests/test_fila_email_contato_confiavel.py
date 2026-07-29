@@ -12,6 +12,7 @@ from app.models.contato_site_mensagem import ContatoSiteMensagem
 from app.services import contato_email
 from app.services.redis_conn import get_redis_optional, reset_redis_client_for_tests
 from config.settings import settings
+from tests.fila_email_helpers import REDIS_URL_FILA_TESTES, parar_workers_email
 from tests.test_api import TestingSessionLocal
 
 
@@ -25,7 +26,8 @@ def _fake_get_db():
 
 @pytest.fixture(autouse=True)
 def _redis_disponivel(monkeypatch):
-    monkeypatch.setattr(settings, "REDIS_URL", "redis://localhost:6379/0")
+    parar_workers_email()
+    monkeypatch.setattr(settings, "REDIS_URL", REDIS_URL_FILA_TESTES)
     monkeypatch.setattr(settings, "ENVIRONMENT", "development")
     monkeypatch.setattr(settings, "TICKET_EMAIL_USE_REDIS", True)
     # _send_sync usa `from app.models import get_db` — aponta pro mesmo banco de
@@ -37,6 +39,7 @@ def _redis_disponivel(monkeypatch):
     assert r is not None, "Redis precisa estar disponível para estes testes"
     r.delete(contato_email._REDIS_QUEUE_KEY, contato_email._REDIS_PROCESSING_KEY)
     yield r
+    parar_workers_email()
     r.delete(contato_email._REDIS_QUEUE_KEY, contato_email._REDIS_PROCESSING_KEY)
     reset_redis_client_for_tests()
 
