@@ -22,8 +22,15 @@ sys.path.insert(0, str(ROOT))
 
 OUT_PATH = ROOT / "frontend" / "public" / "openapi.json"
 
-_ASAAS_RE = re.compile(r"\basaas\b", re.I)
-_SUBCONTA_RE = re.compile(r"\bsubconta\b", re.I)
+# Fronteira de palavra tolerante a camelCase/snake_case: "asaas" conta como
+# token isolado tanto em "Asaas Iniciar Cobranca" (espaço) quanto em
+# "asaas_iniciar_cobranca" (underscore) e "AsaasCobrancaRequest" (próxima
+# letra maiúscula = início de nova palavra em camelCase). `\b` puro do Python
+# não pega os dois últimos casos porque letra-para-letra e letra-para-"_" não
+# são consideradas fronteiras de palavra pelo regex — daí o bug original do
+# `openapi.json` ainda vazar "Asaas" em summaries/operationId/nomes de schema.
+_ASAAS_RE = re.compile(r"asaas(?=[A-Z]|[^a-zA-Z]|$)", re.I)
+_SUBCONTA_RE = re.compile(r"subconta(?=[A-Z]|[^a-zA-Z]|$)", re.I)
 _LEGACY_SUBCONTA_PATH = re.compile(r"/subconta(?:/|$)")
 _ORG_ASAAS_PREFIX = "/api/organizador/asaas"
 
@@ -58,7 +65,15 @@ def _caminho_publico(path: str) -> str:
 
 
 def _sanitizar_paths(paths: dict) -> dict:
-    """Remove aliases legados /subconta e expõe paths white-label na documentação."""
+    """Remove aliases legados /subconta e expõe paths white-label na documentação.
+
+    BUG CORRIGIDO: a versão anterior copiava `spec` (o corpo de cada operação —
+    summary, description, parameters, requestBody, responses...) sem chamar
+    `_sanitizar_schema()` nele. Como o sanitizador só recursava normalmente e
+    tratava "paths" como caso especial, o conteúdo *dentro* de cada operação
+    nunca passava pela sanitização de texto — daí summaries como "Asaas
+    Iniciar Cobranca" continuarem no `openapi.json` mesmo após a exportação.
+    """
     canonico: dict[str, dict] = {}
     for path, ops in (paths or {}).items():
         if _LEGACY_SUBCONTA_PATH.search(path):
@@ -70,7 +85,7 @@ def _sanitizar_paths(paths: dict) -> dict:
             continue
         bucket = canonico.setdefault(public_path, {})
         for method, spec in ops.items():
-            bucket[method] = spec
+            bucket[method] = _sanitizar_schema(spec)
     return canonico
 
 
@@ -80,7 +95,7 @@ def _sanitizar_schema(node: object) -> object:
         for k, v in node.items():
             if k == "paths" and isinstance(v, dict):
                 out[k] = _sanitizar_paths(v)
-            elif k in ("summary", "description", "title") and isinstance(v, str):
+            elif k in ("summary", "description", "title", "operationId") and isinstance(v, str):
                 out[k] = _sanitizar_texto_publico(v)
             else:
                 out[k] = _sanitizar_schema(v)
@@ -95,11 +110,71 @@ def _sanitizar_schema(node: object) -> object:
     return node
 
 
+def _sanitizar_nome_schema(nome: str) -> str:
+    """Sanitiza nomes de schema (ex: `AsaasCobrancaRequest`), preservando
+    CamelCase. Só troca o token "Asaas" — "Subconta" fica de fora aqui para
+    evitar colisão de nomes (`AsaasSubcontaRequest` e
+    `AsaasContaRecebimentoRequest` colidiriam se ambos os tokens fossem
+    trocados pelo mesmo texto "ContaRecebimento")."""
+
+    def _sub(m: re.Match) -> str:
+        return "Pagamentos" if m.group(0)[0].isupper() else "pagamentos"
+
+    return _ASAAS_RE.sub(_sub, nome)
+
+
+def _atualizar_refs(node: object, rename_map: dict[str, str]) -> None:
+    prefix = "#/components/schemas/"
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k == "$ref" and isinstance(v, str) and v.startswith(prefix):
+                nome_antigo = v[len(prefix) :]
+                if nome_antigo in rename_map:
+                    node[k] = prefix + rename_map[nome_antigo]
+            else:
+                _atualizar_refs(v, rename_map)
+    elif isinstance(node, list):
+        for item in node:
+            _atualizar_refs(item, rename_map)
+
+
+def _renomear_schemas_com_marca(schema: dict) -> dict:
+    """Renomeia definições de schema com o nome do provedor (ex:
+    `AsaasCobrancaRequest` → `PagamentosCobrancaRequest`) e atualiza todos os
+    `$ref` que apontam pra elas — a sanitização de texto (summary/description)
+    não alcança nomes de schema porque eles não são strings de `summary` ou
+    `description`, são chaves de `components.schemas` e valores de `$ref`."""
+    schemas = schema.get("components", {}).get("schemas")
+    if not isinstance(schemas, dict):
+        return schema
+    rename_map: dict[str, str] = {}
+    usados: set[str] = set(schemas.keys())
+    for nome in schemas:
+        novo = _sanitizar_nome_schema(nome)
+        if novo == nome:
+            continue
+        candidato = novo
+        sufixo = 2
+        while candidato in usados and candidato != nome:
+            candidato = f"{novo}{sufixo}"
+            sufixo += 1
+        rename_map[nome] = candidato
+        usados.add(candidato)
+    if not rename_map:
+        return schema
+    schema["components"]["schemas"] = {
+        rename_map.get(nome, nome): definicao for nome, definicao in schemas.items()
+    }
+    _atualizar_refs(schema, rename_map)
+    return schema
+
+
 def main() -> int:
     from app.main import app
 
     schema = app.openapi()
     schema = _sanitizar_schema(schema)
+    schema = _renomear_schemas_com_marca(schema)
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps(schema, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"==> OpenAPI exportado: {OUT_PATH} ({len(schema.get('paths', {}))} rotas)")
