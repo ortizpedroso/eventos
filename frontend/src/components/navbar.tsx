@@ -52,6 +52,7 @@ export function Navbar() {
   const [userNome, setUserNome] = useState<string | null>(() => peekSessionCache()?.nome ?? null);
   const [userTipo, setUserTipo] = useState<string | null>(() => peekSessionCache()?.tipo ?? null);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [totpAtivado, setTotpAtivado] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [buscaNav, setBuscaNav] = useState("");
@@ -64,6 +65,7 @@ export function Navbar() {
       setUserNome(u?.nome ?? null);
       setUserTipo(u?.tipo ?? null);
       setIsPlatformAdmin(Boolean(u?.is_platform_admin));
+      setTotpAtivado(Boolean(u?.totp_ativado));
     }
     const onSync = () => void syncSession();
     void syncSession();
@@ -111,6 +113,11 @@ export function Navbar() {
   }, [menuOpen]);
 
   const isOrganizador = loggedIn && userTipo === "organizador";
+  // Spec admin-integrado-usuario.md §3.5: sem 2FA, o item continua visível mas
+  // leva à ativação do 2FA (com explicação) em vez do painel administrativo.
+  const hrefAdmin = totpAtivado
+    ? "/admin/dashboard"
+    : `${isOrganizador ? "/organizador/perfil" : "/conta/perfil"}?ativar_2fa_admin=1`;
 
   const mobileLink =
     "block rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-emerald-50 hover:text-emerald-950";
@@ -215,7 +222,7 @@ export function Navbar() {
                     ) : null}
                     {isPlatformAdmin ? (
                       <Link
-                        href="/admin/dashboard"
+                        href={hrefAdmin}
                         role="menuitem"
                         className="block px-4 py-2.5 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
                         onClick={() => setMenuOpen(false)}

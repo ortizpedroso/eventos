@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { adminFetch, adminSessionInfo, clearAdminSession, validateAdminKey } from "@/lib/admin-api";
+import { fetchSession } from "@/lib/api";
 import { AdminPlatformSettingsPanel } from "./admin-platform-settings";
 
 type Contato = {
@@ -115,6 +116,7 @@ export function AdminDashboardClient() {
   const [setupLoading, setSetupLoading] = useState(false);
   const [setupUnavailable, setSetupUnavailable] = useState(false);
   const [checandoSessao, setChecandoSessao] = useState(true);
+  const [meuUsuarioId, setMeuUsuarioId] = useState<string | null>(null);
 
   useEffect(() => {
     void adminSessionInfo()
@@ -123,6 +125,9 @@ export function AdminDashboardClient() {
         if (unlocked) setAuthed(true);
       })
       .finally(() => setChecandoSessao(false));
+    // Best-effort: só resolve quando o acesso é via login normal (sessão de
+    // usuário); via chave estática de emergência não há usuário associado.
+    void fetchSession().then((u) => setMeuUsuarioId(u?.id ?? null));
   }, []);
 
   const entrar = async () => {
@@ -295,12 +300,11 @@ export function AdminDashboardClient() {
 
   async function alternarAdminPlataforma(u: UsuarioAdmin) {
     const novoValor = !u.is_platform_admin;
-    if (
-      u.is_platform_admin &&
-      !window.confirm(
-        `Remover o acesso administrativo de ${u.nome} (${u.email})? Isso não pode ser desfeito por essa pessoa sem outro admin.`,
-      )
-    ) {
+    const removendoProprioAcesso = u.is_platform_admin && meuUsuarioId !== null && u.id === meuUsuarioId;
+    const mensagemConfirmacao = removendoProprioAcesso
+      ? "Você está removendo o SEU PRÓPRIO acesso administrativo. Depois de confirmar, você só volta a acessar o painel pela chave de emergência (PLATFORM_ADMIN_API_KEY) ou se outro admin reativar seu acesso. Continuar?"
+      : `Remover o acesso administrativo de ${u.nome} (${u.email})? Isso não pode ser desfeito por essa pessoa sem outro admin.`;
+    if (u.is_platform_admin && !window.confirm(mensagemConfirmacao)) {
       return;
     }
     setBusy(true);

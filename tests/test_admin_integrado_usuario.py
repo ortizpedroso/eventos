@@ -88,6 +88,36 @@ class TestAcessoAdminViaSessao:
         r = client.get("/api/admin/setup", headers=ADMIN_HEADERS)
         assert r.status_code == 200, r.text
 
+    def test_bloqueado_imediatamente_apos_desativar_2fa(self, monkeypatch):
+        """Spec admin-integrado-usuario.md §4: desativar o próprio 2FA depois de
+        já ter acesso admin bloqueia o painel na próxima requisição (checagem
+        sempre em tempo real, não cacheada)."""
+        monkeypatch.setattr(settings, "PLATFORM_ADMIN_API_KEY", "chave-admin-teste")
+        email = f"desativa2fa_{uuid.uuid4().hex[:8]}@teste.com"
+        data = _registrar(email, tipo="cliente")
+        _marcar_admin(data["usuario"]["id"])
+        headers = {"Authorization": f"Bearer {data['access_token']}"}
+
+        setup = client.post("/api/auth/2fa/iniciar", headers=headers).json()
+        codigo = totp_service.gerar_codigo_atual(setup["secret"])
+        ativar = client.post("/api/auth/2fa/ativar", json={"codigo": codigo}, headers=headers)
+        assert ativar.status_code == 200, ativar.text
+
+        antes = client.get("/api/admin/setup", headers=headers)
+        assert antes.status_code == 200, antes.text
+
+        codigo_desativar = totp_service.gerar_codigo_atual(setup["secret"])
+        desativar = client.post(
+            "/api/auth/2fa/desativar",
+            json={"codigo": codigo_desativar},
+            headers=headers,
+        )
+        assert desativar.status_code == 200, desativar.text
+
+        depois = client.get("/api/admin/setup", headers=headers)
+        assert depois.status_code == 403
+        assert "2FA" in depois.json()["detail"] or "duas etapas" in depois.json()["detail"]
+
 
 class TestGerenciarAdmins:
     def test_conceder_e_revogar_admin(self, monkeypatch):
