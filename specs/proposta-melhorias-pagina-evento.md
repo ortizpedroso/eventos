@@ -1,11 +1,45 @@
 # Proposta: página de evento — o que o mercado faz e o que trazer pro EventosBR
 
-**Data:** 29/07/2026
+**Data:** 29/07/2026 (atualizado com 2ª rodada de pesquisa)
 **Status:** 📋 Proposta para discussão — nada implementado ainda
 
 ---
 
-## 1. Quem eu analisei
+## 0. Achado estratégico importante (2ª rodada)
+
+Analisei diretamente 6 sites que você indicou (Diversos Ingressos, AppTicket, Guichê Web, Uticket, PagTickets, G-ticket) e percebi uma coisa importante: **a maioria deles NÃO é concorrente direto do jeito que a gente imaginava.**
+
+- **AppTicket, PagTickets, G-ticket**: vendem **software B2B** — o cliente deles é o produtor de eventos (ou até "monte sua própria ticketeira white-label"), não o comprador final. O site institucional é uma landing page de vendas pra produtor, não uma vitrine de eventos pro público.
+- **Diversos Ingressos, Uticket**: esses sim são mais parecidos com a gente — vitrine pro público comprar, mas com forte pegada regional/nichada (Diversos: teatro/dança/Goiás; Uticket: geral, mas com foco pesado em ferramentas de conversão).
+- **Guichê Web**: o site carrega a lista de eventos via JavaScript — não consegui nem ver os eventos na primeira leitura, o que é um sinal de alerta de SEO/performance (Google também tem dificuldade com isso).
+
+**Isso é uma boa notícia pra gente**: como somos uma vitrine B2C completa (não só um software pro produtor), temos menos concorrência direta "cara a cara" do que parecia — o principal concorrente de verdade continua sendo a Sympla.
+
+## 1. Quem eu analisei (atualizado)
+
+| Plataforma | Modelo | O que aprendi |
+|---|---|---|
+| **Sympla** | B2C (vitrine + software) | Líder — ver seção 2 |
+| **Diversos Ingressos** | B2C nichado (teatro/dança/regional) | Depoimentos em vídeo/foto muito bem posicionados na home; "cases de sucesso" como páginas dedicadas (prova social forte); WhatsApp como canal principal de contato/suporte (nem formulário) |
+| **Uticket** | B2C + ferramentas agressivas de conversão | **Repasse no mesmo dia** como diferencial nº1; recuperação de carrinho abandonado (+20% de vendas, alegam); rede de afiliados/influenciadores com link e cupom próprios; venda via WhatsApp com vendedores cadastrados |
+| **AppTicket** | B2B (SaaS pro produtor) | Não é vitrine igual à nossa — foco total em "crie seu evento", números de autoridade (+12 mil produtores, +1 milhão de ingressos) |
+| **Guichê Web** | B2C | Site depende de JS pra listar eventos (ponto fraco de SEO); "Fale conosco" abre direto um formulário pra iniciar conversa por WhatsApp |
+| **PagTickets** | B2B (SaaS + white-label pra ticketeiras) | Não é vitrine — venda por assinatura mensal (R$97 produtor / R$247 ticketeira) + taxa; foco em recursos operacionais (PDV, mapa de assentos, portaria offline) |
+| **G-ticket** | B2B (SaaS + POS físico) | Site institucional datado, foco em maquininha física e revenda white-label; menos relevante pro nosso caso |
+| **Catraca Virtual / Even3 / Zig / Lets.events** | Referências gerais (1ª rodada) | Ver proposta original abaixo |
+| **Ticketmaster / SeatGeek / StubHub** | Referência internacional | Padrão-ouro de UX (1ª rodada) |
+
+⚠️ Eventbrite encerrou operações no Brasil em dezembro/2025 (achado da 1ª rodada, mantido).
+
+## 2. Ideias novas que vieram dessa 2ª rodada (além da proposta original)
+
+1. **Recuperação de carrinho abandonado** (Uticket) — se alguém inicia a compra e não finaliza, um e-mail/lembrete automático depois de um tempo. Já temos a infraestrutura de fila de e-mail confiável pronta; isso seria uma extensão natural.
+2. **Repasse no mesmo dia como diferencial de marketing** (Uticket) — precisa confirmar com você se já é assim ou se é uma promessa que dá pra fazer; se sim, vale destacar isso na home/planos como diferencial forte (poucos comunicam isso tão bem quanto a Uticket).
+3. **WhatsApp como canal principal de contato**, não só formulário (Diversos Ingressos, Guichê Web) — considerar adicionar um botão de WhatsApp visível ao lado do "Fale conosco", já que é claramente um padrão do mercado brasileiro.
+4. **Páginas de "case de sucesso" por organizador** (Diversos Ingressos) — depoimento com nome + resultado, como conteúdo de marketing/SEO, não só na home.
+5. **Cuidado com SEO client-side** (achado negativo do Guichê Web) — reforça que nossa abordagem (SSR com Next.js, sitemap dinâmico) já está no caminho certo; é um ponto que vale destacar como vantagem nossa.
+
+## 3. Quem eu analisei (1ª rodada, mantida)
 
 | Plataforma | Situação |
 |---|---|
@@ -15,60 +49,60 @@
 | **Catraca Virtual** | Concorrente direto de preço com a Sympla, taxa fixa (vantagem em ingressos de valor mais alto) |
 | **Zig** | Plataforma B2B para ingressos, foco em times/arenas |
 | **Lets.events** | Diferencial em gestão de lista de convidados |
-| **Uticket / SuperTixs** | Blogs voltados a produtor, bom material sobre o que funciona na prática |
-| **Ticketmaster / SeatGeek / StubHub** | Referências internacionais (já usadas na pesquisa do redesenho do hero, mantidas aqui como padrão-ouro de UX) |
+| **Ticketmaster / SeatGeek / StubHub** | Referências internacionais |
 
-⚠️ **Achado importante:** a Eventbrite não é mais uma referência ativa no Brasil — vale **não imitar o modelo dela** como prioridade, e sim aproveitar esse momento (produtores órfãos procurando alternativa) como oportunidade de posicionamento.
+## 4. O que os concorrentes fazem bem (padrões que se repetem — 1ª rodada)
 
-## 2. O que os concorrentes fazem bem (padrões que se repetem)
+1. **Prova social explícita** — fotos/vídeos de edições anteriores, depoimentos, "local lotado" em edições passadas
+2. **Urgência real, não genérica** — contador regressivo, quantos restam no lote atual
+3. **Ficha técnica completa e escaneável** — o quê, quando, onde, quanto, e informações práticas
+4. **Upsell/cross-sell no checkout** (Sympla Store)
+5. **Compartilhamento fácil** — botões de rede social, cupom de indicação
+6. **Identidade visual do evento** — a página "veste a camisa" do evento
 
-1. **Prova social explícita** — fotos/vídeos de edições anteriores, depoimentos de participantes, "local lotado" em edições passadas. Quase toda fonte que li menciona isso como o gatilho mais eficaz.
-2. **Urgência real, não genérica** — não é só escrever "últimos ingressos": contador regressivo, indicação clara de quantos restam no lote atual, aviso de troca de lote com antecedência.
-3. **Ficha técnica completa e escaneável** — o que, quando, onde, quanto, e informações práticas (estacionamento, idade mínima, dress code, classificação). Um site cita isso literalmente: "página mal feita gera desconfiança e mata a venda".
-4. **Upsell/cross-sell no checkout** (Sympla Store) — produtos/experiências extras vendidos junto do ingresso, sem sair do fluxo de compra, aumentando o ticket médio.
-5. **Compartilhamento fácil** — botões de rede social, cupom personalizado pra cada comprador divulgar pra amigos (com recompensa por indicação).
-6. **Identidade visual do evento** — a página "veste a camisa" do evento (cores, imagem), não só do organizador.
+## 5. O que já temos que já bate com esses padrões
+- ✅ Hero redesenhado, lotes com indicação de vendas, reembolso automático, badges de pagamento seguro
+- ✅ Mapa embutido (corrigido)
+- ✅ Sistema de repasse/split transparente
+- ✅ SSR completo (SEO melhor que pelo menos um concorrente direto — Guichê Web)
 
-## 3. O que já temos que já bate com esses padrões
+## 6. Oportunidades concretas — proposta priorizada (atualizada)
 
-- ✅ Hero redesenhado (imagem nítida, CTA de compra na primeira dobra) — já pesquisado e implementado
-- ✅ Lotes com indicação de "à venda"/"inativo"/vendidos por lote
-- ✅ Reembolso automático, badges de pagamento seguro
-- ✅ Mapa embutido (corrigido agora)
-- ✅ Sistema de repasse/split transparente (diferencial forte — poucos concorrentes comunicam isso tão bem)
+### 6.1 Prova social (maior impacto, esforço médio)
+- Galeria de fotos de edições anteriores no cadastro do evento
+- "X pessoas já confirmaram presença" perto do botão de compra
 
-## 4. Oportunidades concretas — o que eu proponho trazer
+### 6.2 Urgência mais visível (baixo esforço, alto impacto)
+- Contador regressivo + barra de progresso do lote atual (já temos os dados)
 
-### 4.1 Prova social (maior impacto, esforço médio)
-- Campo opcional no cadastro do evento: **fotos de edições anteriores** (galeria pequena, 3-6 imagens)
-- Contagem de **"X pessoas já confirmaram presença"** perto do botão de compra (já temos os dados — ingressos vendidos — só falta expor isso na UI de forma amigável, sem parecer "pressão artificial" demais)
+### 6.3 Recuperação de carrinho abandonado (novo, 2ª rodada — esforço médio)
+- E-mail automático pra quem iniciou e não terminou a compra — usando a fila de e-mail confiável que já existe
 
-### 4.2 Urgência mais visível (baixo esforço, alto impacto)
-- Contador regressivo pro início das vendas de um lote, ou pro fim de um lote com prazo definido (já temos `urgencia_ativo`/`urgencia_badge` no modelo — dá pra evoluir a UI disso)
-- Barra de progresso visual do lote atual ("faltam 12 de 50")
+### 6.4 Ficha técnica mais completa (baixo esforço)
+- Classificação etária, dress code, estacionamento como campos estruturados
 
-### 4.3 Ficha técnica mais completa (baixo esforço)
-- Campos opcionais na criação de evento: classificação etária, "o que levar"/dress code, informações de estacionamento — hoje só temos descrição livre; padronizar isso em campos estruturados deixa a leitura mais rápida (a maioria dos concorrentes usa ícones + texto curto, não parágrafo)
+### 6.5 Compartilhar e indicar (baixo esforço)
+- Botões de compartilhamento (WhatsApp, Instagram Stories, copiar link)
+- Botão de WhatsApp visível pro "Fale conosco" (novo, 2ª rodada — padrão do mercado brasileiro)
 
-### 4.4 Compartilhar e indicar (baixo esforço, ajuda alcance orgânico)
-- Botões de compartilhamento (WhatsApp, Instagram Stories, copiar link) na página do evento — hoje não existe isso
-- Reconsiderar cupom de indicação no médio prazo (mais complexo, envolve regra de negócio nova)
+### 6.6 Consistência na página (achado da varredura)
+- Consolidar a repetição do local do evento (aparece em até 3 lugares hoje)
 
-### 4.5 Consistência na página (achado da varredura — resolve a "informação repetitiva")
-- O local do evento aparece hoje em até 3 lugares na mesma tela (resumo do topo, ficha técnica, texto acima do mapa) — proponho consolidar: manter no resumo do topo (rápido) e no mapa (contexto espacial), removendo a repetição na ficha técnica do meio
+## 7. O que eu NÃO recomendo copiar agora
+- **Upsell/loja integrada**: feature grande, spec dedicado depois do lançamento
+- **App próprio / POS físico / revenda white-label pra terceiros**: fora do nosso modelo de negócio (somos B2C, não SaaS B2B como AppTicket/PagTickets/G-ticket)
+- **Gamificação de pré-evento**: fora de escopo pro momento de lançamento
 
-## 5. O que eu NÃO recomendo copiar agora
-- **Upsell/loja integrada (tipo Sympla Store)**: alto valor, mas é uma feature grande (catálogo de produtos, estoque, split do valor extra) — vale um `/spec` dedicado depois do lançamento, não antes
-- **App próprio / gamificação de pré-evento**: fora de escopo pro momento de lançamento
+## 8. Proposta de ordem de execução (se você aprovar)
 
-## 6. Proposta de ordem de execução (se você aprovar)
-
-1. Corrigir a repetição de informação (rápido, resolve o achado da varredura)
-2. Urgência mais visível (contador + barra de progresso) — já temos a base de dados
-3. "X pessoas confirmaram" — já temos os dados de vendas
-4. Botões de compartilhamento
-5. Campos estruturados de ficha técnica (classificação etária, dress code, estacionamento)
+1. Corrigir a repetição de informação (rápido)
+2. Urgência mais visível (contador + barra de progresso)
+3. "X pessoas confirmaram" (já temos os dados)
+4. Botões de compartilhamento + WhatsApp no contato
+5. Campos estruturados de ficha técnica
+6. Recuperação de carrinho abandonado (mais trabalhoso, mas alto potencial de retorno)
 
 ---
 
 **Aguardando sua aprovação pra transformar isso num `/spec` e depois `/build`.** Quer que eu comece por algum item específico, ou sigo a ordem sugerida?
+
