@@ -59,6 +59,7 @@ export function SiteFooter() {
               <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-500">Plataforma</h2>
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link href="/eventos" className="text-zinc-400 hover:text-emerald-300">Explorar eventos</Link></li>
+                <li><Link href="/produtores" className="text-zinc-400 hover:text-emerald-300">Para produtores</Link></li>
                 <li><Link href="/planos" className="text-zinc-400 hover:text-emerald-300">Planos e preços</Link></li>
                 <li><Link href="/funcionalidades" className="text-zinc-400 hover:text-emerald-300">Funcionalidades</Link></li>
                 <li><Link href="/ajuda" className="text-zinc-400 hover:text-emerald-300">Central de ajuda</Link></li>
