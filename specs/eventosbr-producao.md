@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.18
+**Versão:** 1.19
 **Data:** 2026-07-29
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `4918c5b`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
+> **Produção (VPS):** `main` em `36f5466`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -230,7 +230,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (322 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (326 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -346,6 +346,7 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 | P15 | Rodapé: contato + redes sociais agrupados à direita; botão flutuante de voltar ao topo | [x] |
 | P16 | Mapa da página de evento sempre embutido (iframe), sem depender de chave de API do Google Maps configurada — usa `?output=embed` como padrão | [x] |
 | P17 | Página pública do evento sem informação repetitiva: meta única (quando/onde), preço/lote/urgência só na zona de compra (sticky), Sobre só com descrição; prova social “X pessoas…”, barra de restante do lote, compartilhar WhatsApp + copiar link | [x] |
+| P18 | Organizador (nome/e-mail/telefone) visível na página do evento; "Ler descrição completa" não duplica mais o início do texto; link "Fale conosco" da página do evento vai pro formulário de contato de verdade (não mais pra /sobre); e-mail do ingresso traz uma carteirinha completa (nome/evento/data/local + QR), não mais um QR nu sem contexto | [x] |
 
 **Nota v1.17 (P17)**: implementado após análise de mercado (Diversos Ingressos, AppTicket,
 Guichê Web, Uticket, PagTickets, G-ticket, Sympla, etc.). Removidos o bloco
@@ -508,7 +509,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (322 testes)
+- [x] `pytest` verde (326 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -520,7 +521,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] `main` em `4918c5b` — inclui mapa do evento sempre embutido na página (4.x), além de tudo das versões anteriores
+- [x] `main` em `36f5466` — inclui organizador/contato visível na página do evento + descrição não duplica mais + link "Fale conosco" corrigido + carteirinha completa no e-mail do ingresso (4.x), além de tudo das versões anteriores
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
@@ -583,6 +584,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.19 | 2026-07-29 | **P18**: página do evento não mostrava nome/e-mail/telefone do organizador (dados coletados como obrigatórios na criação, mas nunca exibidos) — nova seção "Organizador" após o mapa; `organizador_nome` também faltava no tipo TypeScript do frontend. **Bug real**: "Ler descrição completa" duplicava o início do texto ao expandir (resumo truncado ficava visível acima do texto completo, que recomeçava do zero) — trocado `<details>` nativo por toggle controlado em React. **Bug real**: link "Fale conosco" da página do evento caía em `/sobre` (fallback quando `NEXT_PUBLIC_EMAIL_CONTATO` não configurada) em vez de ir pro formulário `/contato` de verdade — corrigido pra sempre ir pro `/contato`. **E-mail do ingresso**: QR nu (200×200, sem nenhum texto) trocado por uma carteirinha completa (nome do evento, data/hora, local, QR de 280px e nome do participante numa imagem só, ~45KB) — se a pessoa salvar só a imagem pra mostrar na entrada, não perde o contexto. Exige `fonts-dejavu-core` na imagem Docker da API (Pillow precisa de uma fonte TrueType). Testes: 322 → 326. |
 | 1.18 | 2026-07-29 | **E-mail “enviado” que não chegava**: worker de contato/e-mail simples descartava a mensagem da fila após falha SMTP **sem retry** (UI já tinha confirmado recebimento). Corrigido: retry com limite (`TICKET_EMAIL_MAX_ATTEMPTS`), Redis deixa de cachear falha de conexão pra sempre (retry em 15s), SMTP off deixa de retornar sucesso falso em ingresso/e-mail simples, formulário `/contato` deixa de dizer “enviada” (usa “recebida”). Página de evento P17 (A+B) mergeada. |
 | 1.17 | 2026-07-29 | **Página pública do evento (P17) — fases A+B**: anti-repetição (meta única quando/onde; preço/lote só na zona de compra sticky; Sobre = descrição; urgência só no checkout; reembolso uma vez) + prova social (“X pessoas já garantiram lugar”), barra de restante do lote, compartilhar WhatsApp/copiar link/`navigator.share`. Componentes: `evento-compartilhar.tsx`, `evento-meta-unica.tsx`; removido `evento-resumo-rapido.tsx`. Spec de proposta atualizada. |
 | 1.16 | 2026-07-29 | `/review` completo encontrou e `/build` corrigiu 8 lacunas: (1) CI do job `api` sem Redis causava 15 erros em testes de fila confiável — adicionado serviço Redis no workflow (2.7); (2) **regressão real do P16** (mapa embutido) reintroduzida por um commit anterior — restaurado o iframe sempre visível com fallback `?output=embed`, validado manualmente; (3) **bug real** em `export-openapi.py`: sanitização de white-label nunca alcançava o corpo das operações (summary/description dentro de `paths`) por falta de recursão — corrigido, e nomes de schema com a marca do provedor também renomeados (3, 2.6.3); (4) `ticket_email.py`, `notificacao_email.py`, `lembrete_evento.py`, `assinatura_email.py` e `marketing_email.py` migrados para o cliente SMTP compartilhado com fallback SSL/STARTTLS (2.6.6); (5) workers de e-mail simples e de contato agora iniciam no boot da API, não só no primeiro envio (2.6.6); (6) admin-integrado-usuario.md §3.2: cliente-admin sem tipo organizador não via a seção de ativação de 2FA na UI — corrigido; (7) admin-integrado-usuario.md §3.5: item "Administração" no menu, sem 2FA ativo, ia direto pra tela de colar chave em vez de orientar a ativação — corrigido com redirecionamento pra `/conta/perfil?ativar_2fa_admin=1` (ou `/organizador/perfil`) com banner explicativo; (8) admin-integrado-usuario.md §3.4/§4: aviso de confirmação ao remover o próprio acesso admin agora é específico (antes era o mesmo texto genérico usado pra remover qualquer usuário), e novo teste automatizado cobre o bloqueio imediato do painel após desativar o próprio 2FA. Testes: 318 → 322. Todos os itens validados manualmente (mapa embutido, fluxo de 2FA admin, aviso de auto-remoção) via `computerUse` em ambiente local. |
