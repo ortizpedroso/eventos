@@ -113,8 +113,8 @@ def candidatos_carrinho_abandonado(db: Session, *, agora: datetime | None = None
     )
 
 
-def _marcar_grupo_enviado(db: Session, ingresso: Ingresso, quando: datetime) -> None:
-    """Marca one-shot no ingresso e nos irmãos do mesmo lote de reserva."""
+def _query_grupo_pendente_sem_lembrete(db: Session, ingresso: Ingresso):
+    """Irmãos do mesmo checkout ainda elegíveis ao one-shot."""
     pay = (ingresso.asaas_payment_id or "").strip()
     q = db.query(Ingresso).filter(
         Ingresso.evento_id == ingresso.evento_id,
@@ -123,16 +123,48 @@ def _marcar_grupo_enviado(db: Session, ingresso: Ingresso, quando: datetime) -> 
         Ingresso.carrinho_lembrete_enviado_em.is_(None),
     )
     if pay:
+        return q.filter(Ingresso.asaas_payment_id == pay)
+    if ingresso.reservado_ate is not None:
+        return q.filter(Ingresso.reservado_ate == ingresso.reservado_ate)
+    return q.filter(Ingresso.id == ingresso.id)
+
+
+def _claim_grupo_lembrete(db: Session, ingresso: Ingresso, quando: datetime) -> int:
+    """Marca one-shot de forma atômica (UPDATE … WHERE enviado_em IS NULL).
+
+    Retorna quantas linhas foram reivindicadas. 0 = outro worker/cron já enviou
+    (ou está enviando) este checkout — não reenviar.
+    """
+    n = _query_grupo_pendente_sem_lembrete(db, ingresso).update(
+        {"carrinho_lembrete_enviado_em": quando},
+        synchronize_session=False,
+    )
+    return int(n or 0)
+
+
+def _liberar_claim_grupo(db: Session, ingresso: Ingresso, quando: datetime) -> None:
+    """Desfaz o claim se o enqueue falhar — permite retry no próximo ciclo."""
+    pay = (ingresso.asaas_payment_id or "").strip()
+    q = db.query(Ingresso).filter(
+        Ingresso.evento_id == ingresso.evento_id,
+        Ingresso.usuario_id == ingresso.usuario_id,
+        Ingresso.carrinho_lembrete_enviado_em == quando,
+    )
+    if pay:
         q = q.filter(Ingresso.asaas_payment_id == pay)
     elif ingresso.reservado_ate is not None:
         q = q.filter(Ingresso.reservado_ate == ingresso.reservado_ate)
     else:
         q = q.filter(Ingresso.id == ingresso.id)
-    q.update({"carrinho_lembrete_enviado_em": quando}, synchronize_session=False)
+    q.update({"carrinho_lembrete_enviado_em": None}, synchronize_session=False)
 
 
 def enviar_lembretes_carrinho() -> int:
-    """Enfileira um lembrete por grupo de reserva abandonada. Retorna qtd enfileirada."""
+    """Enfileira um lembrete por grupo de reserva abandonada. Retorna qtd enfileirada.
+
+    Idempotente: `carrinho_lembrete_enviado_em` é gravado (claim) *antes* do enqueue
+    e commitado, para que um segundo cron na janela da reserva não reenvie.
+    """
     agora = _agora()
     db: Session = SessionLocal()
     enviados = 0
@@ -156,18 +188,26 @@ def enviar_lembretes_carrinho() -> int:
             if not destino:
                 continue
 
+            # Claim atômico antes de enfileirar — evita double-send entre crons/workers.
+            claimed = _claim_grupo_lembrete(db, ing, agora)
+            if claimed <= 0:
+                continue
+            db.commit()
+
             branding = get_email_branding(db)
             assunto = format_email_subject(f"Continue sua compra: {ing.evento.nome}", branding)
             html = _build_html(ing, db)
             if not enqueue_email_simples(destino, assunto, html):
-                logger.warning("Falha ao enfileirar lembrete carrinho ingresso %s", ing.id)
+                logger.warning(
+                    "Falha ao enfileirar lembrete carrinho ingresso %s — liberando claim",
+                    ing.id,
+                )
+                _liberar_claim_grupo(db, ing, agora)
+                db.commit()
                 continue
 
-            _marcar_grupo_enviado(db, ing, agora)
             enviados += 1
 
-        if enviados:
-            db.commit()
         return enviados
     except Exception:
         db.rollback()

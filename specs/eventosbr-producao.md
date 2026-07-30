@@ -61,7 +61,7 @@ o comprador não fosse cobrado. Correção:
 
 Plano: `specs/plano-carrinho-afiliados-galeria.md`.
 
-**Carrinho abandonado (transacional):** worker `lembrete_carrinho.py` envia **um** e-mail via `enqueue_email_simples` **20 min** após `data_compra`, se `status=pendente` e `reservado_ate` ainda no futuro (reserva = 35 min). One-shot: `carrinho_lembrete_enviado_em`. CTA: `/eventos/{slug}?retomar={id}#comprar`. Não exige opt-in de marketing; rodapé com link de preferências. Não altera checkout/pagamento.
+**Carrinho abandonado (transacional):** worker `lembrete_carrinho.py` envia **um** e-mail via `enqueue_email_simples` **20 min** após `data_compra`, se `status=pendente` e `reservado_ate` ainda no futuro (reserva = 35 min). Idempotência: claim atômico em `carrinho_lembrete_enviado_em` antes do enqueue (segundo cron na janela da reserva não reenvia). CTA: `/eventos/{slug}?retomar={id}#comprar`. Não exige opt-in de marketing; rodapé com link de preferências. Não altera checkout/pagamento.
 
 **Promoters:** tabela `evento_promoters`; link `/eventos/{slug}?ref=CODIGO`; atribuição em `Ingresso.promoter_id` na criação do pagamento; painel do organizador com vendas agregadas (sem PII, sem comissão). Compartilhar reutiliza `evento-compartilhar.tsx` com `shareUrl`.
 

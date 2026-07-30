@@ -192,6 +192,99 @@ def test_envia_uma_vez_por_grupo_e_marca_one_shot():
         db.close()
 
 
+def test_idempotente_segundo_cron_nao_reenvia_na_janela_da_reserva():
+    """Mesmo com reserva ainda válida, um segundo ciclo do worker não reenvia."""
+    db = test_api.TestingSessionLocal()
+    try:
+        _, buyer, ev = _setup(db)
+        agora = _agora()
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=buyer.id,
+            participante_email=buyer.email,
+            valor=50.0,
+            status="pendente",
+            data_compra=agora - timedelta(minutes=22),
+            reservado_ate=agora + timedelta(minutes=13),
+        )
+        db.add(ing)
+        db.commit()
+        ingresso_id = ing.id
+
+        sessions: list = []
+
+        def _sl():
+            s = test_api.TestingSessionLocal()
+            sessions.append(s)
+            return s
+
+        with patch("app.services.lembrete_carrinho.SessionLocal", side_effect=_sl):
+            with patch("app.services.lembrete_carrinho.enqueue_email_simples", return_value=True) as enq1:
+                n1 = enviar_lembretes_carrinho()
+        assert n1 >= 1
+        assert sum(1 for c in enq1.call_args_list if ev.slug in c[0][2]) == 1
+
+        db_check = test_api.TestingSessionLocal()
+        try:
+            row = db_check.get(Ingresso, ingresso_id)
+            assert row is not None
+            assert row.carrinho_lembrete_enviado_em is not None
+            assert row.status == "pendente"
+            assert row.reservado_ate > _agora()
+        finally:
+            db_check.close()
+
+        with patch("app.services.lembrete_carrinho.SessionLocal", side_effect=_sl):
+            with patch("app.services.lembrete_carrinho.enqueue_email_simples", return_value=True) as enq2:
+                n2 = enviar_lembretes_carrinho()
+        assert sum(1 for c in enq2.call_args_list if ev.slug in c[0][2]) == 0
+        # Pode haver outros candidatos no DB compartilhado; este checkout não pode estar entre eles
+        assert n2 >= 0
+        for s in sessions:
+            s.close()
+    finally:
+        db.close()
+
+
+def test_claim_falha_enqueue_libera_para_retry():
+    db = test_api.TestingSessionLocal()
+    try:
+        _, buyer, ev = _setup(db)
+        agora = _agora()
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=buyer.id,
+            participante_email=buyer.email,
+            valor=50.0,
+            status="pendente",
+            data_compra=agora - timedelta(minutes=22),
+            reservado_ate=agora + timedelta(minutes=13),
+        )
+        db.add(ing)
+        db.commit()
+        ingresso_id = ing.id
+
+        def _sl():
+            return test_api.TestingSessionLocal()
+
+        with patch("app.services.lembrete_carrinho.SessionLocal", side_effect=_sl):
+            with patch("app.services.lembrete_carrinho.enqueue_email_simples", return_value=False) as enq:
+                n = enviar_lembretes_carrinho()
+        # Enqueue tentado e falhou → nenhum sucesso contabilizado neste run
+        # (return_value=False para todos) e claim liberado para retry.
+        assert any(ev.slug in c[0][2] for c in enq.call_args_list)
+        assert n == 0
+        db2 = test_api.TestingSessionLocal()
+        try:
+            row = db2.get(Ingresso, ingresso_id)
+            assert row is not None
+            assert row.carrinho_lembrete_enviado_em is None
+        finally:
+            db2.close()
+    finally:
+        db.close()
+
+
 def test_nao_envia_se_pago_antes_do_job():
     db = test_api.TestingSessionLocal()
     try:
@@ -214,8 +307,12 @@ def test_nao_envia_se_pago_antes_do_job():
 
         with patch("app.services.lembrete_carrinho.SessionLocal", side_effect=_sl):
             with patch("app.services.lembrete_carrinho.enqueue_email_simples", return_value=True) as enq:
-                n = enviar_lembretes_carrinho()
-        assert n == 0
-        assert enq.call_count == 0
+                enviar_lembretes_carrinho()
+        assert not any(ev.slug in c[0][2] for c in enq.call_args_list)
+        db3 = test_api.TestingSessionLocal()
+        try:
+            assert ing.id not in {c.id for c in candidatos_carrinho_abandonado(db3)}
+        finally:
+            db3.close()
     finally:
         db.close()

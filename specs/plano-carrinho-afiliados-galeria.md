@@ -53,7 +53,7 @@ Candidato = ingresso (ou lote compartilhando o mesmo `asaas_payment_id` / mesmo 
 2. `data_compra <= agora - 20 min` (constante `CARRINHO_LEMBRETE_APOS_MINUTOS = 20`)
 3. `reservado_ate` ainda no futuro (reserva recuperável)
 4. Destino: `participante_email` ou e-mail do `Usuario`
-5. One-shot: novo campo `carrinho_lembrete_enviado_em` **não nulo** → não reenvia
+5. One-shot / idempotência: `carrinho_lembrete_enviado_em` é **claim atômico** (`UPDATE … WHERE IS NULL`) *antes* do enqueue e commitado — um segundo cron na janela da reserva **não reenvia**. Se o enqueue falhar, o claim é liberado para retry.
 6. Não enviar se já `pago` / `cancelado` / `usado` (reconsulta no momento do envio)
 7. Um e-mail por **grupo de reserva** (qty > 1 gera várias linhas — dedupe pelo primeiro ingresso do lote)
 
