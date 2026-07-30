@@ -145,6 +145,7 @@ class EventoResponse(BaseModel):
     id: str
     slug: str
     organizador_id: str
+    organizador_nome: str | None = None
     nome: str
     descricao: str
     data_inicio: datetime
@@ -250,6 +251,11 @@ def montar_evento_response(
         "id": evento.id,
         "slug": evento.slug,
         "organizador_id": evento.organizador_id,
+        "organizador_nome": (
+            (evento.organizador.brand_name or evento.organizador.nome)
+            if getattr(evento, "organizador", None)
+            else None
+        ),
         "nome": evento.nome,
         "descricao": evento.descricao or "",
         "data_inicio": evento.data_inicio,
@@ -285,7 +291,3 @@ def montar_evento_response(
         "espera_janela_exclusiva_ativa": janela_exclusiva_espera_ativa(db, evento.id),
     }
     return EventoResponse.model_validate(base)
-
-
-class EventoPublicoResponse(EventoResponse):
-    organizador_nome: str

@@ -135,3 +135,47 @@ class TestFormularioContatoPublico:
             },
         )
         assert r.status_code == 422
+
+
+class TestOrganizadorNomeNaRespostaPublica:
+    """Regressão: response_model=EventoResponse (rota pública) não incluía
+    organizador_nome — o campo só existia numa subclasse EventoPublicoResponse
+    que nunca era usada de verdade, então o nome do organizador nunca chegava
+    no frontend mesmo a UI já estando pronta para exibi-lo."""
+
+    def test_evento_publico_retorna_nome_do_organizador_cadastrado(self):
+        token = _registrar_organizador(f"orgnome_{uuid.uuid4().hex[:8]}@teste.com")
+        headers = {"Authorization": f"Bearer {token}"}
+        r = client.post(
+            "/api/eventos/criar",
+            json=_payload_evento(publicado=True),
+            headers=headers,
+        )
+        assert r.status_code == 200, r.text
+        slug = r.json()["slug"]
+
+        r2 = client.get(f"/api/eventos/{slug}")
+        assert r2.status_code == 200, r2.text
+        assert r2.json()["organizador_nome"] == "Org Contato"
+
+    def test_organizador_nome_prioriza_marca_cadastrada_no_perfil(self):
+        """Se o organizador configurou um nome de marca (brand_name) no perfil
+        (whitelabel), a página pública do evento deve mostrar esse nome — não
+        o nome genérico da conta usado no cadastro."""
+        token = _registrar_organizador(f"orgmarca_{uuid.uuid4().hex[:8]}@teste.com")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        r_perfil = client.patch(
+            "/api/produtor/meu-perfil",
+            json={"brand_name": "Produtora XPTO Eventos"},
+            headers=headers,
+        )
+        assert r_perfil.status_code == 200, r_perfil.text
+
+        r = client.post("/api/eventos/criar", json=_payload_evento(publicado=True), headers=headers)
+        assert r.status_code == 200, r.text
+        slug = r.json()["slug"]
+
+        r2 = client.get(f"/api/eventos/{slug}")
+        assert r2.status_code == 200, r2.text
+        assert r2.json()["organizador_nome"] == "Produtora XPTO Eventos"
