@@ -4,6 +4,7 @@ import logging
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
@@ -36,10 +37,17 @@ async def deploy_version():
     }
 
 
-@router.get("/platform", response_model=PlatformSettingsPublic)
+@router.get("/platform")
 async def platform_settings_public(db: Session = Depends(get_db)):
     """Branding da plataforma (logo, cores, contatos, redes)."""
-    return get_public_settings(db)
+    data = get_public_settings(db)
+    return JSONResponse(
+        content=data.model_dump(),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+        },
+    )
 
 
 @router.get("/tenant")

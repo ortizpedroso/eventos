@@ -17,6 +17,8 @@ export type PlatformSettings = {
   social_youtube_url: string | null;
 };
 
+export const PLATFORM_SETTINGS_TAG = "platform-settings";
+
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   site_name: "EventosBR",
   site_tagline: "INGRESSOS · SHOWS · TRANSPARÊNCIA",
@@ -43,11 +45,12 @@ function apiOrigin(): string {
   return "http://127.0.0.1:8000";
 }
 
-/** Busca branding da plataforma (SSR / server components). */
+/** Busca branding da plataforma (SSR / server components) — sem cache stale. */
 export async function fetchPlatformSettings(): Promise<PlatformSettings> {
   try {
     const res = await fetch(`${apiOrigin()}/api/public/platform`, {
-      next: { revalidate: 60 },
+      cache: "no-store",
+      next: { tags: [PLATFORM_SETTINGS_TAG] },
     });
     if (!res.ok) return DEFAULT_PLATFORM_SETTINGS;
     return (await res.json()) as PlatformSettings;

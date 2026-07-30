@@ -23,7 +23,7 @@ www.{$DOMAIN} {
 		reverse_proxy api:8000
 	}
 
-	# Rotas do PRÓPRIO Next.js (app/api/admin/session + app/api/admin/proxy/[...path]).
+	# Rotas do PRÓPRIO Next.js (session, proxy, revalidate-platform).
 	# Precisam vir ANTES de @api, senão o Caddy manda /api/* direto pro FastAPI.
 	#
 	# ATENÇÃO — dois erros comuns que causam "Not Found" no painel admin:
@@ -32,7 +32,7 @@ www.{$DOMAIN} {
 	# 3) path + path_regexp no MESMO @matcher → AND (impossível casar)
 	#
 	# Correto: prefixo `/api/admin/proxy*` (Caddy: /foo* casa /foo/bar/baz).
-	@admin_frontend path /api/admin/session /api/admin/proxy*
+	@admin_frontend path /api/admin/session /api/admin/proxy* /api/admin/revalidate-platform
 	handle @admin_frontend {
 		reverse_proxy web:3000
 	}

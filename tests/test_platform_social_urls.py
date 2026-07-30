@@ -55,6 +55,7 @@ def test_admin_salva_instagram_e_whatsapp_no_rodape(admin_headers):
 
     pub = test_api.client.get("/api/public/platform")
     assert pub.status_code == 200
+    assert "no-store" in (pub.headers.get("cache-control") or "").lower()
     p = pub.json()
     assert p["social_instagram_url"] == "https://instagram.com/eventosbr_oficial"
     assert p["social_whatsapp_url"] == "https://wa.me/5511988887777"

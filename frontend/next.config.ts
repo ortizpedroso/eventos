@@ -84,7 +84,8 @@ const nextConfig: NextConfig = {
       // que responde 404 pra um caminho que nunca existiu lá (bug: 'Not Found' em
       // toda chamada do painel admin, mesmo com sessão/chave válidas).
       {
-        source: "/api/:path((?!admin/session|admin/proxy).*)",
+        // Mantém no Next: session, proxy e revalidate-platform (não existem no FastAPI).
+        source: "/api/:path((?!admin/session|admin/proxy|admin/revalidate-platform).*)",
         destination: `${apiTarget}/api/:path`,
       },
       { source: "/uploads/:path*", destination: `${apiTarget}/uploads/:path*` },
