@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.21
+**Versão:** 1.22
 **Data:** 2026-07-30
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `3fa7464`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
+> **Produção (VPS):** `main` em `f452a80`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -230,7 +230,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (332 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (335 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -509,7 +509,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (332 testes)
+- [x] `pytest` verde (335 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -521,7 +521,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] `main` em `3fa7464` — inclui acréscimo de parcelamento embutindo custo de antecipação (protege margem do organizador/plataforma), botão de antecipação automática sem custo, saque sempre visível no Financeiro, mais correções PT-BR e eager-load do organizador em listagens (2.x/5.x), além de tudo das versões anteriores
+- [x] `main` em `f452a80` — inclui página "Para produtores" (`/produtores`) + scroll-reveal Fase 1 (ver `specs/plano-pre-lancamento-posicionamento-animacao.md`), além de tudo das versões anteriores
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
@@ -584,6 +584,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.22 | 2026-07-30 | Início do plano pré-lançamento de posicionamento (`specs/plano-pre-lancamento-posicionamento-animacao.md`): página **"Para produtores"** (`/produtores`) — resolve o "gap principal" de uma análise competitiva (10+ concorrentes/referências) feita em conjunto com o Cursor: produto forte (taxa clara, repasse, whitelabel, operação completa) mas mal empacotado/vendido pro organizador. Linkada no navbar, rodapé e sitemap. **Fase 1 do plano de animação**: `ScrollRevealObserver` (Intersection Observer nativo, sem Framer Motion/GSAP), classes `.reveal`/`.reveal-visible`, respeita `prefers-reduced-motion` (critério de acessibilidade do Lighthouse). Também: limpeza no GitHub (3 PRs stale fechadas, 128 branches remotos apagados, preservados os 2 de backup). Testes: 332 → 335. |
 | 1.21 | 2026-07-30 | Revisão de 6 commits feitos com o Cursor em sessão paralela (usuário confirmou os valores contra o painel real do Asaas — bate certinho): **acréscimo de parcelamento agora embute o custo de antecipação** (1,25% à vista / 1,70% a.m. parcelado), não só o delta de processamento — equaliza a margem líquida do organizador e da plataforma entre à vista e parcelado (antes, parcelar literalmente custava dinheiro pra plataforma/organizador sem compensação); botão "verificar/ativar antecipação automática" no Financeiro do organizador, sem custo EventosBR; bloco "Solicitar saque" sempre visível (formulário ou motivo da indisponibilidade); link âncora direto pro saque. Consolidadas pendências locais: `selectinload(Evento.organizador)` também nas rotas de listagem (antes só a rota de detalhe carregava, então `organizador_nome` vinha vazio em listagens); mais correções PT-BR em termos/admin (aceder→acessar, utilizadores→usuários, respetiva→respectiva, "mantém-se... no que respeita"→"permanece... no que diz respeito", "contacto"→"contato"); seção 9 dos Termos ("Contato") corrigida pra sempre linkar `/contato` em vez de `/sobre`. Testes: 327 → 332. |
 | 1.20 | 2026-07-29 | **Política de privacidade revisada** após pesquisa de como a Sympla estrutura a própria (LGPD exige canal de contato do encarregado/DPO publicado de forma clara). Achados reais corrigidos: vocabulário de português europeu misturado com o resto do site PT-BR ("contacto"→"contato", "utilizador"→"usuário", "recolhemos"→"coletamos", "registo"→"registro", "partilha"→"compartilhamento", "alojamento"→"hospedagem", "detetar"→"detectar", "palavra-passe"→"senha" — mesmos termos corrigidos em `documentacao/page.tsx`); texto com cara de rascunho não finalizado removido; beco sem saída real (política mandava pra `/sobre` "exercer direitos", mas essa página só tem conteúdo de marketing, sem contato nenhum) — corrigido, tudo aponta direto pro `/contato` agora, incluindo uma seção final dedicada. **Rodapé**: link "Desenvolvido por InoveSW" apontava pro domínio errado (`invesw.com.br`, faltando o "o") — corrigido pra `inovesw.com.br`; removido sublinhado dos links "EventosBR" e "InoveSW" (continuam funcionais). **Evento**: texto "Sobre o evento" agora justificado, consistente com o resto do site; seção "Organizador" (nome/e-mail/telefone) já estava distribuída em 3 colunas na ordem certa, confirmado sem necessidade de mudança. |
 | 1.19 | 2026-07-29 | **P18**: página do evento não mostrava nome/e-mail/telefone do organizador (dados coletados como obrigatórios na criação, mas nunca exibidos) — nova seção "Organizador" após o mapa; `organizador_nome` também faltava no tipo TypeScript do frontend. **Bug real**: "Ler descrição completa" duplicava o início do texto ao expandir (resumo truncado ficava visível acima do texto completo, que recomeçava do zero) — trocado `<details>` nativo por toggle controlado em React. **Bug real**: link "Fale conosco" da página do evento caía em `/sobre` (fallback quando `NEXT_PUBLIC_EMAIL_CONTATO` não configurada) em vez de ir pro formulário `/contato` de verdade — corrigido pra sempre ir pro `/contato`. **E-mail do ingresso**: QR nu (200×200, sem nenhum texto) trocado por uma carteirinha completa (nome do evento, data/hora, local, QR de 280px e nome do participante numa imagem só, ~45KB) — se a pessoa salvar só a imagem pra mostrar na entrada, não perde o contexto. Exige `fonts-dejavu-core` na imagem Docker da API (Pillow precisa de uma fonte TrueType). Testes: 322 → 326. |
