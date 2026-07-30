@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { CompraInfoConfianca } from "@/components/compra-info-confianca";
+import { EventoGaleria } from "@/components/evento-galeria";
 import { EventoHeroBanner } from "@/components/evento-hero-banner";
 import { EventoMapaLocal } from "@/components/evento-mapa-local";
 import { EventoMetaUnica } from "@/components/evento-meta-unica";
@@ -17,6 +18,7 @@ import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { formatEventoDataHora } from "@/lib/eventos";
+import { salvarRefPromoter } from "@/lib/promoter-ref";
 import type { Evento, Usuario } from "@/lib/types";
 
 const ComprarIngressoLazy = dynamic(
@@ -65,6 +67,13 @@ export function EventoPublicClient({
       window.history.replaceState(null, "", next || url.pathname);
     }
   }, [alteracaoGuardada]);
+
+  // Captura ?ref=CODIGO para atribuição no checkout (sem expor no share público).
+  useEffect(() => {
+    if (!evento?.id || typeof window === "undefined") return;
+    const ref = searchParams.get("ref");
+    if (ref?.trim()) salvarRefPromoter(evento.id, ref.trim());
+  }, [evento?.id, searchParams]);
 
   useEffect(() => {
     if (!ingressoRetomarId || typeof window === "undefined") return;
@@ -413,6 +422,7 @@ export function EventoPublicClient({
                   garanta seu ingresso na área de compra.
                 </p>
               )}
+              <EventoGaleria urls={evento.galeria_urls ?? []} className="mt-6 border-0 p-0 shadow-none" />
             </section>
           </div>
           <EventoMapaLocal local={evento.local} cidade={evento.cidade} />

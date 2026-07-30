@@ -15,6 +15,8 @@ from app.models.evento_lista_espera import EventoListaEspera
 from app.models.usuario_notificacao import UsuarioNotificacao
 from app.models.financeiro_saque import FinanceiroSaque
 from app.models.contato_site_mensagem import ContatoSiteMensagem
+from app.models.evento_promoter import EventoPromoter
+from app.models.evento_galeria_foto import EventoGaleriaFoto
 
 __all__ = [
     "Base",
@@ -35,4 +37,6 @@ __all__ = [
     "FinanceiroSaque",
     "PlatformSettings",
     "ContatoSiteMensagem",
+    "EventoPromoter",
+    "EventoGaleriaFoto",
 ]

@@ -102,6 +102,14 @@ async def criar_evento(
     usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
     validar_publicacao_evento_pago(db, usuario_atual, novo_evento, evento_data.publicado)
 
+    if evento_data.galeria_urls is not None:
+        from app.services.evento_galeria import substituir_galeria
+
+        try:
+            substituir_galeria(db, novo_evento, evento_data.galeria_urls)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
     db.commit()
     db.refresh(novo_evento)
 
@@ -191,6 +199,14 @@ async def atualizar_evento(
         try:
             itens = [l.model_dump() for l in body.ingresso_lotes]
             substituir_lotes_evento(db, evento, itens)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
+    if "galeria_urls" in body.model_fields_set and body.galeria_urls is not None:
+        from app.services.evento_galeria import substituir_galeria
+
+        try:
+            substituir_galeria(db, evento, body.galeria_urls)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -514,6 +530,89 @@ async def remover_cupom_evento(
     db.delete(cupom)
     db.commit()
     return {"ok": True}
+
+
+@router.get("/id/{evento_id}/promoters")
+async def listar_promoters_evento(
+    evento_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Lista códigos de divulgação e métricas agregadas (sem PII do comprador)."""
+    from app.services.evento_promoters import listar_promoters_com_metricas
+
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    return {"promoters": listar_promoters_com_metricas(db, evento)}
+
+
+@router.post("/id/{evento_id}/promoters")
+async def criar_promoter_evento(
+    evento_id: str,
+    body: dict,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    from pydantic import BaseModel, Field
+
+    from app.services.evento_promoters import criar_promoter
+
+    class _Body(BaseModel):
+        codigo: str | None = Field(default=None, max_length=32)
+        rotulo: str | None = Field(default=None, max_length=120)
+
+    payload = _Body.model_validate(body or {})
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    try:
+        p = criar_promoter(db, evento, codigo=payload.codigo, rotulo=payload.rotulo)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {
+        "id": p.id,
+        "codigo": p.codigo,
+        "rotulo": p.rotulo,
+        "ativo": bool(p.ativo),
+        "criado_em": p.criado_em.isoformat() if p.criado_em else None,
+        "vendas": 0,
+        "receita_bruta": 0.0,
+    }
+
+
+@router.patch("/id/{evento_id}/promoters/{promoter_id}")
+async def atualizar_promoter_evento(
+    evento_id: str,
+    promoter_id: str,
+    body: dict,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    from pydantic import BaseModel, Field
+
+    from app.models import EventoPromoter
+    from app.services.evento_promoters import atualizar_promoter, listar_promoters_com_metricas
+
+    class _Body(BaseModel):
+        rotulo: str | None = Field(default=None, max_length=120)
+        ativo: bool | None = None
+
+    payload = _Body.model_validate(body or {})
+    _evento_do_organizador(db, evento_id, usuario_atual)
+    p = db.get(EventoPromoter, promoter_id)
+    if not p or p.evento_id != evento_id:
+        raise HTTPException(status_code=404, detail="Divulgador não encontrado")
+    atualizar_promoter(db, p, rotulo=payload.rotulo, ativo=payload.ativo)
+    metricas = listar_promoters_com_metricas(db, db.get(Evento, evento_id))  # type: ignore[arg-type]
+    for m in metricas:
+        if m["id"] == p.id:
+            return m
+    return {
+        "id": p.id,
+        "codigo": p.codigo,
+        "rotulo": p.rotulo,
+        "ativo": bool(p.ativo),
+        "criado_em": p.criado_em.isoformat() if p.criado_em else None,
+        "vendas": 0,
+        "receita_bruta": 0.0,
+    }
 
 
 @router.get("/id/{evento_id}/resumo")

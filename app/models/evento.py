@@ -88,6 +88,17 @@ class Evento(Base):
         back_populates="evento",
         cascade="all, delete-orphan",
     )
+    promoters = relationship(
+        "EventoPromoter",
+        back_populates="evento",
+        cascade="all, delete-orphan",
+    )
+    galeria_fotos = relationship(
+        "EventoGaleriaFoto",
+        back_populates="evento",
+        order_by="EventoGaleriaFoto.ordem",
+        cascade="all, delete-orphan",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

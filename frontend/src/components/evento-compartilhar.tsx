@@ -40,13 +40,18 @@ const btnClass =
 type Props = {
   nome: string;
   className?: string;
+  /** URL completa para compartilhar (ex.: link com ?ref=). Default: URL da página. */
+  shareUrl?: string;
 };
 
 /** Compartilhar: WhatsApp, copiar link e Web Share nativo (quando disponível). */
-export function EventoCompartilhar({ nome, className = "" }: Props) {
+export function EventoCompartilhar({ nome, className = "", shareUrl }: Props) {
   const [hint, setHint] = useState<string | null>(null);
 
-  const pageUrl = useCallback(() => (typeof window !== "undefined" ? window.location.href : ""), []);
+  const pageUrl = useCallback(() => {
+    if (shareUrl) return shareUrl;
+    return typeof window !== "undefined" ? window.location.href : "";
+  }, [shareUrl]);
 
   const copiarLink = useCallback(async () => {
     setHint(null);

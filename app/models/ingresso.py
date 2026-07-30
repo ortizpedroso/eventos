@@ -42,6 +42,14 @@ class Ingresso(Base):
     reservado_ate = Column(DateTime, nullable=True)
 
     lembrete_enviado_em = Column(DateTime, nullable=True)
+    # Lembrete único de carrinho abandonado (transacional; ≠ lembrete do dia do evento)
+    carrinho_lembrete_enviado_em = Column(DateTime, nullable=True, index=True)
+
+    # Atribuição de promoter / link ?ref= (sem comissão nesta fase)
+    promoter_id = Column(
+        String, ForeignKey("evento_promoters.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    promoter_codigo = Column(String(32), nullable=True)
 
     # Repasse / transferência para outro participante
     repassado_para_nome = Column(String(200), nullable=True)
@@ -75,6 +83,7 @@ class Ingresso(Base):
     checkin_por = relationship("Usuario", foreign_keys=[checkin_por_id])
     lote = relationship("EventoIngressoLote", back_populates="ingressos")
     cupom = relationship("EventoCupom", back_populates="ingressos")
+    promoter = relationship("EventoPromoter", back_populates="ingressos")
     cancelamento = relationship("Cancelamento", back_populates="ingresso", uselist=False, cascade="all, delete-orphan")
 
     def __init__(self, **kwargs):

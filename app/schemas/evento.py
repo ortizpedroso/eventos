@@ -88,6 +88,24 @@ class CriarEventoRequest(BaseModel):
     aceita_interesse: bool = True
     lista_espera_habilitada: bool = False
     lista_espera_prazo_horas: int = Field(default=24, ge=12, le=48)
+    # Fotos reais de edições anteriores (0–6). Omitir = não alterar no PATCH.
+    galeria_urls: list[str] | None = Field(default=None, max_length=6)
+
+    @field_validator("galeria_urls", mode="before")
+    @classmethod
+    def _galeria_urls(cls, v: object) -> list[str] | None:
+        if v is None:
+            return None
+        if not isinstance(v, list):
+            raise ValueError("galeria_urls deve ser uma lista")
+        out: list[str] = []
+        for item in v:
+            u = validar_imagem_url(item)
+            if u:
+                out.append(u)
+        if len(out) > 6:
+            raise ValueError("máximo de 6 fotos na galeria")
+        return out
 
     @field_validator("parcelamento_max")
     @classmethod
@@ -177,6 +195,7 @@ class EventoResponse(BaseModel):
     lista_espera_habilitada: bool = False
     lista_espera_prazo_horas: int = 24
     espera_janela_exclusiva_ativa: bool = False
+    galeria_urls: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -198,6 +217,7 @@ def montar_evento_response(
     from app.services.urgencia import calcular_urgencia
     from app.services.lista_espera import janela_exclusiva_espera_ativa
     from app.services.evento_repasse import organizador_pode_vender
+    from app.services.evento_galeria import listar_urls as listar_urls_galeria
     from config.settings import settings
 
     lotes_orm = sorted(evento.ingresso_lotes, key=lambda x: (x.ordem, x.id))
@@ -289,5 +309,6 @@ def montar_evento_response(
         "lista_espera_habilitada": bool(getattr(evento, "lista_espera_habilitada", False)),
         "lista_espera_prazo_horas": int(getattr(evento, "lista_espera_prazo_horas", 24) or 24),
         "espera_janela_exclusiva_ativa": janela_exclusiva_espera_ativa(db, evento.id),
+        "galeria_urls": listar_urls_galeria(db, evento.id),
     }
     return EventoResponse.model_validate(base)

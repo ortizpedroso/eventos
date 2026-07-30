@@ -18,6 +18,7 @@ import {
   type LoteFormRow,
 } from "@/components/evento-lotes-editor";
 import { EventoImagemField } from "@/components/evento-imagem-field";
+import { EventoPromotersPainel } from "@/components/evento-promoters-painel";
 import { EventoConfigAvancadaFields } from "@/components/evento-config-avancada-fields";
 import { EventoWizardSimuladorLiquido } from "@/components/evento-wizard-simulador-liquido";
 import { EventoVisibilidadeAvisosLegais } from "@/components/evento-visibilidade-avisos";
@@ -53,6 +54,7 @@ type SalvarPayload = {
   aceita_interesse?: boolean;
   lista_espera_habilitada?: boolean;
   lista_espera_prazo_horas?: number;
+  galeria_urls?: string[];
 };
 
 export function EditarEventoClient({ slug }: Props) {
@@ -66,6 +68,7 @@ export function EditarEventoClient({ slug }: Props) {
   const [nomeParaSlug, setNomeParaSlug] = useState("");
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
+  const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
   const [contatoTelefone, setContatoTelefone] = useState("");
   const [contatoEmail, setContatoEmail] = useState("");
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>([]);
@@ -161,6 +164,7 @@ export function EditarEventoClient({ slug }: Props) {
           setEvento(ev);
           setNomeParaSlug(ev.nome);
           setImagemUrl(ev.imagem_url ?? "");
+          setGaleriaUrls((ev.galeria_urls ?? []).filter(Boolean).slice(0, 6));
           setContatoTelefone(ev.contato_telefone ?? "");
           setContatoEmail(ev.contato_email ?? "");
           setLoteRows(eventoLotesToRows(ev));
@@ -250,6 +254,7 @@ export function EditarEventoClient({ slug }: Props) {
       publicado,
       limite_ingressos_por_cpf:
         limite_ingressos_por_cpf && limite_ingressos_por_cpf >= 1 ? limite_ingressos_por_cpf : null,
+      galeria_urls: galeriaUrls.map((u) => u.trim()).filter(Boolean).slice(0, 6),
       ...parseEventoConfigFromForm(formData),
     };
 
@@ -592,6 +597,48 @@ export function EditarEventoClient({ slug }: Props) {
 
           <EventoImagemField value={imagemUrl} onChange={setImagemUrl} />
 
+          <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+            <div>
+              <p className="text-sm font-medium text-zinc-900">Galeria — edições anteriores</p>
+              <p className="mt-1 text-xs text-zinc-600">
+                Opcional: até 6 fotos reais. Só aparece na página do evento se você enviar alguma.
+                Sem placeholders genéricos.
+              </p>
+            </div>
+            {galeriaUrls.map((url, idx) => (
+              <div key={`gal-${idx}`} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1">
+                  <EventoImagemField
+                    value={url}
+                    onChange={(v) => {
+                      setGaleriaUrls((prev) => {
+                        const next = [...prev];
+                        next[idx] = v;
+                        return next;
+                      });
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="text-sm text-red-700 underline"
+                  onClick={() => setGaleriaUrls((prev) => prev.filter((_, i) => i !== idx))}
+                >
+                  Remover
+                </button>
+              </div>
+            ))}
+            {galeriaUrls.length < 6 ? (
+              <button
+                type="button"
+                className="text-sm font-medium text-emerald-700 underline"
+                onClick={() => setGaleriaUrls((prev) => [...prev, ""])}
+              >
+                Adicionar foto
+              </button>
+            ) : null}
+          </div>
+
           <EventoConfigAvancadaFields
             evento={evento}
             onParcelamentoChange={(hab, max, repasse) => {
@@ -613,7 +660,14 @@ export function EditarEventoClient({ slug }: Props) {
         </form>
 
         <div className="mt-6 border-t border-zinc-100 pt-6">
-          <EventoCuponsEditor eventoId={evento.id} />
+          <EventoPromotersPainel
+            eventoId={evento.id}
+            eventoSlug={evento.slug}
+            eventoNome={evento.nome}
+          />
+          <div className="mt-6">
+            <EventoCuponsEditor eventoId={evento.id} />
+          </div>
           {evento.aceita_interesse !== false ? (
             <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
               <p className="text-sm font-medium text-zinc-900">Lista de interesse</p>

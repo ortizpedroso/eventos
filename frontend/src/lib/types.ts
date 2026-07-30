@@ -55,6 +55,8 @@ export type Evento = {
   lista_espera_habilitada?: boolean;
   lista_espera_prazo_horas?: number;
   espera_janela_exclusiva_ativa?: boolean;
+  /** Fotos reais de edições anteriores (vazio = seção oculta na página pública). */
+  galeria_urls?: string[];
 };
 
 export type Usuario = {

@@ -62,6 +62,8 @@ class CriarPagamentoRequest(BaseModel):
     termo_compra_aceito: bool = Field(default=False)
     termo_compra_versao: str | None = Field(default=None, max_length=32)
     token_espera: str | None = Field(default=None, max_length=128)
+    # Código de divulgador (?ref=) — só atribuição; sem comissão nesta fase.
+    ref: str | None = Field(default=None, max_length=32)
 
     @field_validator("participante_nome", mode="before")
     @classmethod
@@ -84,7 +86,12 @@ class CriarPagamentoRequest(BaseModel):
         return v
 
     @field_validator(
-        "participante_cpf", "participante_telefone", "cortesia_responsavel", "codigo_cupom", mode="before"
+        "participante_cpf",
+        "participante_telefone",
+        "cortesia_responsavel",
+        "codigo_cupom",
+        "ref",
+        mode="before",
     )
     @classmethod
     def _strip_opcional(cls, v):
@@ -297,6 +304,12 @@ async def criar_pagamento(
     if eh_cortesia and not resp_cortesia:
         resp_cortesia = "Ingresso cortesia"
 
+    from app.services.evento_promoters import resolver_promoter_ativo
+
+    promoter = resolver_promoter_ativo(db, evento.id, body.ref)
+    promoter_id = promoter.id if promoter else None
+    promoter_codigo = promoter.codigo if promoter else None
+
     def _ingressos_gratis(fake_prefix: str = "cortesia") -> dict:
         agora = datetime.now(timezone.utc).replace(tzinfo=None)
         ids: list[str] = []
@@ -318,6 +331,8 @@ async def criar_pagamento(
                 status="pago",
                 data_compra=agora,
                 data_limite_cancelamento=agora + timedelta(days=10),
+                promoter_id=promoter_id,
+                promoter_codigo=promoter_codigo,
             )
             db.add(novo)
             db.flush()
@@ -405,6 +420,8 @@ async def criar_pagamento(
             reservado_ate=reserva_ate,
             termo_compra_aceito_em=termo_aceite_em,
             termo_compra_versao=termo_versao,
+            promoter_id=promoter_id,
+            promoter_codigo=promoter_codigo,
         )
         db.add(ing)
         novos.append(ing)

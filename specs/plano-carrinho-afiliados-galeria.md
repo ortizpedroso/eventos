@@ -1,7 +1,7 @@
 # Plano: carrinho abandonado + promoters + galeria (prova social viva)
 
 **Data:** 2026-07-30  
-**Status:** 📋 Aguardando aprovação (não implementar antes do OK)  
+**Status:** ✅ Aprovado e implementado (A→B→C) — timer 20 min, opt-out A1 transacional  
 **Spec principal:** `specs/eventosbr-producao.md` (atualizar changelog na entrega)  
 **Origem:** pedido `/build` — plano de implementação priorizado  
 
@@ -38,7 +38,7 @@ Hoje o checkout cria `Ingresso` com `status="pendente"` e **`reservado_ate = ago
 
 | Pedido original | Restrição | Decisão do plano |
 |-----------------|-----------|------------------|
-| Lembrete em 30–60 min | Reserva só 35 min; aos 60 o link `?retomar=` já não serve | **Enviar ~20–25 min após `data_compra`**, ainda com `status=pendente` e `reservado_ate > agora` |
+| Lembrete em 30–60 min | Reserva só 35 min; aos 60 o link `?retomar=` já não serve | **Enviar 20 min após `data_compra`**, ainda com `status=pendente` e `reservado_ate > agora` |
 | Extender reserva | Mexeria no checkout | **Fora de escopo** nesta fase |
 
 Deep-link já existe:  

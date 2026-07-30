@@ -54,6 +54,10 @@ async def lifespan(app: FastAPI):
     from app.services.notificacao_email import start_email_simples_worker, stop_email_simples_worker
     from app.services.contato_email import start_contato_email_worker, stop_contato_email_worker
     from app.services.lembrete_evento import start_lembrete_worker, stop_lembrete_worker
+    from app.services.lembrete_carrinho import (
+        start_lembrete_carrinho_worker,
+        stop_lembrete_carrinho_worker,
+    )
     from app.services.lista_espera_cleanup import (
         start_lista_espera_cleanup_worker,
         stop_lista_espera_cleanup_worker,
@@ -79,6 +83,7 @@ async def lifespan(app: FastAPI):
         start_reserva_cleanup_worker()
         start_lista_espera_cleanup_worker()
         start_lembrete_worker()
+        start_lembrete_carrinho_worker()
         start_assinatura_ciclo_worker()
         start_repasse_status_sync_worker()
     try:
@@ -87,6 +92,7 @@ async def lifespan(app: FastAPI):
         if _start_bg_workers:
             stop_repasse_status_sync_worker()
             stop_assinatura_ciclo_worker()
+            stop_lembrete_carrinho_worker()
             stop_lembrete_worker()
             stop_lista_espera_cleanup_worker()
             stop_reserva_cleanup_worker()
