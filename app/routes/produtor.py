@@ -17,7 +17,11 @@ from app.services.organizador_publico import (
     validar_brand_subdomain,
 )
 from app.utils.imagem_url import validar_imagem_url
-from app.utils.url_publica import validar_url_http_https, validar_url_whatsapp
+from app.utils.url_publica import (
+    normalizar_url_instagram,
+    normalizar_url_whatsapp,
+    validar_url_http_https,
+)
 
 router = APIRouter()
 
@@ -51,7 +55,14 @@ class PerfilPublicoUpdate(BaseModel):
     def _brand_subdomain(cls, v: object) -> str | None:
         return validar_brand_subdomain(v if isinstance(v, str) else None)
 
-    @field_validator("social_instagram", "social_site", mode="before")
+    @field_validator("social_instagram", mode="before")
+    @classmethod
+    def _url_instagram(cls, v: object) -> str | None:
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
+        return normalizar_url_instagram(v)
+
+    @field_validator("social_site", mode="before")
     @classmethod
     def _url_http(cls, v: object) -> str | None:
         if v is None or (isinstance(v, str) and not v.strip()):
@@ -63,7 +74,7 @@ class PerfilPublicoUpdate(BaseModel):
     def _url_whatsapp(cls, v: object) -> str | None:
         if v is None or (isinstance(v, str) and not v.strip()):
             return None
-        return validar_url_whatsapp(v)
+        return normalizar_url_whatsapp(v)
 
 
 def _perfil_response(usuario: Usuario, slug: str) -> dict:

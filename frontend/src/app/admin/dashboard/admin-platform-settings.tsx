@@ -95,15 +95,20 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
   const [form, setForm] = useState<PlatformSettingsForm>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [localMsg, setLocalMsg] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
     onError(null);
+    setLocalError(null);
     try {
       const data = await adminFetch<PlatformSettingsForm>("/api/admin/settings");
       setForm(toForm(data));
     } catch (e) {
-      onError(e instanceof Error ? e.message : "Falha ao carregar configurações");
+      const msg = e instanceof Error ? e.message : "Falha ao carregar configurações";
+      onError(msg);
+      setLocalError(msg);
     } finally {
       setLoading(false);
     }
@@ -115,12 +120,15 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
 
   function setField<K extends keyof PlatformSettingsForm>(key: K, value: PlatformSettingsForm[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setLocalMsg(null);
   }
 
   async function salvar() {
     setSaving(true);
     onError(null);
     onMsg(null);
+    setLocalError(null);
+    setLocalMsg(null);
     try {
       const data = await adminFetch<PlatformSettingsForm>("/api/admin/settings", {
         method: "PATCH",
@@ -128,9 +136,13 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
         body: JSON.stringify(payloadFromForm(form)),
       });
       setForm(toForm(data));
-      onMsg("Configurações salvas. O site público atualiza em até 1 minuto.");
+      const ok = "Configurações salvas. Instagram e WhatsApp aparecem no rodapé em até 1 minuto.";
+      onMsg(ok);
+      setLocalMsg(ok);
     } catch (e) {
-      onError(e instanceof Error ? e.message : "Falha ao salvar");
+      const msg = e instanceof Error ? e.message : "Falha ao salvar";
+      onError(msg);
+      setLocalError(msg);
     } finally {
       setSaving(false);
     }
@@ -299,26 +311,57 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
         <h3 className="sm:col-span-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
           Redes sociais
         </h3>
+        <p className="sm:col-span-2 text-xs text-zinc-500">
+          Instagram: @usuario ou link. WhatsApp: número com DDD (ex.: 11999999999) ou link wa.me. Aparecem no
+          rodapé do site.
+        </p>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-zinc-800">Instagram</span>
+          <input
+            className="input"
+            value={form.social_instagram_url}
+            onChange={(e) => setField("social_instagram_url", e.target.value)}
+            placeholder="@seuperfil ou https://instagram.com/..."
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-zinc-800">WhatsApp</span>
+          <input
+            className="input"
+            value={form.social_whatsapp_url}
+            onChange={(e) => setField("social_whatsapp_url", e.target.value)}
+            placeholder="11999999999 ou https://wa.me/5511..."
+          />
+        </label>
         {(
           [
-            ["social_instagram_url", "Instagram"],
-            ["social_whatsapp_url", "WhatsApp"],
-            ["social_linkedin_url", "LinkedIn"],
-            ["social_x_url", "X (Twitter)"],
-            ["social_youtube_url", "YouTube"],
+            ["social_linkedin_url", "LinkedIn", "https://linkedin.com/company/..."],
+            ["social_x_url", "X (Twitter)", "https://x.com/..."],
+            ["social_youtube_url", "YouTube", "https://youtube.com/@..."],
           ] as const
-        ).map(([key, label]) => (
+        ).map(([key, label, placeholder]) => (
           <label key={key} className="grid gap-1 text-sm">
             <span className="font-medium text-zinc-800">{label}</span>
             <input
               className="input"
               value={form[key]}
               onChange={(e) => setField(key, e.target.value)}
-              placeholder="https://"
+              placeholder={placeholder}
             />
           </label>
         ))}
       </section>
+
+      {localError ? (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          {localError}
+        </p>
+      ) : null}
+      {localMsg ? (
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status">
+          {localMsg}
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="btn-success px-5 py-2.5 text-sm" disabled={saving} onClick={() => void salvar()}>
