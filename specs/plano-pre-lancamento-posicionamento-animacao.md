@@ -33,7 +33,8 @@ Concordo com o diagnóstico geral (híbrido B2C/B2B, produto forte mal empacotad
 | 3 | Animação leve — Fase 1 (ver seção 3) | Polimento, mas rápido e de baixo risco | ✅ Feito (home, funcionalidades, sobre, produtores) |
 | 4 | Fechar GitHub | ✅ Já feito (seção 0) | ✅ Feito |
 
-**Depois do lançamento:** promoters/afiliados, recuperação de carrinho, prova social viva, PDV, mapa de assentos, Apple/Google Wallet.
+**Depois do lançamento:** promoters/afiliados, recuperação de carrinho, prova social viva, PDV, mapa de assentos, Apple/Google Wallet.  
+**Plano detalhado (aguardando aprovação):** `specs/plano-carrinho-afiliados-galeria.md` (Fases A→B→C).
 
 ---
 
