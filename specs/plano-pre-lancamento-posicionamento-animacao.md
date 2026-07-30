@@ -29,8 +29,8 @@ Concordo com o diagnóstico geral (híbrido B2C/B2B, produto forte mal empacotad
 | # | Item | Por quê nessa posição | Status |
 |---|---|---|---|
 | 1 | Página "Para produtores" | Resolve o gap principal — sem isso o resto fica escondido | ✅ Feito (`/produtores`) |
-| 2 | Home com uma promessa (separar Comprar × Sou produtor) | Mesma frente do item 1 | 📋 Próximo |
-| 3 | Animação leve — Fase 1 (ver seção 3) | Polimento, mas rápido e de baixo risco | ✅ Feito (`ScrollRevealObserver`, usado em `/produtores`) |
+| 2 | Home com uma promessa (separar Comprar × Sou produtor) | Mesma frente do item 1 | ✅ Feito |
+| 3 | Animação leve — Fase 1 (ver seção 3) | Polimento, mas rápido e de baixo risco | ✅ Feito (home, funcionalidades, sobre, produtores) |
 | 4 | Fechar GitHub | ✅ Já feito (seção 0) | ✅ Feito |
 
 **Depois do lançamento:** promoters/afiliados, recuperação de carrinho, prova social viva, PDV, mapa de assentos, Apple/Google Wallet.
