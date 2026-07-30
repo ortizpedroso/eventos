@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 
 from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
-from app.services.smtp_client import send_email, smtp_configured
+from app.services.notificacao_email import enqueue_email_simples
+from app.services.smtp_client import smtp_configured
 from app.utils.html_escape import esc
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ def enviar_email_recuperacao_senha(
             "sem senha. Para entrar depois e ver seus ingressos, defina uma senha neste link:</p>"
         )
         cta = "Definir minha senha"
-        texto = (
+        texto_plano = (
             f"Olá, {nome or 'participante'}!\n\n"
             f"Sua conta {branding.site_name} foi criada na compra rápida sem senha. "
             "Para entrar depois e ver seus ingressos, defina uma senha neste link "
@@ -46,7 +47,7 @@ def enviar_email_recuperacao_senha(
             f"<p>Recebemos um pedido para redefinir a senha da sua conta {esc(branding.site_name)}.</p>"
         )
         cta = "Redefinir senha"
-        texto = (
+        texto_plano = (
             f"Olá, {nome or 'participante'}!\n\n"
             f"Recebemos um pedido para redefinir a senha da sua conta {branding.site_name}.\n\n"
             f"Acesse o link abaixo (válido por 1 hora):\n{link}\n\n"
@@ -60,10 +61,25 @@ def enviar_email_recuperacao_senha(
         "<p>Se você não solicitou, ignore este e-mail.</p>"
     )
     html = build_email_html(title=titulo, body_html=body, branding=branding)
+    assunto = format_email_subject(titulo, branding)
 
-    return send_email(
-        destino=destino,
-        assunto=format_email_subject(titulo, branding),
-        corpo_texto=texto,
-        corpo_html=html,
-    )
+    # Fila com retry (igual onboarding/saque) — evita falha silenciosa no request HTTP.
+    ok = enqueue_email_simples(destino.strip().lower(), assunto, html)
+    if ok:
+        logger.info(
+            "E-mail de %s enfileirado para %s",
+            "primeiro acesso" if primeiro_acesso else "recuperação de senha",
+            destino,
+        )
+    else:
+        logger.error("Falha ao enfileirar e-mail de senha para %s", destino)
+        # Fallback síncrono se a fila recusar (destino vazio etc.)
+        from app.services.smtp_client import send_email
+
+        return send_email(
+            destino=destino,
+            assunto=assunto,
+            corpo_texto=texto_plano,
+            corpo_html=html,
+        )
+    return ok

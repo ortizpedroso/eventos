@@ -501,6 +501,17 @@ class TestRecuperacaoSenha:
         )
         assert login.status_code == 200, login.text
 
+    def test_mensagem_primeiro_acesso_nao_exige_senha_existente(self):
+        with patch("app.routes.auth.enviar_email_recuperacao_senha", return_value=True):
+            r = client.post(
+                "/api/auth/solicitar-recuperacao-senha",
+                json={"email": "inexistente-xyz@test.com"},
+            )
+        assert r.status_code == 200
+        msg = r.json()["message"].lower()
+        assert "tiver senha" not in msg
+        assert "spam" in msg or "link" in msg
+
 
 class TestIngressoImpressaoHtml:
     def test_download_html_permite_script_print(self):

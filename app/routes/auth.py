@@ -407,9 +407,10 @@ async def solicitar_recuperacao_senha(
 
     email = str(body.email).strip().lower()
     usuario = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
+    # Mensagem genérica (não revela se o e-mail existe). Cobre compra rápida sem senha.
     msg = (
-        "Se o e-mail estiver cadastrado, você receberá instruções para acessar "
-        "ou definir sua senha em instantes."
+        "Se este e-mail estiver na nossa base, enviamos um link para criar ou "
+        "redefinir a senha. Confira a caixa de entrada e o spam — o link vale por 1 hora."
     )
 
     # Contas de compra rápida (sem senha) também recebem o link — é o fluxo de “primeiro acesso”.

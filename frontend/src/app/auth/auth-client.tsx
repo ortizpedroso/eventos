@@ -169,12 +169,16 @@ export default function AuthClient({
     try {
       if (mode === "forgot") {
         const email = String(formData.get("email") ?? "");
-        const r = await apiFetch<{ message: string }>("/api/auth/solicitar-recuperacao-senha", {
+        await apiFetch<{ message: string }>("/api/auth/solicitar-recuperacao-senha", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email, turnstile_token: turnstileToken }),
         });
-        setInfoMsg(r.message);
+        setInfoMsg(
+          "Pronto. Se este e-mail estiver cadastrado (incluindo compra rápida sem senha), " +
+            "enviamos um link para criar ou redefinir a senha. Confira a caixa de entrada e o spam — " +
+            "o link vale por 1 hora.",
+        );
         return;
       }
 
@@ -381,7 +385,7 @@ export default function AuthClient({
             : mode === "register"
               ? "Crie sua conta"
               : mode === "forgot"
-                ? "Primeiro acesso ou esqueci a senha"
+                ? "Criar senha ou recuperar acesso"
                 : "Nova senha"}
         </h1>
         <p className="mt-2 text-sm text-zinc-600">
@@ -390,9 +394,16 @@ export default function AuthClient({
             : mode === "register"
               ? "Junte-se à nossa plataforma."
               : mode === "forgot"
-                ? "Informe o e-mail da compra. Enviamos um link para criar ou redefinir sua senha."
+                ? "Use o mesmo e-mail da compra. Funciona para quem comprou sem senha (compra rápida) e para quem esqueceu a senha."
                 : "Escolha uma senha para acessar sua conta e ver seus ingressos."}
         </p>
+        {mode === "forgot" ? (
+          <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-left text-xs leading-relaxed text-sky-950">
+            <strong className="font-semibold">Compra rápida?</strong> Sua conta existe, mas ainda
+            não tem senha. Informe o e-mail usado na compra, abra o link que enviamos e defina uma
+            senha para ver seus ingressos.
+          </p>
+        ) : null}
         {fluxoOrganizador ? (
           <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-xs leading-relaxed text-emerald-950">
             <strong className="font-semibold">Criar eventos</strong> é exclusivo para conta de{" "}
