@@ -381,7 +381,7 @@ export default function AuthClient({
             : mode === "register"
               ? "Crie sua conta"
               : mode === "forgot"
-                ? "Recuperar senha"
+                ? "Primeiro acesso ou esqueci a senha"
                 : "Nova senha"}
         </h1>
         <p className="mt-2 text-sm text-zinc-600">
@@ -390,8 +390,8 @@ export default function AuthClient({
             : mode === "register"
               ? "Junte-se à nossa plataforma."
               : mode === "forgot"
-                ? "Enviaremos um link para redefinir sua senha."
-                : "Escolha uma nova senha para sua conta."}
+                ? "Informe o e-mail da compra. Enviamos um link para criar ou redefinir sua senha."
+                : "Escolha uma senha para acessar sua conta e ver seus ingressos."}
         </p>
         {fluxoOrganizador ? (
           <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-xs leading-relaxed text-emerald-950">
@@ -513,7 +513,7 @@ export default function AuthClient({
                     </label>
                     {mode === "login" ? (
                       <Link href="/auth?mode=forgot" className="text-xs font-medium text-emerald-700 hover:underline">
-                        Esqueci minha senha
+                        Esqueci minha senha / primeiro acesso
                       </Link>
                     ) : null}
                   </div>
@@ -574,7 +574,7 @@ export default function AuthClient({
                 : mode === "register"
                   ? "Cadastrar"
                   : mode === "forgot"
-                    ? "Enviar link"
+                    ? "Enviar link de acesso"
                     : "Salvar nova senha"}
           </button>
         </form>

@@ -322,8 +322,9 @@ async def login(
             raise HTTPException(
                 status_code=401,
                 detail=(
-                    "Esta conta ainda não tem senha. Acesse Minha conta → Perfil para criar uma, "
-                    "ou use «Continuar com Google» no checkout."
+                    "Esta conta ainda não tem senha (compra rápida). "
+                    "Use «Esqueci minha senha / primeiro acesso» na tela de entrar "
+                    "com o mesmo e-mail da compra para criar uma senha e ver seus ingressos."
                 ),
             )
         prov = (usuario.auth_provider or "social").capitalize()
@@ -401,14 +402,18 @@ async def solicitar_recuperacao_senha(
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_login),
 ):
-    """Envia link de recuperação por e-mail (resposta genérica por segurança)."""
+    """Envia link para definir ou redefinir senha (também para compra rápida sem senha)."""
     await _checar_turnstile(request, body.turnstile_token)
 
     email = str(body.email).strip().lower()
     usuario = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
-    msg = "Se o e-mail estiver cadastrado e tiver senha, você receberá instruções em instantes."
+    msg = (
+        "Se o e-mail estiver cadastrado, você receberá instruções para acessar "
+        "ou definir sua senha em instantes."
+    )
 
-    if usuario and usuario.ativo and usuario.senha_hash:
+    # Contas de compra rápida (sem senha) também recebem o link — é o fluxo de “primeiro acesso”.
+    if usuario and usuario.ativo and (usuario.auth_provider or "email") == "email":
         token = secrets.token_urlsafe(32)
         agora = datetime.now(timezone.utc).replace(tzinfo=None)
         usuario.senha_reset_token = token
@@ -416,7 +421,12 @@ async def solicitar_recuperacao_senha(
         db.commit()
         base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
         link = f"{base}/auth?reset={token}"
-        enviar_email_recuperacao_senha(destino=usuario.email, nome=usuario.nome, link=link)
+        enviar_email_recuperacao_senha(
+            destino=usuario.email,
+            nome=usuario.nome,
+            link=link,
+            primeiro_acesso=not bool(usuario.senha_hash),
+        )
 
     return {"message": msg}
 

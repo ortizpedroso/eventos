@@ -190,7 +190,7 @@ export default function IngressoDetalhePage() {
 </head>
 <body>
   <div class="no-print" style="text-align:center;margin-bottom:30px">
-    <button onclick="window.print()" style="padding:12px 24px;font-size:16px;cursor:pointer;background:#10b981;color:#fff;border:none;border-radius:8px;font-weight:bold">
+    <button type="button" id="btn-imprimir" style="padding:12px 24px;font-size:16px;cursor:pointer;background:#10b981;color:#fff;border:none;border-radius:8px;font-weight:bold">
       Imprimir ou Salvar como PDF
     </button>
   </div>
@@ -208,14 +208,35 @@ export default function IngressoDetalhePage() {
       <div class="status">${statusTxt}</div>
     </div>
   </div>
+  <script>
+    (function () {
+      function imprimir() { window.print(); }
+      var btn = document.getElementById("btn-imprimir");
+      if (btn) btn.addEventListener("click", imprimir);
+      window.addEventListener("load", function () {
+        window.setTimeout(imprimir, 400);
+      });
+    })();
+  </script>
 </body>
 </html>`;
 
       const blob = new Blob([html], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
-      const w = window.open(url, "_blank", "noopener,noreferrer");
+      // Sem noopener: precisamos da referência para chamar print() no gesto do clique
+      // (navegadores bloqueiam window.print() automático sem interação do utilizador).
+      const w = window.open(url, "_blank");
       if (!w) {
         setMessage("Permita pop-ups para abrir o ingresso numa nova janela.");
+      } else {
+        window.setTimeout(() => {
+          try {
+            w.focus();
+            w.print();
+          } catch {
+            /* o botão na página do ingresso continua disponível */
+          }
+        }, 400);
       }
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch {

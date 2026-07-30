@@ -456,6 +456,127 @@ class TestRecuperacaoSenha:
         )
         assert login.status_code == 200, login.text
 
+    def test_compra_rapida_primeiro_acesso_via_recuperacao(self):
+        """Conta sem senha (compra rápida) recebe link de primeiro acesso e consegue entrar."""
+        r = client.post(
+            "/api/auth/compra-rapida",
+            json={"nome": "Convidado Rapido", "email": "primeiro.acesso@test.com"},
+        )
+        assert r.status_code == 200, r.text
+
+        login_sem = client.post(
+            "/api/auth/login",
+            json={"email": "primeiro.acesso@test.com", "senha": "qualquer123"},
+        )
+        assert login_sem.status_code == 401
+        assert "primeiro acesso" in login_sem.json()["detail"].lower()
+
+        with patch("app.routes.auth.enviar_email_recuperacao_senha") as send_mail:
+            send_mail.return_value = True
+            rec = client.post(
+                "/api/auth/solicitar-recuperacao-senha",
+                json={"email": "primeiro.acesso@test.com"},
+            )
+        assert rec.status_code == 200
+        assert send_mail.called
+        assert send_mail.call_args.kwargs.get("primeiro_acesso") is True
+
+        db = TestingSessionLocal()
+        from app.models import Usuario
+
+        u = db.query(Usuario).filter(Usuario.email == "primeiro.acesso@test.com").first()
+        assert u and u.senha_reset_token and not u.senha_hash
+        token = u.senha_reset_token
+        db.close()
+
+        r2 = client.post(
+            "/api/auth/redefinir-senha",
+            json={"token": token, "nova_senha": "minhaSenha99"},
+        )
+        assert r2.status_code == 200, r2.text
+
+        login = client.post(
+            "/api/auth/login",
+            json={"email": "primeiro.acesso@test.com", "senha": "minhaSenha99"},
+        )
+        assert login.status_code == 200, login.text
+
+
+class TestIngressoImpressaoHtml:
+    def test_download_html_permite_script_print(self):
+        """CSP do HTML de impressão deve permitir script (senão o botão não chama a impressora)."""
+        from datetime import datetime, timedelta, timezone
+
+        from app.models import Evento, Ingresso, Usuario
+        from app.services.auth import hash_password
+
+        db = TestingSessionLocal()
+        org = Usuario(
+            email="org.print@test.com",
+            nome="Org Print",
+            senha_hash=hash_password("senha12345"),
+            tipo="organizador",
+        )
+        cliente = Usuario(
+            email="cli.print@test.com",
+            nome="Cli Print",
+            senha_hash=hash_password("senha12345"),
+            tipo="cliente",
+        )
+        db.add_all([org, cliente])
+        db.commit()
+        db.refresh(org)
+        db.refresh(cliente)
+
+        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        ev = Evento(
+            nome="Show Print",
+            descricao="desc",
+            data_inicio=agora + timedelta(days=3),
+            data_fim=agora + timedelta(days=3, hours=2),
+            local="Arena",
+            cidade="SP",
+            categoria="Shows",
+            preco_ingresso=40.0,
+            organizador_id=org.id,
+            slug="show-print-test",
+            publicado=True,
+        )
+        db.add(ev)
+        db.commit()
+        db.refresh(ev)
+
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=cliente.id,
+            participante_nome="Cli Print",
+            participante_email="cli.print@test.com",
+            valor=40.0,
+            status="pago",
+        )
+        db.add(ing)
+        db.commit()
+        db.refresh(ing)
+        ingresso_id = ing.id
+        db.close()
+
+        login = client.post(
+            "/api/auth/login",
+            json={"email": "cli.print@test.com", "senha": "senha12345"},
+        )
+        assert login.status_code == 200, login.text
+        token = login.json()["access_token"]
+
+        resp = client.get(
+            f"/api/ingressos/{ingresso_id}/download",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200, resp.text
+        html = resp.text
+        assert "script-src 'unsafe-inline'" in html
+        assert "window.print()" in html
+        assert 'id="btn-imprimir"' in html
+
 
 class TestWebhookIdempotencia:
     def test_webhook_asaas_idempotente(self):

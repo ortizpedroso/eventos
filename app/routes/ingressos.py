@@ -236,7 +236,7 @@ async def download_ingresso(
     <html>
     <head>
         <meta charset="utf-8"/>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline';"/>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';"/>
         <title>Ingresso - {ev_nome}</title>
         <style>
             body {{ font-family: sans-serif; padding: 40px; color: #333; }}
@@ -253,7 +253,7 @@ async def download_ingresso(
     </head>
     <body>
         <div class="no-print" style="text-align: center; margin-bottom: 30px;">
-            <button onclick="window.print()" style="padding: 12px 24px; font-size: 16px; cursor: pointer; background-color: #10b981; color: white; border: none; border-radius: 8px; font-weight: bold;">
+            <button type="button" id="btn-imprimir" style="padding: 12px 24px; font-size: 16px; cursor: pointer; background-color: #10b981; color: white; border: none; border-radius: 8px; font-weight: bold;">
                 Imprimir ou Salvar como PDF
             </button>
         </div>
@@ -272,6 +272,16 @@ async def download_ingresso(
                 <div class="status">{status_txt}</div>
             </div>
         </div>
+        <script>
+          (function () {{
+            function imprimir() {{ window.print(); }}
+            var btn = document.getElementById("btn-imprimir");
+            if (btn) btn.addEventListener("click", imprimir);
+            window.addEventListener("load", function () {{
+              window.setTimeout(imprimir, 400);
+            }});
+          }})();
+        </script>
     </body>
     </html>
     """
