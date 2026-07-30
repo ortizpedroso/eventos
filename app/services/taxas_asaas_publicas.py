@@ -1,4 +1,14 @@
-"""Referência interna Asaas (jun/2026) — https://www.asaas.com/precos-e-taxas
+"""Referência interna Asaas — https://www.asaas.com/precos-e-taxas
+
+Tabela pública conferida em jul/2026:
+  Pix / boleto: R$ 1,99
+  Cartão crédito: R$ 0,49 + 2,99% (à vista) / 3,49% (2–6x) / 3,99% (7–12x) / 4,29% (13–21x)
+  Antecipação: 1,25% a.m. à vista / 1,70% a.m. parcelado
+  Pix saída PJ: 30 grátis/mês, depois R$ 2,00
+
+Acréscimo ao comprador = apenas o delta % vs à vista (ex.: 12x → +1,00 pp sobre o preço base).
+A taxa fixa R$ 0,49 e o 2,99% à vista ficam no custo de processamento (não repassados como
+acréscimo de parcelamento). Opções de checkout: 2, 3, 6 e 12x (máx. 12 no produto).
 
 Usado para acréscimo de parcelamento ao comprador e margem interna da plataforma.
 Não expor marca ou linhas Asaas na UI pública.

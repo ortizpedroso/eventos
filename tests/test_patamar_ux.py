@@ -157,8 +157,44 @@ def test_simular_parcelas():
 
 
 def test_acrescimo_parcelamento_comprador():
+    """Deltas alinhados à tabela pública Asaas (jul/2026): 2,99 / 3,49 / 3,99 / 4,29%."""
     assert calcular_acrescimo_parcelamento_comprador(100.0, 1) == 0.0
+    # 2–6x: 3,49% − 2,99% = 0,50 pp
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 2) == 0.5
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 6) == 0.5
+    # 7–12x: 3,99% − 2,99% = 1,00 pp
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 7) == 1.0
     assert calcular_acrescimo_parcelamento_comprador(100.0, 12) == 1.0
+    # 13–21x: 4,29% − 2,99% = 1,30 pp (faixa Asaas; checkout atual limita a 12x)
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 13) == 1.3
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 21) == 1.3
+
+
+def test_taxas_asaas_cartao_tabela_publica():
+    from app.services.taxas_asaas_publicas import (
+        TAXA_BOLETO,
+        TAXA_CARTAO_13_21X,
+        TAXA_CARTAO_2_6X,
+        TAXA_CARTAO_7_12X,
+        TAXA_CARTAO_AVISTA,
+        TAXA_PIX,
+        calcular_taxa_asaas,
+        taxa_cartao_para_parcelas,
+    )
+
+    assert TAXA_PIX == TAXA_BOLETO == 1.99
+    assert TAXA_CARTAO_AVISTA.fixo == 0.49 and TAXA_CARTAO_AVISTA.percentual == 0.0299
+    assert TAXA_CARTAO_2_6X.percentual == 0.0349
+    assert TAXA_CARTAO_7_12X.percentual == 0.0399
+    assert TAXA_CARTAO_13_21X.percentual == 0.0429
+    assert taxa_cartao_para_parcelas(1) is TAXA_CARTAO_AVISTA
+    assert taxa_cartao_para_parcelas(6) is TAXA_CARTAO_2_6X
+    assert taxa_cartao_para_parcelas(12) is TAXA_CARTAO_7_12X
+    assert taxa_cartao_para_parcelas(21) is TAXA_CARTAO_13_21X
+    # R$ 100 à vista: 0,49 + 2,99 = 3,48
+    assert calcular_taxa_asaas(100.0, "cartao_avista", parcelas=1) == 3.48
+    # R$ 100 em 12x: 0,49 + 3,99 = 4,48 (custo interno; comprador paga +1,00 de acréscimo)
+    assert calcular_taxa_asaas(100.0, "cartao_parcelado", parcelas=12) == 4.48
 
 
 def test_cotacao_total_pagar_alinha_com_valor_cobrado():

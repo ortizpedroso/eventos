@@ -1,4 +1,8 @@
-/** Espelho de app/services/taxas_asaas_publicas.py — uso interno e acréscimo parcelamento. */
+/**
+ * Espelho de app/services/taxas_asaas_publicas.py — uso interno e acréscimo parcelamento.
+ * Tabela Asaas (jul/2026): à vista 2,99%; 2–6x 3,49%; 7–12x 3,99%; 13–21x 4,29% (+ R$ 0,49).
+ * Acréscimo ao comprador = delta % vs à vista apenas.
+ */
 
 export const AVISO_LEGAL_TAXAS =
   "Valores conforme tabelas públicas. A taxa EventosBR é fixa por plano; parcelamento pode incluir acréscimo explícito.";

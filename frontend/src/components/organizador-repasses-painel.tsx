@@ -520,7 +520,8 @@ export function OrganizadorRepassesPainel() {
                   pagamento.
                 </li>
                 <li>
-                  Ao solicitar transferência Pix, a efetivação ocorre em até <strong>{prazoH} horas</strong>.
+                  O formulário de <strong>Solicitar saque</strong> fica nesta mesma página (abaixo). Após
+                  solicitar a transferência Pix, a efetivação ocorre em até <strong>{prazoH} horas</strong>.
                 </li>
               </ul>
             </div>
@@ -913,49 +914,90 @@ export function OrganizadorRepassesPainel() {
         </div>
       ) : null}
 
-      {status?.repasses_prontos && saldo?.saque_habilitado ? (
-        <form onSubmit={solicitarSaque} className="mt-8 border-t border-zinc-100 pt-6">
-          <h3 className="text-sm font-semibold text-zinc-900">Solicitar transferência via Pix</h3>
-          <p className="mt-1 text-xs text-zinc-600">
-            Disponível agora: <strong>{fmt(disponivel)}</strong>. Efetivação em até {prazoH}h após a solicitação.
-          </p>
-          <div className="mt-3 flex flex-wrap items-end gap-3">
-            <div className="min-w-[9rem]">
-              <label className="text-xs text-zinc-600">Valor</label>
-              <InputValorBrl value={saqueValor} onChange={setSaqueValor} className="mt-1 rounded-lg" />
+      {saldo ? (
+        <section
+          id="solicitar-saque"
+          className="mt-8 scroll-mt-24 border-t border-zinc-100 pt-6"
+          aria-labelledby="solicitar-saque-heading"
+        >
+          <h3 id="solicitar-saque-heading" className="text-sm font-semibold text-zinc-900">
+            Solicitar saque
+          </h3>
+          {status?.repasses_prontos && saldo.saque_habilitado ? (
+            <form onSubmit={solicitarSaque} className="mt-2">
+              <p className="text-xs text-zinc-600">
+                Disponível agora: <strong>{fmt(disponivel)}</strong>. Informe a chave Pix de destino. A
+                efetivação ocorre em até {prazoH}h após a solicitação.
+              </p>
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <div className="min-w-[9rem]">
+                  <label className="text-xs text-zinc-600" htmlFor="saque-valor">
+                    Valor
+                  </label>
+                  <InputValorBrl
+                    id="saque-valor"
+                    value={saqueValor}
+                    onChange={setSaqueValor}
+                    className="mt-1 rounded-lg"
+                  />
+                </div>
+                <div className="min-w-[8rem]">
+                  <label className="text-xs text-zinc-600" htmlFor="saque-pix-tipo">
+                    Tipo da chave
+                  </label>
+                  <select
+                    id="saque-pix-tipo"
+                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                    value={pixTipo}
+                    onChange={(e) => setPixTipo(e.target.value)}
+                  >
+                    {PIX_TIPOS.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.rotulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-[12rem] flex-1">
+                  <label className="text-xs text-zinc-600" htmlFor="saque-pix-chave">
+                    Chave Pix
+                  </label>
+                  <input
+                    id="saque-pix-chave"
+                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                    value={pixChave}
+                    onChange={(e) => setPixChave(e.target.value)}
+                    placeholder="Informe a chave de destino"
+                    autoComplete="off"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={busy || disponivel < 1}
+                  className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+                >
+                  Solicitar saque via Pix
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-700">
+              <p className="font-medium text-zinc-900">Saque ainda não disponível nesta tela</p>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">
+                {saldo.nota_saque ??
+                  (!status?.repasses_prontos
+                    ? "Configure e aguarde a aprovação da conta de repasses para solicitar saque por aqui."
+                    : "Quando o saque estiver liberado, o formulário de transferência via Pix aparece neste espaço.")}
+              </p>
+              {!status?.repasses_prontos ? (
+                <p className="mt-2 text-xs text-zinc-600">
+                  Use a seção <strong>Configure sua conta de repasses</strong> acima para liberar recebimentos e
+                  saques.
+                </p>
+              ) : null}
             </div>
-            <div className="min-w-[8rem]">
-              <label className="text-xs text-zinc-600">Tipo da chave</label>
-              <select
-                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                value={pixTipo}
-                onChange={(e) => setPixTipo(e.target.value)}
-              >
-                {PIX_TIPOS.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.rotulo}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="min-w-[12rem] flex-1">
-              <label className="text-xs text-zinc-600">Chave Pix</label>
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                value={pixChave}
-                onChange={(e) => setPixChave(e.target.value)}
-                placeholder="Informe a chave de destino"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={busy || disponivel < 1}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-            >
-              Solicitar transferência
-            </button>
-          </div>
-        </form>
+          )}
+        </section>
       ) : null}
 
       {movimentos.length > 0 ? (
