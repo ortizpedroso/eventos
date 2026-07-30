@@ -128,7 +128,7 @@ export default function DocumentacaoPage() {
               <p>
                 Em <strong className="text-zinc-900">Docker</strong>, o serviço <code className="rounded bg-zinc-100 px-1">web</code> usa{" "}
                 <code className="rounded bg-zinc-100 px-1">INTERNAL_API_URL=http://api:8000</code> para renderização no
-                servidor; o utilizador continua a precisar de uma URL pública da API no browser quando aplicável.
+                servidor; o usuário continua precisando de uma URL pública da API no navegador quando aplicável.
               </p>
             </Section>
 
@@ -143,7 +143,7 @@ export default function DocumentacaoPage() {
               <p className="font-medium text-zinc-900">Routers principais</p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>
-                  <code className="rounded bg-zinc-100 px-1">/api/auth</code> — registo, login,{" "}
+                  <code className="rounded bg-zinc-100 px-1">/api/auth</code> — registro, login,{" "}
                   <code className="rounded bg-zinc-100 px-1">/me</code> (GET/PATCH); organizadores configuram a
                   conta de recebimento na plataforma para repasses via split.
                 </li>
@@ -158,7 +158,7 @@ export default function DocumentacaoPage() {
                   <code className="rounded bg-zinc-100 px-1">POST /cancelar</code>.
                 </li>
                 <li>
-                  <code className="rounded bg-zinc-100 px-1">/api/ingressos</code> — listagem simplificada dos ingressos do utilizador.
+                  <code className="rounded bg-zinc-100 px-1">/api/ingressos</code> — listagem simplificada dos ingressos do usuário.
                 </li>
                 <li>
                   <code className="rounded bg-zinc-100 px-1">/api/relatorios</code> — agregados do organizador; exportação de participantes em JSON ou CSV (
@@ -227,8 +227,8 @@ export default function DocumentacaoPage() {
               <p>
                 <code className="rounded bg-zinc-100 px-1">POST /api/pagamentos/criar</code> resolve o{" "}
                 <strong className="text-zinc-900">lote atual</strong> por ordem, atividade, datas e capacidade; o
-                campo <code className="rounded bg-zinc-100 px-1">valor_centavos</code> tem de coincidir exatamente com
-                o preço desse lote. Cria-se um registo <code className="rounded bg-zinc-100 px-1">Ingresso</code> em{" "}
+                campo <code className="rounded bg-zinc-100 px-1">valor_centavos</code> precisa coincidir exatamente com
+                o preço desse lote. Cria-se um registro <code className="rounded bg-zinc-100 px-1">Ingresso</code> em{" "}
                 <code className="rounded bg-zinc-100 px-1">pendente</code> com reserva de 35 minutos. O front inicia a cobrança
                 (PIX, cartão ou fatura) via API de pagamentos. Requer conta de recebimentos do organizador e split da plataforma.
               </p>
@@ -267,7 +267,7 @@ export default function DocumentacaoPage() {
               <p>
                 Variáveis principais na raiz: <code className="rounded bg-zinc-100 px-1">DATABASE_URL</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">SECRET_KEY</code> (obrigatória fora de development), chaves
-                do processador de pagamentos (variáveis no servidor — não expostas ao utilizador), <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
+                do processador de pagamentos (variáveis no servidor — não expostas ao usuário), <code className="rounded bg-zinc-100 px-1">CORS_ORIGINS</code>,{" "}
                 <code className="rounded bg-zinc-100 px-1">ENVIRONMENT</code>, <code className="rounded bg-zinc-100 px-1">DEBUG</code>.
               </p>
               <p>

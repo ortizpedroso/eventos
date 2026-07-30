@@ -386,7 +386,7 @@ export function EventoPublicClient({
             </aside>
 
             <section
-              className="order-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-1 [&_p]:text-left"
+              className="order-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-1 [&_p]:text-justify"
               aria-labelledby="sobre-evento-titulo"
             >
               <h2 id="sobre-evento-titulo" className="text-lg font-semibold text-zinc-900">
@@ -394,7 +394,7 @@ export function EventoPublicClient({
               </h2>
               {evento.descricao?.trim() ? (
                 <>
-                  <p className="mt-4 whitespace-pre-line text-sm leading-6 text-zinc-800">
+                  <p className="mt-4 whitespace-pre-line text-justify text-sm leading-6 text-zinc-800">
                     {descricaoExpandida ? evento.descricao : descricaoResumo}
                   </p>
                   {descricaoLonga ? (
@@ -424,26 +424,37 @@ export function EventoPublicClient({
               <h2 id="organizador-evento-titulo" className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
                 Organizador
               </h2>
-              <div className="mt-2 space-y-1 text-sm text-zinc-700">
-                {evento.organizador_nome ? <p className="font-medium text-zinc-900">{evento.organizador_nome}</p> : null}
+              <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                {evento.organizador_nome ? (
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Nome</p>
+                    <p className="mt-1 text-sm font-medium text-zinc-900">{evento.organizador_nome}</p>
+                  </div>
+                ) : null}
                 {evento.contato_email ? (
-                  <p>
-                    <a href={`mailto:${evento.contato_email}`} className="text-emerald-700 hover:underline">
-                      {evento.contato_email}
-                    </a>
-                  </p>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">E-mail</p>
+                    <p className="mt-1 text-sm">
+                      <a href={`mailto:${evento.contato_email}`} className="font-medium text-emerald-700 hover:underline">
+                        {evento.contato_email}
+                      </a>
+                    </p>
+                  </div>
                 ) : null}
                 {evento.contato_telefone ? (
-                  <p>
-                    <a
-                      href={`https://wa.me/55${evento.contato_telefone.replace(/\D/g, "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-700 hover:underline"
-                    >
-                      {evento.contato_telefone}
-                    </a>
-                  </p>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Telefone</p>
+                    <p className="mt-1 text-sm">
+                      <a
+                        href={`https://wa.me/55${evento.contato_telefone.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-emerald-700 hover:underline"
+                      >
+                        {evento.contato_telefone}
+                      </a>
+                    </p>
+                  </div>
                 ) : null}
               </div>
             </section>
@@ -453,7 +464,7 @@ export function EventoPublicClient({
         </div>
       ) : (
         <section
-          className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm [&_p]:text-left"
+          className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm [&_p]:text-justify"
           aria-labelledby="sobre-evento-titulo-pausado"
         >
           <h2 id="sobre-evento-titulo-pausado" className="text-lg font-semibold text-zinc-900">
