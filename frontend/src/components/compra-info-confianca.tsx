@@ -33,12 +33,8 @@ function IconFlag({ className }: { className?: string }) {
 /** Bloco de credibilidade na página pública do evento (largura total, abaixo dos cards Sobre / Comprar). */
 export function CompraInfoConfianca() {
   const emailDenuncia = process.env.NEXT_PUBLIC_EMAIL_DENUNCIAS?.trim();
-  const emailContato = process.env.NEXT_PUBLIC_EMAIL_CONTATO?.trim();
   const denunciaMailto = emailDenuncia
     ? `mailto:${emailDenuncia}?subject=${encodeURIComponent("Denúncia — EventosBR")}`
-    : null;
-  const contatoMailto = emailContato
-    ? `mailto:${emailContato}?subject=${encodeURIComponent("Dúvida — EventosBR")}`
     : null;
 
   return (
@@ -118,15 +114,9 @@ export function CompraInfoConfianca() {
             </Link>
             <span>
               Precisa de ajuda?{" "}
-              {contatoMailto ? (
-                <a href={contatoMailto} className="font-medium text-emerald-700 underline-offset-2 hover:underline">
-                  Fale connosco
-                </a>
-              ) : (
-                <Link href="/sobre" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
-                  Fale connosco
-                </Link>
-              )}
+              <Link href="/contato" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
+                Fale conosco
+              </Link>
             </span>
           </p>
         </div>
