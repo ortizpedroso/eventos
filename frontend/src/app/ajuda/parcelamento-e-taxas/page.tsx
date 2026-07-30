@@ -18,7 +18,9 @@ export default function AjudaParcelamentoTaxasPage() {
         O organizador pode habilitar parcelamento no cartão (2x a 12x) por evento. À vista, PIX e
         boleto não incluem acréscimo. No parcelado, o organizador escolhe{" "}
         <strong>repassar o acréscimo ao comprador</strong> (padrão) ou <strong>absorver</strong>{" "}
-        (recebe menos no repasse).
+        (recebe menos no repasse). Esse acréscimo cobre o custo extra de processamento e de
+        antecipação do parcelado, para que a taxa EventosBR e o líquido do organizador permaneçam
+        estáveis.
       </p>
       <p>
         Ingressos pagos têm valor mínimo de R$ {INGRESSO_MINIMO_PAGO_REAIS.toFixed(2).replace(".", ",")}.
