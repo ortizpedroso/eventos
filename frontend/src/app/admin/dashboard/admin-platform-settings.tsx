@@ -136,7 +136,21 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
         body: JSON.stringify(payloadFromForm(form)),
       });
       setForm(toForm(data));
-      const ok = "Configurações salvas. Instagram e WhatsApp aparecem no rodapé em até 1 minuto.";
+      try {
+        await fetch("/api/admin/revalidate-platform", { method: "POST", credentials: "include" });
+      } catch {
+        /* cache do Next pode demorar um pouco a limpar */
+      }
+      const ig = data.social_instagram_url?.trim();
+      const wa = data.social_whatsapp_url?.trim();
+      const redes =
+        ig || wa
+          ? ` Instagram: ${ig || "—"}. WhatsApp: ${wa || "—"}.`
+          : " (nenhuma rede preenchida.)";
+      const ok =
+        "Configurações salvas." +
+        redes +
+        " Abra o site (ou atualize a página) para ver o rodapé.";
       onMsg(ok);
       setLocalMsg(ok);
     } catch (e) {
