@@ -57,6 +57,18 @@ o comprador não fosse cobrado. Correção:
    relatório do organizador — zera registros antigos em batches.
 3. Testes: `tests/test_taxa_ingresso_gratis.py`.
 
+### 2.9 Carrinho abandonado, promoters e galeria (v1.25)
+
+Plano: `specs/plano-carrinho-afiliados-galeria.md`.
+
+**Carrinho abandonado (transacional):** worker `lembrete_carrinho.py` envia **um** e-mail via `enqueue_email_simples` **20 min** após `data_compra`, se `status=pendente` e `reservado_ate` ainda no futuro (reserva = 35 min). One-shot: `carrinho_lembrete_enviado_em`. CTA: `/eventos/{slug}?retomar={id}#comprar`. Não exige opt-in de marketing; rodapé com link de preferências. Não altera checkout/pagamento.
+
+**Promoters:** tabela `evento_promoters`; link `/eventos/{slug}?ref=CODIGO`; atribuição em `Ingresso.promoter_id` na criação do pagamento; painel do organizador com vendas agregadas (sem PII, sem comissão). Compartilhar reutiliza `evento-compartilhar.tsx` com `shareUrl`.
+
+**Galeria:** até 6 fotos reais (`evento_galeria_fotos` / `galeria_urls`); seção “Edições anteriores” só se houver fotos; mesmo pipeline de upload do banner.
+
+Migração: `20260730_000046_carrinho_promoters_galeria.py`. Testes: `test_lembrete_carrinho.py`, `test_evento_promoters.py`, `test_evento_galeria.py`.
+
 ### 2.2 Conta de recebimento do organizador (modelo de produção)
 
 **O organizador não cria nem vincula conta em painel externo.** Tudo ocorre dentro do EventosBR:
@@ -247,7 +259,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (347 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (357 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -538,7 +550,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto `910869f` (v1.24) — taxa zero em ingresso grátis/cortesia + backfill do Financeiro (§2.1.1), home Comprar × Sou produtor + scroll-reveal, além de tudo das versões anteriores. Hash = último commit de produto da versão; commits `docs(spec): tip …` não entram neste ponteiro.
+- [x] tip de produto v1.25 — carrinho abandonado + promoters `?ref=` + galeria (§2.9), taxa zero em ingresso grátis (§2.1.1), home Comprar × Sou produtor + scroll-reveal, além de tudo das versões anteriores. Hash = último commit de produto da versão; commits `docs(spec): tip …` não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
@@ -601,6 +613,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.25 | 2026-07-30 | **Carrinho abandonado + promoters + galeria** (plano aprovado): lembrete transacional único aos 20 min via fila confiável; links `?ref=` com painel agregado sem comissão/PII; galeria 0–6 fotos reais no Sobre. Migração `000046`. Spec §2.9. Testes: 347 → 357. |
 | 1.24 | 2026-07-30 | **Bug Financeiro**: ingresso grátis/cortesia (R$0) aparecia com taxa EventosBR fantasma (R$2 fixo por ingresso no ledger) porque `detalhar_taxa_ingresso(0)` não zera a taxa fixa — alinhado a `taxa_ingresso`; espelho no frontend; backfill `corrigir_taxa_ingressos_gratis` (API pública em `__all__`, sem import de helper privado em `relatorios.py`) em saldo/extrato/vendas/relatórios. Spec §2.1.1. Testes: 343 → 347 (`test_taxa_ingresso_gratis.py`). |
 | 1.23 | 2026-07-30 | **Item 2 do plano concluído**: home separa claramente "Comprar ingresso" (hero principal, foco no comprador) de "Sou produtor" (faixa dedicada com a mesma promessa de `/produtores`) — sem enfraquecer a experiência de quem só compra. Scroll-reveal (Fase 1) estendido pra home, `/funcionalidades` e `/sobre`; micro-celebração do checkout trocou o "✓" de texto por um ícone SVG (animação já existente, `.checkout-check-pop`, mantida). Contadores da home (`CountUp`, eventos/ingressos publicados) confirmados usando dados reais da API, com fallback correto quando não há dados. Também: normalização de Instagram/WhatsApp no rodapé (aceita @usuario, número com DDD, não só URL completa) e correção de cache stale no `revalidateTag` do Next 16. Testes: 335 → 343. |
 | 1.22 | 2026-07-30 | Início do plano pré-lançamento de posicionamento (`specs/plano-pre-lancamento-posicionamento-animacao.md`): página **"Para produtores"** (`/produtores`) — resolve o "gap principal" de uma análise competitiva (10+ concorrentes/referências) feita em conjunto com o Cursor: produto forte (taxa clara, repasse, whitelabel, operação completa) mas mal empacotado/vendido pro organizador. Linkada no navbar, rodapé e sitemap. **Fase 1 do plano de animação**: `ScrollRevealObserver` (Intersection Observer nativo, sem Framer Motion/GSAP), classes `.reveal`/`.reveal-visible`, respeita `prefers-reduced-motion` (critério de acessibilidade do Lighthouse). Também: limpeza no GitHub (3 PRs stale fechadas, 128 branches remotos apagados, preservados os 2 de backup). Testes: 332 → 335. |
