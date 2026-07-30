@@ -178,6 +178,16 @@ export type DetalheTaxaIngresso = {
 
 export function detalharTaxaIngresso(precoVenda: number, tarifa: PlanoTarifa): DetalheTaxaIngresso | null {
   if (!Number.isFinite(precoVenda) || precoVenda < 0) return null;
+  // Ingresso grátis / cortesia: sem taxa percentual nem fixa (alinha com taxa_ingresso no backend).
+  if (precoVenda <= 0) {
+    return {
+      precoVenda: 0,
+      taxaPercentualValor: 0,
+      taxaFixa: 0,
+      taxaTotal: 0,
+      liquidoOrganizador: 0,
+    };
+  }
   const taxaPercentualValor = precoVenda * tarifa.percentual;
   const taxaFixa = tarifa.fixoPorIngresso;
   const taxaTotal = taxaPercentualValor + taxaFixa;

@@ -97,6 +97,26 @@ def _backfill_ledger_pendentes(db: Session, organizador_id: str, *, limit: int =
     db.commit()
 
 
+def _corrigir_taxa_ingressos_gratis(db: Session, organizador_id: str, *, limit: int = 200) -> None:
+    """Zera taxa fantasma em ingressos grátis gravados com taxa fixa por bug antigo."""
+    rows = (
+        _ingressos_pagos_query(db, organizador_id)
+        .filter(
+            Ingresso.valor <= 0,
+            Ingresso.taxa_plataforma_aplicada.isnot(None),
+            Ingresso.taxa_plataforma_aplicada > 0,
+        )
+        .limit(limit)
+        .all()
+    )
+    if not rows:
+        return
+    for ing in rows:
+        ing.taxa_plataforma_aplicada = 0.0
+        ing.liquido_repassado = 0.0
+    db.commit()
+
+
 def _referencia_pagamento(ingresso: Ingresso) -> datetime:
     ref = getattr(ingresso, "pago_em", None) or ingresso.data_compra
     return ref or _agora()
@@ -172,6 +192,7 @@ def saque_habilitado_para(usuario: Usuario) -> bool:
 def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
     _backfill_pago_em(db, usuario.id)
     _backfill_ledger_pendentes(db, usuario.id)
+    _corrigir_taxa_ingressos_gratis(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
     ingressos = _ingressos_pagos_query(db, usuario.id).all()
     bruto = round(sum(float(i.valor or 0) for i in ingressos), 2)
@@ -301,6 +322,7 @@ def listar_extrato(
 ) -> dict[str, Any]:
     _backfill_pago_em(db, usuario.id)
     _backfill_ledger_pendentes(db, usuario.id)
+    _corrigir_taxa_ingressos_gratis(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
 
     saques_q = db.query(FinanceiroSaque).filter(FinanceiroSaque.organizador_id == usuario.id)
@@ -419,6 +441,7 @@ def listar_vendas_agrupadas(
     ate: datetime | None = None,
 ) -> dict[str, Any]:
     _backfill_ledger_pendentes(db, usuario.id)
+    _corrigir_taxa_ingressos_gratis(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
     ingressos = _ingressos_pagos_query(db, usuario.id).all()
     evento_ids = {i.evento_id for i in ingressos if i.evento_id}

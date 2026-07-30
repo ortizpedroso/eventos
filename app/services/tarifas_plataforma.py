@@ -104,17 +104,30 @@ def liquido_ingresso_para_saldo(ingresso, tarifa_fallback: PlanoTarifa | None = 
 
 
 def detalhar_taxa_ingresso(valor_bruto: float, tarifa: PlanoTarifa | None = None) -> dict:
+    """Detalha a taxa all-in. Ingresso grátis (≤ 0) não gera taxa — alinhado a `taxa_ingresso`."""
     t = tarifa or TARIFA_PADRAO
-    taxa_percentual = round(valor_bruto * t.percentual, 2) if valor_bruto > 0 else 0.0
+    vb = float(valor_bruto or 0)
+    if vb <= 0:
+        return {
+            "plano": t.id,
+            "preco_ingresso": round(vb, 2),
+            "taxa_percentual": t.percentual,
+            "taxa_percentual_valor": 0.0,
+            "taxa_fixa": 0.0,
+            "taxa_total": 0.0,
+            "liquido_organizador": 0.0,
+            "rotulo_taxa": f"{int(t.percentual * 100)}% + R$ {t.fixo_por_ingresso:.2f}".replace(".", ","),
+        }
+    taxa_percentual = round(vb * t.percentual, 2)
     taxa_fixa = t.fixo_por_ingresso
     taxa_total = round(taxa_percentual + taxa_fixa, 2)
     return {
         "plano": t.id,
-        "preco_ingresso": round(valor_bruto, 2),
+        "preco_ingresso": round(vb, 2),
         "taxa_percentual": t.percentual,
         "taxa_percentual_valor": taxa_percentual,
         "taxa_fixa": taxa_fixa,
         "taxa_total": taxa_total,
-        "liquido_organizador": round(max(0.0, valor_bruto - taxa_total), 2),
+        "liquido_organizador": round(max(0.0, vb - taxa_total), 2),
         "rotulo_taxa": f"{int(t.percentual * 100)}% + R$ {t.fixo_por_ingresso:.2f}".replace(".", ","),
     }
