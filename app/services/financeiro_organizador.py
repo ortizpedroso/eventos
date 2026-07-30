@@ -97,10 +97,14 @@ def _backfill_ledger_pendentes(db: Session, organizador_id: str, *, limit: int =
     db.commit()
 
 
-def _corrigir_taxa_ingressos_gratis(
+def corrigir_taxa_ingressos_gratis(
     db: Session, organizador_id: str, *, batch: int = 500, max_batches: int = 40
 ) -> None:
-    """Zera taxa fantasma em ingressos grátis gravados com taxa fixa por bug antigo."""
+    """Zera taxa fantasma em ingressos grátis gravados com taxa fixa por bug antigo.
+
+    Público para rotas/relatórios reutilizarem o mesmo backfill do Financeiro
+    (saldo, extrato, vendas agrupadas).
+    """
     for _ in range(max_batches):
         rows = (
             _ingressos_pagos_query(db, organizador_id)
@@ -197,7 +201,7 @@ def saque_habilitado_para(usuario: Usuario) -> bool:
 def calcular_saldo_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
     _backfill_pago_em(db, usuario.id)
     _backfill_ledger_pendentes(db, usuario.id)
-    _corrigir_taxa_ingressos_gratis(db, usuario.id)
+    corrigir_taxa_ingressos_gratis(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
     ingressos = _ingressos_pagos_query(db, usuario.id).all()
     bruto = round(sum(float(i.valor or 0) for i in ingressos), 2)
@@ -327,7 +331,7 @@ def listar_extrato(
 ) -> dict[str, Any]:
     _backfill_pago_em(db, usuario.id)
     _backfill_ledger_pendentes(db, usuario.id)
-    _corrigir_taxa_ingressos_gratis(db, usuario.id)
+    corrigir_taxa_ingressos_gratis(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
 
     saques_q = db.query(FinanceiroSaque).filter(FinanceiroSaque.organizador_id == usuario.id)
@@ -446,7 +450,7 @@ def listar_vendas_agrupadas(
     ate: datetime | None = None,
 ) -> dict[str, Any]:
     _backfill_ledger_pendentes(db, usuario.id)
-    _corrigir_taxa_ingressos_gratis(db, usuario.id)
+    corrigir_taxa_ingressos_gratis(db, usuario.id)
     tarifa = tarifa_para_organizador(usuario)
     ingressos = _ingressos_pagos_query(db, usuario.id).all()
     evento_ids = {i.evento_id for i in ingressos if i.evento_id}
@@ -699,6 +703,7 @@ def registrar_ledger_ingressos_lote(
 __all__ = [
     "calcular_saldo_organizador",
     "cancelar_saque",
+    "corrigir_taxa_ingressos_gratis",
     "listar_extrato",
     "listar_saques",
     "listar_vendas_agrupadas",

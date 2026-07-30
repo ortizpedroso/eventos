@@ -15,7 +15,7 @@ from app.models import Evento, Ingresso, Usuario, get_db
 from app.routes.auth import get_usuario_atual
 from app.services.export_presenca import gerar_pdf_participantes, gerar_xlsx_participantes
 from app.services.metricas_evento import taxa_conversao_por_status, vagas_restantes_evento
-from app.services.financeiro_organizador import _corrigir_taxa_ingressos_gratis
+from app.services.financeiro_organizador import corrigir_taxa_ingressos_gratis
 from app.services.tarifas_plataforma import (
     detalhar_taxa_ingresso,
     liquido_ingresso_para_saldo,
@@ -54,7 +54,7 @@ async def relatorio_organizador(
     comparativo por evento e série diária de vendas confirmadas.
     """
     _require_organizador(usuario_atual)
-    _corrigir_taxa_ingressos_gratis(db, usuario_atual.id)
+    corrigir_taxa_ingressos_gratis(db, usuario_atual.id)
     tarifa = tarifa_para_organizador(usuario_atual)
 
     q = (

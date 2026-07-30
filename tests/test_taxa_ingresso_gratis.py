@@ -5,7 +5,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from app.models import Evento, Ingresso, Usuario
-from app.services.financeiro_organizador import calcular_saldo_organizador, listar_extrato
+from app.services.financeiro_organizador import (
+    calcular_saldo_organizador,
+    corrigir_taxa_ingressos_gratis,
+    listar_extrato,
+)
 from app.services.tarifas_plataforma import (
     TARIFA_ASSINATURA,
     TARIFA_PADRAO,
@@ -32,6 +36,14 @@ def test_detalhar_pago_ainda_cobra_fixo():
     assert det["taxa_fixa"] == 2.0
     assert det["taxa_total"] == 12.0
     assert taxa_ingresso(100.0, TARIFA_PADRAO) == det["taxa_total"]
+
+
+def test_corrigir_taxa_ingressos_gratis_e_api_publica():
+    """Helper exportado em __all__ — rotas/relatórios não devem importar nome privado."""
+    import app.services.financeiro_organizador as fin
+
+    assert "corrigir_taxa_ingressos_gratis" in fin.__all__
+    assert callable(corrigir_taxa_ingressos_gratis)
 
 
 def test_financeiro_corrige_taxa_fantasma_em_ingresso_gratis():
