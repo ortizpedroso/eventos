@@ -185,6 +185,8 @@ export function EventoPublicClient({
     return evento.descricao.trim().length > 320;
   }, [evento]);
 
+  const [descricaoExpandida, setDescricaoExpandida] = useState(false);
+
   const imagemBanner = useMemo(
     () => resolveEventoImagemSrc(evento?.imagem_url),
     [evento?.imagem_url],
@@ -393,17 +395,16 @@ export function EventoPublicClient({
               {evento.descricao?.trim() ? (
                 <>
                   <p className="mt-4 whitespace-pre-line text-sm leading-6 text-zinc-800">
-                    {descricaoResumo}
+                    {descricaoExpandida ? evento.descricao : descricaoResumo}
                   </p>
                   {descricaoLonga ? (
-                    <details className="mt-3">
-                      <summary className="cursor-pointer text-sm font-medium text-emerald-700 hover:underline">
-                        Ler descrição completa
-                      </summary>
-                      <p className="mt-3 whitespace-pre-line text-left text-sm leading-6 text-zinc-800">
-                        {evento.descricao}
-                      </p>
-                    </details>
+                    <button
+                      type="button"
+                      onClick={() => setDescricaoExpandida((v) => !v)}
+                      className="mt-3 text-sm font-medium text-emerald-700 hover:underline"
+                    >
+                      {descricaoExpandida ? "Ler menos" : "Ler descrição completa"}
+                    </button>
                   ) : null}
                 </>
               ) : (
@@ -415,6 +416,38 @@ export function EventoPublicClient({
             </section>
           </div>
           <EventoMapaLocal local={evento.local} cidade={evento.cidade} />
+          {(evento.organizador_nome || evento.contato_email || evento.contato_telefone) ? (
+            <section
+              className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
+              aria-labelledby="organizador-evento-titulo"
+            >
+              <h2 id="organizador-evento-titulo" className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                Organizador
+              </h2>
+              <div className="mt-2 space-y-1 text-sm text-zinc-700">
+                {evento.organizador_nome ? <p className="font-medium text-zinc-900">{evento.organizador_nome}</p> : null}
+                {evento.contato_email ? (
+                  <p>
+                    <a href={`mailto:${evento.contato_email}`} className="text-emerald-700 hover:underline">
+                      {evento.contato_email}
+                    </a>
+                  </p>
+                ) : null}
+                {evento.contato_telefone ? (
+                  <p>
+                    <a
+                      href={`https://wa.me/55${evento.contato_telefone.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-700 hover:underline"
+                    >
+                      {evento.contato_telefone}
+                    </a>
+                  </p>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
           <CompraInfoConfianca />
           <EventoRelacionados slug={evento.slug} />
         </div>
