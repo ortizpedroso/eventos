@@ -165,6 +165,9 @@ export function Navbar() {
               <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
                 Funcionalidades
               </Link>
+              <Link href="/produtores" className={navLinkClass("/produtores")}>
+                Para produtores
+              </Link>
               <Link href="/planos" className={navLinkClass("/planos")}>
                 Planos
               </Link>
@@ -289,6 +292,9 @@ export function Navbar() {
             <div className="flex flex-col gap-0.5">
               <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                 Funcionalidades
+              </Link>
+              <Link href="/produtores" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                Para produtores
               </Link>
               <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                 Planos

@@ -155,6 +155,23 @@ body > footer {
       0 4px 10px -6px rgb(24 24 27 / 0.12);
   }
 
+  /* Scroll-reveal (Fase 1 do plano de animação) — fade + leve subida quando a
+     seção entra na tela. Ativado via ScrollRevealObserver (IntersectionObserver),
+     não em toda a página de uma vez. Nunca usar em página de evento/checkout —
+     ali a prioridade é velocidade, não estética. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+      opacity 400ms ease-out,
+      transform 400ms ease-out;
+  }
+
+  .reveal.reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   .checkout-check-pop {
     display: inline-flex;
     align-items: center;
@@ -203,7 +220,8 @@ body > footer {
 @media (prefers-reduced-motion: reduce) {
   .card-interactive,
   .checkout-check-pop,
-  .checkout-qr-fade {
+  .checkout-qr-fade,
+  .reveal {
     animation: none !important;
     transition: none !important;
     transform: none !important;

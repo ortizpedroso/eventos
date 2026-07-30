@@ -8,6 +8,7 @@ const rotasEstaticas = [
   "",
   "/eventos",
   "/funcionalidades",
+  "/produtores",
   "/planos",
   "/sobre",
   "/ajuda",

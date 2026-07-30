@@ -8,6 +8,7 @@ import { EarlyScrollReset } from "@/components/early-scroll-reset";
 import { Navbar } from "@/components/navbar";
 import { PlatformSettingsProvider } from "@/components/platform-settings-provider";
 import { PlatformTheme } from "@/components/platform-theme";
+import { ScrollRevealObserver } from "@/components/scroll-reveal-observer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { SkipToContent } from "@/components/skip-to-content";
@@ -58,6 +59,7 @@ export default async function RootLayout({
 
           <SiteFooter />
           <BackToTopButton />
+          <ScrollRevealObserver />
         </PlatformSettingsProvider>
       </body>
     </html>
