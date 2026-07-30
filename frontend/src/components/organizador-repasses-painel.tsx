@@ -30,7 +30,12 @@ type RepasseStatus = {
   pode_publicar_eventos_pagos?: boolean;
   eventos_sem_wallet: number;
   nota_wallet: string | null;
-  anticipacao?: { credit_card_automatic_enabled?: boolean | null };
+  anticipacao?: {
+    disponivel?: boolean;
+    credit_card_automatic_enabled?: boolean | null;
+    custo_extra_organizador?: boolean;
+    nota?: string | null;
+  };
   onboarding_mode?: string;
   permite_vinculo_wallet?: boolean;
   permite_conta_recebimento?: boolean;
@@ -176,6 +181,9 @@ export function OrganizadorRepassesPainel() {
   const [gruposVendas, setGruposVendas] = useState<GrupoVendas[]>(() => cached?.gruposVendas ?? []);
   const [conciliacao, setConciliacao] = useState<Conciliacao | null>(() => cached?.conciliacao ?? null);
   const [anticipacao, setAnticipacao] = useState<boolean | null>(() => cached?.anticipacao ?? null);
+  const [anticipacaoDisponivel, setAnticipacaoDisponivel] = useState(false);
+  const [anticipacaoNota, setAnticipacaoNota] = useState<string | null>(null);
+  const [busyAntecipacao, setBusyAntecipacao] = useState(false);
   const [agrupamento, setAgrupamento] = useState<Agrupamento>("mes");
   const [extratoOffset, setExtratoOffset] = useState(() => cached?.extratoOffset ?? 0);
   const [extratoTotal, setExtratoTotal] = useState(() => cached?.extratoTotal ?? 0);
@@ -250,6 +258,8 @@ export function OrganizadorRepassesPainel() {
       setStatus(s);
       setSaldo(ex.saldo);
       setAnticipacao(s.anticipacao?.credit_card_automatic_enabled ?? null);
+      setAnticipacaoDisponivel(Boolean(s.anticipacao?.disponivel));
+      setAnticipacaoNota(s.anticipacao?.nota ?? null);
         setExtratoOffset(offset + ex.movimentos.length);
         setExtratoTotal(ex.total_movimentos ?? ex.movimentos.length);
         setMovimentos((prev) => (append ? [...prev, ...ex.movimentos] : ex.movimentos));
@@ -449,6 +459,33 @@ export function OrganizadorRepassesPainel() {
     }
   }
 
+  async function verificarAntecipacao(ativarSeDesligada = true) {
+    setBusyAntecipacao(true);
+    setMsg(null);
+    setError(null);
+    try {
+      const r = await apiFetch<{
+        ok: boolean;
+        disponivel?: boolean;
+        credit_card_automatic_enabled?: boolean | null;
+        mensagem: string;
+        custo_extra_organizador?: boolean;
+      }>("/api/organizador/asaas/antecipacao/verificar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ativar_se_desligada: ativarSeDesligada }),
+      });
+      setAnticipacao(r.credit_card_automatic_enabled ?? null);
+      setAnticipacaoDisponivel(Boolean(r.disponivel));
+      setMsg(r.mensagem);
+      await carregar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível verificar a antecipação.");
+    } finally {
+      setBusyAntecipacao(false);
+    }
+  }
+
   const disponivel = saldo?.saldo_disponivel_saque ?? saldo?.saldo_disponivel ?? 0;
   const carenciaH = saldo?.carencia_horas ?? 48;
   const prazoH = saldo?.prazo_transferencia_horas ?? 48;
@@ -555,14 +592,43 @@ export function OrganizadorRepassesPainel() {
         </p>
       ) : null}
 
-      {status?.repasse_aprovado && anticipacao != null ? (
-        <div className="mt-4 rounded-lg border border-zinc-200 px-4 py-3 text-sm">
+      {status?.repasse_aprovado ? (
+        <div
+          id="antecipacao-automatica"
+          className="mt-4 scroll-mt-24 rounded-lg border border-zinc-200 px-4 py-3 text-sm"
+        >
           <p className="font-medium text-zinc-900">Antecipação automática de cartão</p>
-          <p className="mt-1 text-xs text-zinc-600">
+          <p className="mt-1 text-xs leading-5 text-zinc-600">
             {anticipacao
-              ? "Ativa — vendas no cartão podem ser antecipadas automaticamente pela conta de repasses."
-              : "Desativada — recebimentos de cartão seguem o prazo padrão de liquidação."}
+              ? "Ativa — vendas no cartão são liberadas mais rápido na sua conta de repasses."
+              : anticipacaoDisponivel
+                ? "Desativada — recebimentos de cartão seguem o prazo padrão de liquidação."
+                : "Indisponível para consulta nesta conta (ex.: conta vinculada). Configure no painel da conta de recebimento, se aplicável."}
           </p>
+          <p className="mt-2 text-xs leading-5 text-zinc-600">
+            {anticipacaoNota ??
+              "Seu líquido cai só na sua conta via split; a plataforma não acessa esse valor. A taxa EventosBR já cobre o custo comercial — não há taxa extra no saque."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busyAntecipacao || !anticipacaoDisponivel}
+              onClick={() => void verificarAntecipacao(true)}
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+            >
+              {busyAntecipacao ? "Verificando…" : "Verificar antecipação"}
+            </button>
+            {anticipacaoDisponivel && anticipacao !== true ? (
+              <button
+                type="button"
+                disabled={busyAntecipacao}
+                onClick={() => void verificarAntecipacao(true)}
+                className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-900 disabled:opacity-50"
+              >
+                Ativar agora (sem custo EventosBR)
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
