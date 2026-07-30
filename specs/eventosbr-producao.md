@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de produto da `main` em `8406ed5` — v1.25 (carrinho abandonado + promoters + galeria; ver §2.9). **Supervisão:** revisado item a item (migração, idempotência do claim atômico, autorização por dono do evento, ausência de PII/dados fabricados) — 359/359 testes, `tsc`/`eslint`/build limpos, migração validada (upgrade→downgrade→upgrade). **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
+> **Produção (VPS):** tip de produto da `main` em `8406ed5` — v1.25 (carrinho abandonado + promoters + galeria; ver §2.9). **Review vs plano:** **não aprovado** — ver `specs/plano-carrinho-afiliados-galeria.md` §11 (lacunas B1–B4, C1–C3, A1). Suites A/B/C passam (12), mas aceite do plano incompleto; `pytest` total 359. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -59,15 +59,15 @@ o comprador não fosse cobrado. Correção:
 
 ### 2.9 Carrinho abandonado, promoters e galeria (v1.25)
 
-Plano: `specs/plano-carrinho-afiliados-galeria.md`.
+Plano: `specs/plano-carrinho-afiliados-galeria.md` (**review §11 — build parcial; lacunas B1–B4, C1–C3, A1 bloqueiam aprovação**).
 
 **Carrinho abandonado (transacional):** worker `lembrete_carrinho.py` envia **um** e-mail via `enqueue_email_simples` **20 min** após `data_compra`, se `status=pendente` e `reservado_ate` ainda no futuro (reserva = 35 min). Idempotência: claim atômico em `carrinho_lembrete_enviado_em` antes do enqueue (segundo cron na janela da reserva não reenvia). CTA: `/eventos/{slug}?retomar={id}#comprar`. Não exige opt-in de marketing; rodapé com link de preferências. Não altera checkout/pagamento.
 
-**Promoters:** tabela `evento_promoters`; link `/eventos/{slug}?ref=CODIGO`; atribuição em `Ingresso.promoter_id` na criação do pagamento; painel do organizador com vendas agregadas (sem PII, sem comissão). Compartilhar reutiliza `evento-compartilhar.tsx` com `shareUrl`.
+**Promoters:** tabela `evento_promoters`; link `/eventos/{slug}?ref=CODIGO`; atribuição em `Ingresso.promoter_id` na criação do pagamento; painel do organizador com vendas agregadas (sem PII, sem comissão). Compartilhar reutiliza `evento-compartilhar.tsx` com `shareUrl`. Persistência do `ref`: ~24h ou até compra (`localStorage`+TTL — ver plano §3.3); share público **não** deve propagar `?ref=`.
 
-**Galeria:** até 6 fotos reais (`evento_galeria_fotos` / `galeria_urls`); seção “Edições anteriores” só se houver fotos; mesmo pipeline de upload do banner.
+**Galeria:** **0–6** fotos reais (`evento_galeria_fotos` / `galeria_urls`) na **criação e edição**; seção “Edições anteriores” só se houver fotos; mesmo pipeline de upload do banner.
 
-Migração: `20260730_000046_carrinho_promoters_galeria.py`. Testes: `test_lembrete_carrinho.py`, `test_evento_promoters.py`, `test_evento_galeria.py`.
+Migração: `20260730_000046_carrinho_promoters_galeria.py`. Testes: `test_lembrete_carrinho.py`, `test_evento_promoters.py`, `test_evento_galeria.py` (cobertura de aceite incompleta — plano §11).
 
 ### 2.2 Conta de recebimento do organizador (modelo de produção)
 
@@ -550,7 +550,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto v1.25 — carrinho abandonado + promoters `?ref=` + galeria (§2.9), taxa zero em ingresso grátis (§2.1.1), home Comprar × Sou produtor + scroll-reveal, além de tudo das versões anteriores. Hash = último commit de produto da versão; commits `docs(spec): tip …` não entram neste ponteiro.
+- [ ] tip de produto v1.25 **aceite completo** — código em `8406ed5`, mas review do plano §11 **reprova** até fechar B1–B4/C1–C3/A1; taxa zero ingresso grátis (§2.1.1) e home Comprar × Sou produtor OK. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
@@ -613,7 +613,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.25 | 2026-07-30 | **Carrinho abandonado + promoters + galeria** (plano aprovado): lembrete transacional único aos 20 min via fila confiável; links `?ref=` com painel agregado sem comissão/PII; galeria 0–6 fotos reais no Sobre. Migração `000046`. Spec §2.9. Testes: 347 → 357. |
+| 1.25 | 2026-07-30 | **Carrinho abandonado + promoters + galeria** (plano aprovado): lembrete transacional único aos 20 min via fila confiável; links `?ref=` com painel agregado sem comissão/PII; galeria 0–6 fotos reais no Sobre. Migração `000046`. Spec §2.9. Testes: 347 → 359 (inclui harden do claim atômico). **Review 2026-07-30:** build **não aprovada** — lacunas no plano §11 (atribuição/isolamento via API de pagamento, TTL do `ref`, share público sem `ref`, galeria na criação, testes de visibilidade/cancelado). |
 | 1.24 | 2026-07-30 | **Bug Financeiro**: ingresso grátis/cortesia (R$0) aparecia com taxa EventosBR fantasma (R$2 fixo por ingresso no ledger) porque `detalhar_taxa_ingresso(0)` não zera a taxa fixa — alinhado a `taxa_ingresso`; espelho no frontend; backfill `corrigir_taxa_ingressos_gratis` (API pública em `__all__`, sem import de helper privado em `relatorios.py`) em saldo/extrato/vendas/relatórios. Spec §2.1.1. Testes: 343 → 347 (`test_taxa_ingresso_gratis.py`). |
 | 1.23 | 2026-07-30 | **Item 2 do plano concluído**: home separa claramente "Comprar ingresso" (hero principal, foco no comprador) de "Sou produtor" (faixa dedicada com a mesma promessa de `/produtores`) — sem enfraquecer a experiência de quem só compra. Scroll-reveal (Fase 1) estendido pra home, `/funcionalidades` e `/sobre`; micro-celebração do checkout trocou o "✓" de texto por um ícone SVG (animação já existente, `.checkout-check-pop`, mantida). Contadores da home (`CountUp`, eventos/ingressos publicados) confirmados usando dados reais da API, com fallback correto quando não há dados. Também: normalização de Instagram/WhatsApp no rodapé (aceita @usuario, número com DDD, não só URL completa) e correção de cache stale no `revalidateTag` do Next 16. Testes: 335 → 343. |
 | 1.22 | 2026-07-30 | Início do plano pré-lançamento de posicionamento (`specs/plano-pre-lancamento-posicionamento-animacao.md`): página **"Para produtores"** (`/produtores`) — resolve o "gap principal" de uma análise competitiva (10+ concorrentes/referências) feita em conjunto com o Cursor: produto forte (taxa clara, repasse, whitelabel, operação completa) mas mal empacotado/vendido pro organizador. Linkada no navbar, rodapé e sitemap. **Fase 1 do plano de animação**: `ScrollRevealObserver` (Intersection Observer nativo, sem Framer Motion/GSAP), classes `.reveal`/`.reveal-visible`, respeita `prefers-reduced-motion` (critério de acessibilidade do Lighthouse). Também: limpeza no GitHub (3 PRs stale fechadas, 128 branches remotos apagados, preservados os 2 de backup). Testes: 332 → 335. |
