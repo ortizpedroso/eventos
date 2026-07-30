@@ -273,23 +273,23 @@ Dependências externas: nenhuma nova (Redis/fila e R2/local já existem).
 
 ---
 
-## 10. Aprovações pedidas antes do `/build`
+## 10. Aprovações (decididas)
 
-1. **Timer do lembrete:** 20–25 min (por causa dos 35 min de reserva) — OK?  
-2. **Opt-out:** A1 (transacional) vs A2 (só quem aceitou marketing)?  
-3. **URL afiliado:** `/eventos/{slug}?ref=CODIGO` (sem criar `/e/` agora) — OK?  
-4. **Ordem A → B → C** — OK, ou quer galeria antes de promoters?  
-5. **Comissão:** confirmado que fica fora desta implementação?
+1. **Timer do lembrete:** 20 min — OK  
+2. **Opt-out:** A1 (transacional) — OK  
+3. **URL afiliado:** `/eventos/{slug}?ref=CODIGO` (sem `/e/` agora) — OK  
+4. **Ordem A → B → C** — OK  
+5. **Comissão:** fora desta implementação — OK  
 
 ---
 
-**Próximo passo após o seu OK:** implementar Fase A na branch `cursor/carrinho-abandonado-9182`, testes, merge `main`, atualizar spec; depois B e C na mesma lógica.
+**Próximo passo:** `/build` fecha lacunas do §11 (B1–B4, C1–C3, A1); só então marcar §7 todo `[x]` e aprovar a build na spec principal.
 
 ---
 
 ## 11. Review build vs plano (2026-07-30) — **NÃO APROVADO**
 
-Tip de produto: `8406ed5`. Spec §2.9 / changelog 1.25. Testes coletados: **359**. Suites A/B/C: 12 passed (cobertura insuficiente vs §2.6/§3.5/§4.5).
+Tip de produto: `8406ed5` (código). Spec §2.9 / changelog 1.25. Decisões §10 OK. Testes coletados: **359**. Suites A/B/C: 12 passed (cobertura insuficiente vs §2.6/§3.5/§4.5).
 
 ### Lacunas que bloqueiam aprovação
 
