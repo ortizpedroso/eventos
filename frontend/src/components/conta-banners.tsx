@@ -94,8 +94,11 @@ export function ContaBanners() {
         >
           <p className="font-semibold">Proteja sua conta</p>
           <p className="mt-1 text-amber-900">
-            Sua conta foi criada na compra rápida sem senha. Defina uma senha no perfil para acessar com
-            segurança em outros dispositivos.
+            Sua conta foi criada na compra rápida sem senha. Defina uma senha no perfil agora, ou use{" "}
+            <Link href="/auth?mode=forgot" className="font-medium underline underline-offset-2">
+              primeiro acesso
+            </Link>{" "}
+            com este e-mail em outro dispositivo.
           </p>
           <Link
             href={perfilHref}

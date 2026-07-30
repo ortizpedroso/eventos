@@ -283,8 +283,9 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
           {busy ? "A criar conta…" : "Continuar como convidado"}
         </button>
         <p className="text-[11px] leading-relaxed text-sky-900/80">
-          Criamos uma conta de cliente com este e-mail. Depois você pode definir senha em Perfil ou
-          entrar com Google.
+          Criamos uma conta com este e-mail. Para entrar depois e ver seus ingressos, use{" "}
+          <strong>Esqueci minha senha / primeiro acesso</strong> na tela Entrar (mesmo e-mail) ou
+          defina a senha em Perfil enquanto a sessão estiver aberta.
         </p>
       </form>
 
