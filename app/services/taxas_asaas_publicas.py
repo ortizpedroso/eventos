@@ -6,9 +6,11 @@ Tabela pública conferida em jul/2026:
   Antecipação: 1,25% a.m. à vista / 1,70% a.m. parcelado
   Pix saída PJ: 30 grátis/mês, depois R$ 2,00
 
-Acréscimo ao comprador = apenas o delta % vs à vista (ex.: 12x → +1,00 pp sobre o preço base).
-A taxa fixa R$ 0,49 e o 2,99% à vista ficam no custo de processamento (não repassados como
-acréscimo de parcelamento). Opções de checkout: 2, 3, 6 e 12x (máx. 12 no produto).
+Acréscimo ao comprador no parcelamento = custo extra vs cartão à vista com antecipação:
+  1) delta % de processamento (ex.: 12x 3,99% − 2,99% = +1 pp)
+  2) custo de antecipação do parcelado (1,70% a.m. × meses médios) embutido no total
+Assim organizador (split) e margem líquida da plataforma ficam equivalentes ao à vista.
+Opções de checkout: 2, 3, 6 e 12x (máx. 12 no produto).
 
 Usado para acréscimo de parcelamento ao comprador e margem interna da plataforma.
 Não expor marca ou linhas Asaas na UI pública.
@@ -21,7 +23,8 @@ from typing import Literal
 
 AVISO_LEGAL = (
     "Valores conforme tabelas públicas de processamento. "
-    "A taxa EventosBR é fixa por plano; parcelamento pode incluir acréscimo explícito ao comprador."
+    "A taxa EventosBR é fixa por plano; parcelamento inclui acréscimo ao comprador "
+    "(processamento e antecipação do parcelado)."
 )
 
 SYMPLA_TAXA_PERCENTUAL = 0.12
@@ -81,14 +84,57 @@ def calcular_taxa_asaas(
     return round(taxa.fixo + valor_bruto * taxa.percentual, 2)
 
 
+def meses_medios_antecipacao_parcelado(parcelas: int) -> float:
+    """Média dos prazos das parcelas (1…N) — base para 1,70% a.m. no parcelado."""
+    n = max(1, int(parcelas))
+    return (n + 1) / 2.0
+
+
+def calcular_custo_antecipacao_cartao(valor_bruto: float, parcelas: int) -> float:
+    """Estimativa da taxa de antecipação Asaas sobre o líquido após processamento."""
+    if valor_bruto <= 0:
+        return 0.0
+    metodo: MetodoAsaas = "cartao_avista" if parcelas <= 1 else "cartao_parcelado"
+    processamento = calcular_taxa_asaas(valor_bruto, metodo, parcelas=max(1, parcelas))
+    base = max(0.0, valor_bruto - processamento)
+    if parcelas <= 1:
+        return round(base * TAXA_ANTECIPACAO_AVISTA_MES, 2)
+    return round(base * TAXA_ANTECIPACAO_PARCELADO_MES * meses_medios_antecipacao_parcelado(parcelas), 2)
+
+
+def liquido_apos_processamento_e_antecipacao(valor_bruto: float, parcelas: int) -> float:
+    """Valor que sobra na cobrança após taxas Asaas de cartão + antecipação."""
+    if valor_bruto <= 0:
+        return 0.0
+    metodo: MetodoAsaas = "cartao_avista" if parcelas <= 1 else "cartao_parcelado"
+    processamento = calcular_taxa_asaas(valor_bruto, metodo, parcelas=max(1, parcelas))
+    antecipacao = calcular_custo_antecipacao_cartao(valor_bruto, parcelas)
+    return round(max(0.0, valor_bruto - processamento - antecipacao), 2)
+
+
 def calcular_acrescimo_parcelamento_comprador(valor_base: float, parcelas: int) -> float:
-    """Acréscimo repassado ao comprador (delta % sobre o preço base do ingresso)."""
+    """Acréscimo ao comprador para equalizar margem vs cartão à vista com antecipação.
+
+    Inclui o delta de processamento do parcelado e o custo de antecipação (1,70% a.m.),
+    de modo que organizador (split) e plataforma não sejam prejudicados pelo parcelamento.
+    """
     if parcelas <= 1 or valor_base <= 0:
         return 0.0
-    avista = TAXA_CARTAO_AVISTA.percentual
-    parcelado = taxa_cartao_para_parcelas(parcelas).percentual
-    delta = max(0.0, parcelado - avista)
-    return round(valor_base * delta, 2)
+
+    alvo_liquido = liquido_apos_processamento_e_antecipacao(valor_base, 1)
+    # Busca o menor total cobrado tal que o líquido após Asaas+antecipação >= alvo à vista.
+    lo = round(valor_base, 2)
+    hi = round(valor_base * 1.8 + 20.0, 2)
+    for _ in range(48):
+        mid = round((lo + hi) / 2.0, 2)
+        if liquido_apos_processamento_e_antecipacao(mid, parcelas) >= alvo_liquido:
+            hi = mid
+        else:
+            lo = round(mid + 0.01, 2)
+    total = hi
+    while liquido_apos_processamento_e_antecipacao(total, parcelas) < alvo_liquido:
+        total = round(total + 0.01, 2)
+    return round(max(0.0, total - valor_base), 2)
 
 
 RepasseParcelamento = Literal["comprador", "organizador"]

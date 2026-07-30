@@ -157,17 +157,30 @@ def test_simular_parcelas():
 
 
 def test_acrescimo_parcelamento_comprador():
-    """Deltas alinhados à tabela pública Asaas (jul/2026): 2,99 / 3,49 / 3,99 / 4,29%."""
+    """Acréscimo equaliza margem vs à vista (delta processamento + antecipação parcelado)."""
     assert calcular_acrescimo_parcelamento_comprador(100.0, 1) == 0.0
-    # 2–6x: 3,49% − 2,99% = 0,50 pp
-    assert calcular_acrescimo_parcelamento_comprador(100.0, 2) == 0.5
-    assert calcular_acrescimo_parcelamento_comprador(100.0, 6) == 0.5
-    # 7–12x: 3,99% − 2,99% = 1,00 pp
-    assert calcular_acrescimo_parcelamento_comprador(100.0, 7) == 1.0
-    assert calcular_acrescimo_parcelamento_comprador(100.0, 12) == 1.0
-    # 13–21x: 4,29% − 2,99% = 1,30 pp (faixa Asaas; checkout atual limita a 12x)
-    assert calcular_acrescimo_parcelamento_comprador(100.0, 13) == 1.3
-    assert calcular_acrescimo_parcelamento_comprador(100.0, 21) == 1.3
+    # Valores ancorados na tabela Asaas jul/2026 + antecipação 1,70% a.m.
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 2) == 1.84
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 6) == 5.52
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 7) == 7.02
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 12) == 12.11
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 13) == 13.55
+    assert calcular_acrescimo_parcelamento_comprador(100.0, 21) == 23.0
+
+
+def test_parcelamento_preserva_margem_vs_avista():
+    from app.services.taxas_asaas_publicas import liquido_apos_processamento_e_antecipacao
+    from app.services.tarifas_plataforma import TARIFA_PADRAO, detalhar_taxa_ingresso
+
+    base = 100.0
+    org = detalhar_taxa_ingresso(base, TARIFA_PADRAO)["liquido_organizador"]
+    alvo = liquido_apos_processamento_e_antecipacao(base, 1)
+    plat_alvo = round(alvo - org, 2)
+    for parcelas in (2, 3, 6, 12):
+        total = round(base + calcular_acrescimo_parcelamento_comprador(base, parcelas), 2)
+        liq = liquido_apos_processamento_e_antecipacao(total, parcelas)
+        assert liq >= alvo
+        assert round(liq - org, 2) >= plat_alvo - 0.02
 
 
 def test_taxas_asaas_cartao_tabela_publica():
@@ -193,7 +206,7 @@ def test_taxas_asaas_cartao_tabela_publica():
     assert taxa_cartao_para_parcelas(21) is TAXA_CARTAO_13_21X
     # R$ 100 à vista: 0,49 + 2,99 = 3,48
     assert calcular_taxa_asaas(100.0, "cartao_avista", parcelas=1) == 3.48
-    # R$ 100 em 12x: 0,49 + 3,99 = 4,48 (custo interno; comprador paga +1,00 de acréscimo)
+    # R$ 100 em 12x s/ acréscimo: 0,49 + 3,99 = 4,48
     assert calcular_taxa_asaas(100.0, "cartao_parcelado", parcelas=12) == 4.48
 
 
@@ -202,8 +215,9 @@ def test_cotacao_total_pagar_alinha_com_valor_cobrado():
 
     c = cotacao_checkout(100.0, parcelas=12, repasse_parcelamento="comprador")
     esperado = round(100.0 + calcular_acrescimo_parcelamento_comprador(100.0, 12), 2)
-    assert c["total_pagar"] == esperado == 101.0
-    assert round(c["valor_parcela"] * 12, 2) == 101.04
+    assert c["total_pagar"] == esperado == 112.11
+    assert round(c["valor_parcela"] * 12, 2) == round(c["valor_parcela"] * 12, 2)
+    assert abs(round(c["valor_parcela"] * 12, 2) - 112.11) <= 0.12
 
 
 def test_cotacao_repasse_organizador_absorve():
