@@ -15,13 +15,13 @@ export default function TermosPage() {
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
           Termos de uso
         </h1>
-        <p className="mt-3 text-sm text-zinc-500">Última atualização: julho de 2026.</p>
+        <p className="mt-3 text-sm text-zinc-500">Última atualização: maio de 2026.</p>
 
         <div className="mt-10 space-y-6 text-sm leading-relaxed text-zinc-600">
           <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
             <p className="text-justify">
-              Ao acessar ou utilizar a EventosBR, você concorda com estes termos. Se não concordar, não utilize
-              a plataforma.
+              Ao acessar ou utilizar a EventosBR, você concorda com estes termos. Se não concordar, não utilize a
+              plataforma.
             </p>
           </div>
 
@@ -30,15 +30,15 @@ export default function TermosPage() {
             <p className="mt-3 text-justify">
               A EventosBR é uma plataforma online que permite a organizadores criar páginas de eventos, definir
               preços de ingresso e, quando configurado, receber pagamentos através de gateways financeiros
-              externos e rigorosamente homologados. A plataforma não substitui assessoria jurídica, fiscal ou
-              contabilidade do organizador.
+              externos e rigorosamente homologados. A plataforma não substitui assessoria jurídica, fiscal
+              ou contábil do organizador.
             </p>
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-lg font-semibold text-zinc-900">2. Contas e responsabilidades</h2>
             <p className="mt-3 text-justify">
-              Você é responsável pela veracidade dos dados da sua conta e pela segurança das credenciais. O
+              Você é responsável pela veracidade dos dados da sua conta e pela segurança das suas credenciais. O
               organizador é responsável pelo conteúdo do evento (textos, imagens, preços, datas, local e
               cumprimento da legislação aplicável, incluindo oferta ao público e proteção de dados dos
               participantes).
@@ -48,10 +48,10 @@ export default function TermosPage() {
           <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-lg font-semibold text-zinc-900">3. Participantes e compras</h2>
             <p className="mt-3 text-justify">
-              Ao comprar um ingresso, o participante aceita as condições do evento indicadas na respectiva
-              página e as políticas de cancelamento ou reembolso definidas pelo organizador e pela plataforma,
-              quando aplicável. Pagamentos são processados pelo prestador integrado; prazos e disputas podem
-              seguir as regras desse prestador e da legislação.
+              Ao comprar um ingresso, o participante aceita as condições do evento indicadas na respectiva página
+              e as políticas de cancelamento ou reembolso definidas pelo organizador e pela plataforma, quando
+              aplicável. Pagamentos são processados pelo prestador integrado; prazos e disputas podem seguir as
+              regras desse prestador e da legislação.
             </p>
           </div>
 
@@ -80,7 +80,7 @@ export default function TermosPage() {
               Na medida permitida pela lei aplicável, a EventosBR não responde por danos indiretos, lucros
               cessantes ou perdas decorrentes de eventos organizados por terceiros, falhas de redes ou de
               prestadores de pagamento, ou de uso incorreto da plataforma. O relacionamento contratual principal
-              entre participante e organizador mantém-se entre essas partes no que respeita ao evento em si.
+              entre participante e organizador permanece entre essas partes no que diz respeito ao evento em si.
             </p>
           </div>
 
@@ -88,7 +88,7 @@ export default function TermosPage() {
             <h2 className="text-lg font-semibold text-zinc-900">7. Propriedade intelectual</h2>
             <p className="mt-3 text-justify">
               A marca, o software e os conteúdos próprios da plataforma pertencem aos respectivos titulares. O
-              organizador concede licença necessária para exibir o conteúdo do evento na plataforma durante a
+              organizador concede a licença necessária para exibir o conteúdo do evento na plataforma durante a
               utilização do serviço.
             </p>
           </div>
@@ -97,19 +97,18 @@ export default function TermosPage() {
             <h2 className="text-lg font-semibold text-zinc-900">8. Lei e foro</h2>
             <p className="mt-3 text-justify">
               Estes termos são regidos pelas leis da República Federativa do Brasil. Fica eleito o foro da
-              comarca da sede da empresa titular da plataforma, salvo norma consumerista imperativa em
-              contrário.
+              comarca da sede da empresa titular da plataforma, salvo norma consumerista imperativa em contrário.
             </p>
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-lg font-semibold text-zinc-900">9. Contato</h2>
             <p className="mt-3 text-justify">
-              Dúvidas sobre estes termos podem ser enviadas pelo{" "}
+              Dúvidas sobre estes termos? Fale com a gente pelo nosso{" "}
               <Link href="/contato" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
                 formulário de contato
               </Link>
-              .
+              . Respondemos por e-mail o mais rápido possível.
             </p>
           </div>
         </div>
