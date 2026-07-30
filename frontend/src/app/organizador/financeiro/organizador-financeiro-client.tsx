@@ -299,7 +299,11 @@ export function OrganizadorFinanceiroClient() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Financeiro</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
-          Acompanhe vendas por período, saldo com carência de 48h e solicite transferências Pix direto na plataforma —{" "}
+          Acompanhe vendas por período, saldo com carência de 48h e{" "}
+          <a href="#solicitar-saque" className="font-medium text-emerald-700 underline underline-offset-2">
+            solicite saque via Pix
+          </a>{" "}
+          nesta página —{" "}
           <Link href="/planos" className="font-medium text-emerald-700 underline underline-offset-2">
             ver planos
           </Link>
