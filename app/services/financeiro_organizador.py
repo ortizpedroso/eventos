@@ -97,24 +97,29 @@ def _backfill_ledger_pendentes(db: Session, organizador_id: str, *, limit: int =
     db.commit()
 
 
-def _corrigir_taxa_ingressos_gratis(db: Session, organizador_id: str, *, limit: int = 200) -> None:
+def _corrigir_taxa_ingressos_gratis(
+    db: Session, organizador_id: str, *, batch: int = 500, max_batches: int = 40
+) -> None:
     """Zera taxa fantasma em ingressos grátis gravados com taxa fixa por bug antigo."""
-    rows = (
-        _ingressos_pagos_query(db, organizador_id)
-        .filter(
-            Ingresso.valor <= 0,
-            Ingresso.taxa_plataforma_aplicada.isnot(None),
-            Ingresso.taxa_plataforma_aplicada > 0,
+    for _ in range(max_batches):
+        rows = (
+            _ingressos_pagos_query(db, organizador_id)
+            .filter(
+                Ingresso.valor <= 0,
+                Ingresso.taxa_plataforma_aplicada.isnot(None),
+                Ingresso.taxa_plataforma_aplicada > 0,
+            )
+            .limit(batch)
+            .all()
         )
-        .limit(limit)
-        .all()
-    )
-    if not rows:
-        return
-    for ing in rows:
-        ing.taxa_plataforma_aplicada = 0.0
-        ing.liquido_repassado = 0.0
-    db.commit()
+        if not rows:
+            return
+        for ing in rows:
+            ing.taxa_plataforma_aplicada = 0.0
+            ing.liquido_repassado = 0.0
+        db.commit()
+        if len(rows) < batch:
+            return
 
 
 def _referencia_pagamento(ingresso: Ingresso) -> datetime:
