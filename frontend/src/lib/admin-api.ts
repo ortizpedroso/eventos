@@ -47,6 +47,33 @@ export async function adminSessionActive(): Promise<boolean> {
   return Boolean(j.unlocked);
 }
 
+function formatAdminDetail(detail: unknown): string {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const parts = detail
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const row = item as { msg?: string; loc?: unknown[] };
+        const field = Array.isArray(row.loc)
+          ? row.loc.filter((x) => x !== "body").join(".")
+          : "";
+        const text = typeof row.msg === "string" ? row.msg : "";
+        if (!text) return null;
+        return field ? `${field}: ${text}` : text;
+      })
+      .filter(Boolean);
+    if (parts.length) return parts.join(" · ");
+  }
+  if (detail && typeof detail === "object") {
+    try {
+      return JSON.stringify(detail);
+    } catch {
+      /* ignore */
+    }
+  }
+  return "";
+}
+
 export async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (!headers.has("accept")) headers.set("accept", "application/json");
@@ -60,8 +87,8 @@ export async function adminFetch<T>(path: string, init: RequestInit = {}): Promi
   if (!res.ok) {
     let msg = `Erro ${res.status}`;
     try {
-      const j = (await res.json()) as { detail?: string };
-      if (j.detail) msg = j.detail;
+      const j = (await res.json()) as { detail?: unknown };
+      msg = formatAdminDetail(j.detail) || msg;
     } catch {
       /* ignore */
     }

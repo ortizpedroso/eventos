@@ -6,6 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from app.utils.imagem_url import validar_imagem_url
+from app.utils.url_publica import (
+    normalizar_url_instagram,
+    normalizar_url_whatsapp,
+    validar_url_http_https,
+)
 
 _HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
@@ -19,8 +24,11 @@ def _optional_url(v: object) -> str | None:
     if not s or s == "#":
         return None
     if not s.startswith(("http://", "https://")):
+        # Aceita linkedin.com/... sem esquema
+        if re.match(r"^(www\.)?(linkedin\.com|x\.com|twitter\.com|youtube\.com|youtu\.be)/", s, re.I):
+            return validar_url_http_https("https://" + s.lstrip("/"))
         raise ValueError("URL deve começar com http:// ou https://")
-    return s
+    return validar_url_http_https(s)
 
 
 class PlatformSettingsPublic(BaseModel):
@@ -65,9 +73,17 @@ class PlatformSettingsUpdate(BaseModel):
     def _asset_url(cls, v: object) -> str | None:
         return validar_imagem_url(v)
 
+    @field_validator("social_instagram_url", mode="before")
+    @classmethod
+    def _social_instagram(cls, v: object) -> str | None:
+        return normalizar_url_instagram(v)
+
+    @field_validator("social_whatsapp_url", mode="before")
+    @classmethod
+    def _social_whatsapp(cls, v: object) -> str | None:
+        return normalizar_url_whatsapp(v)
+
     @field_validator(
-        "social_instagram_url",
-        "social_whatsapp_url",
         "social_linkedin_url",
         "social_x_url",
         "social_youtube_url",

@@ -261,7 +261,7 @@ export function PerfilPublicoOrganizador() {
               value={instagram}
               onChange={(e) => setInstagram(e.target.value)}
               className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-              placeholder="https://instagram.com/..."
+              placeholder="@seuperfil ou https://instagram.com/..."
             />
           </div>
           <div>
@@ -273,7 +273,7 @@ export function PerfilPublicoOrganizador() {
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
               className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-              placeholder="https://wa.me/55..."
+              placeholder="11999999999 ou https://wa.me/55..."
             />
           </div>
         </div>
