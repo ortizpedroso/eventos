@@ -44,6 +44,7 @@ export type Evento = {
   data_criacao: string;
   /** Dono do evento (para exibir ação de editar) */
   organizador_id: string;
+  organizador_nome?: string | null;
   urgencia_modo?: string;
   urgencia_badge?: string | null;
   urgencia_ativo?: boolean;
