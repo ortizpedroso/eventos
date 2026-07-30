@@ -5,8 +5,12 @@ WORKDIR /app
 RUN useradd --create-home --shell /bin/sh --uid 1000 appuser
 
 # Instala dependências do sistema
+# fonts-dejavu-core: necessário pro Pillow desenhar texto na carteirinha do
+# ingresso (nome/evento/data/local ao lado do QR) — python:3.11-slim não vem
+# com nenhuma fonte TrueType por padrão.
 RUN apt-get update && apt-get install -y \
     gcc \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia requirements
