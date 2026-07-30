@@ -19,7 +19,8 @@ export async function POST() {
     return NextResponse.json({ detail: "Sessão admin não iniciada." }, { status: 401 });
   }
 
-  revalidateTag(PLATFORM_SETTINGS_TAG);
+  // Next.js 16: segundo argumento obrigatório; expire:0 = invalida na hora.
+  revalidateTag(PLATFORM_SETTINGS_TAG, { expire: 0 });
   revalidatePath("/", "layout");
   revalidatePath("/contato");
   return NextResponse.json({ ok: true });
