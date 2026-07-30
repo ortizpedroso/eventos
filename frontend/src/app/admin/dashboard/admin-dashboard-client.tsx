@@ -753,7 +753,7 @@ export function AdminDashboardClient() {
             </button>
           </div>
           <p className="text-xs text-zinc-500">
-            {totalContatos} contacto(s) com consentimento · {selecionados.size} selecionado(s)
+            {totalContatos} contato(s) com consentimento · {selecionados.size} selecionado(s)
           </p>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-xs">
@@ -844,7 +844,7 @@ export function AdminDashboardClient() {
                 checked={usarSelecao}
                 onChange={(e) => setUsarSelecao(e.target.checked)}
               />
-              Usar {selecionados.size} contacto(s) selecionado(s) na aba Contatos
+              Usar {selecionados.size} contato(s) selecionado(s) na aba Contatos
             </label>
             <div className="flex flex-wrap gap-2 pt-2">
               <button

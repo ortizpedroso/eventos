@@ -234,7 +234,7 @@ async def listar_meus_eventos(
 
     eventos = (
         db.query(Evento)
-        .options(selectinload(Evento.ingresso_lotes))
+        .options(selectinload(Evento.ingresso_lotes), selectinload(Evento.organizador))
         .filter(Evento.organizador_id == usuario_atual.id)
         .order_by(Evento.data_criacao.desc())
         .limit(limit)
@@ -291,7 +291,7 @@ async def listar_eventos(
     try:
         query = (
             db.query(Evento)
-            .options(selectinload(Evento.ingresso_lotes))
+            .options(selectinload(Evento.ingresso_lotes), selectinload(Evento.organizador))
             .filter(Evento.publicado.is_(True))
         )
         if q:
@@ -336,7 +336,7 @@ async def eventos_relacionados(slug: str, db: Session = Depends(get_db)):
 
     evento = (
         db.query(Evento)
-        .options(selectinload(Evento.ingresso_lotes))
+        .options(selectinload(Evento.ingresso_lotes), selectinload(Evento.organizador))
         .filter(Evento.slug == slug, Evento.publicado.is_(True))
         .first()
     )
@@ -355,7 +355,7 @@ async def obter_evento(
 
     evento = (
         db.query(Evento)
-        .options(selectinload(Evento.ingresso_lotes))
+        .options(selectinload(Evento.ingresso_lotes), selectinload(Evento.organizador))
         .filter(Evento.slug == slug)
         .first()
     )
@@ -529,7 +529,7 @@ async def resumo_evento_organizador(
 
     evento = (
         db.query(Evento)
-        .options(selectinload(Evento.ingresso_lotes))
+        .options(selectinload(Evento.ingresso_lotes), selectinload(Evento.organizador))
         .filter(Evento.id == evento_id, Evento.organizador_id == usuario_atual.id)
         .first()
     )
@@ -576,7 +576,7 @@ async def duplicar_evento(
 
     evento = (
         db.query(Evento)
-        .options(selectinload(Evento.ingresso_lotes))
+        .options(selectinload(Evento.ingresso_lotes), selectinload(Evento.organizador))
         .filter(Evento.id == evento_id, Evento.organizador_id == usuario_atual.id)
         .first()
     )
