@@ -33,12 +33,8 @@ function IconFlag({ className }: { className?: string }) {
 /** Bloco de credibilidade na página pública do evento (largura total, abaixo dos cards Sobre / Comprar). */
 export function CompraInfoConfianca() {
   const emailDenuncia = process.env.NEXT_PUBLIC_EMAIL_DENUNCIAS?.trim();
-  const emailContato = process.env.NEXT_PUBLIC_EMAIL_CONTATO?.trim();
   const denunciaMailto = emailDenuncia
     ? `mailto:${emailDenuncia}?subject=${encodeURIComponent("Denúncia — EventosBR")}`
-    : null;
-  const contatoMailto = emailContato
-    ? `mailto:${emailContato}?subject=${encodeURIComponent("Dúvida — EventosBR")}`
     : null;
 
   return (
@@ -51,13 +47,7 @@ export function CompraInfoConfianca() {
       </h3>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-3 text-xs leading-relaxed text-emerald-950 sm:col-span-2">
-          <p className="font-semibold text-emerald-700">Reembolso em até 10 dias</p>
-          <p className="mt-1">
-            Após a compra, cancele e peça reembolso em Minha conta → Pagamentos, dentro do prazo legal,
-            sem precisar falar com o organizador (se o ingresso não tiver sido usado na entrada).
-          </p>
-        </div>
+        {/* Reembolso aparece só na zona de compra (EventoPoliticaReembolso) — evita repetição. */}
         <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs leading-relaxed text-zinc-600">
           <p className="flex items-start gap-2 font-medium text-zinc-800">
             <IconFlag className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
@@ -124,15 +114,9 @@ export function CompraInfoConfianca() {
             </Link>
             <span>
               Precisa de ajuda?{" "}
-              {contatoMailto ? (
-                <a href={contatoMailto} className="font-medium text-emerald-700 underline-offset-2 hover:underline">
-                  Fale connosco
-                </a>
-              ) : (
-                <Link href="/sobre" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
-                  Fale connosco
-                </Link>
-              )}
+              <Link href="/contato" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
+                Fale conosco
+              </Link>
             </span>
           </p>
         </div>

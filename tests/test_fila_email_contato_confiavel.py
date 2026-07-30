@@ -103,6 +103,9 @@ class TestFilaConfiavelContato:
         assert interno.kwargs["destino"] == "dono@eventosbr.app.br"
         assert interno.kwargs["reply_to"] == "visitante@teste.com"
         assert confirmacao.kwargs["destino"] == "visitante@teste.com"
+        assert "Recebemos sua mensagem" in confirmacao.kwargs["assunto"]
+        assert "Visitante" in confirmacao.kwargs["corpo_texto"] or "Oi," in confirmacao.kwargs["corpo_texto"]
+        assert "Assunto teste" in (confirmacao.kwargs.get("corpo_html") or "")
 
         db = TestingSessionLocal()
         try:
@@ -131,6 +134,33 @@ class TestFilaConfiavelContato:
         try:
             registro = db.get(ContatoSiteMensagem, mensagem_id)
             assert registro.email_enviado is True
+        finally:
+            db.close()
+
+    def test_falha_smtp_reenfileira_em_vez_de_descartar(self, monkeypatch, _redis_disponivel):
+        """Regressão: falha SMTP marcava processado sem retry — UI dizia ok e o
+        e-mail sumia. Agora reenfileira até MAX_ATTEMPTS."""
+        monkeypatch.setattr(settings, "TICKET_EMAIL_MAX_ATTEMPTS", 2)
+        r = _redis_disponivel
+        mensagem_id = _criar_registro()
+
+        with (
+            patch("app.services.platform_settings.get_public_settings") as mock_settings,
+            patch("app.services.smtp_client.smtp_configured", return_value=True),
+            patch("app.services.smtp_client.send_email", return_value=False),
+        ):
+            mock_settings.return_value.contact_email = "dono@eventosbr.app.br"
+            mock_settings.return_value.support_email = None
+            r.lpush(contato_email._REDIS_QUEUE_KEY, mensagem_id)
+            assert contato_email._send_sync(mensagem_id) is False
+            contato_email._schedule_retry(mensagem_id)
+            # Após 1ª falha deve voltar pra fila principal
+            assert mensagem_id in r.lrange(contato_email._REDIS_QUEUE_KEY, 0, -1)
+
+        db = TestingSessionLocal()
+        try:
+            registro = db.get(ContatoSiteMensagem, mensagem_id)
+            assert registro.email_enviado is False
         finally:
             db.close()
 

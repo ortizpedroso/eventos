@@ -30,7 +30,7 @@ export function ContatoFormClient() {
       });
       setAviso({
         tipo: "sucesso",
-        texto: "Mensagem enviada com sucesso!",
+        texto: "Sua mensagem foi enviada com sucesso!",
       });
       formRef.current?.reset();
       setTurnstileToken(null);

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.models import Evento, Ingresso
 from app.utils.html_escape import esc
 from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
-from app.services.ingresso_qr import gerar_qr_png_bytes, ingresso_qr_payload
+from app.services.ingresso_qr import gerar_ticket_card_png_bytes, ingresso_qr_payload
 from app.services.redis_conn import get_redis_optional
 from config.database import SessionLocal
 from config.settings import settings
@@ -45,13 +45,13 @@ def _build_html(ingresso: Ingresso, qr_cid: str, db) -> str:
     org_name = (org.brand_name or org.nome) if org else None
     body = (
         f"<p>Olá, <strong>{esc(ingresso.participante_nome)}</strong>!</p>"
-        f"<p>Seu ingresso está confirmado. Apresente o QR Code na entrada.</p>"
-        f"<p><strong>Data:</strong> {evento.data_inicio}<br/>"
-        f"<strong>Local:</strong> {evento.local}<br/>"
-        f"<strong>Valor:</strong> R$ {valor_fmt}</p>"
-        f'<p style="text-align:center"><img src="cid:{qr_cid}" alt="QR Code" width="200" height="200"/></p>'
-        f'<p style="font-size:12px;color:#71717a">Código para digitar na portaria:<br/>'
+        f"<p>Seu ingresso está confirmado. Apresente a carteirinha abaixo (com o QR Code) na entrada — "
+        f"ela já tem seu nome, o evento, data e local, então funciona mesmo se você só salvar essa imagem.</p>"
+        f'<p style="text-align:center"><img src="cid:{qr_cid}" alt="Ingresso — {esc(evento.nome)}" '
+        f'width="240" style="border-radius:8px;border:1px solid #e4e4e7"/></p>'
+        f'<p style="font-size:12px;color:#71717a">Código para digitar na portaria (se o scanner falhar):<br/>'
         f'<span style="font-family:monospace;word-break:break-all">{esc(ingresso_qr_payload(ingresso.id))}</span></p>'
+        f'<p><strong>Valor:</strong> R$ {valor_fmt}</p>'
         f'<p><a href="{link}" style="{link_style(branding)}">Ver ingresso na conta</a></p>'
         f'<p style="font-size:11px;color:#a1a1aa">Reembolso: até 10 dias em Minha conta → Pagamentos.</p>'
     )
@@ -81,7 +81,18 @@ def _send_sync(ingresso_id: str) -> bool:
             logger.warning("E-mail ingresso %s: sem destino", ingresso_id)
             return False
 
-        qr_bytes = gerar_qr_png_bytes(ingresso.id)
+        data_local_fmt = (
+            ingresso.evento.data_inicio.strftime("%d/%m/%Y às %H:%M")
+            if getattr(ingresso.evento, "data_inicio", None)
+            else "Data a confirmar"
+        )
+        qr_bytes = gerar_ticket_card_png_bytes(
+            ingresso_id=ingresso.id,
+            evento_nome=ingresso.evento.nome,
+            data_local_fmt=data_local_fmt,
+            local=ingresso.evento.local,
+            participante_nome=ingresso.participante_nome,
+        )
         qr_cid = "ingresso_qr"
         html = _build_html(ingresso, qr_cid, db)
         branding = get_email_branding(db)
@@ -110,12 +121,14 @@ def _send_sync(ingresso_id: str) -> bool:
         msg.attach(img)
 
         if not smtp_configured():
-            logger.info(
-                "E-mail ingresso %s → %s (SMTP não configurado; conteúdo gerado, não enviado)",
+            # False (não True): evita o worker marcar como "ok" e descartar sem
+            # entrega — sintoma "disse que enviou e nunca chegou".
+            logger.error(
+                "E-mail ingresso %s → %s NÃO enviado (SMTP não configurado)",
                 ingresso_id,
                 destino,
             )
-            return True
+            return False
 
         if not send_prebuilt_message(msg, destino=destino):
             return False

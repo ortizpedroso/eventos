@@ -148,6 +148,13 @@ export default function SobrePage() {
             Funcionalidades
           </Link>
         </div>
+        <p className="mt-6 text-sm text-zinc-500">
+          Alguma dúvida, sugestão ou precisa falar com a gente?{" "}
+          <Link href="/contato" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
+            Fale conosco
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );

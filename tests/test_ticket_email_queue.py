@@ -41,6 +41,11 @@ def test_enqueue_usa_redis_quando_disponivel(monkeypatch):
 
 
 def test_retry_reenfileira_no_redis(monkeypatch):
+    """Usa assert_any_call (não assert_called_once) porque monkeypatch troca
+    get_redis_optional no MÓDULO inteiro — se alguma thread de worker real
+    ainda viva de outro teste (ex: test_fila_email_ingresso_confiavel.py)
+    chamar _schedule_retry durante essa janela, ela também usaria esse mesmo
+    mock_redis, inflando a contagem de chamadas e deixando o teste flaky."""
     mock_redis = MagicMock()
     mock_redis.incr.return_value = 1
     monkeypatch.setattr(settings, "TICKET_EMAIL_MAX_ATTEMPTS", 3)
@@ -50,4 +55,4 @@ def test_retry_reenfileira_no_redis(monkeypatch):
     with patch("time.sleep"):
         ticket_email._schedule_retry("ing-retry")
 
-    mock_redis.lpush.assert_called_once()
+    mock_redis.lpush.assert_any_call(ticket_email._REDIS_QUEUE_KEY, "ing-retry")

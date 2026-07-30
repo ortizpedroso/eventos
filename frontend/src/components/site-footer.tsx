@@ -116,13 +116,24 @@ export function SiteFooter() {
           ) : null}
         </div>
 
-        <div className="mt-12 border-t border-zinc-800/90 pt-8">
+        <div className="mt-12 flex flex-col gap-3 border-t border-zinc-800/90 pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-400">
             © {year}{" "}
-            <Link href="/" className="text-zinc-300 underline underline-offset-2 hover:text-emerald-300">
+            <Link href="/" className="text-zinc-300 no-underline hover:text-emerald-300 hover:no-underline">
               {platform.site_name}
             </Link>
             . Todos os direitos reservados.
+          </p>
+          <p className="text-xs text-zinc-500 sm:text-right">
+            Desenvolvido por{" "}
+            <a
+              href="https://inovesw.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-400 no-underline hover:text-emerald-300 hover:no-underline"
+            >
+              InoveSW
+            </a>
           </p>
         </div>
       </div>

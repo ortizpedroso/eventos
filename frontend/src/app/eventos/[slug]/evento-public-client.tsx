@@ -6,12 +6,11 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { CompraInfoConfianca } from "@/components/compra-info-confianca";
-import { EventoCategoriaBadge } from "@/components/evento-categoria-badge";
 import { EventoHeroBanner } from "@/components/evento-hero-banner";
 import { EventoMapaLocal } from "@/components/evento-mapa-local";
+import { EventoMetaUnica } from "@/components/evento-meta-unica";
 import { EventoPoliticaReembolso } from "@/components/evento-politica-reembolso";
 import { EventoRelacionados } from "@/components/evento-relacionados";
-import { EventoResumoRapido } from "@/components/evento-resumo-rapido";
 import { ListaEsperaForm } from "@/components/lista-espera-form";
 import { ListaInteresseForm } from "@/components/lista-interesse-form";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
@@ -186,13 +185,11 @@ export function EventoPublicClient({
     return evento.descricao.trim().length > 320;
   }, [evento]);
 
+  const [descricaoExpandida, setDescricaoExpandida] = useState(false);
+
   const imagemBanner = useMemo(
     () => resolveEventoImagemSrc(evento?.imagem_url),
     [evento?.imagem_url],
-  );
-
-  const souOrganizador = Boolean(
-    me && evento && me.tipo === "organizador" && me.id === evento.organizador_id,
   );
 
   if (loading && !evento) {
@@ -295,44 +292,22 @@ export function EventoPublicClient({
           imagemUrl={imagemBanner}
           local={evento.local}
           fmtInicio={fmtInicio}
-          precoFmt={precoFmt}
+          mostrarAcoes={evento.publicado}
         />
-      ) : null}
+      ) : (
+        <EventoMetaUnica
+          nome={evento.nome}
+          categoria={evento.categoria}
+          fmtInicio={fmtInicio}
+          local={evento.local}
+          mostrarAcoes={evento.publicado}
+        />
+      )}
 
       {evento.publicado ? (
         <div className="grid w-full gap-6">
-          <EventoResumoRapido
-            fmtInicio={fmtInicio}
-            local={evento.local}
-            precoFmt={precoFmt}
-            precoIngresso={
-              evento.preco_compra != null
-                ? Number(evento.preco_compra)
-                : Number(evento.preco_ingresso)
-            }
-            loteAtivoNome={loteAtivoNome}
-            lotes={evento.ingresso_lotes}
-            loteCompraId={evento.lote_compra_id}
-            compraDisponivel={compraDisponivel}
-            motivoCompraIndisponivel={motivoCompraIndisponivel}
-          />
-
-          {evento.urgencia_ativo && evento.urgencia_badge ? (
-            <p
-              className="inline-flex w-fit rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-950"
-              role="status"
-            >
-              {evento.urgencia_badge}
-            </p>
-          ) : null}
-
-          {mostraListaInteresse ? (
-            <ListaInteresseForm slug={evento.slug} />
-          ) : null}
-
-          {mostraListaEspera ? (
-            <ListaEsperaForm slug={evento.slug} />
-          ) : null}
+          {mostraListaInteresse ? <ListaInteresseForm slug={evento.slug} /> : null}
+          {mostraListaEspera ? <ListaEsperaForm slug={evento.slug} /> : null}
 
           {bloqueadoPorEspera ? (
             <div
@@ -364,9 +339,16 @@ export function EventoPublicClient({
           <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start">
             <aside
               id="comprar"
-              className="order-1 scroll-mt-24 rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm lg:order-2 lg:self-start"
+              className="order-1 scroll-mt-24 rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm lg:sticky lg:top-24 lg:order-2 lg:self-start"
               aria-label="Compra de ingresso"
             >
+              <div className="mb-3 border-b border-zinc-200/80 pb-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Ingressos</p>
+                <p className="mt-1 text-lg font-bold tabular-nums text-emerald-800">{precoFmt}</p>
+                {loteAtivoNome ? (
+                  <p className="mt-0.5 text-xs text-zinc-600">Lote à venda: {loteAtivoNome}</p>
+                ) : null}
+              </div>
               <EventoPoliticaReembolso />
               <div className="mt-4">
                 <ComprarIngressoLazy
@@ -404,167 +386,107 @@ export function EventoPublicClient({
             </aside>
 
             <section
-              className="order-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-1 [&_dd]:text-left [&_p]:text-left"
+              className="order-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-1 [&_p]:text-justify"
               aria-labelledby="sobre-evento-titulo"
             >
               <h2 id="sobre-evento-titulo" className="text-lg font-semibold text-zinc-900">
                 Sobre o evento
               </h2>
-              {!imagemBanner ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-semibold text-zinc-900 sm:text-2xl">{evento.nome}</h1>
-                  <EventoCategoriaBadge categoria={evento.categoria} variant="inline" />
-                </div>
-              ) : (
-                <p className="mt-3 text-base font-semibold text-zinc-900">{evento.nome}</p>
-              )}
-              <dl className="mt-4 space-y-2 border-t border-zinc-100 pt-4 text-sm text-zinc-600">
-                <div>
-                  <dt className="font-medium text-zinc-800">Início</dt>
-                  <dd>{fmtInicio}</dd>
-                </div>
-                <div>
-                  <dt className="font-medium text-zinc-800">Local</dt>
-                  <dd className="break-words">{evento.local}</dd>
-                </div>
-                <div>
-                  <dt className="font-medium text-zinc-800">Ingresso</dt>
-                  <dd className="font-semibold text-emerald-700">{precoFmt}</dd>
-                </div>
-              </dl>
-              {evento.ingresso_lotes && evento.ingresso_lotes.length > 0 ? (
-                <div className="mt-5 border-t border-zinc-100 pt-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Lotes</p>
-                  <ul className="mt-2 space-y-2 text-xs text-zinc-600">
-                    {evento.ingresso_lotes
-                      .slice()
-                      .sort((a, b) => a.ordem - b.ordem)
-                      .map((l) => {
-                        const max = l.quantidade_maxima;
-                        const cap =
-                          max != null ? `${l.vendidos}/${max}` : `${l.vendidos} vendidos`;
-                        const atual = evento.lote_compra_id === l.id;
-                        return (
-                          <li
-                            key={l.id}
-                            className={`flex flex-wrap items-baseline justify-between gap-2 rounded-md border px-2 py-1.5 ${
-                              atual ? "border-emerald-300 bg-emerald-50/80" : "border-zinc-100 bg-zinc-50/80"
-                            }`}
-                          >
-                            <span className="font-medium text-zinc-800">{l.nome}</span>
-                            <span className="tabular-nums text-zinc-700">
-                              {l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} · {cap}
-                              {atual ? (
-                                <span className="ml-1 text-emerald-700"> (à venda)</span>
-                              ) : !l.ativo ? (
-                                <span className="ml-1 text-zinc-500"> (inativo)</span>
-                              ) : null}
-                            </span>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </div>
-              ) : null}
-              <p className="mt-4 whitespace-pre-line text-sm leading-6 text-zinc-800">
-                {descricaoResumo}
-              </p>
-              {descricaoLonga ? (
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-sm font-medium text-emerald-700 hover:underline">
-                    Ler descrição completa
-                  </summary>
-                  <p className="mt-3 whitespace-pre-line text-left text-sm leading-6 text-zinc-800">
-                    {evento.descricao}
+              {evento.descricao?.trim() ? (
+                <>
+                  <p className="mt-4 whitespace-pre-line text-justify text-sm leading-6 text-zinc-800">
+                    {descricaoExpandida ? evento.descricao : descricaoResumo}
                   </p>
-                </details>
-              ) : null}
+                  {descricaoLonga ? (
+                    <button
+                      type="button"
+                      onClick={() => setDescricaoExpandida((v) => !v)}
+                      className="mt-3 text-sm font-medium text-emerald-700 hover:underline"
+                    >
+                      {descricaoExpandida ? "Ler menos" : "Ler descrição completa"}
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <p className="mt-4 text-sm text-zinc-500">
+                  O organizador ainda não adicionou uma descrição. Use a data e o local acima e
+                  garanta seu ingresso na área de compra.
+                </p>
+              )}
             </section>
           </div>
           <EventoMapaLocal local={evento.local} cidade={evento.cidade} />
+          {(evento.organizador_nome || evento.contato_email || evento.contato_telefone) ? (
+            <section
+              className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
+              aria-labelledby="organizador-evento-titulo"
+            >
+              <h2 id="organizador-evento-titulo" className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                Organizador
+              </h2>
+              <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                {evento.organizador_nome ? (
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Nome</p>
+                    <p className="mt-1 text-sm font-medium text-zinc-900">{evento.organizador_nome}</p>
+                  </div>
+                ) : null}
+                {evento.contato_email ? (
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">E-mail</p>
+                    <p className="mt-1 text-sm">
+                      <a href={`mailto:${evento.contato_email}`} className="font-medium text-emerald-700 hover:underline">
+                        {evento.contato_email}
+                      </a>
+                    </p>
+                  </div>
+                ) : null}
+                {evento.contato_telefone ? (
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Telefone</p>
+                    <p className="mt-1 text-sm">
+                      <a
+                        href={`https://wa.me/55${evento.contato_telefone.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-emerald-700 hover:underline"
+                      >
+                        {evento.contato_telefone}
+                      </a>
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
           <CompraInfoConfianca />
           <EventoRelacionados slug={evento.slug} />
         </div>
       ) : (
         <section
-          className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm [&_dd]:text-left [&_p]:text-left"
+          className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm [&_p]:text-justify"
           aria-labelledby="sobre-evento-titulo-pausado"
         >
           <h2 id="sobre-evento-titulo-pausado" className="text-lg font-semibold text-zinc-900">
             Sobre o evento
           </h2>
-          {!imagemBanner ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-semibold text-zinc-900 sm:text-2xl">{evento.nome}</h1>
-              <EventoCategoriaBadge categoria={evento.categoria} variant="inline" />
-            </div>
-          ) : (
-            <p className="mt-3 text-base font-semibold text-zinc-900">{evento.nome}</p>
-          )}
-          <dl className="mt-4 space-y-2 border-t border-zinc-100 pt-4 text-sm text-zinc-600">
-            <div>
-              <dt className="font-medium text-zinc-800">Início</dt>
-              <dd>{fmtInicio}</dd>
-            </div>
-            <div>
-              <dt className="font-medium text-zinc-800">Local</dt>
-              <dd className="break-words">{evento.local}</dd>
-            </div>
-            <div>
-              <dt className="font-medium text-zinc-800">Ingresso</dt>
-              <dd className="font-semibold text-emerald-700">{precoFmt}</dd>
-            </div>
-          </dl>
-          {evento.ingresso_lotes && evento.ingresso_lotes.length > 0 ? (
-            <div className="mt-5 border-t border-zinc-100 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Lotes</p>
-              <ul className="mt-2 space-y-2 text-xs text-zinc-600">
-                {evento.ingresso_lotes
-                  .slice()
-                  .sort((a, b) => a.ordem - b.ordem)
-                  .map((l) => {
-                    const max = l.quantidade_maxima;
-                    const cap = max != null ? `${l.vendidos}/${max}` : `${l.vendidos} vendidos`;
-                    const atual = evento.lote_compra_id === l.id;
-                    return (
-                      <li
-                        key={l.id}
-                        className={`flex flex-wrap items-baseline justify-between gap-2 rounded-md border px-2 py-1.5 ${
-                          atual ? "border-emerald-300 bg-emerald-50/80" : "border-zinc-100 bg-zinc-50/80"
-                        }`}
-                      >
-                        <span className="font-medium text-zinc-800">{l.nome}</span>
-                        <span className="tabular-nums text-zinc-700">
-                          {l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} · {cap}
-                          {atual ? (
-                            <span className="ml-1 text-emerald-700"> (à venda)</span>
-                          ) : !l.ativo ? (
-                            <span className="ml-1 text-zinc-500"> (inativo)</span>
-                          ) : null}
-                        </span>
-                      </li>
-                    );
-                  })}
-              </ul>
-            </div>
-          ) : null}
-          <p className="mt-5 whitespace-pre-line border-t border-zinc-100 pt-5 text-left text-sm leading-6 text-zinc-800">
-            {evento.descricao}
+          <p className="mt-4 whitespace-pre-line text-sm leading-6 text-zinc-800">
+            {evento.descricao?.trim() || "Sem descrição."}
           </p>
         </section>
       )}
 
       {evento.publicado && compraDisponivel ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm lg:hidden">
           <button
             type="button"
-            className="btn-success flex w-full items-center justify-center gap-2 text-white"
+            className="btn-success flex min-h-11 w-full items-center justify-center gap-2 text-white"
             onClick={() => {
               document.getElementById("comprar")?.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
           >
             <span>Comprar ingresso</span>
-            <span className="font-semibold">{precoFmt}</span>
+            <span className="font-semibold tabular-nums">{precoFmt}</span>
           </button>
         </div>
       ) : null}

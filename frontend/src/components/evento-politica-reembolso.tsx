@@ -1,27 +1,15 @@
 import Link from "next/link";
 
-/** Política de reembolso visível na página pública do evento (Fase A). */
+/** Linha curta de reembolso na zona de compra (única menção ao lado do checkout). */
 export function EventoPoliticaReembolso() {
   return (
-    <aside
-      className="rounded-lg border border-emerald-200/80 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-950 [&_p]:text-justify"
-      aria-label="Política de reembolso"
-    >
-      <p className="font-semibold text-emerald-700">Reembolso em até 10 dias</p>
-      <p className="mt-1 text-xs leading-relaxed text-emerald-700/90">
-        Após a compra, você pode solicitar cancelamento e reembolso integral em{" "}
-        <strong>Minha conta → Pagamentos</strong>, sem precisar contactar o organizador, desde que
-        esteja dentro do prazo de 10 dias e o ingresso ainda não tenha sido utilizado na entrada.
-      </p>
-      <p className="mt-2 text-xs text-emerald-700/80">
-        <Link href="/termos" className="underline-offset-2 hover:underline">
-          Termos de uso
-        </Link>
-        {" · "}
-        <Link href="/privacidade" className="underline-offset-2 hover:underline">
-          Privacidade
-        </Link>
-      </p>
-    </aside>
+    <p className="text-xs leading-relaxed text-zinc-600" aria-label="Política de reembolso">
+      <span className="font-semibold text-emerald-800">Reembolso em até 10 dias</span>
+      {" — "}
+      cancele em Minha conta → Pagamentos, se o ingresso ainda não tiver sido usado.{" "}
+      <Link href="/termos" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
+        Termos
+      </Link>
+    </p>
   );
 }
