@@ -256,7 +256,7 @@ test.describe("Navegação — renderização imediata", () => {
     await expect(page.getByRole("heading", { name: /Planos para cada tipo/i })).toBeVisible();
     await page.getByRole("banner").getByRole("link", { name: /EventosBR — início/i }).click();
     await expect(page).toHaveURL("/");
-    await expect(page.getByRole("heading", { level: 1, name: /Venda ingressos/i })).toBeVisible({
+    await expect(page.getByRole("heading", { level: 1, name: /Encontre o evento|Compre em minutos/i })).toBeVisible({
       timeout: 5000,
     });
   });

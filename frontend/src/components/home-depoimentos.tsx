@@ -35,7 +35,7 @@ export function HomeDepoimentos() {
         {depoimentos.map((d) => (
           <li
             key={d.nome}
-            className="flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+            className="reveal flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
           >
             <blockquote className="flex-1 text-sm leading-relaxed text-zinc-700">
               <span aria-hidden className="text-2xl font-serif text-emerald-700">

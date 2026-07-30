@@ -100,7 +100,9 @@ export function CheckoutConfirmacaoIngresso({
   return (
     <div className="space-y-4 text-center">
       <p className="checkout-check-pop" aria-hidden>
-        ✓
+        <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
       </p>
       <h2 className="text-lg font-semibold text-emerald-700" data-testid="checkout-confirmacao">
         Compra confirmada{quantidade > 1 ? ` — ${quantidade} ingressos` : ""}!

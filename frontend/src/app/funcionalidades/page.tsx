@@ -288,7 +288,7 @@ export default function FuncionalidadesPage() {
         </div>
         <div className="grid grid-cols-1 gap-6 text-left sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
           {outrosRecursos.map((b) => (
-            <div key={b.titulo} className="h-full">
+            <div key={b.titulo} className="reveal h-full">
             <div
               className="h-full rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
             >
