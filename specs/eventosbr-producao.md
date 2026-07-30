@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em `0e7e784`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
+> **Produção (VPS):** `main` em `04fb291`. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** rodando em modo `linked` desde 25/07/2026 (organizador vincula conta Asaas própria) — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe segue pendente, mas **não é mais bloqueio de lançamento**; necessário apenas para reativar o modo `baas` (onboarding 100% invisível) no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -538,7 +538,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] `main` em `0e7e784` — inclui taxa zero em ingresso grátis/cortesia + backfill do Financeiro (§2.1.1), home Comprar × Sou produtor + scroll-reveal, além de tudo das versões anteriores
+- [x] `main` em `04fb291` — inclui taxa zero em ingresso grátis/cortesia + backfill do Financeiro (§2.1.1), home Comprar × Sou produtor + scroll-reveal, além de tudo das versões anteriores
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
