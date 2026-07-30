@@ -24,6 +24,7 @@ from app.services.organizador_asaas import (
     simular_antecipacao,
     sincronizar_wallet_eventos_organizador,
     status_asaas_organizador,
+    verificar_antecipacao_organizador,
 )
 from app.services.onboarding_tracker import acompanhamento_conta_completo
 from app.services.ticket_email import enqueue_comunicado_evento
@@ -249,6 +250,12 @@ class AsaasAntecipacaoRequest(BaseModel):
     credit_card_automatic_enabled: bool
 
 
+class AsaasAntecipacaoVerificarRequest(BaseModel):
+    """Por padrão ativa a antecipação se estiver desligada (sem custo EventosBR)."""
+
+    ativar_se_desligada: bool = True
+
+
 class AsaasSimularAntecipacaoRequest(BaseModel):
     valor_reais: float = Field(gt=0, le=1_000_000)
     payment_id: str | None = Field(default=None, max_length=64)
@@ -266,7 +273,9 @@ async def asaas_status_organizador(
     usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
     db.commit()
     db.refresh(usuario_atual)
-    return status_asaas_organizador(db, usuario_atual)
+    status = status_asaas_organizador(db, usuario_atual)
+    db.commit()
+    return status
 
 
 @router.get("/asaas/acompanhamento")
@@ -412,6 +421,25 @@ async def asaas_antecipacao(
             db,
             usuario_atual,
             habilitar=body.credit_card_automatic_enabled,
+        )
+    except ValueError as e:
+        raise _erro_pagamento(e) from e
+
+
+@router.post("/asaas/antecipacao/verificar")
+async def asaas_verificar_antecipacao(
+    body: AsaasAntecipacaoVerificarRequest | None = None,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Verifica (e, por padrão, ativa) antecipação automática — sem taxa EventosBR."""
+    _require_organizador(usuario_atual)
+    req = body or AsaasAntecipacaoVerificarRequest()
+    try:
+        return verificar_antecipacao_organizador(
+            db,
+            usuario_atual,
+            ativar_se_desligada=req.ativar_se_desligada,
         )
     except ValueError as e:
         raise _erro_pagamento(e) from e

@@ -271,18 +271,21 @@ def status_asaas_organizador(db: Session, usuario: Usuario) -> dict[str, Any]:
     anticipacao: dict[str, Any] = {
         "disponivel": False,
         "credit_card_automatic_enabled": usuario.asaas_anticipacao_cartao,
+        "custo_extra_organizador": False,
+        "nota": (
+            "A taxa EventosBR já cobre o custo comercial de processamento e antecipação. "
+            "Não há taxa extra da plataforma no saque. O valor do organizador cai só na conta dele via split."
+        ),
     }
     sub_client = _client_subconta(usuario)
     if sub_client and sub_client.enabled:
         anticipacao["disponivel"] = True
-        try:
-            cfg = sub_client.get("/v3/anticipations/configurations")
-            if isinstance(cfg, dict) and "creditCardAutomaticEnabled" in cfg:
-                anticipacao["credit_card_automatic_enabled"] = bool(
-                    cfg.get("creditCardAutomaticEnabled")
-                )
-        except AsaasAPIError as e:
-            logger.warning("Não foi possível ler antecipação Asaas (%s): %s", usuario.email, e)
+        lido = _ler_antecipacao_automatica(sub_client)
+        if lido is not None:
+            anticipacao["credit_card_automatic_enabled"] = lido
+            if usuario.asaas_anticipacao_cartao != lido:
+                usuario.asaas_anticipacao_cartao = lido
+                db.add(usuario)
 
     status_repasse = (usuario.asaas_repasse_status or "").strip().lower() or None
     detalhes: dict | None = None
@@ -530,6 +533,10 @@ def criar_subconta_organizador(
         atualizar_antecipacao_cartao(db, usuario, habilitar=True)
     except ValueError:
         logger.info("Antecipação automática não ativada na subconta %s", usuario.email)
+    try:
+        garantir_antecipacao_conta_plataforma()
+    except Exception:
+        logger.info("Antecipação automática da plataforma não confirmada no onboarding")
 
     aprovado = repasse_status_aprovado(usuario.asaas_repasse_status)
     from app.services.onboarding_tracker import tracking_id_conta
@@ -695,6 +702,68 @@ def reenviar_subconta_organizador(
     )
 
 
+def _ler_antecipacao_automatica(client: AsaasClient) -> bool | None:
+    """Lê creditCardAutomaticEnabled; None se a API não responder o campo."""
+    try:
+        cfg = client.get("/v3/anticipations/configurations")
+    except AsaasAPIError as e:
+        logger.warning("Falha ao ler antecipação Asaas: %s", e)
+        return None
+    if isinstance(cfg, dict) and "creditCardAutomaticEnabled" in cfg:
+        return bool(cfg.get("creditCardAutomaticEnabled"))
+    return None
+
+
+def _definir_antecipacao_automatica(client: AsaasClient, *, habilitar: bool) -> bool:
+    cfg = client.put(
+        "/v3/anticipations/configurations",
+        json={"creditCardAutomaticEnabled": bool(habilitar)},
+    )
+    if isinstance(cfg, dict) and "creditCardAutomaticEnabled" in cfg:
+        return bool(cfg.get("creditCardAutomaticEnabled"))
+    return bool(habilitar)
+
+
+def garantir_antecipacao_conta_plataforma() -> dict[str, Any]:
+    """Garante antecipação automática na conta mestre (emissora das cobranças).
+
+    Com split fixo, as taxas Asaas (processamento + antecipação) saem da margem que
+    permanece na conta da plataforma — o organizador recebe o fixedValue integral.
+    Custo comercial coberto pela taxa EventosBR (ex.: 10% + R$ 2).
+    """
+    client = get_asaas_client()
+    if not client.enabled:
+        return {"ok": False, "disponivel": False, "credit_card_automatic_enabled": None, "mensagem": "Processador inativo."}
+    atual = _ler_antecipacao_automatica(client)
+    if atual is True:
+        return {
+            "ok": True,
+            "disponivel": True,
+            "credit_card_automatic_enabled": True,
+            "mensagem": "Antecipação automática da conta da plataforma já está ativa.",
+        }
+    try:
+        enabled = _definir_antecipacao_automatica(client, habilitar=True)
+    except AsaasAPIError as e:
+        logger.warning("Não foi possível ativar antecipação na conta plataforma: %s", e)
+        return {
+            "ok": False,
+            "disponivel": True,
+            "credit_card_automatic_enabled": atual,
+            "mensagem": sanitizar_mensagem_pagamento(str(e)) or "Falha ao ativar antecipação da plataforma.",
+        }
+    return {
+        "ok": bool(enabled),
+        "disponivel": True,
+        "credit_card_automatic_enabled": enabled,
+        "mensagem": (
+            "Antecipação automática da conta da plataforma ativada."
+            if enabled
+            else "Não foi possível confirmar a antecipação da plataforma."
+        ),
+    }
+
+
 def atualizar_antecipacao_cartao(
     db: Session,
     usuario: Usuario,
@@ -708,14 +777,10 @@ def atualizar_antecipacao_cartao(
             "Configure ou crie sua conta de recebimento em Financeiro."
         )
     try:
-        cfg = sub_client.put(
-            "/v3/anticipations/configurations",
-            json={"creditCardAutomaticEnabled": bool(habilitar)},
-        )
+        enabled = _definir_antecipacao_automatica(sub_client, habilitar=habilitar)
     except AsaasAPIError as e:
         raise ValueError(str(e) or "Não foi possível atualizar antecipação.") from e
 
-    enabled = bool(cfg.get("creditCardAutomaticEnabled")) if isinstance(cfg, dict) else habilitar
     usuario.asaas_anticipacao_cartao = enabled
     db.add(usuario)
     db.commit()
@@ -723,11 +788,98 @@ def atualizar_antecipacao_cartao(
     return {
         "ok": True,
         "credit_card_automatic_enabled": enabled,
+        "custo_extra_organizador": False,
         "mensagem": (
-            "Antecipação automática no cartão ativada."
+            "Antecipação automática no cartão ativada. Sem custo adicional EventosBR — "
+            "já coberto pela taxa da plataforma."
             if enabled
             else "Antecipação automática desativada."
         ),
+    }
+
+
+def verificar_antecipacao_organizador(
+    db: Session,
+    usuario: Usuario,
+    *,
+    ativar_se_desligada: bool = True,
+) -> dict[str, Any]:
+    """Consulta (e opcionalmente ativa) antecipação automática da conta de repasses.
+
+    Também tenta garantir antecipação na conta mestre da plataforma, para que as taxas
+    Asaas de cartão/antecipação incidam na margem da plataforma (taxa EventosBR), e o
+    organizador receba o valor do split sem desconto extra no saque.
+    """
+    plataforma = garantir_antecipacao_conta_plataforma()
+
+    sub_client = _client_subconta(usuario)
+    if not sub_client or not sub_client.enabled:
+        return {
+            "ok": False,
+            "disponivel": False,
+            "credit_card_automatic_enabled": usuario.asaas_anticipacao_cartao,
+            "ativada_agora": False,
+            "custo_extra_organizador": False,
+            "plataforma": plataforma,
+            "mensagem": (
+                "Não há conta de recebimento gerenciada pela plataforma para consultar antecipação. "
+                "Se você vinculou uma conta própria, configure a antecipação no painel dessa conta."
+            ),
+        }
+
+    atual = _ler_antecipacao_automatica(sub_client)
+    ativada_agora = False
+    if atual is None and usuario.asaas_anticipacao_cartao is not None:
+        atual = bool(usuario.asaas_anticipacao_cartao)
+
+    if ativar_se_desligada and atual is not True:
+        try:
+            enabled = _definir_antecipacao_automatica(sub_client, habilitar=True)
+            ativada_agora = enabled and atual is not True
+            atual = enabled
+        except AsaasAPIError as e:
+            return {
+                "ok": False,
+                "disponivel": True,
+                "credit_card_automatic_enabled": atual,
+                "ativada_agora": False,
+                "custo_extra_organizador": False,
+                "plataforma": plataforma,
+                "mensagem": sanitizar_mensagem_pagamento(str(e))
+                or "Não foi possível ativar a antecipação automática.",
+            }
+
+    if atual is not None:
+        usuario.asaas_anticipacao_cartao = bool(atual)
+        db.add(usuario)
+        db.commit()
+        db.refresh(usuario)
+
+    ativa = atual is True
+    if ativa and ativada_agora:
+        msg = (
+            "Antecipação automática verificada e ativada agora. "
+            "Sem custo adicional no saque — coberto pela taxa da plataforma."
+        )
+    elif ativa:
+        msg = (
+            "Antecipação automática já está ativa. "
+            "Seu repasse via split não é acessado pela plataforma; o saque não tem taxa EventosBR."
+        )
+    else:
+        msg = (
+            "Antecipação automática está desativada. "
+            "Ative para liberar vendas no cartão mais rápido na sua conta de repasses."
+        )
+
+    return {
+        "ok": True,
+        "disponivel": True,
+        "credit_card_automatic_enabled": atual,
+        "ativada_agora": ativada_agora,
+        "custo_extra_organizador": False,
+        "plataforma": plataforma,
+        "mensagem": msg,
     }
 
 
@@ -788,7 +940,8 @@ def simular_antecipacao(
         "liquido_antecipado_estimado": liquido_antecipado,
         "taxa_antecipacao_mes_pct": _TAXA_ANTECIPACAO_CARTAO_MES * 100,
         "nota": (
-            "Estimativa ilustrativa (cartão ~1,25% a.m.). "
-            "Valores reais dependem da análise de crédito."
+            "Estimativa ilustrativa do custo Asaas (~1,25% a.m. no cartão). "
+            "A EventosBR não cobra antecipação à parte: o custo comercial está na taxa da plataforma. "
+            "O organizador recebe o valor do split na conta dele; a plataforma não acessa esse saldo."
         ),
     }

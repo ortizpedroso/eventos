@@ -30,7 +30,12 @@ type RepasseStatus = {
   pode_publicar_eventos_pagos?: boolean;
   eventos_sem_wallet: number;
   nota_wallet: string | null;
-  anticipacao?: { credit_card_automatic_enabled?: boolean | null };
+  anticipacao?: {
+    disponivel?: boolean;
+    credit_card_automatic_enabled?: boolean | null;
+    custo_extra_organizador?: boolean;
+    nota?: string | null;
+  };
   onboarding_mode?: string;
   permite_vinculo_wallet?: boolean;
   permite_conta_recebimento?: boolean;
@@ -176,6 +181,9 @@ export function OrganizadorRepassesPainel() {
   const [gruposVendas, setGruposVendas] = useState<GrupoVendas[]>(() => cached?.gruposVendas ?? []);
   const [conciliacao, setConciliacao] = useState<Conciliacao | null>(() => cached?.conciliacao ?? null);
   const [anticipacao, setAnticipacao] = useState<boolean | null>(() => cached?.anticipacao ?? null);
+  const [anticipacaoDisponivel, setAnticipacaoDisponivel] = useState(false);
+  const [anticipacaoNota, setAnticipacaoNota] = useState<string | null>(null);
+  const [busyAntecipacao, setBusyAntecipacao] = useState(false);
   const [agrupamento, setAgrupamento] = useState<Agrupamento>("mes");
   const [extratoOffset, setExtratoOffset] = useState(() => cached?.extratoOffset ?? 0);
   const [extratoTotal, setExtratoTotal] = useState(() => cached?.extratoTotal ?? 0);
@@ -250,6 +258,8 @@ export function OrganizadorRepassesPainel() {
       setStatus(s);
       setSaldo(ex.saldo);
       setAnticipacao(s.anticipacao?.credit_card_automatic_enabled ?? null);
+      setAnticipacaoDisponivel(Boolean(s.anticipacao?.disponivel));
+      setAnticipacaoNota(s.anticipacao?.nota ?? null);
         setExtratoOffset(offset + ex.movimentos.length);
         setExtratoTotal(ex.total_movimentos ?? ex.movimentos.length);
         setMovimentos((prev) => (append ? [...prev, ...ex.movimentos] : ex.movimentos));
@@ -449,6 +459,33 @@ export function OrganizadorRepassesPainel() {
     }
   }
 
+  async function verificarAntecipacao(ativarSeDesligada = true) {
+    setBusyAntecipacao(true);
+    setMsg(null);
+    setError(null);
+    try {
+      const r = await apiFetch<{
+        ok: boolean;
+        disponivel?: boolean;
+        credit_card_automatic_enabled?: boolean | null;
+        mensagem: string;
+        custo_extra_organizador?: boolean;
+      }>("/api/organizador/asaas/antecipacao/verificar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ativar_se_desligada: ativarSeDesligada }),
+      });
+      setAnticipacao(r.credit_card_automatic_enabled ?? null);
+      setAnticipacaoDisponivel(Boolean(r.disponivel));
+      setMsg(r.mensagem);
+      await carregar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível verificar a antecipação.");
+    } finally {
+      setBusyAntecipacao(false);
+    }
+  }
+
   const disponivel = saldo?.saldo_disponivel_saque ?? saldo?.saldo_disponivel ?? 0;
   const carenciaH = saldo?.carencia_horas ?? 48;
   const prazoH = saldo?.prazo_transferencia_horas ?? 48;
@@ -520,7 +557,8 @@ export function OrganizadorRepassesPainel() {
                   pagamento.
                 </li>
                 <li>
-                  Ao solicitar transferência Pix, a efetivação ocorre em até <strong>{prazoH} horas</strong>.
+                  O formulário de <strong>Solicitar saque</strong> fica nesta mesma página (abaixo). Após
+                  solicitar a transferência Pix, a efetivação ocorre em até <strong>{prazoH} horas</strong>.
                 </li>
               </ul>
             </div>
@@ -554,14 +592,43 @@ export function OrganizadorRepassesPainel() {
         </p>
       ) : null}
 
-      {status?.repasse_aprovado && anticipacao != null ? (
-        <div className="mt-4 rounded-lg border border-zinc-200 px-4 py-3 text-sm">
+      {status?.repasse_aprovado ? (
+        <div
+          id="antecipacao-automatica"
+          className="mt-4 scroll-mt-24 rounded-lg border border-zinc-200 px-4 py-3 text-sm"
+        >
           <p className="font-medium text-zinc-900">Antecipação automática de cartão</p>
-          <p className="mt-1 text-xs text-zinc-600">
+          <p className="mt-1 text-xs leading-5 text-zinc-600">
             {anticipacao
-              ? "Ativa — vendas no cartão podem ser antecipadas automaticamente pela conta de repasses."
-              : "Desativada — recebimentos de cartão seguem o prazo padrão de liquidação."}
+              ? "Ativa — vendas no cartão são liberadas mais rápido na sua conta de repasses."
+              : anticipacaoDisponivel
+                ? "Desativada — recebimentos de cartão seguem o prazo padrão de liquidação."
+                : "Indisponível para consulta nesta conta (ex.: conta vinculada). Configure no painel da conta de recebimento, se aplicável."}
           </p>
+          <p className="mt-2 text-xs leading-5 text-zinc-600">
+            {anticipacaoNota ??
+              "Seu líquido cai só na sua conta via split; a plataforma não acessa esse valor. A taxa EventosBR já cobre o custo comercial — não há taxa extra no saque."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busyAntecipacao || !anticipacaoDisponivel}
+              onClick={() => void verificarAntecipacao(true)}
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+            >
+              {busyAntecipacao ? "Verificando…" : "Verificar antecipação"}
+            </button>
+            {anticipacaoDisponivel && anticipacao !== true ? (
+              <button
+                type="button"
+                disabled={busyAntecipacao}
+                onClick={() => void verificarAntecipacao(true)}
+                className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-900 disabled:opacity-50"
+              >
+                Ativar agora (sem custo EventosBR)
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -913,49 +980,90 @@ export function OrganizadorRepassesPainel() {
         </div>
       ) : null}
 
-      {status?.repasses_prontos && saldo?.saque_habilitado ? (
-        <form onSubmit={solicitarSaque} className="mt-8 border-t border-zinc-100 pt-6">
-          <h3 className="text-sm font-semibold text-zinc-900">Solicitar transferência via Pix</h3>
-          <p className="mt-1 text-xs text-zinc-600">
-            Disponível agora: <strong>{fmt(disponivel)}</strong>. Efetivação em até {prazoH}h após a solicitação.
-          </p>
-          <div className="mt-3 flex flex-wrap items-end gap-3">
-            <div className="min-w-[9rem]">
-              <label className="text-xs text-zinc-600">Valor</label>
-              <InputValorBrl value={saqueValor} onChange={setSaqueValor} className="mt-1 rounded-lg" />
+      {saldo ? (
+        <section
+          id="solicitar-saque"
+          className="mt-8 scroll-mt-24 border-t border-zinc-100 pt-6"
+          aria-labelledby="solicitar-saque-heading"
+        >
+          <h3 id="solicitar-saque-heading" className="text-sm font-semibold text-zinc-900">
+            Solicitar saque
+          </h3>
+          {status?.repasses_prontos && saldo.saque_habilitado ? (
+            <form onSubmit={solicitarSaque} className="mt-2">
+              <p className="text-xs text-zinc-600">
+                Disponível agora: <strong>{fmt(disponivel)}</strong>. Informe a chave Pix de destino. A
+                efetivação ocorre em até {prazoH}h após a solicitação.
+              </p>
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <div className="min-w-[9rem]">
+                  <label className="text-xs text-zinc-600" htmlFor="saque-valor">
+                    Valor
+                  </label>
+                  <InputValorBrl
+                    id="saque-valor"
+                    value={saqueValor}
+                    onChange={setSaqueValor}
+                    className="mt-1 rounded-lg"
+                  />
+                </div>
+                <div className="min-w-[8rem]">
+                  <label className="text-xs text-zinc-600" htmlFor="saque-pix-tipo">
+                    Tipo da chave
+                  </label>
+                  <select
+                    id="saque-pix-tipo"
+                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                    value={pixTipo}
+                    onChange={(e) => setPixTipo(e.target.value)}
+                  >
+                    {PIX_TIPOS.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.rotulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-[12rem] flex-1">
+                  <label className="text-xs text-zinc-600" htmlFor="saque-pix-chave">
+                    Chave Pix
+                  </label>
+                  <input
+                    id="saque-pix-chave"
+                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                    value={pixChave}
+                    onChange={(e) => setPixChave(e.target.value)}
+                    placeholder="Informe a chave de destino"
+                    autoComplete="off"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={busy || disponivel < 1}
+                  className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+                >
+                  Solicitar saque via Pix
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-700">
+              <p className="font-medium text-zinc-900">Saque ainda não disponível nesta tela</p>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">
+                {saldo.nota_saque ??
+                  (!status?.repasses_prontos
+                    ? "Configure e aguarde a aprovação da conta de repasses para solicitar saque por aqui."
+                    : "Quando o saque estiver liberado, o formulário de transferência via Pix aparece neste espaço.")}
+              </p>
+              {!status?.repasses_prontos ? (
+                <p className="mt-2 text-xs text-zinc-600">
+                  Use a seção <strong>Configure sua conta de repasses</strong> acima para liberar recebimentos e
+                  saques.
+                </p>
+              ) : null}
             </div>
-            <div className="min-w-[8rem]">
-              <label className="text-xs text-zinc-600">Tipo da chave</label>
-              <select
-                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                value={pixTipo}
-                onChange={(e) => setPixTipo(e.target.value)}
-              >
-                {PIX_TIPOS.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.rotulo}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="min-w-[12rem] flex-1">
-              <label className="text-xs text-zinc-600">Chave Pix</label>
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                value={pixChave}
-                onChange={(e) => setPixChave(e.target.value)}
-                placeholder="Informe a chave de destino"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={busy || disponivel < 1}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-            >
-              Solicitar transferência
-            </button>
-          </div>
-        </form>
+          )}
+        </section>
       ) : null}
 
       {movimentos.length > 0 ? (

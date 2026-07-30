@@ -204,6 +204,82 @@ class TestOrganizadorAsaas:
         assert r.status_code == 400
         assert "conta de recebimento" in r.json()["detail"].lower()
 
+    def test_verificar_antecipacao_sem_subconta(self):
+        token = _registrar_organizador("ant_ver")
+        with patch("app.services.organizador_asaas.garantir_antecipacao_conta_plataforma") as plat:
+            plat.return_value = {
+                "ok": True,
+                "disponivel": True,
+                "credit_card_automatic_enabled": True,
+                "mensagem": "ok",
+            }
+            r = client.post(
+                "/api/organizador/asaas/antecipacao/verificar",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"ativar_se_desligada": True},
+            )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["disponivel"] is False
+        assert body["custo_extra_organizador"] is False
+        assert "conta" in body["mensagem"].lower() or "vinculou" in body["mensagem"].lower()
+
+    def test_verificar_antecipacao_ativa_subconta(self):
+        from app.models import Usuario
+        from app.services.organizador_asaas import verificar_antecipacao_organizador
+        from app.utils.secret_storage import encrypt_at_rest
+
+        db = TestingSessionLocal()
+        try:
+            org = Usuario(
+                id=str(uuid.uuid4()),
+                email=f"ant_ok_{uuid.uuid4().hex[:8]}@test.com",
+                nome="Org Ant",
+                senha_hash="x",
+                tipo="organizador",
+                asaas_subaccount_api_key=encrypt_at_rest("sub_key_test"),
+                asaas_account_id="acc_test",
+                asaas_wallet_id="wallet-org-test",
+                asaas_repasse_status="approved",
+                asaas_anticipacao_cartao=False,
+            )
+            db.add(org)
+            db.commit()
+            db.refresh(org)
+
+            class FakeClient:
+                enabled = True
+
+                def get(self, path):
+                    assert "anticipations/configurations" in path
+                    return {"creditCardAutomaticEnabled": False}
+
+                def put(self, path, json=None):
+                    assert "anticipations/configurations" in path
+                    assert json == {"creditCardAutomaticEnabled": True}
+                    return {"creditCardAutomaticEnabled": True}
+
+            with (
+                patch("app.services.organizador_asaas._client_subconta", return_value=FakeClient()),
+                patch("app.services.organizador_asaas.garantir_antecipacao_conta_plataforma") as plat,
+            ):
+                plat.return_value = {
+                    "ok": True,
+                    "disponivel": True,
+                    "credit_card_automatic_enabled": True,
+                    "mensagem": "plataforma ok",
+                }
+                body = verificar_antecipacao_organizador(db, org, ativar_se_desligada=True)
+
+            assert body["ok"] is True
+            assert body["credit_card_automatic_enabled"] is True
+            assert body["ativada_agora"] is True
+            assert body["custo_extra_organizador"] is False
+            db.refresh(org)
+            assert org.asaas_anticipacao_cartao is True
+        finally:
+            db.close()
+
     def test_criar_subconta_exige_data_nascimento_cpf(self):
         token = _registrar_organizador("sub_birth")
         with (

@@ -43,7 +43,8 @@ export default function PlanosPage() {
             <p className="mt-3 text-sm leading-6 text-zinc-600">
               No plano de eventos pagos sem assinatura, a taxa percentual e o valor fixo por ingresso são a única taxa
               cobrada — fixa para você e para o organizador, independente do meio de pagamento. No parcelamento, o
-              comprador vê um acréscimo explícito; sua taxa e o líquido do organizador não mudam.
+              comprador vê um acréscimo explícito (processamento e antecipação do parcelado); sua taxa e o líquido do
+              organizador não mudam.
             </p>
           </div>
         </div>
