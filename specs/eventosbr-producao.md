@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.32
+**Versão:** 1.33
 **Data:** 2026-07-31
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `a32b948` — v1.32, **`/review` aprovada** (L1-L5 fechados). `pytest` total **390**. **Deploy VPS:** confirmado pelo usuário (31/07/2026). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`.
+> **Produção (VPS):** tip de **produto** da `main` em `a32b948` — v1.33, **`/review` independente aprovada** (L1–L5 revalidados; §2.9–§2.11 PASS; pytest **390**). **Deploy VPS:** confirmado pelo usuário (31/07/2026). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -572,7 +572,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 - [x] tip de produto — `a32b948` (L4 spec linked/produção + L5 docstring DELETE); L1 DELETE+usado em `9082c90`; SEO `8b6759c` / fix teste `f3f2e8b`; lint `12ec50f`; §2.10 `eea493d`. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
-- [x] Deploy VPS: **confirmado pelo usuário** (31/07/2026) — cobrindo o acumulado de produto até tip `9082c90` (carrinho/promoters/galeria, ficha, duplicar/deletar+usado, SEO, lint, fix teste `/workspace`)
+- [x] Deploy VPS: **confirmado pelo usuário** (31/07/2026) — cobrindo o acumulado de produto até tip `a32b948` (carrinho/promoters/galeria, ficha, duplicar/deletar+usado, SEO, lint, fix teste `/workspace`, L4/L5)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
@@ -635,63 +635,55 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Review | Tip | Veredito |
 |--------|-----|----------|
-| v1.30 | `f3f2e8b` / 389 | NÃO aprovada — L1 DELETE `usado`, L2 baas↔linked, L3 tip docs |
-| build `9082c90` | fechou L1 no código; L2 parcial na spec | — |
-| **v1.31 (este)** | `9082c90` / **390** | **NÃO aprovada** — restos L2 + docstring (ver §11.5) |
+| v1.30 | `f3f2e8b` / 389 | NÃO aprovada — L1, L2, L3 |
+| v1.31 | `9082c90` / 390 | NÃO aprovada — L4 restos linked, L5 docstring |
+| build `a32b948` | fechou L4+L5 | — |
+| v1.32 | `a32b948` / 390 | aprovada (pelo build que fechou L4/L5) |
+| **v1.33 (este, independente)** | `a32b948` / **390** | **APROVADA** — L1–L5 revalidados no código e na spec; sem lacunas de código |
 
-### 11.1 Requisitos recentes — resultado (v1.31)
+### 11.1 Requisitos recentes — resultado (v1.33)
 
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
-| §2.9 | Carrinho / promoters / galeria | **PASS** (`1b15985`) |
+| §2.9 | Carrinho / promoters / galeria | **PASS** |
 | §2.10 | Ficha técnica + migração `000047` + UI sem placeholder | **PASS** |
 | §2.10 | WhatsApp `/contato` via `social_whatsapp_url` | **PASS** |
 | §2.10 | Duplicar → editar, `publicado=false` | **PASS** |
-| §2.10 | DELETE dono-only; bloqueia `pago`/`pendente`/`usado`; UI confirma; disabled+explicação | **PASS** (código em `9082c90`; teste `test_deletar_evento_com_ingresso_usado_bloqueado`) |
+| §2.10 | DELETE dono-only; bloqueia `pago`/`pendente`/`usado`; UI confirma; disabled+explicação | **PASS** (`9082c90` + docstring `a32b948`) |
 | §2.11 | Metadata `?cidade=` (+ categoria); `q`/categoria/padrão intactos | **PASS** |
 | §2.11 | `typicalAgeRange` (`0-`/`12-`/`16-`/`18-`) | **PASS** |
 | §2.11 | Teste SEO sem `cwd="/workspace"` | **PASS** |
+| §2.2–§2.4 / §4 | Narrativa `linked` = lançamento; `baas` = alvo | **PASS** (L4) |
+| §2.10 docstring API | Menciona `usado` | **PASS** (L5) |
 | §7 Qualidade | `pytest` 390 | **PASS** (rodado neste review) |
 | §7 Ops | Deploy confirmado 31/07 | **PASS** (ops) |
-| §2.8 A–C | Webhook real / SMTP / 1ª venda | **PENDENTE ops** (não bloqueia código se §11.5 fechar) |
-| §2.2–§2.4 / §4 | Narrativa `linked` consistente em todo o corpo | **FAIL** — §11.5 L4 |
-| §2.10 texto + docstring | Spec/docstring alinhados ao filtro com `usado` | **FAIL** — §11.5 L5 (texto §2.10 corrigido neste review; docstring API ainda desatualizada) |
+| §2.8 A–C | Webhook real / SMTP / 1ª venda | **PENDENTE ops** — não bloqueia aprovação de código |
+| §7 Pagamentos | Conta criada pela plataforma (`baas`) | **aberto de propósito** até CNPJ+`baas` |
 
-### 11.2 Lacunas v1.30 — status
+### 11.2 Lacunas L1–L5 — status final
 
 | ID | Item | Status |
 |----|------|--------|
-| L1 | DELETE bloqueia `usado` | ✅ FECHADO em `9082c90` |
-| L2 | §2.2/§2.3/§6 alinhar `linked` | ⚠️ PARCIAL — restos em §11.5 L4 |
-| L3 | Tip deploy ≠ SHA docs | ✅ FECHADO |
+| L1 | DELETE bloqueia `usado` | ✅ `9082c90` |
+| L2 | §2.2/§2.3/§6 alinhar `linked` | ✅ (completado via L4 em `a32b948`) |
+| L3 | Tip deploy ≠ SHA docs | ✅ |
+| L4 | Restos “linked só-dev / fora de escopo” | ✅ `a32b948` — revalidado: §2.2 nota linked; §2.3 linked=atual; §2.4 `status_repasse_aprovados`; §4 sem linked/both |
+| L5 | Docstring DELETE omite `usado` | ✅ `a32b948` — revalidado: `pago, pendente ou usado (check-in)` |
 
 ### 11.3 Não são lacunas de código desta build
 
 - CNPJ conta mãe, §2.8 A/B/C, `asaas_platform_cnpj` em `linked` — `[ ]` / N/A.
-- Item §7 “conta criada pela plataforma (`baas`)” aberto de propósito até CNPJ+`baas`.
+- Item §7 “conta criada pela plataforma (`baas`)” aberto até CNPJ+`baas`.
 - Rotação automática de chave — descartada (changelog 1.29).
 
-### 11.5 Lacunas — todas fechadas (31/07/2026, revisão 2)
+### 11.5 Evidência L4/L5 (revalidação v1.33)
 
-#### L4 — restos da L2: texto ainda tratava `linked` como fora de produção — ✅ FECHADO
+- **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
+- **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-**Falha (era):**
-1. **§2.2** abertura: “O organizador não cria nem vincula conta em painel externo” — em `linked` o organizador **cria/usa conta Asaas** e vincula; contradizia o modo de lançamento.
-2. **§2.3** (após a tabela): “Modos `linked` e `both` existem apenas no código para desenvolvimento legado — **fora do escopo de produção**” — falso; `linked` é o modo ativo.
-3. **§2.4**: “Status `manual` e `linked` aplicam-se só a ambientes de desenvolvimento” — em produção com `ASAAS_ONBOARDING_MODE=linked`, `evento_repasse.py` adiciona `"linked"` aos status aprovados via `settings.permite_vinculo_wallet_organizador()`.
-4. **§4** “Fora do escopo”: listava `modo linked/both` — `linked` está no escopo do lançamento.
+### 11.6 Critério de aprovação — ✅ atingido (v1.33)
 
-**Correção aplicada:** §2.2 agora rotula a seção como modelo `baas` (alvo), com nota no topo apontando pro fluxo `linked` real em `onboarding-linked-lancamento.md`; §2.3 reescrita (linked=atual, both=compat, baas=alvo); §2.4 reescrita citando a função real (`status_repasse_aprovados()`) e a condição exata de cada status; §4 removeu `linked/both` da lista de fora de escopo.
-
-#### L5 — docstring da API DELETE desatualizada — ✅ FECHADO
-
-**Falha (era):** `deletar_evento` docstring dizia "bloqueado se houver ingresso pago ou pendente" — omitia `usado`, mesmo o código (corrigido no L1) já bloqueando os três.
-
-**Correção aplicada:** docstring agora diz "pago, pendente ou usado (check-in)".
-
-### 11.6 Critério de aprovação — ✅ atingido
-
-Aprovado: L1-L5 fechados, `pytest` 390 verde, `/review` v1.31 completo.
+**Build de código aprovada.** L1–L5 fechados; `pytest` 390 verde; tip produto `a32b948`. Nenhuma correção pendente para `/build` nesta rodada. Pendências restantes são só operacionais (§2.8 / CNPJ).
 
 ---
 
@@ -699,6 +691,7 @@ Aprovado: L1-L5 fechados, `pytest` 390 verde, `/review` v1.31 completo.
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.33 | 2026-07-31 | **`/review` independente — build aprovada.** Revalidou tip `a32b948` / 390 testes: L1–L5 PASS; §2.9–§2.11 PASS; restos L4/L5 confirmados fechados no código e no corpo da spec. Atualizou §11 (tabelas v1.31 que ainda diziam FAIL) e tip de deploy §7 → `a32b948`. Sem correções novas para `/build`. Ops §2.8 A–C seguem `[ ]`. |
 | 1.32 | 2026-07-31 | **`/review` aprovada.** L4 fechado: §2.2/§2.3/§2.4/§4 reescritos — texto ainda tratava `linked` como só-dev/fora-de-escopo, contradizendo o cabeçalho da spec e o código real (`evento_repasse.py` confirma que `linked` libera venda em produção via `status_repasse_aprovados()`). Achado extra durante a correção (fora do diagnóstico original): linha 134 tinha a mesma contradição, corrigida junto. L5 fechado: docstring de `deletar_evento` desatualizada (dizia só "pago ou pendente", o código já bloqueava `usado` desde o L1). 390/390, sem mudança de lógica de negócio. |
 | 1.31 | 2026-07-31 | **`/review` — build NÃO aprovada.** Tip produto `9082c90`, pytest **390**. L1 DELETE+`usado` **confirmada no código**. L2 só parcial: restos em §2.2/§2.3/§2.4/§4 (**L4**) + docstring API (**L5**). Correções para `/build` em §11.5. Contagens tip/§7 atualizadas. |
 | 1.30 | 2026-07-31 | **`/review` — build NÃO aprovada.** §2.10–§2.11 passam com **L1** (DELETE não bloqueia ingresso `usado` embora UI e “vendido” incluam check-in). **L2** contradições baas↔linked no corpo da spec vs tip/`onboarding-linked-lancamento.md`/código. **L3** tip de deploy citava SHA docs. Correções para `/build` em §11. Ajuste pontual §2.11 (nota do fix `/workspace`) e §7 Validado VPS (`linked`). pytest 389. |
