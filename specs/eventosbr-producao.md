@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.27
+**Versão:** 1.28
 **Data:** 2026-07-31
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `eea493d` — v1.26 (ficha técnica + WhatsApp /contato + duplicar/deletar; ver §2.10). Tip de **docs/spec**: HEAD da `main` após commits `docs(spec): …`. `pytest` total **379**. v1.25.1 (§11) permanece aprovada. **Supervisão independente confirmada** (2026-07-31): revisei a regra de segurança do DELETE (bloqueia com ingresso pago/pendente, `_evento_do_organizador` garante só o dono, cascade delete-orphan já configurado em todas as relações do Evento — sem risco de erro de integridade referencial); CTA de WhatsApp em `/contato` reaproveita `social_whatsapp_url` já normalizado, some se não configurado; migração `000047` validada upgrade→downgrade→upgrade. 379/379 rodado 2x, estável. `tsc`/`eslint`/build limpos (mesmos 10 erros pré-existentes, arquivo não tocado). **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh` (aplica migração `000047`). **Onboarding de pagamentos:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas` no futuro.
+> **Produção (VPS):** tip de **produto** da `main` em `8b6759c` — v1.28 (SEO: metadata por cidade + `typicalAgeRange` no JSON-LD; ver §2.11). Tip de **docs/spec**: HEAD da `main` após commits `docs(spec): …`. `pytest` total **389**. v1.27 (lint zero erros) e v1.26 (§2.10) permanecem. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas` no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -80,6 +80,14 @@ Migração: `20260730_000046_carrinho_promoters_galeria.py`. Testes: `test_lembr
 **Deletar:** `DELETE /api/eventos/id/{id}` só para o dono; bloqueado se houver ingresso `pago` ou `pendente` (erro sugere despublicar); UI com confirmação explícita; com vendas o botão fica desabilitado com explicação.
 
 Testes: `test_evento_ficha_tecnica.py`, `test_contato_whatsapp_cta.py`, `test_evento_duplicar_deletar.py`.
+
+### 2.11 SEO — metadata por cidade e typicalAgeRange (v1.28)
+
+**Listagem `/eventos`:** `generateMetadata` passa a considerar `?cidade=` (além de `q` e `categoria` já existentes). Só cidade → `Eventos em {cidade} | EventosBR`. Cidade + categoria → combinação natural (`{categoria} em {cidade} | EventosBR`). Casos `q`, só categoria e padrão inalterados. Helper: `frontend/src/lib/eventos-listagem-metadata.ts`.
+
+**JSON-LD Event:** `typicalAgeRange` só se `classificacao_etaria` preenchida — mapeamento schema.org formato aberto `min-`: `livre`→`0-`, `12+`→`12-`, `16+`→`16-`, `18+`→`18-`. Sem classificação o campo some (mesmo padrão de `endDate`). Helper: `typicalAgeRangeFromClassificacao` em `evento-ficha.ts`.
+
+Testes: `tests/test_seo_cidade_typical_age.py`.
 
 ### 2.2 Conta de recebimento do organizador (modelo de produção)
 
@@ -271,7 +279,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (379 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (389 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -550,7 +558,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (379 testes)
+- [x] `pytest` verde (389 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -562,7 +570,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto v1.26 — `eea493d` (ficha técnica + WhatsApp /contato + duplicar/deletar; §2.10); §11 v1.25.1 em `1b15985`. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
+- [x] tip de produto v1.28 — `8b6759c` (SEO cidade + typicalAgeRange; §2.11); v1.27 lint em `12ec50f`; v1.26 §2.10 em `eea493d`. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
@@ -605,7 +613,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Compressão de imagem | `lib/comprimir-imagem.ts` (navegador), `utils/imagem_processamento.py` (servidor, Pillow) |
 | CAPTCHA | `services/turnstile.py`, `components/turnstile-widget.tsx` |
 | Cifra em repouso (CPF/CNPJ, API keys) | `utils/secret_storage.py` (esquema `enc:v2`), `utils/cpf.py` |
-| SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `app/eventos/[slug]/page.tsx` (JSON-LD) |
+| SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `lib/eventos-listagem-metadata.ts`, `app/eventos/page.tsx` (metadata cidade), `app/eventos/[slug]/page.tsx` (JSON-LD + typicalAgeRange) |
 | Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh` |
@@ -625,6 +633,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.28 | 2026-07-31 | **SEO** (`8b6759c`): metadata dinâmica em `/eventos?cidade=` (e combinação natural com categoria); `typicalAgeRange` no JSON-LD schema.org/Event a partir de `classificacao_etaria` (formato `0-`/`12-`/`16-`/`18-`). Spec §2.11. Testes: 379 → 389 (`test_seo_cidade_typical_age.py`). |
 | 1.27 | 2026-07-31 | **Zero erros de lint no projeto** (antes: 10 erros pré-existentes, mesmo arquivo, várias sessões sem correção). `organizador-panel-views.tsx` mutava/lia um ref diretamente no corpo do render (viola regra do React) — trocado por `useState` + cálculo derivado no render (só leitura) pra não perder o efeito "sem flash na primeira visita à aba"; `useEffect` só persiste no estado pra lembrar nas trocas seguintes. `eventos-lista-publica.tsx`: 4 refs (`filtroData`/`dataDe`/`dataAte`/`buildUrl`) alinhados ao mesmo padrão `useEffect` que já era usado corretamente pros outros refs do mesmo arquivo. **Verificação de impacto feita antes de enviar**: rastreamento manual do teste e2e de troca de abas do painel (Eventos→Financeiro→Relatórios→Eventos), confirmação de que as demais mutações de ref no arquivo de eventos acontecem dentro de handlers (seguro), e que a interface pública de `OrganizadorPanelViews` (só recebe `children`) ficou inalterada. Build (2x) + 379/379 testes, sem regressão. |
 | 1.25.1 | 2026-07-31 | **Aceite §11 fechado** (`1b15985`): A1 teste `cancelado` sem lembrete; B1 `POST /pagamentos/criar` + `ref`; B2 isolamento cross-org promoters; B3 share público sem `?ref=`; B4 `localStorage` TTL 24h + `limparRefPromoter`; C1 galeria no criar; C2/C3 visibilidade e PATCH cross-org. Spec §2.9 / plano §7–§11 **aprovados**. Testes: 359 → 367. |
 | 1.25 | 2026-07-30 | **Carrinho abandonado + promoters + galeria** (plano aprovado): lembrete transacional único aos 20 min via fila confiável; links `?ref=` com painel agregado sem comissão/PII; galeria 0–6 fotos reais no Sobre. Migração `000046`. Spec §2.9. Testes: 347 → 359 (inclui harden do claim atômico). Review intermediário apontou lacunas §11 (fechadas em 1.25.1). |
