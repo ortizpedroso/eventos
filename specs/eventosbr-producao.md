@@ -1,6 +1,6 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.26
+**Versão:** 1.27
 **Data:** 2026-07-31
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
@@ -625,6 +625,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.27 | 2026-07-31 | **Zero erros de lint no projeto** (antes: 10 erros pré-existentes, mesmo arquivo, várias sessões sem correção). `organizador-panel-views.tsx` mutava/lia um ref diretamente no corpo do render (viola regra do React) — trocado por `useState` + cálculo derivado no render (só leitura) pra não perder o efeito "sem flash na primeira visita à aba"; `useEffect` só persiste no estado pra lembrar nas trocas seguintes. `eventos-lista-publica.tsx`: 4 refs (`filtroData`/`dataDe`/`dataAte`/`buildUrl`) alinhados ao mesmo padrão `useEffect` que já era usado corretamente pros outros refs do mesmo arquivo. **Verificação de impacto feita antes de enviar**: rastreamento manual do teste e2e de troca de abas do painel (Eventos→Financeiro→Relatórios→Eventos), confirmação de que as demais mutações de ref no arquivo de eventos acontecem dentro de handlers (seguro), e que a interface pública de `OrganizadorPanelViews` (só recebe `children`) ficou inalterada. Build (2x) + 379/379 testes, sem regressão. |
 | 1.25.1 | 2026-07-31 | **Aceite §11 fechado** (`1b15985`): A1 teste `cancelado` sem lembrete; B1 `POST /pagamentos/criar` + `ref`; B2 isolamento cross-org promoters; B3 share público sem `?ref=`; B4 `localStorage` TTL 24h + `limparRefPromoter`; C1 galeria no criar; C2/C3 visibilidade e PATCH cross-org. Spec §2.9 / plano §7–§11 **aprovados**. Testes: 359 → 367. |
 | 1.25 | 2026-07-30 | **Carrinho abandonado + promoters + galeria** (plano aprovado): lembrete transacional único aos 20 min via fila confiável; links `?ref=` com painel agregado sem comissão/PII; galeria 0–6 fotos reais no Sobre. Migração `000046`. Spec §2.9. Testes: 347 → 359 (inclui harden do claim atômico). Review intermediário apontou lacunas §11 (fechadas em 1.25.1). |
 | 1.24 | 2026-07-30 | **Bug Financeiro**: ingresso grátis/cortesia (R$0) aparecia com taxa EventosBR fantasma (R$2 fixo por ingresso no ledger) porque `detalhar_taxa_ingresso(0)` não zera a taxa fixa — alinhado a `taxa_ingresso`; espelho no frontend; backfill `corrigir_taxa_ingressos_gratis` (API pública em `__all__`, sem import de helper privado em `relatorios.py`) em saldo/extrato/vendas/relatórios. Spec §2.1.1. Testes: 343 → 347 (`test_taxa_ingresso_gratis.py`). |
