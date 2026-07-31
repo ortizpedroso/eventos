@@ -759,7 +759,7 @@ async def deletar_evento(
         db.query(func.count(Ingresso.id))
         .filter(
             Ingresso.evento_id == evento.id,
-            Ingresso.status.in_(("pendente", "pago")),
+            Ingresso.status.in_(("pendente", "pago", "usado")),
         )
         .scalar()
         or 0
@@ -769,8 +769,8 @@ async def deletar_evento(
             status_code=400,
             detail=(
                 "Não é possível deletar este evento porque já existem ingressos "
-                "pagos ou pendentes. Despublique (pause) o evento na vitrine se "
-                "quiser interromper novas vendas."
+                "pagos, pendentes ou com check-in (usados). Despublique (pause) o "
+                "evento na vitrine se quiser interromper novas vendas."
             ),
         )
     db.delete(evento)

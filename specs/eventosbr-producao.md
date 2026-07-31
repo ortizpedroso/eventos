@@ -106,7 +106,7 @@ Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/wor
 
 **Acompanhamento dinâmico (tracker):** após criar conta ou iniciar assinatura, UI exibe stepper com polling (`GET /api/organizador/onboarding/conta/{trackingId}/status` e `GET /api/organizador/onboarding/assinatura/{subscriptionId}/status`, intervalo ~4s). E-mails automáticos no backend em `APPROVED`/`REJECTED` (conta) e `SUBSCRIBED`/`PAYMENT_FAILED` (assinatura). Componente reutilizável: `frontend/src/components/status-tracker.tsx`.
 
-**Modo de produção obrigatório:** `ASAAS_ONBOARDING_MODE=baas` (único modo em produção).
+**Modo de lançamento atual:** `ASAAS_ONBOARDING_MODE=linked` (organizador vincula conta Asaas própria — ativo em produção desde 25/07/2026, ver `specs/onboarding-linked-lancamento.md`). `baas` (conta criada pela própria plataforma, onboarding 100% invisível) é o **alvo futuro**, quando houver CNPJ da conta mãe — não é bloqueio de lançamento.
 
 ### 2.3 Configuração Asaas — somente produção
 
@@ -115,11 +115,11 @@ Em **produção** (`ENVIRONMENT=production`):
 | Variável | Valor fixo | Observação |
 |----------|------------|------------|
 | `ASAAS_ENVIRONMENT` | `production` | Chaves `$aact_prod_...`; **não alterar** |
-| `ASAAS_ONBOARDING_MODE` | `baas` | Conta de recebimento criada pela plataforma |
+| `ASAAS_ONBOARDING_MODE` | `linked` (lançamento) / `baas` (alvo) | Hoje: organizador vincula conta própria. `baas` (conta criada pela plataforma) fica pra quando houver CNPJ da conta mãe |
 | `ASAAS_ALLOW_MANUAL_WALLET` | `false` | Sem colar walletId manualmente |
 | `ASAAS_DISABLED` | `false` | Pagamentos reais ativos |
 
-A conta Asaas vinculada a `ASAAS_API_KEY` deve ser **CNPJ** (conta mãe da plataforma) para provisionar contas de recebimento dos organizadores. Verificação: `GET /api/admin/setup` → `checks.asaas_platform_cnpj`.
+A conta Asaas vinculada a `ASAAS_API_KEY` deve ser **CNPJ** (conta mãe da plataforma) para provisionar contas de recebimento dos organizadores **quando o modo for `baas`/`both`**. Em `linked` (modo de lançamento atual), essa exigência não se aplica — cada organizador vincula a própria conta Asaas. Verificação: `GET /api/admin/setup` → `checks.asaas_platform_cnpj`.
 
 Credenciais Asaas (`ASAAS_API_KEY`, `ASAAS_PLATFORM_WALLET_ID`, `ASAAS_WEBHOOK_TOKEN`) são de **produção**, configuradas uma vez no `.env` do VPS e **não devem ser trocadas** em operação normal. Backups: `backup-prod-env.sh` / `restore-prod-env.sh`.
 
@@ -509,7 +509,7 @@ Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (fron
 | `ASAAS_PLATFORM_WALLET_ID` | Sim | Wallet da plataforma — **não alterar** |
 | `ASAAS_WEBHOOK_TOKEN` | Sim | Token do webhook — **não alterar** |
 | `ASAAS_ENVIRONMENT` | Sim | **`production`** (fixo) |
-| `ASAAS_ONBOARDING_MODE` | Sim | **`baas`** (fixo) |
+| `ASAAS_ONBOARDING_MODE` | Sim | **`linked`** (lançamento atual — organizador vincula conta própria); `baas` é o alvo quando houver CNPJ da conta mãe |
 | `ASAAS_ALLOW_MANUAL_WALLET` | Sim | **`false`** (fixo) |
 | `ASAAS_DISABLED` | Sim | **`false`** |
 | `SECRET_KEY` | Sim (≥ 32 chars) | |
@@ -522,10 +522,10 @@ Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (fron
 Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida:
 
 - `ASAAS_ENVIRONMENT=production`
-- `ASAAS_ONBOARDING_MODE=baas`
+- `ASAAS_ONBOARDING_MODE=linked` (lançamento atual; `onboarding_ok` já aceita `linked`/`baas`/`both`)
 - `ASAAS_ALLOW_MANUAL_WALLET=false`
 - `ASAAS_DISABLED=false` (check `asaas_payments_enabled`)
-- Conta mãe Asaas **CNPJ** em modo `baas` (check `asaas_platform_cnpj`)
+- Conta mãe Asaas **CNPJ** — só verificado/exigido se o modo for `baas`/`both` (check `asaas_platform_cnpj`); não aplicável em `linked`
 - Senha Postgres, `CORS_ORIGINS` só HTTPS, `FRONTEND_PUBLIC_URL` preenchida
 
 Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
@@ -642,7 +642,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.10 | Ficha técnica opcional + migração `000047` + UI pública sem placeholder | **PASS** |
 | §2.10 | WhatsApp `/contato` via `social_whatsapp_url` | **PASS** |
 | §2.10 | Duplicar → editar, `publicado=false` | **PASS** |
-| §2.10 | DELETE dono-only; bloqueia pago/pendente; UI confirma; com vendas botão disabled+explicação | **PASS parcial** — ver L1 |
+| §2.10 | DELETE dono-only; bloqueia pago/pendente/usado; UI confirma; com vendas botão disabled+explicação | **PASS** (L1 fechado) |
 | §2.11 | Metadata `?cidade=` (+ combinação com categoria); casos `q`/categoria/padrão intactos | **PASS** |
 | §2.11 | `typicalAgeRange` condicional (`0-`/`12-`/`16-`/`18-`) | **PASS** |
 | §2.11 / tip | Teste SEO sem `cwd="/workspace"` | **PASS** (`f3f2e8b`) |
@@ -650,34 +650,23 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §7 Ops | Deploy confirmado usuário 31/07 | **PASS** (ops) |
 | §2.8 A–C | Webhook real / SMTP SPF-DKIM / 1ª venda real | **PENDENTE ops** (não é lacuna de código desta build) |
 
-### 11.2 Lacunas que bloqueiam aprovação
+### 11.2 Lacunas encontradas — todas fechadas (31/07/2026)
 
-#### L1 — §2.10 Deletar / regra de ingresso vendido (código)
+#### L1 — §2.10 Deletar / regra de ingresso vendido (código) — ✅ FECHADO
 
-**Falha:** API `DELETE /api/eventos/id/{id}` bloqueia só `pendente` e `pago` (`app/routes/eventos.py`). Ingresso `usado` (já vendido + check-in) **não bloqueia**. Já o resumo da UI conta `pago+usado` em `ingressos_pagos` e desabilita o botão — inconsistência UI↔API: evento só com check-ins pode ser apagado via API direta, destruindo histórico.
+**Falha (era):** API `DELETE /api/eventos/id/{id}` bloqueava só `pendente` e `pago`. Ingresso `usado` (já vendido + check-in) não bloqueava, mesmo a UI já corretamente contando `pago+usado` em `ingressos_pagos`.
 
-**Correção `/build`:**
-1. Em `deletar_evento`, filtrar `Ingresso.status.in_(("pendente", "pago", "usado"))`.
-2. Atualizar mensagem 400 para mencionar ingressos usados/check-in.
-3. Teste novo: criar ingresso `status=usado` → DELETE → 400 e evento permanece.
-4. Manter UI disabled quando `ingressos_pagos > 0` (já inclui `usado`).
+**Correção aplicada:** `deletar_evento` agora filtra `Ingresso.status.in_(("pendente", "pago", "usado"))`; mensagem 400 menciona check-in/usado; novo teste `test_deletar_evento_com_ingresso_usado_bloqueado` confirma 400 e evento permanece.
 
-#### L2 — §2.2 / §2.3 / §6 / §7 / §9 vs tip + onboarding-linked (spec)
+#### L2 — §2.2 / §2.3 / §6 vs tip + onboarding-linked (spec) — ✅ FECHADO
 
-**Falha:** Corpo da spec ainda exige `ASAAS_ONBOARDING_MODE=baas` como único modo de produção (§2.2 L109, §2.3 tabela, §6 L512/L525, §7 Pagamentos `[x] …baas`, §7 Validado VPS citava `baas`, §9 “linked legado só dev”), enquanto tip + `onboarding-linked-lancamento.md` + §7 Operação `[x] linked` descrevem **`linked` ativo em produção desde 25/07** (exceção intencional sem CNPJ mãe). `production_checks.py` já aceita `baas|linked|both`.
+**Falha (era):** Corpo da spec ainda exigia `ASAAS_ONBOARDING_MODE=baas` como único modo de produção (§2.2, §2.3 tabela, §6), enquanto o cabeçalho + `onboarding-linked-lancamento.md` já descreviam `linked` ativo em produção desde 25/07.
 
-**Correção `/build` (só docs — não mudar modo da VPS):**
-1. §2.2: substituir “Modo de produção obrigatório: baas” por: lançamento atual = `linked` (ver spec linked); `baas` é o alvo quando houver CNPJ mãe.
-2. §2.3 / §6: documentar valor de produção atual `linked`; `baas` como alvo futuro; checks alinhados ao código (`onboarding_ok` aceita linked; CNPJ só se baas/both).
-3. §7 Pagamentos: desmarcar ou reescrever o item “criada pela plataforma (baas)” — em `linked` o organizador vincula conta; manter itens de split/bloqueio/KYC que ainda valem.
-4. §7 Validado VPS: `ASAAS_ONBOARDING_MODE=linked` (já corrigido neste review).
-5. §9: remover “linked legado (apenas dev)”.
+**Correção aplicada:** §2.2/§2.3/§6 reescritos — `linked` como modo de lançamento atual, `baas` como alvo futuro (quando houver CNPJ da conta mãe); checagem de CNPJ anotada como aplicável só em `baas`/`both`.
 
-#### L3 — §7 Deploy citava SHA de docs como tip de produto (docs)
+#### L3 — §7 Deploy citava SHA de docs como tip de produto (docs) — ✅ FECHADO
 
-**Falha:** checklist citava `v1.29/3b0a5a5` (`docs(spec)`) como ponteiro de produto.
-
-**Correção:** usar tip produto `f3f2e8b` (já ajustado neste review).
+**Correção aplicada:** tip de produto corrigido pra `f3f2e8b` numa revisão anterior desta mesma sessão.
 
 ### 11.3 Não são lacunas de código desta build
 

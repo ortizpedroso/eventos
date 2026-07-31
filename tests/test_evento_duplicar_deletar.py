@@ -183,6 +183,50 @@ def test_deletar_evento_com_ingresso_pendente_bloqueado():
     assert r.status_code == 400, r.text
 
 
+def test_deletar_evento_com_ingresso_usado_bloqueado():
+    """L1: ingresso com check-in feito (status=usado) também deve bloquear —
+    já foi comparecido de verdade, apagar o evento destruiria esse registro."""
+    suf = uuid.uuid4().hex[:8]
+    tok = _registrar("organizador", suf)
+    email = f"organizador.dupdel.{suf}@test.com"
+    ev = _criar_evento(tok, email)
+    headers = {"Authorization": f"Bearer {tok}"}
+
+    db = test_api.TestingSessionLocal()
+    try:
+        from app.models import Usuario
+
+        buyer = Usuario(
+            email=f"buy3.dupdel.{suf}@test.com",
+            nome="Buyer3",
+            senha_hash="x",
+            tipo="cliente",
+        )
+        db.add(buyer)
+        db.commit()
+        db.refresh(buyer)
+        db.add(
+            Ingresso(
+                evento_id=ev["id"],
+                usuario_id=buyer.id,
+                valor=80.0,
+                status="usado",
+                participante_email=buyer.email,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    r = client.delete(f"/api/eventos/id/{ev['id']}", headers=headers)
+    assert r.status_code == 400, r.text
+    detail = r.json()["detail"].lower()
+    assert "usado" in detail or "check-in" in detail
+
+    ainda = client.get(f"/api/eventos/id/{ev['id']}/resumo", headers=headers)
+    assert ainda.status_code == 200
+
+
 def test_deletar_outro_organizador_negado():
     suf = uuid.uuid4().hex[:8]
     tok_a = _registrar("organizador", f"a{suf}")
