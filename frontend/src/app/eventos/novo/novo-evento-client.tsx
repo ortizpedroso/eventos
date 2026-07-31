@@ -44,6 +44,7 @@ type CriarEventoPayload = {
   local: string;
   cidade?: string | null;
   imagem_url?: string | null;
+  galeria_urls?: string[];
   contato_telefone: string;
   contato_email: string;
   preco_ingresso: number;
@@ -112,6 +113,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
   const [nomeParaSlug, setNomeParaSlug] = useState("");
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
+  const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>(() => defaultLoteRows());
   const [wizardStep, setWizardStep] = useState(1);
   const [modoSimples, setModoSimples] = useState(true);
@@ -241,6 +243,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
       local: String(formData.get("local") ?? ""),
       cidade: String(formData.get("cidade") ?? "").trim() || null,
       imagem_url: imagemUrl.trim() || null,
+      galeria_urls: galeriaUrls.map((u) => u.trim()).filter(Boolean).slice(0, 6),
       contato_telefone: onlyDigits(contatoTelefone, 13),
       contato_email: contatoEmail.trim(),
       preco_ingresso,
@@ -508,6 +511,47 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
 
             <section className="space-y-3">
               <EventoImagemField value={imagemUrl} onChange={setImagemUrl} />
+              <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+                <div>
+                  <p className="text-sm font-medium text-zinc-900">Galeria — edições anteriores</p>
+                  <p className="mt-1 text-xs text-zinc-600">
+                    Opcional: até 6 fotos reais. Só aparece na página do evento se você enviar alguma.
+                    Sem placeholders genéricos.
+                  </p>
+                </div>
+                {galeriaUrls.map((url, idx) => (
+                  <div key={`gal-${idx}`} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="min-w-0 flex-1">
+                      <EventoImagemField
+                        value={url}
+                        onChange={(v) => {
+                          setGaleriaUrls((prev) => {
+                            const next = [...prev];
+                            next[idx] = v;
+                            return next;
+                          });
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="text-sm text-red-700 underline"
+                      onClick={() => setGaleriaUrls((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+                {galeriaUrls.length < 6 ? (
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-emerald-700 underline"
+                    onClick={() => setGaleriaUrls((prev) => [...prev, ""])}
+                  >
+                    Adicionar foto
+                  </button>
+                ) : null}
+              </div>
             </section>
             </div>
 

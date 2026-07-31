@@ -316,3 +316,43 @@ def test_nao_envia_se_pago_antes_do_job():
             db3.close()
     finally:
         db.close()
+
+
+def test_nao_envia_se_cancelado_dentro_da_janela_20min():
+    """A1: status cancelado não enfileira lembrete, mesmo com data_compra elegível."""
+    db = test_api.TestingSessionLocal()
+    try:
+        _, buyer, ev = _setup(db)
+        agora = _agora()
+        ing = Ingresso(
+            evento_id=ev.id,
+            usuario_id=buyer.id,
+            participante_email=buyer.email,
+            valor=50.0,
+            status="cancelado",
+            data_compra=agora - timedelta(minutes=25),
+            reservado_ate=agora + timedelta(minutes=10),
+        )
+        db.add(ing)
+        db.commit()
+        ingresso_id = ing.id
+
+        def _sl():
+            return test_api.TestingSessionLocal()
+
+        with patch("app.services.lembrete_carrinho.SessionLocal", side_effect=_sl):
+            with patch("app.services.lembrete_carrinho.enqueue_email_simples", return_value=True) as enq:
+                n = enviar_lembretes_carrinho()
+        assert n == 0
+        assert enq.call_count == 0
+        assert not any(ev.slug in str(c) for c in enq.call_args_list)
+        db3 = test_api.TestingSessionLocal()
+        try:
+            assert ingresso_id not in {c.id for c in candidatos_carrinho_abandonado(db3)}
+            row = db3.get(Ingresso, ingresso_id)
+            assert row is not None
+            assert row.carrinho_lembrete_enviado_em is None
+        finally:
+            db3.close()
+    finally:
+        db.close()

@@ -40,9 +40,21 @@ const btnClass =
 type Props = {
   nome: string;
   className?: string;
-  /** URL completa para compartilhar (ex.: link com ?ref=). Default: URL da página. */
+  /** URL completa para compartilhar (ex.: link com ?ref=). Default: URL da página sem ?ref=. */
   shareUrl?: string;
 };
+
+/** Remove ?ref= da URL pública (não “roubar” atribuição do promoter no share do visitante). */
+export function urlCompartilharSemRef(href: string): string {
+  try {
+    const u = new URL(href);
+    if (!u.searchParams.has("ref")) return href;
+    u.searchParams.delete("ref");
+    return u.toString();
+  } catch {
+    return href;
+  }
+}
 
 /** Compartilhar: WhatsApp, copiar link e Web Share nativo (quando disponível). */
 export function EventoCompartilhar({ nome, className = "", shareUrl }: Props) {
@@ -50,7 +62,8 @@ export function EventoCompartilhar({ nome, className = "", shareUrl }: Props) {
 
   const pageUrl = useCallback(() => {
     if (shareUrl) return shareUrl;
-    return typeof window !== "undefined" ? window.location.href : "";
+    if (typeof window === "undefined") return "";
+    return urlCompartilharSemRef(window.location.href);
   }, [shareUrl]);
 
   const copiarLink = useCallback(async () => {

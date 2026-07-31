@@ -20,7 +20,7 @@ import { formatCpfMask, isValidCpf, onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask, isTelefoneBrasilOk } from "@/lib/telefone-br";
 import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import type { CriarPagamentoResponse, IngressoLote, RetomarPagamentoResponse, Usuario } from "@/lib/types";
-import { lerRefPromoter } from "@/lib/promoter-ref";
+import { lerRefPromoter, limparRefPromoter } from "@/lib/promoter-ref";
 import { urlRetomarPagamento } from "@/lib/reserva-pagamento";
 
 type Props = {
@@ -505,6 +505,7 @@ export function ComprarIngresso({
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
+      limparRefPromoter(eventoId);
       if (data.payments_disabled || data.cortesia) {
         setPagamentoModoTeste(Boolean(data.payments_disabled && !data.cortesia));
         setIngressoId(data.ingresso_id);
