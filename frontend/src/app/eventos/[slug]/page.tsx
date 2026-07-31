@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { EventoPublicClient } from "./evento-public-client";
+import { typicalAgeRangeFromClassificacao } from "@/lib/evento-ficha";
 import { getEventoPublicoBySlug } from "@/lib/eventos-publicos";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 
@@ -64,6 +65,8 @@ function buildEventoJsonLd(evento: NonNullable<Awaited<ReturnType<typeof getEven
           ? "https://schema.org/SoldOut"
           : "https://schema.org/InStock",
     },
+    // schema.org/typicalAgeRange — só se classificação etária preenchida (mesmo padrão de endDate)
+    typicalAgeRange: typicalAgeRangeFromClassificacao(evento.classificacao_etaria),
   };
 
   return JSON.stringify(jsonLd);
