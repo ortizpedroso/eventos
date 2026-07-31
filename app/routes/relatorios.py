@@ -282,6 +282,9 @@ async def participantes_organizador(
                 else tel_raw,
                 "status": ing.status or "",
                 "valor": float(ing.valor or 0),
+                "assento": getattr(ing, "assento", None) or "",
+                "canal_venda": getattr(ing, "canal_venda", None) or "online",
+                "forma_pagamento_pdv": getattr(ing, "forma_pagamento_pdv", None) or "",
                 "data_compra": ing.data_compra.isoformat() if ing.data_compra else None,
                 "checkin_em": ing.checkin_em.isoformat() if ing.checkin_em else None,
             }

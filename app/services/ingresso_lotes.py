@@ -115,6 +115,11 @@ def lote_elegivel_compra(
             vendidos = contar_ocupacao_lote(db, lote.id)
         if vendidos >= lote.quantidade_maxima:
             return False
+    # Lote com assentos nomeados: esgota quando não há assento livre.
+    from app.services.lote_assentos import assentos_disponiveis, lote_usa_assentos
+
+    if lote_usa_assentos(lote) and not assentos_disponiveis(db, lote):
+        return False
     return True
 
 
@@ -321,6 +326,12 @@ def substituir_lotes_evento(
         ativo = bool(raw.get("ativo", True))
         vi = raw.get("vendas_inicio")
         vf = raw.get("vendas_fim")
+        from app.utils.lote_assentos import normalizar_assentos_campo
+
+        try:
+            assentos_txt = normalizar_assentos_campo(raw.get("assentos"))
+        except ValueError as e:
+            raise ValueError(str(e)) from e
 
         tipo = normalizar_tipo_ingresso(str(raw.get("tipo") or TIPO_PADRAO))
 
@@ -335,6 +346,7 @@ def substituir_lotes_evento(
                 lo.ativo = ativo
                 lo.vendas_inicio = vi
                 lo.vendas_fim = vf
+                lo.assentos = assentos_txt
                 continue
 
         db.add(
@@ -348,6 +360,7 @@ def substituir_lotes_evento(
                 ativo=ativo,
                 vendas_inicio=vi,
                 vendas_fim=vf,
+                assentos=assentos_txt,
             )
         )
 

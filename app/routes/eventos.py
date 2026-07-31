@@ -404,6 +404,83 @@ def _evento_do_organizador(db: Session, evento_id: str, usuario: Usuario) -> Eve
     return evento
 
 
+@router.get("/id/{evento_id}", response_model=EventoResponse)
+async def obter_evento_do_organizador(
+    evento_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Detalhe do evento para o dono (inclui lotes, assentos e ocupação)."""
+    _evento_do_organizador(db, evento_id, usuario_atual)
+    evento = (
+        db.query(Evento)
+        .options(selectinload(Evento.ingresso_lotes), selectinload(Evento.organizador))
+        .filter(Evento.id == evento_id)
+        .first()
+    )
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+    return montar_evento_response(db, evento)
+
+
+@router.post("/id/{evento_id}/pdv")
+async def vender_pdv_presencial(
+    evento_id: str,
+    body: dict,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Registra venda presencial (PDV): ingresso pago sem Asaas/split."""
+    from pydantic import BaseModel, Field
+
+    from app.services.pdv_presencial import vender_ingresso_pdv
+
+    class PdvBody(BaseModel):
+        lote_id: str = Field(min_length=1, max_length=64)
+        participante_nome: str = Field(min_length=1, max_length=200)
+        participante_email: str | None = Field(default=None, max_length=255)
+        participante_telefone: str | None = Field(default=None, max_length=20)
+        forma_pagamento: str = Field(min_length=1, max_length=40)
+        assento: str | None = Field(default=None, max_length=40)
+
+    try:
+        payload = PdvBody.model_validate(body)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    try:
+        ingresso = vender_ingresso_pdv(
+            db,
+            evento=evento,
+            organizador=usuario_atual,
+            lote_id=payload.lote_id.strip(),
+            participante_nome=payload.participante_nome,
+            participante_email=payload.participante_email,
+            participante_telefone=payload.participante_telefone,
+            forma_pagamento=payload.forma_pagamento,
+            assento=payload.assento,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    from app.services.ingresso_checkin import codigo_checkin
+
+    codigo = codigo_checkin(ingresso.id)
+    return {
+        "ok": True,
+        "ingresso_id": ingresso.id,
+        "status": ingresso.status,
+        "assento": ingresso.assento,
+        "canal_venda": ingresso.canal_venda,
+        "forma_pagamento_pdv": ingresso.forma_pagamento_pdv,
+        "valor": float(ingresso.valor or 0),
+        "participante_nome": ingresso.participante_nome,
+        "codigo_checkin": codigo,
+        "qr_url": f"/ingresso/qr?c={codigo}",
+    }
+
+
 @router.get("/id/{evento_id}/lista-interesse")
 async def listar_lista_interesse(
     evento_id: str,
@@ -734,6 +811,7 @@ async def duplicar_evento(
                 ativo=lote.ativo,
                 vendas_inicio=lote.vendas_inicio,
                 vendas_fim=lote.vendas_fim,
+                assentos=getattr(lote, "assentos", None),
             )
         )
 

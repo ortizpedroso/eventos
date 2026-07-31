@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.33
+**Versão:** 1.34
 **Data:** 2026-07-31
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `a32b948` — v1.33, **`/review` independente aprovada** (L1–L5 revalidados; §2.9–§2.11 PASS; pytest **390**). **Deploy VPS:** confirmado pelo usuário (31/07/2026). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** anterior em `a32b948` (v1.33). **v1.34 (este branch):** PDV presencial + assentos nomeados MVP — pytest **400**; tip de produto atualizado após merge. **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -88,6 +88,32 @@ Testes: `test_evento_ficha_tecnica.py`, `test_contato_whatsapp_cta.py`, `test_ev
 **JSON-LD Event:** `typicalAgeRange` só se `classificacao_etaria` preenchida — mapeamento schema.org formato aberto `min-`: `livre`→`0-`, `12+`→`12-`, `16+`→`16-`, `18+`→`18-`. Sem classificação o campo some (mesmo padrão de `endDate`). Helper: `typicalAgeRangeFromClassificacao` em `evento-ficha.ts`.
 
 Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/workspace`); subprocess herda CWD da raiz do repo (fix `f3f2e8b`).
+
+### 2.12 PDV presencial + assentos nomeados (MVP, v1.34)
+
+Duas funcionalidades classificadas como alto esforço na pesquisa de concorrentes — entregues como **MVP**, sem a versão completa.
+
+#### PDV / venda presencial
+
+- Rota UI: `/organizador/eventos/{id}/pdv` (link “PDV” na listagem do organizador).
+- API: `POST /api/eventos/id/{evento_id}/pdv` — só o dono (`_evento_do_organizador`).
+- Formulário: nome (obrigatório), e-mail/telefone (opcionais), lote, forma de pagamento textual (`dinheiro` | `pix_manual` | `cartao`), assento se o lote tiver lista.
+- Gera `Ingresso` com `status=pago`, `canal_venda=pdv`, `forma_pagamento_pdv` — **sem Asaas, sem split, sem repasse automático** (reconciliação manual).
+- Respeita `quantidade_maxima` do lote (via `reservar_vaga_e_assento` / FOR UPDATE).
+- Carteirinha/QR: mesmo fluxo (`codigo_checkin` → `/ingresso/qr?c=…`; e-mail com `gerar_ticket_card_png_bytes` se houver e-mail).
+- **Fora de escopo:** maquininha, split/NF automática, UI só-tablet.
+
+#### Assentos nomeados (sem mapa visual)
+
+- Campo opcional no lote: texto `A1, A2, B1` → coluna `evento_ingresso_lotes.assentos`; parse em `app/utils/lote_assentos.py`.
+- Checkout: se o lote tem assentos, select de assento disponível (qty=1); lote sem assentos continua por quantidade.
+- Claim atômico: `SELECT FOR UPDATE` no lote + checagem de ocupação (`app/services/lote_assentos.py`), mesmo espírito do claim do carrinho.
+- Assento em `Ingresso.assento` → carteirinha PNG, e-mail, download HTML, `/ingresso/qr`, relatório de participantes, painel (PDV + editor de lotes mostra ocupados).
+- **Fora de escopo:** mapa clicável, editor de planta, preços por setor.
+
+Migração: `20260731_000048_pdv_assentos_mvp.py` (`assentos` no lote; `assento`, `canal_venda`, `forma_pagamento_pdv` no ingresso).
+
+Testes: `tests/test_pdv_presencial.py`, `tests/test_lote_assentos.py` (auth dono, limite de lote, race de assento, carteirinha, compatibilidade sem assentos).
 
 ### 2.2 Conta de recebimento do organizador (modelo `baas` — alvo futuro)
 
@@ -279,7 +305,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (390 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (400 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -558,7 +584,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (390 testes)
+- [x] `pytest` verde (400 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -691,6 +717,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.34 | 2026-07-31 | **PDV presencial + assentos nomeados (MVP).** §2.12: venda presencial (`canal_venda=pdv`, sem Asaas/split); lotes com lista de assentos + select no checkout + claim FOR UPDATE; assento na carteirinha/relatórios. Migração `000048`. Testes: 390 → 400 (`test_pdv_presencial.py`, `test_lote_assentos.py`). Fora de escopo: maquininha, mapa visual, preços por setor. |
 | 1.33 | 2026-07-31 | **`/review` independente — build aprovada.** Revalidou tip `a32b948` / 390 testes: L1–L5 PASS; §2.9–§2.11 PASS; restos L4/L5 confirmados fechados no código e no corpo da spec. Atualizou §11 (tabelas v1.31 que ainda diziam FAIL) e tip de deploy §7 → `a32b948`. Sem correções novas para `/build`. Ops §2.8 A–C seguem `[ ]`. |
 | 1.32 | 2026-07-31 | **`/review` aprovada.** L4 fechado: §2.2/§2.3/§2.4/§4 reescritos — texto ainda tratava `linked` como só-dev/fora-de-escopo, contradizendo o cabeçalho da spec e o código real (`evento_repasse.py` confirma que `linked` libera venda em produção via `status_repasse_aprovados()`). Achado extra durante a correção (fora do diagnóstico original): linha 134 tinha a mesma contradição, corrigida junto. L5 fechado: docstring de `deletar_evento` desatualizada (dizia só "pago ou pendente", o código já bloqueava `usado` desde o L1). 390/390, sem mudança de lógica de negócio. |
 | 1.31 | 2026-07-31 | **`/review` — build NÃO aprovada.** Tip produto `9082c90`, pytest **390**. L1 DELETE+`usado` **confirmada no código**. L2 só parcial: restos em §2.2/§2.3/§2.4/§4 (**L4**) + docstring API (**L5**). Correções para `/build` em §11.5. Contagens tip/§7 atualizadas. |

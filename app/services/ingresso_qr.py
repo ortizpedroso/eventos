@@ -73,6 +73,7 @@ def gerar_ticket_card_png_bytes(
     data_local_fmt: str,
     local: str,
     participante_nome: str,
+    assento: str | None = None,
 ) -> bytes:
     """Carteirinha compacta pra mostrar no celular na entrada: nome, evento, data,
     local e o QR — tudo numa imagem só, pra não perder o contexto se a pessoa
@@ -85,6 +86,7 @@ def gerar_ticket_card_png_bytes(
     LARGURA = 480
     MARGEM = 28
     QR_TAM = 280
+    assento_txt = (assento or "").strip() or None
 
     fonte_titulo = ImageFont.truetype(_FONTE_BOLD, 26)
     fonte_label = ImageFont.truetype(_FONTE_REGULAR, 15)
@@ -95,9 +97,25 @@ def gerar_ticket_card_png_bytes(
     draw_tmp = ImageDraw.Draw(img_tmp)
     linhas_titulo = _quebrar_linhas(draw_tmp, evento_nome, fonte_titulo, LARGURA - 2 * MARGEM)[:2]
 
-    # Altura calculada dinamicamente conforme o título (1 ou 2 linhas)
+    # Altura calculada dinamicamente conforme o título (1 ou 2 linhas) + assento opcional
     altura_titulo = len(linhas_titulo) * 32
-    ALTURA = MARGEM + altura_titulo + 16 + 44 + 4 + 44 + 20 + QR_TAM + 16 + 22 + 20 + 18 + MARGEM
+    altura_assento = 40 if assento_txt else 0
+    ALTURA = (
+        MARGEM
+        + altura_titulo
+        + 16
+        + 44
+        + 4
+        + 44
+        + altura_assento
+        + 20
+        + QR_TAM
+        + 16
+        + 22
+        + 20
+        + 18
+        + MARGEM
+    )
 
     img = Image.new("RGB", (LARGURA, ALTURA), "white")
     draw = ImageDraw.Draw(img)
@@ -122,6 +140,14 @@ def gerar_ticket_card_png_bytes(
     for linha in _quebrar_linhas(draw, local, fonte_valor, LARGURA - 2 * MARGEM)[:2]:
         draw.text((MARGEM, y), linha, font=fonte_valor, fill=(24, 24, 27))
         y += 24
+
+    if assento_txt:
+        y += 8
+        draw.text((MARGEM, y), "ASSENTO", font=fonte_label, fill=(113, 113, 122))
+        y += 20
+        draw.text((MARGEM, y), assento_txt, font=fonte_valor, fill=(24, 24, 27))
+        y += 12
+
     y += 16
 
     draw.line([(MARGEM, y), (LARGURA - MARGEM, y)], fill=(228, 228, 231), width=1)

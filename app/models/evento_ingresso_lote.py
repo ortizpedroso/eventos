@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 import uuid
 
@@ -21,6 +21,8 @@ class EventoIngressoLote(Base):
     ativo = Column(Boolean, nullable=False, default=True)
     vendas_inicio = Column(DateTime, nullable=True)
     vendas_fim = Column(DateTime, nullable=True)
+    # Lista canônica "A1, A2, B1" — vazia/null = lote sem assentos nomeados (compra por quantidade).
+    assentos = Column(Text, nullable=True)
 
     evento = relationship("Evento", back_populates="ingresso_lotes")
     ingressos = relationship("Ingresso", back_populates="lote")
