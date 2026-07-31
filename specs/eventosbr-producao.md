@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.25.1
+**Versão:** 1.26
 **Data:** 2026-07-31
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `1b15985` — v1.25.1 (carrinho + promoters + galeria; lacunas §11 fechadas; ver §2.9). Tip de **docs/spec**: HEAD da `main` após commits `docs(spec): …`. **Review vs plano:** **aprovado** — `specs/plano-carrinho-afiliados-galeria.md` §7/§11. Suites A/B/C verdes; `pytest` total **367**. **Supervisão independente confirmada** (2026-07-31): revisei os 8 itens do §11 um a um (não só rodei os testes — li o código de cada correção e confirmei que os testes checam o comportamento certo, não só "passam"). Destaque: B2 antes tinha um teste chamado "isolamento" que só testava UM organizador — agora usa dois organizadores reais (A e B) e confirma 403/404 corretamente nos três verbos (GET/POST/PATCH). 367/367 rodado 2x + os 8 testes específicos isolados, tudo estável. `tsc`/`eslint`/build limpos (mesmos 10 erros pré-existentes de sempre, não relacionados). Sem migração nova nesta rodada. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas` no futuro.
+> **Produção (VPS):** tip de **produto** da `main` em `eea493d` — v1.26 (ficha técnica + WhatsApp /contato + duplicar/deletar; ver §2.10). Tip de **docs/spec**: HEAD da `main` após commits `docs(spec): …`. `pytest` total **379**. v1.25.1 (§11) permanece aprovada. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh` (aplica migração `000047`). **Onboarding de pagamentos:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas` no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -271,7 +271,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (367 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (379 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -550,7 +550,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (367 testes)
+- [x] `pytest` verde (379 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -562,7 +562,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto v1.25.1 **aceite completo** — `1b15985` (fecha §11: A1/B1–B4/C1–C3); taxa zero ingresso grátis (§2.1.1) e home Comprar × Sou produtor OK. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
+- [x] tip de produto v1.26 — `eea493d` (ficha técnica + WhatsApp /contato + duplicar/deletar; §2.10); §11 v1.25.1 em `1b15985`. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
