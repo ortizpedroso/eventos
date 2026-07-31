@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `9082c90` — L1 DELETE bloqueia `usado` + alinhamento parcial L2. Tip de **docs/spec**: HEAD após `docs(spec): …`. `pytest` total **390**. **`/review` v1.31 — build NÃO aprovada** (restos da L2 na spec + tip/contagens desatualizados no corpo; ver §11.5). **Deploy VPS:** confirmado pelo usuário (31/07/2026). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`.
+> **Produção (VPS):** tip de **produto** da `main` em `9082c90` — L1 DELETE bloqueia `usado` + alinhamento parcial L2. Tip de **docs/spec**: HEAD após `docs(spec): …`. `pytest` total **390**. **`/review` v1.31 — build NÃO aprovada** (restos L2 em §2.2/§2.3/§2.4/§4 = **L4**; docstring DELETE = **L5**; ver §11.5). **Deploy VPS:** confirmado pelo usuário (31/07/2026). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
