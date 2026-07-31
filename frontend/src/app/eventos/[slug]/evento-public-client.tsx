@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { CompraInfoConfianca } from "@/components/compra-info-confianca";
+import { EventoFichaTecnica } from "@/components/evento-ficha-tecnica";
 import { EventoGaleria } from "@/components/evento-galeria";
 import { EventoHeroBanner } from "@/components/evento-hero-banner";
 import { EventoMapaLocal } from "@/components/evento-mapa-local";
@@ -425,6 +426,11 @@ export function EventoPublicClient({
               <EventoGaleria urls={evento.galeria_urls ?? []} className="mt-6 border-0 p-0 shadow-none" />
             </section>
           </div>
+          <EventoFichaTecnica
+            classificacaoEtaria={evento.classificacao_etaria}
+            oQueLevar={evento.o_que_levar}
+            estacionamento={evento.estacionamento}
+          />
           <EventoMapaLocal local={evento.local} cidade={evento.cidade} />
           {(evento.organizador_nome || evento.contato_email || evento.contato_telefone) ? (
             <section

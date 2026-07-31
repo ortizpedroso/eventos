@@ -2,6 +2,10 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 
 from app.utils.imagem_url import validar_imagem_url
 from app.utils.evento_categorias import normalizar_categoria_evento
+from app.utils.evento_ficha import (
+    normalizar_classificacao_etaria,
+    normalizar_texto_ficha,
+)
 from app.utils.ingresso_tipos import TIPO_PADRAO, normalizar_tipo_ingresso, lote_e_cortesia
 from app.services.taxas_asaas_publicas import INGRESSO_MINIMO_PAGO_REAIS
 from datetime import datetime
@@ -77,6 +81,10 @@ class CriarEventoRequest(BaseModel):
     preco_ingresso: float = Field(ge=0, le=500_000)
     categoria: str = Field(default="Outros", min_length=1, max_length=80)
     mensagem_confirmacao: Optional[str] = Field(default=None, max_length=2000)
+    # Ficha técnica (opcional) — livre | 12+ | 16+ | 18+
+    classificacao_etaria: str | None = Field(default=None, max_length=16)
+    o_que_levar: str | None = Field(default=None, max_length=280)
+    estacionamento: str | None = Field(default=None, max_length=280)
     # False = pausado (não aparece na listagem pública; só o organizador vê com login).
     publicado: bool = False
     limite_ingressos_por_cpf: int | None = Field(default=None, ge=1, le=50)
@@ -90,6 +98,21 @@ class CriarEventoRequest(BaseModel):
     lista_espera_prazo_horas: int = Field(default=24, ge=12, le=48)
     # Fotos reais de edições anteriores (0–6). Omitir = não alterar no PATCH.
     galeria_urls: list[str] | None = Field(default=None, max_length=6)
+
+    @field_validator("classificacao_etaria", mode="before")
+    @classmethod
+    def _classificacao_etaria(cls, v: object) -> str | None:
+        return normalizar_classificacao_etaria(v)
+
+    @field_validator("o_que_levar", mode="before")
+    @classmethod
+    def _o_que_levar(cls, v: object) -> str | None:
+        return normalizar_texto_ficha(v, max_len=280)
+
+    @field_validator("estacionamento", mode="before")
+    @classmethod
+    def _estacionamento(cls, v: object) -> str | None:
+        return normalizar_texto_ficha(v, max_len=280)
 
     @field_validator("galeria_urls", mode="before")
     @classmethod
@@ -176,6 +199,9 @@ class EventoResponse(BaseModel):
     preco_ingresso: float
     categoria: str
     mensagem_confirmacao: Optional[str]
+    classificacao_etaria: str | None = None
+    o_que_levar: str | None = None
+    estacionamento: str | None = None
     publicado: bool
     limite_ingressos_por_cpf: int | None = None
     data_criacao: datetime
@@ -288,6 +314,9 @@ def montar_evento_response(
         "preco_ingresso": evento.preco_ingresso,
         "categoria": evento.categoria,
         "mensagem_confirmacao": evento.mensagem_confirmacao,
+        "classificacao_etaria": getattr(evento, "classificacao_etaria", None),
+        "o_que_levar": getattr(evento, "o_que_levar", None),
+        "estacionamento": getattr(evento, "estacionamento", None),
         "publicado": evento.publicado,
         "limite_ingressos_por_cpf": getattr(evento, "limite_ingressos_por_cpf", None),
         "data_criacao": evento.data_criacao,

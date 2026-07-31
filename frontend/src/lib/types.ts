@@ -39,6 +39,10 @@ export type Evento = {
   ingresso_lotes?: IngressoLote[];
   categoria: string;
   mensagem_confirmacao?: string | null;
+  /** Ficha técnica opcional (livre | 12+ | 16+ | 18+). */
+  classificacao_etaria?: string | null;
+  o_que_levar?: string | null;
+  estacionamento?: string | null;
   publicado: boolean;
   limite_ingressos_por_cpf?: number | null;
   data_criacao: string;

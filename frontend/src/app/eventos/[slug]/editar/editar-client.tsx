@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { CLASSIFICACAO_ETARIA_OPCOES, labelClassificacaoEtaria } from "@/lib/evento-ficha";
 import { EVENTO_CATEGORIAS, isoToDatetimeLocalValue, slugFromNome } from "@/lib/eventos";
 import { EventoCuponsEditor } from "@/components/evento-cupons-editor";
 import {
@@ -46,6 +47,9 @@ type SalvarPayload = {
   ingresso_lotes: ReturnType<typeof lotesRowsToApiPayload>;
   categoria: string;
   mensagem_confirmacao?: string | null;
+  classificacao_etaria?: string | null;
+  o_que_levar?: string | null;
+  estacionamento?: string | null;
   publicado: boolean;
   limite_ingressos_por_cpf?: number | null;
   urgencia_modo?: string;
@@ -69,6 +73,9 @@ export function EditarEventoClient({ slug }: Props) {
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
   const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
+  const [classificacaoEtaria, setClassificacaoEtaria] = useState("");
+  const [oQueLevar, setOQueLevar] = useState("");
+  const [estacionamento, setEstacionamento] = useState("");
   const [contatoTelefone, setContatoTelefone] = useState("");
   const [contatoEmail, setContatoEmail] = useState("");
   const [loteRows, setLoteRows] = useState<LoteFormRow[]>([]);
@@ -165,6 +172,9 @@ export function EditarEventoClient({ slug }: Props) {
           setNomeParaSlug(ev.nome);
           setImagemUrl(ev.imagem_url ?? "");
           setGaleriaUrls((ev.galeria_urls ?? []).filter(Boolean).slice(0, 6));
+          setClassificacaoEtaria(ev.classificacao_etaria ?? "");
+          setOQueLevar(ev.o_que_levar ?? "");
+          setEstacionamento(ev.estacionamento ?? "");
           setContatoTelefone(ev.contato_telefone ?? "");
           setContatoEmail(ev.contato_email ?? "");
           setLoteRows(eventoLotesToRows(ev));
@@ -251,6 +261,9 @@ export function EditarEventoClient({ slug }: Props) {
       ingresso_lotes: lotesPayload,
       categoria: String(formData.get("categoria") ?? "Outros"),
       mensagem_confirmacao: msg || null,
+      classificacao_etaria: classificacaoEtaria.trim() || null,
+      o_que_levar: oQueLevar.trim() || null,
+      estacionamento: estacionamento.trim() || null,
       publicado,
       limite_ingressos_por_cpf:
         limite_ingressos_por_cpf && limite_ingressos_por_cpf >= 1 ? limite_ingressos_por_cpf : null,
@@ -552,6 +565,59 @@ export function EditarEventoClient({ slug }: Props) {
               maxLength={2000}
               defaultValue={evento.mensagem_confirmacao ?? ""}
             />
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+            <div>
+              <p className="text-sm font-medium text-zinc-900">Ficha técnica (opcional)</p>
+              <p className="mt-1 text-xs text-zinc-600">
+                Só aparece na página do evento se você preencher. Deixe em branco o que não se aplicar.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-zinc-800" htmlFor="classificacao_etaria">
+                Classificação etária
+              </label>
+              <select
+                id="classificacao_etaria"
+                className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                value={classificacaoEtaria}
+                onChange={(e) => setClassificacaoEtaria(e.target.value)}
+              >
+                <option value="">Não informar</option>
+                {CLASSIFICACAO_ETARIA_OPCOES.map((op) => (
+                  <option key={op} value={op}>
+                    {labelClassificacaoEtaria(op)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-zinc-800" htmlFor="o_que_levar">
+                O que levar / dress code
+              </label>
+              <input
+                id="o_que_levar"
+                className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                maxLength={280}
+                placeholder="Ex.: Traga documento com foto"
+                value={oQueLevar}
+                onChange={(e) => setOQueLevar(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-zinc-800" htmlFor="estacionamento">
+                Estacionamento
+              </label>
+              <input
+                id="estacionamento"
+                className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                maxLength={280}
+                placeholder="Ex.: Estacionamento próprio gratuito"
+                value={estacionamento}
+                onChange={(e) => setEstacionamento(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="rounded-lg border border-zinc-200 p-4">

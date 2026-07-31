@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EventoLinkPortaria } from "@/components/evento-link-portaria";
@@ -57,6 +58,7 @@ type ResumoEvento = {
 const ONBOARDING_KEY = "eventosbr_org_onboarding_v1";
 
 export function OrganizadorEventosClient() {
+  const router = useRouter();
   const [items, setItems] = useState<Evento[] | null>(
     () => readOrganizadorCache<Evento[]>(ORGANIZADOR_CACHE_KEYS.eventos) ?? null,
   );
@@ -64,6 +66,9 @@ export function OrganizadorEventosClient() {
   const [error, setError] = useState<string | null>(null);
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
   const [publishErr, setPublishErr] = useState<string | null>(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
+  const [actionErr, setActionErr] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [mostrarOnboarding, setMostrarOnboarding] = useState(() => {
     if (typeof window === "undefined") return false;
     return !window.localStorage.getItem(ONBOARDING_KEY);
@@ -177,6 +182,36 @@ export function OrganizadorEventosClient() {
     }
   }
 
+  async function duplicarEvento(e: Evento) {
+    setActionErr(null);
+    setActionBusyId(e.id);
+    try {
+      const copia = await apiFetch<Evento>(`/api/eventos/id/${e.id}/duplicar`, {
+        method: "POST",
+      });
+      await recarregar();
+      router.push(`/eventos/${copia.slug}/editar`);
+    } catch (err) {
+      setActionErr(err instanceof Error ? err.message : "Não foi possível duplicar o evento");
+    } finally {
+      setActionBusyId(null);
+    }
+  }
+
+  async function confirmarDeletarEvento(e: Evento) {
+    setActionErr(null);
+    setActionBusyId(e.id);
+    try {
+      await apiFetch<{ ok: boolean }>(`/api/eventos/id/${e.id}`, { method: "DELETE" });
+      setDeleteConfirmId(null);
+      await recarregar();
+    } catch (err) {
+      setActionErr(err instanceof Error ? err.message : "Não foi possível deletar o evento");
+    } finally {
+      setActionBusyId(null);
+    }
+  }
+
   const ordenados = useMemo(() => (items ? ordenarPorCriacaoDesc(items) : null), [items]);
   const qtdPausados = useMemo(
     () => (items ? items.filter((x) => !x.publicado).length : 0),
@@ -227,6 +262,9 @@ export function OrganizadorEventosClient() {
 
       {publishErr ? (
         <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{publishErr}</p>
+      ) : null}
+      {actionErr ? (
+        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{actionErr}</p>
       ) : null}
 
       {ordenados === null && !temCacheEventos ? (
@@ -352,7 +390,73 @@ export function OrganizadorEventosClient() {
                     >
                       Editar
                     </Link>
+                    <button
+                      type="button"
+                      disabled={actionBusyId === e.id}
+                      onClick={() => void duplicarEvento(e)}
+                      className="btn-outline flex-1 px-3 py-2 text-center text-sm sm:flex-none disabled:opacity-60"
+                    >
+                      {actionBusyId === e.id ? "Duplicando…" : "Duplicar"}
+                    </button>
                   </div>
+                  {(() => {
+                    const temVendas =
+                      (stats?.ingressos_pagos ?? 0) > 0 || (stats?.ingressos_pendentes ?? 0) > 0;
+                    const confirmando = deleteConfirmId === e.id;
+                    return (
+                      <div className="mt-3 space-y-2">
+                        {temVendas ? (
+                          <p className="text-xs leading-relaxed text-zinc-600">
+                            <button
+                              type="button"
+                              disabled
+                              className="w-full cursor-not-allowed rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-400"
+                            >
+                              Deletar
+                            </button>
+                            <span className="mt-1.5 block">
+                              Não é possível deletar: há ingressos pagos ou pendentes. Pause o evento
+                              na vitrine para interromper novas vendas.
+                            </span>
+                          </p>
+                        ) : confirmando ? (
+                          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-950">
+                            <p className="font-medium">Tem certeza que deseja deletar este evento?</p>
+                            <p className="mt-1 text-xs text-red-800">
+                              Esta ação é irreversível. O rascunho será removido permanentemente.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={actionBusyId === e.id}
+                                onClick={() => void confirmarDeletarEvento(e)}
+                                className="rounded-lg bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60"
+                              >
+                                {actionBusyId === e.id ? "Deletando…" : "Sim, deletar"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={actionBusyId === e.id}
+                                onClick={() => setDeleteConfirmId(null)}
+                                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={actionBusyId === e.id || stats == null}
+                            onClick={() => setDeleteConfirmId(e.id)}
+                            className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+                          >
+                            Deletar
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </article>
               </li>
             );

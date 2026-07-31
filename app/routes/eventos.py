@@ -72,6 +72,9 @@ async def criar_evento(
         preco_ingresso=evento_data.preco_ingresso,
         categoria=evento_data.categoria.strip() or "Outros",
         mensagem_confirmacao=evento_data.mensagem_confirmacao,
+        classificacao_etaria=evento_data.classificacao_etaria,
+        o_que_levar=evento_data.o_que_levar,
+        estacionamento=evento_data.estacionamento,
         organizador_id=usuario_atual.id,
         asaas_wallet_id=usuario_atual.asaas_wallet_id,
         slug=slug,
@@ -164,6 +167,12 @@ async def atualizar_evento(
     evento.preco_ingresso = body.preco_ingresso
     evento.categoria = body.categoria.strip() or "Outros"
     evento.mensagem_confirmacao = body.mensagem_confirmacao
+    if "classificacao_etaria" in body.model_fields_set:
+        evento.classificacao_etaria = body.classificacao_etaria
+    if "o_que_levar" in body.model_fields_set:
+        evento.o_que_levar = body.o_que_levar
+    if "estacionamento" in body.model_fields_set:
+        evento.estacionamento = body.estacionamento
     if body.publicado is not None:
         evento.publicado = body.publicado
     if "limite_ingressos_por_cpf" in body.model_fields_set:
@@ -693,6 +702,9 @@ async def duplicar_evento(
         preco_ingresso=evento.preco_ingresso,
         categoria=evento.categoria,
         mensagem_confirmacao=evento.mensagem_confirmacao,
+        classificacao_etaria=getattr(evento, "classificacao_etaria", None),
+        o_que_levar=getattr(evento, "o_que_levar", None),
+        estacionamento=getattr(evento, "estacionamento", None),
         organizador_id=usuario_atual.id,
         asaas_wallet_id=usuario_atual.asaas_wallet_id,
         slug=slug,
@@ -729,3 +741,39 @@ async def duplicar_evento(
     db.refresh(copia)
     logger.info("Evento %s duplicado como %s por %s", evento.id, copia.id, usuario_atual.id)
     return montar_evento_response(db, copia)
+
+
+@router.delete("/id/{evento_id}")
+async def deletar_evento(
+    evento_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Remove o evento. Só o dono; bloqueado se houver ingresso pago ou pendente."""
+    from sqlalchemy import func
+
+    from app.models import Ingresso
+
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    bloqueantes = (
+        db.query(func.count(Ingresso.id))
+        .filter(
+            Ingresso.evento_id == evento.id,
+            Ingresso.status.in_(("pendente", "pago")),
+        )
+        .scalar()
+        or 0
+    )
+    if int(bloqueantes) > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Não é possível deletar este evento porque já existem ingressos "
+                "pagos ou pendentes. Despublique (pause) o evento na vitrine se "
+                "quiser interromper novas vendas."
+            ),
+        )
+    db.delete(evento)
+    db.commit()
+    logger.info("Evento %s deletado por %s", evento_id, usuario_atual.id)
+    return {"ok": True, "id": evento_id}

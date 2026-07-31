@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { ContatoWhatsappCta } from "@/components/contato-whatsapp-cta";
+
 import { ContatoFormClient } from "./contato-form-client";
 
 export const metadata: Metadata = {
@@ -15,6 +17,7 @@ export default function ContatoPage() {
         Dúvidas sobre um evento, um ingresso, reembolso ou sobre a plataforma? Preencha o
         formulário abaixo — respondemos por e-mail.
       </p>
+      <ContatoWhatsappCta />
       <ContatoFormClient />
     </div>
   );

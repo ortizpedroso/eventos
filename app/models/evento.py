@@ -28,6 +28,11 @@ class Evento(Base):
     categoria = Column(String(80), nullable=False, default="Outros")
     mensagem_confirmacao = Column(Text, nullable=True)
 
+    # Ficha técnica (opcional) — página pública só mostra o que estiver preenchido.
+    classificacao_etaria = Column(String(16), nullable=True)
+    o_que_levar = Column(String(280), nullable=True)
+    estacionamento = Column(String(280), nullable=True)
+
     # Preço sugerido do ingresso (reais); usado na página pública e na compra.
     preco_ingresso = Column(Float, nullable=False, default=10.0)
 
