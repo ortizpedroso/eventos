@@ -572,7 +572,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 - [x] tip de produto v1.29 — `f3f2e8b` (bug de caminho fixo corrigido no teste de SEO); v1.28 SEO em `8b6759c` (§2.11); v1.27 lint em `12ec50f`; v1.26 §2.10 em `eea493d`. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
-- [ ] Deploy VPS com o commit atual (`3b0a5a5` / v1.29) **precisa reconfirmação** — última confirmação explícita registrada foi do commit `e6df57d` (25/07/2026); muita coisa foi implementada e aprovada desde então (carrinho/promoters/galeria, ficha técnica, duplicar/deletar evento, SEO) sem uma confirmação nova de "rodei o deploy e validei" registrada aqui
+- [x] Deploy VPS: **confirmado pelo usuário** (31/07/2026) — "até o presente momento está rodando tudo perfeitamente", cobrindo o acumulado até v1.29/`3b0a5a5` (carrinho/promoters/galeria, ficha técnica, duplicar/deletar evento, SEO cidade+typicalAgeRange, zero erros de lint)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
