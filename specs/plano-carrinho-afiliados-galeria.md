@@ -1,10 +1,10 @@
 # Plano: carrinho abandonado + promoters + galeria (prova social viva)
 
 **Data:** 2026-07-30  
-**Status:** ⚠️ Implementação parcial em `main` (tip produto `8406ed5`) — **build NÃO aprovada** até fechar lacunas do §11  
-**Spec principal:** `specs/eventosbr-producao.md` §2.9 / changelog 1.25  
+**Status:** ✅ **Build aprovada** — tip produto `1b15985` (v1.25.1; lacunas §11 fechadas)  
+**Spec principal:** `specs/eventosbr-producao.md` §2.9 / changelog 1.25.1  
 **Origem:** pedido `/build` — plano de implementação priorizado  
-**Review:** 2026-07-30 — ver §11 (matriz vs build + correções para `/build`)
+**Review:** 2026-07-31 — §11 fechado; aceite §7 completo
 
 ---
 
@@ -225,29 +225,27 @@ Reaproveitar pipeline do banner:
 
 ## 7. Critérios de aceite por fase
 
-Legenda: `[x]` atendido na build atual · `[ ]` lacuna (bloqueia aprovação) · ver §11.
-
 ### A — Carrinho
 - [x] Um único e-mail por reserva abandonada elegível
-- [x] Zero e-mail se pago/cancelado entre agendamento e envio *(código filtra `pendente`; falta teste explícito `cancelado` — §11.A1)*
+- [x] Zero e-mail se pago/cancelado entre agendamento e envio
 - [x] Fila Redis/confiável (não SMTP direto no worker de lembrete)
 - [x] Envio ainda dentro da janela de reserva (~20–25 min)
-- [x] Testes verdes *(suite A passa; cobertura incompleta — §11.A1)*
+- [x] Testes verdes
 
 ### B — Promoters
-- [ ] Link com `?ref=` atribui venda *(código OK; falta teste `POST /pagamentos/criar` — §11.B1)*
+- [x] Link com `?ref=` atribui venda
 - [x] Painel só com agregados; sem PII do comprador
-- [x] Compartilhar reutiliza `evento-compartilhar.tsx` *(painel OK; share público com `?ref=` vazando — §11.B3)*
+- [x] Compartilhar reutiliza `evento-compartilhar.tsx`
 - [x] Sem cálculo de comissão
-- [ ] Testes de atribuição e isolamento *(§11.B1, §11.B2)*
-- [ ] Persistência `ref` ~24h ou até compra *(§11.B4)*
-- [ ] Share público sem propagar `?ref=` *(§11.B3 / §3.3 item 5)*
+- [x] Testes de atribuição e isolamento
+- [x] Persistência `ref` ~24h ou até compra
+- [x] Share público sem propagar `?ref=`
 
 ### C — Galeria
-- [x] 0 fotos → seção ausente *(runtime OK; falta teste automatizado — §11.C2)*
-- [ ] 1–6 fotos reais via pipeline existente *(editar OK; criar sem UI — §11.C1)*
+- [x] 0 fotos → seção ausente
+- [x] 1–6 fotos reais via pipeline existente
 - [x] Sem imagem genérica
-- [ ] Testes de limite e visibilidade *(limite OK; visibilidade/isolamento incompletos — §11.C2/C3)*
+- [x] Testes de limite e visibilidade
 
 ---
 
@@ -283,33 +281,23 @@ Dependências externas: nenhuma nova (Redis/fila e R2/local já existem).
 
 ---
 
-**Próximo passo:** `/build` fecha lacunas do §11 (B1–B4, C1–C3, A1); só então marcar §7 todo `[x]` e aprovar a build na spec principal.
+**Próximo passo:** deploy VPS com tip `1b15985` quando conveniente (`scripts/atualizar-vps-agora.sh`).
 
 ---
 
-## 11. Review build vs plano (2026-07-30) — **NÃO APROVADO**
+## 11. Review build vs plano — **APROVADO** (2026-07-31)
 
-Tip de produto: `8406ed5` (código). Spec §2.9 / changelog 1.25. Decisões §10 OK. Testes coletados: **359**. Suites A/B/C: 12 passed (cobertura insuficiente vs §2.6/§3.5/§4.5).
+Tip de produto: `1b15985` (v1.25.1). Spec §2.9 / changelog 1.25.1. Decisões §10 OK. Testes: **367**. Suites A/B/C verdes. §7 completo.
 
-### Lacunas que bloqueiam aprovação
+### Lacunas §11 — fechadas em `1b15985`
 
-| ID | Item da spec | Falha | Correção para `/build` |
-|----|--------------|-------|------------------------|
-| **B1** | §3.5 / §7.B — compra com `ref` válido → `promoter_id`; `ref` inválido/inativo/outro evento → sem promoter; regressão sem `ref` | Só há teste de `resolver_promoter_ativo`; **nenhum** bate em `POST /api/pagamentos/criar` com `ref` | Em `tests/test_evento_promoters.py` (ou novo): criar evento+promoter; `POST /api/pagamentos/criar` com `ref` válido → assert `Ingresso.promoter_id` / `promoter_codigo`; casos inválido, inativo, código de outro evento → `promoter_id is None`; pagamento sem `ref` → inalterado. Mock Asaas/payments_disabled como nos testes existentes de pagamento. |
-| **B2** | §3.5 — isolamento org A ↛ evento de B | `test_api_criar_e_listar_promoters_isolamento` só cria/lista o próprio; **não** prova cross-org | Segundo organizador: `GET/POST/PATCH .../promoters` no `evento_id` de A → 403/404; A não lista promoters de B. |
-| **B3** | §3.3 item 5 — compartilhamento público **sem** `ref` | `EventoCompartilhar` sem `shareUrl` usa `window.location.href` (`evento-compartilhar.tsx`); hero/meta em página com `?ref=` **repropaga** o código | Default público: URL canônica **sem** query `ref` (ex. `origin + pathname`, ou strip de `ref`). Painel continua passando `shareUrl` com `?ref=`. Após capturar `ref` em `evento-public-client.tsx`, opcional: `history.replaceState` removendo só `ref` da barra (mantém storage). Teste unitário/FE ou contrato do helper de URL. |
-| **B4** | §3.3 item 2 — persistir `ref` ~24h ou até compra | `promoter-ref.ts` usa `sessionStorage` sem TTL e **não limpa** após compra | Trocar para `localStorage` JSON `{ codigo, exp }` com TTL 24h; `lerRefPromoter` descarta expirado; após `POST /pagamentos/criar` sucesso em `comprar-ingresso.tsx`, chamar `limparRefPromoter(eventoId)`. Testes JS se houver harness; senão helpers puros testáveis. |
-| **C1** | §4.1 / §4.3 / mapa §5 C—FE — mesmo bloco na **criação** e edição | `novo-evento-client.tsx` **sem** `galeria` / slots; só `editar-client.tsx` | Reutilizar o bloco de galeria do editar (0–6 slots + `EventoImagemField` + `galeria_urls` no `POST /api/eventos/criar`). API já aceita `galeria_urls` no create (`eventos.py`). |
-| **C2** | §4.5 / §7.C — página pública omite seção com lista vazia | Runtime: `EventoGaleria` retorna `null`; **sem** teste automatizado | Teste: montar/`montar_evento_response` com `galeria_urls=[]` + assert contrato do componente (ou snapshot/render) que não há heading “Edições anteriores”; com 1 URL → presente. |
-| **C3** | §4.5 — organizador só edita fotos do próprio evento | Owner path existe; **sem** teste cross-org em `galeria_urls` | Org B `PATCH` evento de A com `galeria_urls` → 403/404; org A consegue substituir. |
-| **A1** | §2.6 / §7.A — `cancelado` (e idealmente `usado`) não recebe e-mail | Código OK (`status==pendente`); falta assert explícito | Em `test_lembrete_carrinho.py`: candidato elegível muda para `cancelado` antes de `enviar_lembretes_carrinho` → enqueue **não** chamado; opcional idem para `usado`. |
-
-### Itens OK (não reabrir sem regressão)
-
-- A: timer 20 min, claim atômico, `enqueue_email_simples`, worker no lifespan, dedupe de lote, A1 transacional, reserva 35 min intacta.
-- B: modelo/API promoters, painel agregado sem PII/comissão, `shareUrl` no painel, captura `?ref=` → body do checkout (código).
-- C: max 6 enforce, tabela/migração, seção pública só com fotos reais, upload via pipeline do banner (editar).
-
-### Critério de aprovação
-
-Build só aprovada quando **B1–B4, C1–C3, A1** estiverem fechados, §7 com todos os `[ ]` restantes em `[x]`, e `pytest` + lint/build frontend verdes. Depois: tip de produto + changelog (ex. 1.25.1 ou 1.26) em `eventosbr-producao.md`.
+| ID | Item da spec | Resolução |
+|----|--------------|-----------|
+| **B1** | §3.5 / §7.B atribuição via `POST /pagamentos/criar` | `test_pagamentos_criar_com_ref_atribui_promoter_id` |
+| **B2** | §3.5 isolamento cross-org | `test_organizador_b_nao_acessa_promoters_do_evento_de_a` (rota já usava `_evento_do_organizador`) |
+| **B3** | §3.3.5 share público sem `?ref=` | `urlCompartilharSemRef` + `test_compartilhar_publico_remove_param_ref` |
+| **B4** | §3.3.2 TTL 24h / limpar pós-compra | `localStorage` `{codigo,exp}` + `limparRefPromoter` + teste contrato |
+| **C1** | §4.1 galeria no criar | bloco em `novo-evento-client.tsx` + `test_novo_evento_client_tem_bloco_galeria_0_a_6` |
+| **C2** | §4.5 / §7.C seção vazia | `test_resposta_publica_omite_secao_com_zero_fotos_e_mostra_com_fotos` |
+| **C3** | §4.5 PATCH cross-org | `test_organizador_b_nao_patch_galeria_do_evento_de_a` |
+| **A1** | §2.6 / §7.A `cancelado` | `test_nao_envia_se_cancelado_dentro_da_janela_20min` |
