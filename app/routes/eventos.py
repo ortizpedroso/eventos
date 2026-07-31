@@ -749,7 +749,7 @@ async def deletar_evento(
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
 ):
-    """Remove o evento. Só o dono; bloqueado se houver ingresso pago ou pendente."""
+    """Remove o evento. Só o dono; bloqueado se houver ingresso pago, pendente ou usado (check-in)."""
     from sqlalchemy import func
 
     from app.models import Ingresso

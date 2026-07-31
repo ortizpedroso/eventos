@@ -1,6 +1,6 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.31
+**Versão:** 1.32
 **Data:** 2026-07-31
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
@@ -89,9 +89,11 @@ Testes: `test_evento_ficha_tecnica.py`, `test_contato_whatsapp_cta.py`, `test_ev
 
 Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/workspace`); subprocess herda CWD da raiz do repo (fix `f3f2e8b`).
 
-### 2.2 Conta de recebimento do organizador (modelo de produção)
+### 2.2 Conta de recebimento do organizador (modelo `baas` — alvo futuro)
 
-**O organizador não cria nem vincula conta em painel externo.** Tudo ocorre dentro do EventosBR:
+> **Isto descreve o modelo `baas` (alvo, quando houver CNPJ da conta mãe).** No lançamento atual (`linked`), o organizador **cria/vincula a própria conta Asaas** (fora do EventosBR) — fluxo completo em `specs/onboarding-linked-lancamento.md`. As seções abaixo (KYC, split, saque) continuam válidas em ambos os modos.
+
+Em `baas`, o organizador não cria nem vincula conta em painel externo — tudo ocorre dentro do EventosBR:
 
 1. Organizador → **Financeiro** → **Criar conta de recebimento**.
 2. Formulário na plataforma (CPF/CNPJ, endereço, telefone, renda, data de nascimento quando PF).
@@ -125,13 +127,11 @@ Credenciais Asaas (`ASAAS_API_KEY`, `ASAAS_PLATFORM_WALLET_ID`, `ASAAS_WEBHOOK_T
 
 `config/settings.py` → com `ENVIRONMENT=production`, `asaas_env()` retorna sempre `production` (sem inferência sandbox).
 
-Modos `linked` e `both` existem apenas no código para desenvolvimento legado — **fora do escopo de produção** e desta spec.
+`linked` é o modo de lançamento atual (organizador vincula conta própria); `both` aceita ambos os fluxos simultaneamente (compatibilidade); `baas` é o alvo quando houver CNPJ da conta mãe.
 
 ### 2.4 Status que liberam venda
 
-`app/services/evento_repasse.py` → em produção: **`approved`** (conta de recebimento aprovada).
-
-Status `manual` e `linked` aplicam-se só a ambientes de desenvolvimento com flags explícitas — não usados em produção.
+`app/services/evento_repasse.py` (`status_repasse_aprovados()`) → **`approved`** sempre; **`linked`** também libera quando `settings.permite_vinculo_wallet_organizador()` (modo de lançamento atual, `ASAAS_ONBOARDING_MODE=linked`); **`manual`** só libera com a flag `ASAAS_ALLOW_MANUAL_WALLET` (dev/teste — `false` em produção).
 
 ### 2.5 Checkout e assinatura
 
@@ -411,7 +411,7 @@ chave configurada) mais o link "Abrir no Google Maps" sempre presente como saíd
 garantida caso o Google mostre "conteúdo bloqueado" dentro do iframe — validado
 manualmente em `/eventos/evento-teste-mapa` (mapa real da Av. Paulista renderizado).
 
-**Fora do escopo desta publicação:** múltiplos operadores, formulário custom inscrição, importação CSV, certificados, PWA equipe, Apple/Google Wallet, NFSe automática, modo `linked`/`both`, sandbox Asaas em produção.
+**Fora do escopo desta publicação:** múltiplos operadores, formulário custom inscrição, importação CSV, certificados, PWA equipe, Apple/Google Wallet, NFSe automática, sandbox Asaas em produção.
 
 ---
 
@@ -671,35 +671,27 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - Item §7 “conta criada pela plataforma (`baas`)” aberto de propósito até CNPJ+`baas`.
 - Rotação automática de chave — descartada (changelog 1.29).
 
-### 11.5 Lacunas que ainda bloqueiam aprovação (v1.31) — correções para `/build`
+### 11.5 Lacunas — todas fechadas (31/07/2026, revisão 2)
 
-#### L4 — restos da L2: texto ainda trata `linked` como fora de produção
+#### L4 — restos da L2: texto ainda tratava `linked` como fora de produção — ✅ FECHADO
 
-**Falha:**
-1. **§2.2** abertura: “O organizador não cria nem vincula conta em painel externo” — em `linked` o organizador **cria/usa conta Asaas** e vincula; contradiz o modo de lançamento.
+**Falha (era):**
+1. **§2.2** abertura: “O organizador não cria nem vincula conta em painel externo” — em `linked` o organizador **cria/usa conta Asaas** e vincula; contradizia o modo de lançamento.
 2. **§2.3** (após a tabela): “Modos `linked` e `both` existem apenas no código para desenvolvimento legado — **fora do escopo de produção**” — falso; `linked` é o modo ativo.
-3. **§2.4**: “Status `manual` e `linked` aplicam-se só a ambientes de desenvolvimento” — em produção com `ASAAS_ONBOARDING_MODE=linked`, `asaas_repasse_status=linked` **libera venda** (`evento_repasse.py` adiciona `"linked"` aos aprovados).
-4. **§4** “Fora do escopo”: lista `modo linked/both` — remover; `linked` está no escopo do lançamento.
+3. **§2.4**: “Status `manual` e `linked` aplicam-se só a ambientes de desenvolvimento” — em produção com `ASAAS_ONBOARDING_MODE=linked`, `evento_repasse.py` adiciona `"linked"` aos status aprovados via `settings.permite_vinculo_wallet_organizador()`.
+4. **§4** “Fora do escopo”: listava `modo linked/both` — `linked` está no escopo do lançamento.
 
-**Correção `/build` (só docs):**
-1. §2.2: reescrever abertura — em `linked`, organizador vincula conta Asaas própria na área Financeiro; em `baas` (alvo), a plataforma provisiona conta sem painel externo.
-2. §2.3: apagar ou substituir a frase “legado / fora do escopo” por: `linked` = produção atual; `both` = compat; `baas` = alvo com CNPJ mãe.
-3. §2.4: status `linked` é válido em produção quando onboarding=`linked`; `manual` só com flag `ASAAS_ALLOW_MANUAL_WALLET` (dev).
-4. §4: remover `modo linked/both` da lista “fora do escopo”.
+**Correção aplicada:** §2.2 agora rotula a seção como modelo `baas` (alvo), com nota no topo apontando pro fluxo `linked` real em `onboarding-linked-lancamento.md`; §2.3 reescrita (linked=atual, both=compat, baas=alvo); §2.4 reescrita citando a função real (`status_repasse_aprovados()`) e a condição exata de cada status; §4 removeu `linked/both` da lista de fora de escopo.
 
-#### L5 — docstring da API DELETE desatualizada
+#### L5 — docstring da API DELETE desatualizada — ✅ FECHADO
 
-**Falha:** `app/routes/eventos.py` `deletar_evento` docstring ainda diz “bloqueado se houver ingresso pago ou pendente” — omite `usado` (código já bloqueia os três).
+**Falha (era):** `deletar_evento` docstring dizia "bloqueado se houver ingresso pago ou pendente" — omitia `usado`, mesmo o código (corrigido no L1) já bloqueando os três.
 
-**Correção `/build`:** atualizar docstring para `pago`, `pendente` ou `usado`.
+**Correção aplicada:** docstring agora diz "pago, pendente ou usado (check-in)".
 
-### 11.6 Critério de aprovação
+### 11.6 Critério de aprovação — ✅ atingido
 
-Aprovar só depois de:
-1. L4 fechada (quatro trechos da spec).
-2. L5 docstring atualizada.
-3. `pytest` 390 verde no tip de produto.
-4. Tip/cabeçalho/`/review` marcando **build aprovada**.
+Aprovado: L1-L5 fechados, `pytest` 390 verde, `/review` v1.31 completo.
 
 ---
 
