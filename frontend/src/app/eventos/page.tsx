@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { CriarEventoLink } from "@/components/criar-evento-link";
 import { categoriaFromQuery } from "@/lib/evento-categorias";
+import { buildEventosListagemMetadata } from "@/lib/eventos-listagem-metadata";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { fetchEventosPublicos } from "@/lib/eventos-publicos";
 
@@ -21,23 +22,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const sp = await searchParams;
   const categoria = categoriaFromQuery(sp.categoria);
   const q = buscaFromQuery(sp.q);
-  if (q) {
-    return {
-      title: `Busca: ${q} | Eventos | EventosBR`,
-      description: `Eventos relacionados a “${q}” na EventosBR.`,
-    };
-  }
-  if (categoria) {
-    return {
-      title: `${categoria} | Eventos | EventosBR`,
-      description: `Eventos de ${categoria} na EventosBR — datas, locais e ingressos com pagamento seguro.`,
-    };
-  }
-  return {
-    title: "Eventos | EventosBR",
-    description:
-      "Descubra eventos publicados na EventosBR: datas, locais e ingressos com pagamento seguro.",
-  };
+  const cidade = sp.cidade?.trim() ?? "";
+  return buildEventosListagemMetadata({ q, categoria, cidade });
 }
 
 export default async function EventosListPage({ searchParams }: PageProps) {
