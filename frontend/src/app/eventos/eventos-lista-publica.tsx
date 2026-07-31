@@ -65,11 +65,18 @@ export function EventosListaPublica({
   const [erroIntervalo, setErroIntervalo] = useState<string | null>(null);
 
   const filtroDataRef = useRef(filtroData);
-  filtroDataRef.current = filtroData;
   const dataDeRef = useRef(dataDe);
-  dataDeRef.current = dataDe;
   const dataAteRef = useRef(dataAte);
-  dataAteRef.current = dataAte;
+
+  useEffect(() => {
+    filtroDataRef.current = filtroData;
+  }, [filtroData]);
+  useEffect(() => {
+    dataDeRef.current = dataDe;
+  }, [dataDe]);
+  useEffect(() => {
+    dataAteRef.current = dataAte;
+  }, [dataAte]);
 
   // Refs com valores correntes para evitar closures desatualizadas no debounce
   const categoriaRef = useRef(categoria);
@@ -124,7 +131,9 @@ export function EventosListaPublica({
     [pathname],
   );
   const buildUrlRef = useRef(buildUrl);
-  buildUrlRef.current = buildUrl;
+  useEffect(() => {
+    buildUrlRef.current = buildUrl;
+  }, [buildUrl]);
 
   const atualizarCategoria = useCallback(
     (nova: string) => {
