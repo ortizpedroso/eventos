@@ -15,7 +15,6 @@ FICHA_LIB = Path("frontend/src/lib/evento-ficha.ts")
 def _node_eval(script: str) -> str:
     r = subprocess.run(
         ["node", "--experimental-strip-types", "--input-type=module", "-e", script],
-        cwd="/workspace",
         capture_output=True,
         text=True,
         check=False,
