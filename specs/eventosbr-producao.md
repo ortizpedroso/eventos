@@ -69,6 +69,18 @@ Plano: `specs/plano-carrinho-afiliados-galeria.md` (**§7/§11 — build aprovad
 
 Migração: `20260730_000046_carrinho_promoters_galeria.py`. Testes: `test_lembrete_carrinho.py`, `test_evento_promoters.py`, `test_evento_galeria.py`.
 
+### 2.10 Ficha técnica, WhatsApp /contato, duplicar e deletar evento (v1.26)
+
+**Ficha técnica (opcional):** campos `classificacao_etaria` (livre | 12+ | 16+ | 18+), `o_que_levar`, `estacionamento` no criar/editar; página pública (`EventoFichaTecnica`) só mostra o que estiver preenchido — nunca placeholder genérico. Migração `20260731_000047_evento_ficha_tecnica.py`.
+
+**WhatsApp em /contato:** CTA complementar ao formulário via `social_whatsapp_url` das Configurações da plataforma (mesmo campo do rodapé); sem URL configurada o botão não aparece.
+
+**Duplicar:** botão na listagem `/organizador/eventos` chama `POST /api/eventos/id/{id}/duplicar` (já existia); redireciona para editar a cópia; cópia nasce `publicado=false`.
+
+**Deletar:** `DELETE /api/eventos/id/{id}` só para o dono; bloqueado se houver ingresso `pago` ou `pendente` (erro sugere despublicar); UI com confirmação explícita; com vendas o botão fica desabilitado com explicação.
+
+Testes: `test_evento_ficha_tecnica.py`, `test_contato_whatsapp_cta.py`, `test_evento_duplicar_deletar.py`.
+
 ### 2.2 Conta de recebimento do organizador (modelo de produção)
 
 **O organizador não cria nem vincula conta em painel externo.** Tudo ocorre dentro do EventosBR:
