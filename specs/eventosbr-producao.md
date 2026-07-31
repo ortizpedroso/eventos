@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** anterior em `a32b948` (v1.33). **v1.34 (este branch):** PDV presencial + assentos nomeados MVP — pytest **400**; tip de produto atualizado após merge. **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da branch em `c9ea77f` — v1.34 (PDV + assentos MVP); pytest **400**. Aguarda merge/`/review` independente. Base anterior: `a32b948` (v1.33). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
