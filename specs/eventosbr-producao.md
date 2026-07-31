@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.30
+**Versão:** 1.31
 **Data:** 2026-07-31
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `f3f2e8b` — v1.29 (fix teste SEO `/workspace`). Tip de **docs/spec**: HEAD após `docs(spec): …`. `pytest` total **389**. **`/review` v1.30 — build NÃO aprovada** (lacunas em §11; features §2.10–§2.11 quase ok, 1 gap de DELETE; spec contradiz modo `linked` ativo). **Deploy VPS:** confirmado pelo usuário (31/07/2026). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`.
+> **Produção (VPS):** tip de **produto** da `main` em `9082c90` — L1 DELETE bloqueia `usado` + alinhamento parcial L2. Tip de **docs/spec**: HEAD após `docs(spec): …`. `pytest` total **390**. **`/review` v1.31 — build NÃO aprovada** (restos da L2 na spec + tip/contagens desatualizados no corpo; ver §11.5). **Deploy VPS:** confirmado pelo usuário (31/07/2026). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -77,7 +77,7 @@ Migração: `20260730_000046_carrinho_promoters_galeria.py`. Testes: `test_lembr
 
 **Duplicar:** botão na listagem `/organizador/eventos` chama `POST /api/eventos/id/{id}/duplicar` (já existia); redireciona para editar a cópia; cópia nasce `publicado=false`.
 
-**Deletar:** `DELETE /api/eventos/id/{id}` só para o dono; bloqueado se houver ingresso `pago` ou `pendente` (erro sugere despublicar); UI com confirmação explícita; com vendas o botão fica desabilitado com explicação.
+**Deletar:** `DELETE /api/eventos/id/{id}` só para o dono; bloqueado se houver ingresso `pago`, `pendente` ou `usado` (erro sugere despublicar); UI com confirmação explícita; com vendas o botão fica desabilitado com explicação.
 
 Testes: `test_evento_ficha_tecnica.py`, `test_contato_whatsapp_cta.py`, `test_evento_duplicar_deletar.py`.
 
@@ -279,7 +279,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (389 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (390 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -558,7 +558,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (389 testes)
+- [x] `pytest` verde (390 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -570,9 +570,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto v1.29 — `f3f2e8b` (bug de caminho fixo corrigido no teste de SEO); v1.28 SEO em `8b6759c` (§2.11); v1.27 lint em `12ec50f`; v1.26 §2.10 em `eea493d`. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
+- [x] tip de produto — `9082c90` (L1 DELETE+usado; L2 parcial na spec); SEO `8b6759c` / fix teste `f3f2e8b`; lint `12ec50f`; §2.10 `eea493d`. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
-- [x] Deploy VPS: **confirmado pelo usuário** (31/07/2026) — cobrindo o acumulado de produto até tip `f3f2e8b` / docs HEAD (carrinho/promoters/galeria, ficha técnica, duplicar/deletar, SEO cidade+typicalAgeRange, zero erros de lint, fix teste `/workspace`)
+- [x] Deploy VPS: **confirmado pelo usuário** (31/07/2026) — cobrindo o acumulado de produto até tip `9082c90` (carrinho/promoters/galeria, ficha, duplicar/deletar+usado, SEO, lint, fix teste `/workspace`)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
@@ -629,56 +629,77 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 ---
 
-## 11. `/review` v1.30 — build vs spec (31/07/2026)
+## 11. `/review` — build vs spec
 
-**Escopo:** tip produto `f3f2e8b`, pytest **389**, features §2.9–§2.11 + critérios §7 relevantes.  
-**Veredito:** **build NÃO aprovada** — há lacunas de código e de consistência da spec. Features recentes (§2.10 / §2.11) passam com **1 gap** no DELETE.
+### 11.0 Histórico rápido
 
-### 11.1 Requisitos recentes — resultado
+| Review | Tip | Veredito |
+|--------|-----|----------|
+| v1.30 | `f3f2e8b` / 389 | NÃO aprovada — L1 DELETE `usado`, L2 baas↔linked, L3 tip docs |
+| build `9082c90` | fechou L1 no código; L2 parcial na spec | — |
+| **v1.31 (este)** | `9082c90` / **390** | **NÃO aprovada** — restos L2 + docstring (ver §11.5) |
+
+### 11.1 Requisitos recentes — resultado (v1.31)
 
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
-| §2.9 | Carrinho / promoters / galeria (aceite §11 v1.25.1) | **PASS** (já aprovado em `1b15985`) |
-| §2.10 | Ficha técnica opcional + migração `000047` + UI pública sem placeholder | **PASS** |
+| §2.9 | Carrinho / promoters / galeria | **PASS** (`1b15985`) |
+| §2.10 | Ficha técnica + migração `000047` + UI sem placeholder | **PASS** |
 | §2.10 | WhatsApp `/contato` via `social_whatsapp_url` | **PASS** |
 | §2.10 | Duplicar → editar, `publicado=false` | **PASS** |
-| §2.10 | DELETE dono-only; bloqueia pago/pendente/usado; UI confirma; com vendas botão disabled+explicação | **PASS** (L1 fechado) |
-| §2.11 | Metadata `?cidade=` (+ combinação com categoria); casos `q`/categoria/padrão intactos | **PASS** |
-| §2.11 | `typicalAgeRange` condicional (`0-`/`12-`/`16-`/`18-`) | **PASS** |
-| §2.11 / tip | Teste SEO sem `cwd="/workspace"` | **PASS** (`f3f2e8b`) |
-| §7 Qualidade | `pytest` 389 | **PASS** |
-| §7 Ops | Deploy confirmado usuário 31/07 | **PASS** (ops) |
-| §2.8 A–C | Webhook real / SMTP SPF-DKIM / 1ª venda real | **PENDENTE ops** (não é lacuna de código desta build) |
+| §2.10 | DELETE dono-only; bloqueia `pago`/`pendente`/`usado`; UI confirma; disabled+explicação | **PASS** (código em `9082c90`; teste `test_deletar_evento_com_ingresso_usado_bloqueado`) |
+| §2.11 | Metadata `?cidade=` (+ categoria); `q`/categoria/padrão intactos | **PASS** |
+| §2.11 | `typicalAgeRange` (`0-`/`12-`/`16-`/`18-`) | **PASS** |
+| §2.11 | Teste SEO sem `cwd="/workspace"` | **PASS** |
+| §7 Qualidade | `pytest` 390 | **PASS** (rodado neste review) |
+| §7 Ops | Deploy confirmado 31/07 | **PASS** (ops) |
+| §2.8 A–C | Webhook real / SMTP / 1ª venda | **PENDENTE ops** (não bloqueia código se §11.5 fechar) |
+| §2.2–§2.4 / §4 | Narrativa `linked` consistente em todo o corpo | **FAIL** — §11.5 L4 |
+| §2.10 texto + docstring | Spec/docstring alinhados ao filtro com `usado` | **FAIL** — §11.5 L5 (texto §2.10 corrigido neste review; docstring API ainda desatualizada) |
 
-### 11.2 Lacunas encontradas — todas fechadas (31/07/2026)
+### 11.2 Lacunas v1.30 — status
 
-#### L1 — §2.10 Deletar / regra de ingresso vendido (código) — ✅ FECHADO
-
-**Falha (era):** API `DELETE /api/eventos/id/{id}` bloqueava só `pendente` e `pago`. Ingresso `usado` (já vendido + check-in) não bloqueava, mesmo a UI já corretamente contando `pago+usado` em `ingressos_pagos`.
-
-**Correção aplicada:** `deletar_evento` agora filtra `Ingresso.status.in_(("pendente", "pago", "usado"))`; mensagem 400 menciona check-in/usado; novo teste `test_deletar_evento_com_ingresso_usado_bloqueado` confirma 400 e evento permanece.
-
-#### L2 — §2.2 / §2.3 / §6 vs tip + onboarding-linked (spec) — ✅ FECHADO
-
-**Falha (era):** Corpo da spec ainda exigia `ASAAS_ONBOARDING_MODE=baas` como único modo de produção (§2.2, §2.3 tabela, §6), enquanto o cabeçalho + `onboarding-linked-lancamento.md` já descreviam `linked` ativo em produção desde 25/07.
-
-**Correção aplicada:** §2.2/§2.3/§6 reescritos — `linked` como modo de lançamento atual, `baas` como alvo futuro (quando houver CNPJ da conta mãe); checagem de CNPJ anotada como aplicável só em `baas`/`both`.
-
-#### L3 — §7 Deploy citava SHA de docs como tip de produto (docs) — ✅ FECHADO
-
-**Correção aplicada:** tip de produto corrigido pra `f3f2e8b` numa revisão anterior desta mesma sessão.
+| ID | Item | Status |
+|----|------|--------|
+| L1 | DELETE bloqueia `usado` | ✅ FECHADO em `9082c90` |
+| L2 | §2.2/§2.3/§6 alinhar `linked` | ⚠️ PARCIAL — restos em §11.5 L4 |
+| L3 | Tip deploy ≠ SHA docs | ✅ FECHADO |
 
 ### 11.3 Não são lacunas de código desta build
 
-- CNPJ conta mãe, §2.8 A/B/C, `asaas_platform_cnpj` em linked — pendências operacionais já marcadas `[ ]` / N/A.
-- Rotação automática de chave de criptografia — descartada de propósito (changelog 1.29).
+- CNPJ conta mãe, §2.8 A/B/C, `asaas_platform_cnpj` em `linked` — `[ ]` / N/A.
+- Item §7 “conta criada pela plataforma (`baas`)” aberto de propósito até CNPJ+`baas`.
+- Rotação automática de chave — descartada (changelog 1.29).
 
-### 11.4 Critério de aprovação
+### 11.5 Lacunas que ainda bloqueiam aprovação (v1.31) — correções para `/build`
 
-Aprovar a build só depois de:
-1. L1 implementada + teste verde (suite ≥ 390).
-2. L2/L3 reconciliadas na spec (corpo alinhado a `linked` de lançamento).
-3. `pytest` verde no tip de produto resultante.
+#### L4 — restos da L2: texto ainda trata `linked` como fora de produção
+
+**Falha:**
+1. **§2.2** abertura: “O organizador não cria nem vincula conta em painel externo” — em `linked` o organizador **cria/usa conta Asaas** e vincula; contradiz o modo de lançamento.
+2. **§2.3** (após a tabela): “Modos `linked` e `both` existem apenas no código para desenvolvimento legado — **fora do escopo de produção**” — falso; `linked` é o modo ativo.
+3. **§2.4**: “Status `manual` e `linked` aplicam-se só a ambientes de desenvolvimento” — em produção com `ASAAS_ONBOARDING_MODE=linked`, `asaas_repasse_status=linked` **libera venda** (`evento_repasse.py` adiciona `"linked"` aos aprovados).
+4. **§4** “Fora do escopo”: lista `modo linked/both` — remover; `linked` está no escopo do lançamento.
+
+**Correção `/build` (só docs):**
+1. §2.2: reescrever abertura — em `linked`, organizador vincula conta Asaas própria na área Financeiro; em `baas` (alvo), a plataforma provisiona conta sem painel externo.
+2. §2.3: apagar ou substituir a frase “legado / fora do escopo” por: `linked` = produção atual; `both` = compat; `baas` = alvo com CNPJ mãe.
+3. §2.4: status `linked` é válido em produção quando onboarding=`linked`; `manual` só com flag `ASAAS_ALLOW_MANUAL_WALLET` (dev).
+4. §4: remover `modo linked/both` da lista “fora do escopo”.
+
+#### L5 — docstring da API DELETE desatualizada
+
+**Falha:** `app/routes/eventos.py` `deletar_evento` docstring ainda diz “bloqueado se houver ingresso pago ou pendente” — omite `usado` (código já bloqueia os três).
+
+**Correção `/build`:** atualizar docstring para `pago`, `pendente` ou `usado`.
+
+### 11.6 Critério de aprovação
+
+Aprovar só depois de:
+1. L4 fechada (quatro trechos da spec).
+2. L5 docstring atualizada.
+3. `pytest` 390 verde no tip de produto.
+4. Tip/cabeçalho/`/review` marcando **build aprovada**.
 
 ---
 
@@ -686,6 +707,7 @@ Aprovar a build só depois de:
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.31 | 2026-07-31 | **`/review` — build NÃO aprovada.** Tip produto `9082c90`, pytest **390**. L1 DELETE+`usado` **confirmada no código**. L2 só parcial: restos em §2.2/§2.3/§2.4/§4 (**L4**) + docstring API (**L5**). Correções para `/build` em §11.5. Contagens tip/§7 atualizadas. |
 | 1.30 | 2026-07-31 | **`/review` — build NÃO aprovada.** §2.10–§2.11 passam com **L1** (DELETE não bloqueia ingresso `usado` embora UI e “vendido” incluam check-in). **L2** contradições baas↔linked no corpo da spec vs tip/`onboarding-linked-lancamento.md`/código. **L3** tip de deploy citava SHA docs. Correções para `/build` em §11. Ajuste pontual §2.11 (nota do fix `/workspace`) e §7 Validado VPS (`linked`). pytest 389. |
 | 1.29 | 2026-07-31 | **Auditoria de segurança/UI/SEO feita a pedido do usuário** (checklist de 9 itens contra o código real): confirmado que 8 já estavam bem implementados (CSP com nonce+strict-dynamic, validação de webhook com `compare_digest`, criptografia de segredos com salt por registro, skeletons calibrados, validação de cartão com mensagens claras antes de submeter, portaria com "modo festa" pra baixa luminosidade, JSON-LD Event completo, WebP client+server) — rotação automática de chave de criptografia avaliada e **descartada de propósito** (risco maior que benefício nessa escala; mecanismo manual já existente é a escolha certa). **2 gaps reais implementados**: metadata dinâmica por cidade em `/eventos?cidade=` (combinando com categoria quando os dois existem) e `typicalAgeRange` no JSON-LD quando `classificacao_etaria` está preenchida. **Bug real encontrado e corrigido na supervisão**: teste novo tinha um caminho absoluto fixo (`/workspace`) no `subprocess.run` que só funcionava por coincidência num ambiente específico — 8 de 10 testes falhavam em qualquer outro lugar; corrigido removendo o `cwd` fixo (mesmo padrão de caminho relativo já usado no resto da suíte). Testes: 379 → 389. |
 | 1.28 | 2026-07-31 | **SEO** (`8b6759c`): metadata dinâmica em `/eventos?cidade=` (e combinação natural com categoria); `typicalAgeRange` no JSON-LD schema.org/Event a partir de `classificacao_etaria` (formato `0-`/`12-`/`16-`/`18-`). Spec §2.11. Testes: 379 → 389 (`test_seo_cidade_typical_age.py`). |
