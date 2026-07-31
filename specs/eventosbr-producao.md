@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `8b6759c` — v1.28 (SEO: metadata por cidade + `typicalAgeRange` no JSON-LD; ver §2.11). Tip de **docs/spec**: HEAD da `main` após commits `docs(spec): …`. `pytest` total **389**. v1.27 (lint zero erros) e v1.26 (§2.10) permanecem. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas` no futuro.
+> **Produção (VPS):** tip de **produto** da `main` em `f3f2e8b` — v1.29 (bug real corrigido: caminho fixo `/workspace` quebrava o teste de SEO fora de um ambiente específico; ver changelog). `pytest` total **389**. v1.28 (SEO §2.11), v1.27 (lint zero erros) e v1.26 (§2.10) permanecem. **Deploy VPS:** `cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`. **Onboarding de pagamentos:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ da conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas` no futuro.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -570,9 +570,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto v1.28 — `8b6759c` (SEO cidade + typicalAgeRange; §2.11); v1.27 lint em `12ec50f`; v1.26 §2.10 em `eea493d`. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
+- [x] tip de produto v1.29 — `f3f2e8b` (bug de caminho fixo corrigido no teste de SEO); v1.28 SEO em `8b6759c` (§2.11); v1.27 lint em `12ec50f`; v1.26 §2.10 em `eea493d`. Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
-- [x] Deploy VPS com o commit `e6df57d`: confirmado rodando em produção (25/07/2026)
+- [ ] Deploy VPS com o commit atual (`3b0a5a5` / v1.29) **precisa reconfirmação** — última confirmação explícita registrada foi do commit `e6df57d` (25/07/2026); muita coisa foi implementada e aprovada desde então (carrinho/promoters/galeria, ficha técnica, duplicar/deletar evento, SEO) sem uma confirmação nova de "rodei o deploy e validei" registrada aqui
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
