@@ -45,6 +45,47 @@ export async function waitForApiReady(maxMs = 120_000): Promise<void> {
   throw new Error(`API não respondeu em ${API}/ready após ${maxMs}ms`);
 }
 
+export async function seedPublishedEventMeiaEntrada(): Promise<SeededEvent> {
+  const suf = `${Date.now()}`;
+  const senha = "senha12345";
+  const orgEmail = `e2e_meia_org_${suf}@test.com`;
+
+  await api("POST", "/api/auth/registrar", {
+    email: orgEmail,
+    nome: "Org Meia E2E",
+    senha,
+    tipo: "organizador",
+  });
+
+  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
+    email: orgEmail,
+    senha,
+  });
+
+  const ev = await api<{ id: string; slug: string; preco_compra?: number; preco_ingresso: number }>(
+    "POST",
+    "/api/eventos/criar",
+    {
+      nome: `E2E Meia-entrada ${suf}`,
+      descricao: "Evento para teste Playwright de meia-entrada",
+      data_inicio: "2026-12-20T19:00:00",
+      data_fim: "2026-12-20T23:00:00",
+      local: "São Paulo",
+      preco_ingresso: 30,
+      categoria: "Outros",
+      publicado: true,
+      ingresso_lotes: [{ nome: "Meia-entrada", preco: 15, ordem: 1, ativo: true, tipo: "meia" }],
+    },
+    orgToken,
+  );
+
+  return {
+    slug: ev.slug,
+    eventoId: ev.id,
+    precoReais: Number(ev.preco_compra ?? ev.preco_ingresso ?? 15),
+  };
+}
+
 export async function seedPublishedEventAsaas(): Promise<SeededEvent> {
   const suf = `${Date.now()}`;
   const senha = "senha12345";

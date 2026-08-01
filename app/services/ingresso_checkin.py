@@ -237,3 +237,13 @@ def realizar_checkin_portaria_por_id(
 ) -> dict:
     """Check-in a partir da busca manual (link da portaria)."""
     return realizar_checkin_portaria(db, evento_id, codigo_checkin(ingresso_id))
+
+
+def listar_ids_validos_portaria(db: Session, evento_id: str) -> list[dict]:
+    """IDs e status dos ingressos do evento, para pré-carregar validação offline na portaria."""
+    linhas = (
+        db.query(Ingresso.id, Ingresso.status)
+        .filter(Ingresso.evento_id == evento_id, Ingresso.status.in_(("pago", "usado")))
+        .all()
+    )
+    return [{"ingresso_id": iid, "status": status} for iid, status in linhas]

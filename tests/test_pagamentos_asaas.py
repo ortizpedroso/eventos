@@ -393,6 +393,96 @@ class TestPagamentosAsaas:
         criar_mock.assert_not_called()
         cancel_mock.assert_not_called()
 
+    def test_cobranca_retry_apos_falha_transitoria_usa_mesma_idempotency_key(self):
+        """Item 4: retry automático do frontend não deve gerar cobrança duplicada.
+
+        Simula uma falha transitória do Asaas na 1ª tentativa e uma retentativa
+        bem-sucedida logo em seguida (mesma janela de 10min) — a chave de
+        idempotência enviada ao Asaas deve ser idêntica nas duas chamadas, o que
+        garante que o Asaas nunca processa duas cobranças para o mesmo ingresso.
+        """
+        from app.services.asaas_client import AsaasAPIError
+        from tests import test_api as ta
+
+        org = _registrar_organizador("retrypag")
+        cli = _registrar_cliente("retrypag")
+        ev = _criar_evento(org)
+
+        with patch("app.routes.pagamentos.settings") as route_settings:
+            route_settings.payments_disabled = False
+            route_settings.use_asaas = True
+            route_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            criar = client.post(
+                "/api/pagamentos/criar",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={
+                    "evento_id": ev["id"],
+                    "valor_centavos": 5000,
+                    "participante_nome": "Retry",
+                    "participante_email": "retrypag@test.com",
+                    "participante_cpf": "52998224725",
+                    "participante_telefone": "11987654321",
+                    "termo_compra_aceito": True,
+                },
+            )
+        iid = criar.json()["ingresso_id"]
+
+        mock_payment = {
+            "id": "pay_retry_ok",
+            "status": "PENDING",
+            "billingType": "PIX",
+            "pixTransaction": {"encodedImage": "abc", "payload": "00020126"},
+        }
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch("app.services.pagamentos_asaas_handlers.settings") as svc_settings,
+            patch("app.services.pagamentos_asaas_handlers.garantir_customer_asaas", return_value="cus_x"),
+            patch(
+                "app.services.pagamentos_asaas_handlers.criar_cobranca_asaas",
+                side_effect=AsaasAPIError("timeout", status_code=503),
+            ) as criar_mock_falha,
+        ):
+            route_settings.use_asaas = True
+            svc_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            cob1 = client.post(
+                "/api/pagamentos/asaas/cobranca",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={"ingresso_id": iid, "metodo": "pix"},
+            )
+        assert cob1.status_code == 400
+        assert criar_mock_falha.call_count == 1
+        idem_key_tentativa_1 = criar_mock_falha.call_args.kwargs["idempotency_key"]
+
+        # Retentativa automática do frontend, logo em seguida (mesma janela de 10min).
+        with (
+            patch("app.routes.pagamentos.settings") as route_settings,
+            patch("app.services.pagamentos_asaas_handlers.settings") as svc_settings,
+            patch("app.services.pagamentos_asaas_handlers.garantir_customer_asaas", return_value="cus_x"),
+            patch(
+                "app.services.pagamentos_asaas_handlers.criar_cobranca_asaas",
+                return_value=mock_payment,
+            ) as criar_mock_ok,
+        ):
+            route_settings.use_asaas = True
+            svc_settings.ASAAS_PLATFORM_WALLET_ID = WALLET_PLATFORM
+            cob2 = client.post(
+                "/api/pagamentos/asaas/cobranca",
+                headers={"Authorization": f"Bearer {cli}"},
+                json={"ingresso_id": iid, "metodo": "pix"},
+            )
+        assert cob2.status_code == 200, cob2.text
+        assert cob2.json().get("payment_id") == "pay_retry_ok"
+        idem_key_tentativa_2 = criar_mock_ok.call_args.kwargs["idempotency_key"]
+
+        assert idem_key_tentativa_1 == idem_key_tentativa_2
+
+        db = ta.TestingSessionLocal()
+        try:
+            ingresso = db.query(Ingresso).filter(Ingresso.id == iid).one()
+            assert ingresso.asaas_payment_id == "pay_retry_ok"
+        finally:
+            db.close()
+
     def test_cobranca_pix_gera_novo_qrcode_apos_10min(self):
         from datetime import datetime, timedelta, timezone
         from tests import test_api as ta

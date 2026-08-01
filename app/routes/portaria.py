@@ -14,7 +14,11 @@ from app.deps.rate_limit import (
     rate_limit_portaria_validar,
 )
 from app.services.ingresso_busca import buscar_ingressos_evento
-from app.services.ingresso_checkin import realizar_checkin_portaria, realizar_checkin_portaria_por_id
+from app.services.ingresso_checkin import (
+    listar_ids_validos_portaria,
+    realizar_checkin_portaria,
+    realizar_checkin_portaria_por_id,
+)
 
 router = APIRouter()
 
@@ -58,6 +62,15 @@ class PortariaEventoInfo(BaseModel):
     nome: str
     local: str
     data_inicio: str
+
+
+class IngressoIdValido(BaseModel):
+    ingresso_id: str
+    status: str
+
+
+class PortariaIdsValidosResponse(BaseModel):
+    ingressos: list[IngressoIdValido]
 
 
 @router.get("/evento", response_model=PortariaEventoInfo)
@@ -123,3 +136,21 @@ async def validar_portaria_por_id(
         return realizar_checkin_portaria_por_id(db, body.evento_id, body.ingresso_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.get("/ids-validos", response_model=PortariaIdsValidosResponse)
+async def ids_validos_portaria(
+    request: Request,
+    evento_id: str = Query(..., min_length=8),
+    k: str = Query(..., min_length=8),
+    db: Session = Depends(get_db),
+):
+    """Pré-carrega IDs de ingressos do evento para validação offline na portaria (fallback de rede)."""
+    rate_limit_portaria_info(request, evento_id, k)
+    evento = evento_por_token_portaria(db, evento_id, k)
+    if not evento:
+        raise HTTPException(status_code=403, detail="Link da portaria inválido ou expirado.")
+    itens = listar_ids_validos_portaria(db, evento_id)
+    return PortariaIdsValidosResponse(
+        ingressos=[IngressoIdValido(ingresso_id=i["ingresso_id"], status=i["status"]) for i in itens]
+    )
