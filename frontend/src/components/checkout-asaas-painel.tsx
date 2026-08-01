@@ -35,11 +35,20 @@ type Metodo = "pix" | "card" | "invoice";
 
 const PIX_QR_VALIDADE_MS = 10 * 60 * 1000;
 
+/** Tentativas automáticas em falha de pagamento — evita que o comprador clique "pagar"
+ * de novo e gere cobrança duplicada. Backoff crescente entre cada tentativa. */
+const MAX_TENTATIVAS_COBRANCA = 3;
+const RETRY_BACKOFF_MS = [2000, 4000, 8000];
+
 function formatCountdown(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function aguardar(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function CheckoutAsaasPainel({
@@ -66,6 +75,8 @@ export function CheckoutAsaasPainel({
   const [countdown, setCountdown] = useState<string | null>(null);
   const [pixExpiraEm, setPixExpiraEm] = useState<number | null>(null);
   const [pixCountdown, setPixCountdown] = useState<string | null>(null);
+  const [tentativaAtual, setTentativaAtual] = useState(0);
+  const [tentativasEsgotadas, setTentativasEsgotadas] = useState(false);
 
   const [cardNome, setCardNome] = useState(participanteNome);
   const [cardNumero, setCardNumero] = useState("");
@@ -157,74 +168,102 @@ export function CheckoutAsaasPainel({
     return () => window.clearInterval(id);
   }, [pix, invoiceUrl, aguardandoConfirmacao, ingressoId]);
 
+  function construirBody(): Record<string, unknown> | null {
+    const body: Record<string, unknown> = {
+      ingresso_id: ingressoId,
+      metodo: metodo === "pix" ? "pix" : metodo === "card" ? "card" : "invoice",
+    };
+    if (tokenEspera?.trim()) body.token_espera = tokenEspera.trim();
+    if (metodo === "card" && parcelas > 1) body.parcelas = parcelas;
+
+    if (metodo === "card") {
+      const erroCartao = validarDadosCartao({
+        nome: cardNome,
+        numero: cardNumero,
+        mes: cardMes,
+        ano: cardAno,
+        cvv: cardCvv,
+        cpf: cardCpf,
+        cep: cardCep,
+      });
+      if (erroCartao) {
+        setMsg(erroCartao);
+        return null;
+      }
+      body.credit_card = {
+        holderName: cardNome.trim(),
+        number: onlyDigits(cardNumero, 19),
+        expiryMonth: cardMes.padStart(2, "0"),
+        expiryYear: cardAno.length === 2 ? `20${cardAno}` : cardAno,
+        ccv: cardCvv,
+      };
+      body.credit_card_holder_info = {
+        name: cardNome.trim(),
+        email: participanteEmail.trim(),
+        cpfCnpj: onlyDigits(cardCpf, 14),
+        postalCode: onlyDigits(cardCep, 8),
+        addressNumber: cardNumeroEnd.trim() || "S/N",
+        phone: onlyDigits(cardTel, 11),
+      };
+    }
+    return body;
+  }
+
+  async function enviarCobranca(body: Record<string, unknown>) {
+    const res = await apiFetch<
+      CriarPagamentoResponse & { ja_pago?: boolean; pix?: AsaasPixPayload; invoice_url?: string }
+    >(
+      "/api/pagamentos/asaas/cobranca",
+      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+    );
+    if (res.ja_pago) {
+      onSuccess();
+      return;
+    }
+    if (res.pix) {
+      setPix(res.pix);
+      setPixExpiraEm(Date.now() + PIX_QR_VALIDADE_MS);
+    }
+    if (res.invoice_url) {
+      setInvoiceUrl(res.invoice_url);
+      window.open(res.invoice_url, "_blank", "noopener,noreferrer");
+    }
+    if (res.pix || res.invoice_url || metodo === "card") {
+      setAguardandoConfirmacao(true);
+    }
+  }
+
+  /** Repete a cobrança automaticamente em falha (com backoff) em vez de deixar o
+   * comprador clicar "pagar" de novo — o backend reusa a mesma chave de idempotência
+   * do Asaas dentro da janela de 10min, então retentar não gera cobrança duplicada. */
   async function criarCobranca() {
+    const body = construirBody();
+    if (!body) return;
+
     setBusy(true);
     setMsg(null);
-    try {
-      const body: Record<string, unknown> = {
-        ingresso_id: ingressoId,
-        metodo: metodo === "pix" ? "pix" : metodo === "card" ? "card" : "invoice",
-      };
-      if (tokenEspera?.trim()) body.token_espera = tokenEspera.trim();
-      if (metodo === "card" && parcelas > 1) body.parcelas = parcelas;
+    setTentativasEsgotadas(false);
 
-      if (metodo === "card") {
-        const erroCartao = validarDadosCartao({
-          nome: cardNome,
-          numero: cardNumero,
-          mes: cardMes,
-          ano: cardAno,
-          cvv: cardCvv,
-          cpf: cardCpf,
-          cep: cardCep,
-        });
-        if (erroCartao) {
-          setMsg(erroCartao);
+    for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_COBRANCA; tentativa++) {
+      setTentativaAtual(tentativa);
+      try {
+        await enviarCobranca(body);
+        setTentativaAtual(0);
+        setBusy(false);
+        return;
+      } catch (err) {
+        if (tentativa >= MAX_TENTATIVAS_COBRANCA) {
+          setTentativasEsgotadas(true);
+          setMsg(
+            `${mapCheckoutError(err instanceof Error ? err.message : String(err))} ` +
+              `Tentamos ${MAX_TENTATIVAS_COBRANCA} vezes sem sucesso.`,
+          );
+          setTentativaAtual(0);
           setBusy(false);
           return;
         }
-        body.credit_card = {
-          holderName: cardNome.trim(),
-          number: onlyDigits(cardNumero, 19),
-          expiryMonth: cardMes.padStart(2, "0"),
-          expiryYear: cardAno.length === 2 ? `20${cardAno}` : cardAno,
-          ccv: cardCvv,
-        };
-        body.credit_card_holder_info = {
-          name: cardNome.trim(),
-          email: participanteEmail.trim(),
-          cpfCnpj: onlyDigits(cardCpf, 14),
-          postalCode: onlyDigits(cardCep, 8),
-          addressNumber: cardNumeroEnd.trim() || "S/N",
-          phone: onlyDigits(cardTel, 11),
-        };
+        await aguardar(RETRY_BACKOFF_MS[tentativa - 1]);
       }
-
-      const res = await apiFetch<
-        CriarPagamentoResponse & { ja_pago?: boolean; pix?: AsaasPixPayload; invoice_url?: string }
-      >(
-        "/api/pagamentos/asaas/cobranca",
-        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
-      );
-      if (res.ja_pago) {
-        onSuccess();
-        return;
-      }
-      if (res.pix) {
-        setPix(res.pix);
-        setPixExpiraEm(Date.now() + PIX_QR_VALIDADE_MS);
-      }
-      if (res.invoice_url) {
-        setInvoiceUrl(res.invoice_url);
-        window.open(res.invoice_url, "_blank", "noopener,noreferrer");
-      }
-      if (res.pix || res.invoice_url || metodo === "card") {
-        setAguardandoConfirmacao(true);
-      }
-    } catch (err) {
-      setMsg(mapCheckoutError(err instanceof Error ? err.message : String(err)));
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -482,13 +521,26 @@ export function CheckoutAsaasPainel({
       {metodo === "invoice" && (
         <p className="text-xs text-gray-500">Abriremos a fatura de pagamento em nova aba.</p>
       )}
+      {busy && tentativaAtual > 1 ? (
+        <p className="text-sm text-amber-700" data-testid="checkout-retry-status">
+          Tentando novamente ({tentativaAtual}/{MAX_TENTATIVAS_COBRANCA})… Não feche esta página nem clique em pagar de novo.
+        </p>
+      ) : null}
       {msg && <p className="text-sm text-red-600">{msg}</p>}
       <button
         type="submit"
         disabled={busy}
         className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-white disabled:opacity-60"
       >
-        {busy ? "Processando…" : metodo === "pix" ? `Pagar ${formatBrl(valorBase)} com PIX` : `Pagar ${formatBrl(totalPagar)}`}
+        {busy
+          ? tentativaAtual > 1
+            ? `Tentando novamente (${tentativaAtual}/${MAX_TENTATIVAS_COBRANCA})…`
+            : "Processando…"
+          : tentativasEsgotadas
+            ? "Tentar novamente"
+            : metodo === "pix"
+              ? `Pagar ${formatBrl(valorBase)} com PIX`
+              : `Pagar ${formatBrl(totalPagar)}`}
       </button>
       <p className="text-xs text-gray-400">
         {valorFmt} · {participanteNome} ({participanteEmail})

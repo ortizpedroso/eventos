@@ -335,3 +335,49 @@ class TestCheckin:
         )
         assert chk.status_code == 200
         assert chk.json()["ok"] is True
+
+    def test_portaria_ids_validos_preload(self):
+        org = _registrar_organizador("pidsvalidos")
+        cli = _registrar_cliente("pidsvalidos")
+        ev = _criar_evento(org)
+
+        r = client.post(
+            "/api/pagamentos/criar",
+            headers={"Authorization": f"Bearer {cli}"},
+            json={
+                "evento_id": ev["id"],
+                "valor_centavos": 5000,
+                "participante_nome": "Bia Offline",
+                "participante_email": "bia.offline@test.com",
+                "participante_cpf": "52998224725",
+                "participante_telefone": "11987654321",
+                "termo_compra_aceito": True,
+            },
+        )
+        assert r.status_code == 200, r.text
+        iid = r.json()["ingresso_id"]
+
+        link = client.get(
+            f"/api/eventos/id/{ev['id']}/link-portaria",
+            headers={"Authorization": f"Bearer {org}"},
+        )
+        assert link.status_code == 200
+        token = link.json()["token"]
+
+        resp = client.get(
+            "/api/portaria/ids-validos",
+            params={"evento_id": ev["id"], "k": token},
+        )
+        assert resp.status_code == 200
+        ingressos = resp.json()["ingressos"]
+        assert any(x["ingresso_id"] == iid and x["status"] == "pago" for x in ingressos)
+
+    def test_portaria_ids_validos_token_invalido(self):
+        org = _registrar_organizador("pidsinvalido")
+        ev = _criar_evento(org)
+
+        resp = client.get(
+            "/api/portaria/ids-validos",
+            params={"evento_id": ev["id"], "k": "token-errado-000000"},
+        )
+        assert resp.status_code == 403

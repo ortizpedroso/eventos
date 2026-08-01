@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 
-import { apiFetch } from "@/lib/api";
+import { ApiNetworkError, apiFetch } from "@/lib/api";
 import { feedbackCheckinSucesso } from "@/lib/checkin-feedback";
 
 type Html5QrcodeModule = typeof import("html5-qrcode");
@@ -25,7 +25,31 @@ export type CheckinResult = {
   evento_nome: string;
   checkin_em: string | null;
   mensagem: string;
+  /** Validado localmente (sem contactar o servidor) por falha de rede — pendente de sincronização. */
+  offline?: boolean;
 };
+
+type IngressoIdValido = { ingresso_id: string; status: string };
+
+type ItemFilaOffline = {
+  ingressoId: string;
+  codigo: string;
+};
+
+/**
+ * Extrai o ID do ingresso do código EBR1:id:assinatura sem verificar a assinatura
+ * (o segredo HMAC não está disponível no cliente). Usado só no fallback offline,
+ * onde o ID é em seguida conferido contra a lista pré-carregada do servidor.
+ */
+function extrairIngressoIdSemAssinatura(codigo: string): string | null {
+  const texto = (codigo || "").trim();
+  const partes = texto.split(":");
+  if (partes.length >= 2 && partes[0] === "EBR1") {
+    const id = partes[1]?.trim();
+    return id || null;
+  }
+  return null;
+}
 
 export type IngressoBuscaItem = {
   ingresso_id: string;
@@ -193,11 +217,18 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
   const [buscaBusy, setBuscaBusy] = useState(false);
   const [buscaResultados, setBuscaResultados] = useState<IngressoBuscaItem[]>([]);
   const [buscaErro, setBuscaErro] = useState<string | null>(null);
+  const [idsValidosCarregados, setIdsValidosCarregados] = useState(false);
+  const [filaPendentes, setFilaPendentes] = useState(0);
+  const [sincronizando, setSincronizando] = useState(false);
   const scannerRef = useRef<Html5QrcodeInstance | null>(null);
   const cooldownRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fotoInputRef = useRef<HTMLInputElement>(null);
   const autoFotoDisparadoRef = useRef(false);
+  /** IDs válidos do evento pré-carregados para o fallback offline (portaria) — apenas em memória. */
+  const idsValidosRef = useRef<Map<string, string>>(new Map());
+  /** Check-ins feitos offline aguardando envio ao servidor quando a conexão voltar. */
+  const filaOfflineRef = useRef<ItemFilaOffline[]>([]);
 
   useEffect(() => {
     setCameraAoVivoOk(window.isSecureContext);
@@ -213,6 +244,105 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
     const t = window.setTimeout(() => fotoInputRef.current?.click(), 600);
     return () => window.clearTimeout(t);
   }, [inicializado, cameraAoVivoOk, aba, fotoBusy, busy]);
+
+  const carregarIdsValidos = useCallback(async () => {
+    if (modo !== "portaria" || !eventoId || !token) return;
+    try {
+      const data = await apiFetch<{ ingressos: IngressoIdValido[] }>(
+        `/api/portaria/ids-validos?evento_id=${encodeURIComponent(eventoId)}&k=${encodeURIComponent(token)}`,
+      );
+      const mapa = new Map<string, string>();
+      for (const item of data.ingressos) {
+        mapa.set(item.ingresso_id, item.status);
+      }
+      idsValidosRef.current = mapa;
+      setIdsValidosCarregados(true);
+    } catch {
+      // Sem lista local pré-carregada: fallback offline fica indisponível nesta sessão.
+    }
+  }, [modo, eventoId, token]);
+
+  useEffect(() => {
+    void carregarIdsValidos();
+  }, [carregarIdsValidos]);
+
+  const sincronizarFila = useCallback(async () => {
+    if (modo !== "portaria" || !eventoId || !token) return;
+    if (filaOfflineRef.current.length === 0) return;
+    setSincronizando(true);
+    try {
+      while (filaOfflineRef.current.length > 0) {
+        const item = filaOfflineRef.current[0];
+        try {
+          await apiFetch<CheckinResult>("/api/portaria/validar", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ evento_id: eventoId, token, codigo: item.codigo }),
+          });
+          filaOfflineRef.current = filaOfflineRef.current.slice(1);
+          setFilaPendentes(filaOfflineRef.current.length);
+        } catch (err) {
+          if (err instanceof ApiNetworkError) {
+            // Ainda sem conexão: para e tenta de novo no próximo evento "online".
+            break;
+          }
+          // Erro de negócio (ex.: já validado por outra portaria) — descarta e segue.
+          filaOfflineRef.current = filaOfflineRef.current.slice(1);
+          setFilaPendentes(filaOfflineRef.current.length);
+        }
+      }
+    } finally {
+      setSincronizando(false);
+    }
+  }, [modo, eventoId, token]);
+
+  useEffect(() => {
+    if (modo !== "portaria") return;
+    function aoVoltarOnline() {
+      void sincronizarFila();
+    }
+    window.addEventListener("online", aoVoltarOnline);
+    return () => window.removeEventListener("online", aoVoltarOnline);
+  }, [modo, sincronizarFila]);
+
+  const validarOffline = useCallback(
+    (codigoTexto: string): CheckinResult | null => {
+      if (modo !== "portaria" || !idsValidosCarregados) return null;
+      const ingressoId = extrairIngressoIdSemAssinatura(codigoTexto);
+      if (!ingressoId) return null;
+      const status = idsValidosRef.current.get(ingressoId);
+      if (!status) return null;
+
+      if (status === "usado") {
+        return {
+          ok: false,
+          ja_utilizado: true,
+          ingresso_id: ingressoId,
+          participante_nome: null,
+          evento_nome: tituloEvento || "",
+          checkin_em: null,
+          mensagem: "Ingresso já validado na entrada.",
+          offline: true,
+        };
+      }
+
+      idsValidosRef.current.set(ingressoId, "usado");
+      filaOfflineRef.current = [...filaOfflineRef.current, { ingressoId, codigo: codigoTexto }];
+      setFilaPendentes(filaOfflineRef.current.length);
+
+      return {
+        ok: true,
+        ja_utilizado: false,
+        ingresso_id: ingressoId,
+        participante_nome: null,
+        evento_nome: tituloEvento || "",
+        checkin_em: null,
+        mensagem: "Verificado offline — sincronize quando a internet voltar.",
+        offline: true,
+      };
+    },
+    [modo, idsValidosCarregados, tituloEvento],
+  );
 
   const validarCodigo = useCallback(
     async (raw: string) => {
@@ -248,13 +378,25 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
         setCodigo("");
         inputRef.current?.focus();
       } catch (err) {
+        if (err instanceof ApiNetworkError) {
+          const offlineResult = validarOffline(texto);
+          if (offlineResult) {
+            setLast(offlineResult);
+            if (offlineResult.ok) {
+              feedbackCheckinSucesso();
+            }
+            setCodigo("");
+            inputRef.current?.focus();
+            return;
+          }
+        }
         setLast(null);
         setError(err instanceof Error ? err.message : "Não foi possível validar.");
       } finally {
         setBusy(false);
       }
     },
-    [modo, eventoId, token],
+    [modo, eventoId, token, validarOffline],
   );
 
   const validarPorId = useCallback(
@@ -467,6 +609,17 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
           </label>
         </div>
       </header>
+
+      {modo === "portaria" && filaPendentes > 0 ? (
+        <div
+          className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950"
+          role="status"
+        >
+          {sincronizando
+            ? `Sincronizando ${filaPendentes} check-in${filaPendentes > 1 ? "s" : ""} offline…`
+            : `${filaPendentes} check-in${filaPendentes > 1 ? "s" : ""} offline aguardando sincronização com o servidor.`}
+        </div>
+      ) : null}
 
       {!cameraAoVivoOk && inicializado ? (
         <div
@@ -712,18 +865,27 @@ export function CheckinPortariaClient({ modo, eventoId, token, tituloEvento }: P
         <aside
           className={`rounded-2xl border p-5 sm:p-6 ${
             modoFesta
-              ? last.ja_utilizado
-                ? "border-amber-400 bg-amber-500 text-zinc-950"
-                : "border-emerald-400 bg-emerald-500 text-white"
-              : last.ja_utilizado
-                ? "border-amber-200 bg-amber-50"
-                : "border-emerald-200 bg-emerald-50"
+              ? last.offline
+                ? "border-blue-400 bg-blue-500 text-white"
+                : last.ja_utilizado
+                  ? "border-amber-400 bg-amber-500 text-zinc-950"
+                  : "border-emerald-400 bg-emerald-500 text-white"
+              : last.offline
+                ? "border-blue-200 bg-blue-50"
+                : last.ja_utilizado
+                  ? "border-amber-200 bg-amber-50"
+                  : "border-emerald-200 bg-emerald-50"
           }`}
           role="status"
         >
           <p className={`font-semibold text-zinc-900 ${modoFesta ? "text-center text-3xl sm:text-4xl" : "text-lg"}`}>
             {last.mensagem}
           </p>
+          {last.offline ? (
+            <p className="mt-1 text-sm font-medium text-blue-800">
+              Verificado offline — sincronize quando a internet voltar.
+            </p>
+          ) : null}
           <ul className="mt-3 space-y-1 text-sm text-zinc-700">
             <li>
               <span className="font-medium">Participante:</span> {last.participante_nome || "—"}

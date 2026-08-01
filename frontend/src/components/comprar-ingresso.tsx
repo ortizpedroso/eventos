@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CheckoutAsaasPainel } from "@/components/checkout-asaas-painel";
+import { CheckoutAvisoMeiaEntrada } from "@/components/checkout-aviso-meia-entrada";
 import { CheckoutBadgesPagamento } from "@/components/checkout-badges-pagamento";
 import { CheckoutConfirmacaoIngresso } from "@/components/checkout-confirmacao-ingresso";
 import { CheckoutStepper } from "@/components/checkout-stepper";
@@ -174,6 +175,7 @@ export function ComprarIngresso({
   const [mesmoPagador, setMesmoPagador] = useState(true);
   const [participanteNome, setParticipanteNome] = useState("");
   const [participanteEmail, setParticipanteEmail] = useState("");
+  const [participanteEmailConfirmacao, setParticipanteEmailConfirmacao] = useState("");
   const [participanteCpfDigits, setParticipanteCpfDigits] = useState("");
   const [participanteTelDigits, setParticipanteTelDigits] = useState("");
   const [cortesiaResponsavel, setCortesiaResponsavel] = useState("");
@@ -378,6 +380,16 @@ export function ComprarIngresso({
     return null;
   }, [mesmoPagador, exigeCpf, participanteCpfDigits]);
 
+  const alertaEmailParticipante = useMemo(() => {
+    if (mesmoPagador) return null;
+    const confirmacao = participanteEmailConfirmacao.trim();
+    if (!confirmacao) return null;
+    if (participanteEmail.trim().toLowerCase() !== confirmacao.toLowerCase()) {
+      return "Os e-mails não coincidem";
+    }
+    return null;
+  }, [mesmoPagador, participanteEmail, participanteEmailConfirmacao]);
+
   async function aplicarCupom() {
     const codigo = codigoCupom.trim();
     if (!codigo || ehCortesia) return;
@@ -433,6 +445,10 @@ export function ComprarIngresso({
         setError(
           "Informe nome e e-mail do participante, ou marque que é o mesmo que quem paga.",
         );
+        return;
+      }
+      if (em.toLowerCase() !== participanteEmailConfirmacao.trim().toLowerCase()) {
+        setError("Os e-mails não coincidem");
         return;
       }
       if (!isValidCpf(participanteCpfDigits)) {
@@ -709,6 +725,8 @@ export function ComprarIngresso({
             </div>
           ) : null}
 
+          <CheckoutAvisoMeiaEntrada tipo={loteAtual?.tipo} />
+
           {usaAssentos ? (
             <div>
               <label htmlFor="assento-ingresso" className="text-xs font-medium text-zinc-700">
@@ -860,6 +878,7 @@ export function ComprarIngresso({
                       if (e.target.checked) {
                         setParticipanteNome("");
                         setParticipanteEmail("");
+                        setParticipanteEmailConfirmacao("");
                         setParticipanteCpfDigits("");
                         setParticipanteTelDigits("");
                       }
@@ -894,6 +913,23 @@ export function ComprarIngresso({
                         className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
                         autoComplete="email"
                       />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-zinc-700" htmlFor="part_email_confirmacao">
+                        Confirme seu e-mail
+                      </label>
+                      <input
+                        id="part_email_confirmacao"
+                        type="email"
+                        value={participanteEmailConfirmacao}
+                        onChange={(e) => setParticipanteEmailConfirmacao(e.target.value)}
+                        className="mt-0.5 w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                        autoComplete="email"
+                        onPaste={(e) => e.preventDefault()}
+                      />
+                      {alertaEmailParticipante ? (
+                        <p className="mt-1 text-xs text-red-600">{alertaEmailParticipante}</p>
+                      ) : null}
                     </div>
                     <div>
                       <label className="text-xs font-medium text-zinc-700" htmlFor="part_cpf">
