@@ -89,7 +89,7 @@ Testes: `test_evento_ficha_tecnica.py`, `test_contato_whatsapp_cta.py`, `test_ev
 
 Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/workspace`); subprocess herda CWD da raiz do repo (fix `f3f2e8b`).
 
-### 2.12 PDV presencial + assentos nomeados (MVP, v1.34)
+### 2.12 PDV presencial + assentos nomeados (MVP, v1.34; e-mail obrigatório desde v1.36)
 
 Duas funcionalidades classificadas como alto esforço na pesquisa de concorrentes — entregues como **MVP**, sem a versão completa.
 
@@ -97,10 +97,11 @@ Duas funcionalidades classificadas como alto esforço na pesquisa de concorrente
 
 - Rota UI: `/organizador/eventos/{id}/pdv` (link “PDV” na listagem do organizador).
 - API: `POST /api/eventos/id/{evento_id}/pdv` — só o dono (`_evento_do_organizador`).
-- Formulário: nome (obrigatório), e-mail/telefone (opcionais), lote, forma de pagamento textual (`dinheiro` | `pix_manual` | `cartao`), assento se o lote tiver lista.
+- Formulário: nome e e-mail (**obrigatórios**), telefone (opcional), lote, forma de pagamento textual (`dinheiro` | `pix_manual` | `cartao`), assento se o lote tiver lista.
+- **E-mail obrigatório (v1.36):** diferente do checkout online (onde o e-mail do participante é opcional porque cai no e-mail da conta logada do comprador), no PDV o ingresso é atribuído ao `usuario_id` do organizador — não existe conta de cliente associada. Sem e-mail obrigatório, o comprador não tinha garantia de receber o ingresso. Backend (`vender_ingresso_pdv`) e schema (`PdvBody`) rejeitam venda sem e-mail válido (`400`/`422`, mesma checagem leve `"@" not in email` usada em `lista_espera.py`/`lista_interesse.py`); UI marca o campo como obrigatório.
 - Gera `Ingresso` com `status=pago`, `canal_venda=pdv`, `forma_pagamento_pdv` — **sem Asaas, sem split, sem repasse automático** (reconciliação manual).
 - Respeita `quantidade_maxima` do lote (via `reservar_vaga_e_assento` / FOR UPDATE).
-- Carteirinha/QR: mesmo fluxo (`codigo_checkin` → `/ingresso/qr?c=…`; e-mail com `gerar_ticket_card_png_bytes` se houver e-mail).
+- Carteirinha/QR: mesmo fluxo (`codigo_checkin` → `/ingresso/qr?c=…`); e-mail com `gerar_ticket_card_png_bytes` **sempre enviado** (`enqueue_ticket_email`), já que o e-mail agora é obrigatório.
 - **Fora de escopo:** maquininha, split/NF automática, UI só-tablet.
 
 #### Assentos nomeados (sem mapa visual)
@@ -719,6 +720,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.36 | 2026-08-01 | **Fix: e-mail obrigatório no PDV presencial.** Bug real: e-mail do participante era opcional na venda PDV e o envio de carteirinha era condicional (`if email:`) — diferente do checkout online (onde o e-mail é opcional só porque cai na conta logada do comprador), no PDV o ingresso vai pro `usuario_id` do organizador, sem conta de cliente associada, então sem e-mail o comprador não tinha nenhuma garantia de receber o ingresso. Corrigido: `vender_ingresso_pdv` e `PdvBody` agora exigem e-mail válido (mesma checagem leve `"@" not in email` de `lista_espera.py`), `enqueue_ticket_email` passou a ser chamado incondicionalmente após a venda, e a UI do PDV marca o campo como obrigatório. §2.12 atualizada. |
 | 1.35 | 2026-07-31 | **PDV + assentos MVP mesclado no main**, após supervisão completa (migração, trava atômica, bypass de gateway, autorização — tudo confirmado correto). **Achado crítico da supervisão**: o teste de concorrência real (duas threads, mesmo assento) falhava não por bug de produção, mas porque toda a suíte roda em SQLite em memória e o dialeto SQLite descarta silenciosamente `FOR UPDATE` — rodado 5x contra Postgres real, a lógica passa sempre. Corrigido com um fixture que troca o banco pra Postgres real só nesse teste (`DATABASE_URL_TESTE_CONCORRENCIA`, pula com aviso se não configurada); CI ganhou serviço Postgres pra isso nunca mais passar despercebido. Revela que a trava de capacidade de lote pré-existente nunca tinha sido verificada sob concorrência real — este foi o primeiro teste desse tipo em todo o sistema. |
 | 1.34 | 2026-07-31 | **PDV presencial + assentos nomeados (MVP).** §2.12: venda presencial (`canal_venda=pdv`, sem Asaas/split); lotes com lista de assentos + select no checkout + claim FOR UPDATE; assento na carteirinha/relatórios. Migração `000048`. Testes: 390 → 400 (`test_pdv_presencial.py`, `test_lote_assentos.py`). Fora de escopo: maquininha, mapa visual, preços por setor. |
 | 1.33 | 2026-07-31 | **`/review` independente — build aprovada.** Revalidou tip `a32b948` / 390 testes: L1–L5 PASS; §2.9–§2.11 PASS; restos L4/L5 confirmados fechados no código e no corpo da spec. Atualizou §11 (tabelas v1.31 que ainda diziam FAIL) e tip de deploy §7 → `a32b948`. Sem correções novas para `/build`. Ops §2.8 A–C seguem `[ ]`. |

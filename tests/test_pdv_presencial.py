@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from tests.test_api import client
 
@@ -83,6 +84,7 @@ def test_pdv_so_dono_acessa():
         json={
             "lote_id": lote_id,
             "participante_nome": "Intruso",
+            "participante_email": f"intruso.{suf}@test.com",
             "forma_pagamento": "dinheiro",
         },
     )
@@ -95,6 +97,7 @@ def test_pdv_so_dono_acessa():
         json={
             "lote_id": lote_id,
             "participante_nome": "Cliente",
+            "participante_email": f"cliente.{suf}@test.com",
             "forma_pagamento": "dinheiro",
         },
     )
@@ -131,6 +134,7 @@ def test_pdv_respeita_limite_lote_e_gera_pago():
         json={
             "lote_id": lote_id,
             "participante_nome": "Extra",
+            "participante_email": f"extra.{suf}@test.com",
             "forma_pagamento": "cartao",
         },
     )
@@ -145,3 +149,57 @@ def test_pdv_respeita_limite_lote_e_gera_pago():
     assert "Pessoa 1" in nomes
     canais = {p.get("canal_venda") for p in rel.json()["participantes"]}
     assert "pdv" in canais
+
+
+def test_pdv_exige_email():
+    suf = uuid.uuid4().hex[:8]
+    tok, email = _registrar("organizador", suf)
+    ev = _criar_evento(tok, email)
+    lote_id = ev["ingresso_lotes"][0]["id"]
+    headers = {"Authorization": f"Bearer {tok}"}
+
+    r = client.post(
+        f"/api/eventos/id/{ev['id']}/pdv",
+        headers=headers,
+        json={
+            "lote_id": lote_id,
+            "participante_nome": "Sem Email",
+            "forma_pagamento": "dinheiro",
+        },
+    )
+    assert r.status_code == 422, r.text
+
+    r2 = client.post(
+        f"/api/eventos/id/{ev['id']}/pdv",
+        headers=headers,
+        json={
+            "lote_id": lote_id,
+            "participante_nome": "Email Invalido",
+            "participante_email": "nao-e-email",
+            "forma_pagamento": "dinheiro",
+        },
+    )
+    assert r2.status_code == 400, r2.text
+    assert "e-mail" in r2.json()["detail"].lower()
+
+
+def test_pdv_envia_email_do_ingresso_ao_vender():
+    suf = uuid.uuid4().hex[:8]
+    tok, email = _registrar("organizador", suf)
+    ev = _criar_evento(tok, email)
+    lote_id = ev["ingresso_lotes"][0]["id"]
+    headers = {"Authorization": f"Bearer {tok}"}
+
+    with patch("app.services.pdv_presencial.enqueue_ticket_email") as mock_enqueue:
+        r = client.post(
+            f"/api/eventos/id/{ev['id']}/pdv",
+            headers=headers,
+            json={
+                "lote_id": lote_id,
+                "participante_nome": "Comprador PDV",
+                "participante_email": f"comprador.{suf}@test.com",
+                "forma_pagamento": "dinheiro",
+            },
+        )
+    assert r.status_code == 200, r.text
+    mock_enqueue.assert_called_once_with(r.json()["ingresso_id"])

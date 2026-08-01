@@ -438,7 +438,7 @@ async def vender_pdv_presencial(
     class PdvBody(BaseModel):
         lote_id: str = Field(min_length=1, max_length=64)
         participante_nome: str = Field(min_length=1, max_length=200)
-        participante_email: str | None = Field(default=None, max_length=255)
+        participante_email: str = Field(min_length=1, max_length=255)
         participante_telefone: str | None = Field(default=None, max_length=20)
         forma_pagamento: str = Field(min_length=1, max_length=40)
         assento: str | None = Field(default=None, max_length=40)

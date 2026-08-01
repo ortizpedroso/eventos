@@ -22,7 +22,7 @@ def vender_ingresso_pdv(
     organizador: Usuario,
     lote_id: str,
     participante_nome: str,
-    participante_email: str | None = None,
+    participante_email: str,
     participante_telefone: str | None = None,
     forma_pagamento: str,
     assento: str | None = None,
@@ -37,10 +37,10 @@ def vender_ingresso_pdv(
     if forma not in FORMAS_PAGAMENTO_PDV:
         raise ValueError("Forma de pagamento inválida. Use: dinheiro, pix_manual ou cartao.")
 
-    email = (participante_email or "").strip() or None
+    email = (participante_email or "").strip().lower()
     telefone = (participante_telefone or "").strip() or None
-    if email and len(email) > 255:
-        raise ValueError("E-mail inválido.")
+    if not email or "@" not in email or len(email) > 255:
+        raise ValueError("Informe um e-mail válido do participante.")
     if telefone and len(telefone) > 20:
         raise ValueError("Telefone inválido.")
 
@@ -78,7 +78,6 @@ def vender_ingresso_pdv(
     db.commit()
     db.refresh(ingresso)
 
-    if email:
-        enqueue_ticket_email(ingresso.id)
+    enqueue_ticket_email(ingresso.id)
 
     return ingresso

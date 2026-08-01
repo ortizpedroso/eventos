@@ -69,6 +69,10 @@ export function PdvPresencialClient({ eventoId }: Props) {
       setErro("Informe o nome do participante.");
       return;
     }
+    if (!email.trim() || !email.includes("@")) {
+      setErro("Informe um e-mail válido do participante.");
+      return;
+    }
     if (usaAssentos && !assento.trim()) {
       setErro("Escolha um assento disponível.");
       return;
@@ -78,7 +82,7 @@ export function PdvPresencialClient({ eventoId }: Props) {
       const body: Record<string, unknown> = {
         lote_id: loteAtual.id,
         participante_nome: nome.trim(),
-        participante_email: email.trim() || null,
+        participante_email: email.trim(),
         participante_telefone: telefone.trim() || null,
         forma_pagamento: forma,
       };
@@ -194,12 +198,13 @@ export function PdvPresencialClient({ eventoId }: Props) {
           />
         </label>
         <label className="grid gap-1 text-sm font-medium text-zinc-800">
-          E-mail (opcional — envia carteirinha se preenchido)
+          E-mail do participante *
           <input
             type="email"
             className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
             maxLength={255}
           />
         </label>
