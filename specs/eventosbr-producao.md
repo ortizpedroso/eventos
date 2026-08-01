@@ -599,7 +599,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — `d8f3b4b` (v1.35 — PDV/assentos mesclado + fixture Postgres real pro teste de concorrência + serviço Postgres no CI); anterior `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
+- [x] tip de produto — `4b18643` (v1.36 — e-mail obrigatório no PDV + envio de carteirinha garantido); anterior `d8f3b4b` (v1.35), `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
 - [x] Deploy VPS: **confirmado pelo usuário** (31/07/2026) — cobrindo o acumulado de produto até tip `a32b948` (carrinho/promoters/galeria, ficha, duplicar/deletar+usado, SEO, lint, fix teste `/workspace`, L4/L5)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
