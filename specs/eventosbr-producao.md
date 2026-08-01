@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.35
-**Data:** 2026-07-31
+**Versão:** 1.37
+**Data:** 2026-08-01
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `d8f3b4b` — v1.35 (PDV + assentos MVP mesclado; achado crítico de supervisão corrigido — teste de concorrência era falso-negativo por SQLite, agora verificado contra Postgres real). pytest **400** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 399+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da `main` em `4b18643` — v1.36 (e-mail obrigatório no PDV + envio de carteirinha garantido; anterior v1.35 PDV/assentos MVP em `d8f3b4b`). pytest **402** (com `DATABASE_URL_TESTE_CONCORRENCIA` e Redis no CI; 401+1 skip sem Postgres de concorrência). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -117,6 +117,28 @@ Migração: `20260731_000048_pdv_assentos_mvp.py` (`assentos` no lote; `assento`
 Testes: `tests/test_pdv_presencial.py`, `tests/test_lote_assentos.py` (auth dono, limite de lote, race de assento, carteirinha, compatibilidade sem assentos).
 
 **Achado da supervisão (importante, primeiro teste de concorrência real do sistema):** `test_dois_compradores_mesmo_assento_so_um_consegue` falhava — as duas threads conseguiam o mesmo assento — não porque o código de trava estivesse errado, mas porque a suíte inteira roda em SQLite em memória (`tests/test_api.py`, `StaticPool`), e o dialeto SQLite do SQLAlchemy **descarta silenciosamente a cláusula `FOR UPDATE`** (sem suporte a lock de linha). Rodado 5x contra Postgres real, a mesma lógica passa consistentemente — o código de produção está correto, só a verificação por SQLite não conseguia detectar isso (nem detectaria um bug de verdade, se houvesse). Corrigido: fixture `db_postgres_real` troca `get_db` temporariamente pra um Postgres real só durante esse teste (via `DATABASE_URL_TESTE_CONCORRENCIA`; pula com aviso se não configurada — nunca dá falsa confiança). CI (`ci.yml`) ganhou serviço Postgres pra essa variável ficar sempre disponível lá. Isso também expõe que a trava pré-existente de capacidade de lote (`reservar_vaga_lote`, usada há mais tempo) nunca tinha sido verificada sob concorrência real antes.
+
+### 2.13 Cursor Cloud Agent — ambiente de desenvolvimento (v1.37)
+
+Configuração versionada para agentes no **Cursor Cloud** (desenvolvimento e automação via branches `cursor/*`).
+
+| Artefato | Função |
+|----------|--------|
+| `.cursor/environment.json` | Schema oficial Cursor: `install`, `start` (Docker opcional), `terminals`, `ports` |
+| `.cursor/setup-cloud.sh` | Install idempotente no boot: `pip install -r requirements.txt`, `npm ci` em `frontend/`, cria `.env` e `frontend/.env.local` a partir dos exemplos se ausentes |
+| `AGENTS.md` | Instruções para agentes (comandos de teste, CI, secrets) |
+
+**Boot do ambiente:**
+
+1. `install` → `.cursor/setup-cloud.sh` (PATH inclui `$HOME/.local/bin` para `uvicorn`/`pytest`).
+2. `start` → inicia Docker se instalado (E2E com `docker-compose.e2e.yml`).
+3. Terminais padrão (tmux): API `python3 -m uvicorn app.main:app --reload` (`:8000`, SQLite + `ASAAS_DISABLED=true`) e web `npm run dev --prefix frontend` (`:3000`).
+
+**Dev local seguro (padrão do setup):** `.env` com `ENVIRONMENT=development`, `ASAAS_DISABLED=true`, `RATE_LIMIT_USE_REDIS=false`, `TICKET_EMAIL_USE_REDIS=false`; `frontend/.env.local` com `INTERNAL_API_URL=http://127.0.0.1:8000`. Secrets de produção (Asaas, SMTP, etc.) → aba **Secrets** do dashboard Cloud Agent, **não** commitar.
+
+**CI / PR automático:** pushes em `cursor/**` disparam `.github/workflows/ci.yml` e `.github/workflows/cursor-agent-pr.yml` (draft PR → `main`). Ver `docs/13-github-automacao.md`.
+
+**Commit de referência (tooling, não altera tip de produto §7):** `b8f6d57` — merge PR #73.
 
 ### 2.2 Conta de recebimento do organizador (modelo `baas` — alvo futuro)
 
@@ -308,14 +330,17 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (400 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (402 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
 | `e2e-asaas` | Checkout PIX/cartão mock Asaas |
 | `prod-compose` | `docker-compose.prod.yml` válido |
+| `cursor/**` | Mesmo `ci.yml` em push/PR; `cursor-agent-pr.yml` abre ou atualiza draft PR |
 
 Conectividade API real (produção): `scripts/test-asaas-connection.py`.
+
+**Cursor Cloud (dev agent):** `.cursor/environment.json` + `setup-cloud.sh` — ver §2.13.
 
 ### 2.8 Validação operacional (VPS — cobra de verdade)
 
@@ -587,9 +612,10 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (400 testes)
+- [x] `pytest` verde (402 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
+- [x] Cursor Cloud Agent: `.cursor/environment.json`, `.cursor/setup-cloud.sh`, `AGENTS.md` (§2.13 — v1.37)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 - [x] OpenAPI exportado sem paths `subconta` (`export-openapi.py` white-label)
 - [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
@@ -647,7 +673,8 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh` |
 | Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh` |
-| CI | `.github/workflows/ci.yml` |
+| CI | `.github/workflows/ci.yml`, `.github/workflows/cursor-agent-pr.yml` |
+| Cursor Cloud | `.cursor/environment.json`, `.cursor/setup-cloud.sh`, `AGENTS.md` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
 
 ---
@@ -720,7 +747,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.36 | 2026-08-01 | **Fix: e-mail obrigatório no PDV presencial.** Bug real: e-mail do participante era opcional na venda PDV e o envio de carteirinha era condicional (`if email:`) — diferente do checkout online (onde o e-mail é opcional só porque cai na conta logada do comprador), no PDV o ingresso vai pro `usuario_id` do organizador, sem conta de cliente associada, então sem e-mail o comprador não tinha nenhuma garantia de receber o ingresso. Corrigido: `vender_ingresso_pdv` e `PdvBody` agora exigem e-mail válido (mesma checagem leve `"@" not in email` de `lista_espera.py`), `enqueue_ticket_email` passou a ser chamado incondicionalmente após a venda, e a UI do PDV marca o campo como obrigatório. §2.12 atualizada. |
+| 1.37 | 2026-08-01 | **Cursor Cloud Agent — ambiente versionado** (`b8f6d57`, PR #73): `.cursor/environment.json`, `.cursor/setup-cloud.sh`, `AGENTS.md`. Spec §2.13; §2.7/§7/§8 atualizados. Cabeçalho/ponteiro §7 sincronizados com v1.36 (`4b18643`); contagem pytest **402** (v1.36 +2 testes PDV e-mail). Tip de produto permanece `4b18643` — mudança só de tooling/agent. |
+| 1.36 | 2026-08-01 | **Fix: e-mail obrigatório no PDV presencial.** Bug real: e-mail do participante era opcional na venda PDV e o envio de carteirinha era condicional (`if email:`) — diferente do checkout online (onde o e-mail é opcional só porque cai na conta logada do comprador), no PDV o ingresso vai pro `usuario_id` do organizador, sem conta de cliente associada, então sem e-mail o comprador não tinha nenhuma garantia de receber o ingresso. Corrigido: `vender_ingresso_pdv` e `PdvBody` agora exigem e-mail válido (mesma checagem leve `"@" not in email` de `lista_espera.py`), `enqueue_ticket_email` passou a ser chamado incondicionalmente após a venda, e a UI do PDV marca o campo como obrigatório. §2.12 atualizada. Testes: 400 → 402. |
 | 1.35 | 2026-07-31 | **PDV + assentos MVP mesclado no main**, após supervisão completa (migração, trava atômica, bypass de gateway, autorização — tudo confirmado correto). **Achado crítico da supervisão**: o teste de concorrência real (duas threads, mesmo assento) falhava não por bug de produção, mas porque toda a suíte roda em SQLite em memória e o dialeto SQLite descarta silenciosamente `FOR UPDATE` — rodado 5x contra Postgres real, a lógica passa sempre. Corrigido com um fixture que troca o banco pra Postgres real só nesse teste (`DATABASE_URL_TESTE_CONCORRENCIA`, pula com aviso se não configurada); CI ganhou serviço Postgres pra isso nunca mais passar despercebido. Revela que a trava de capacidade de lote pré-existente nunca tinha sido verificada sob concorrência real — este foi o primeiro teste desse tipo em todo o sistema. |
 | 1.34 | 2026-07-31 | **PDV presencial + assentos nomeados (MVP).** §2.12: venda presencial (`canal_venda=pdv`, sem Asaas/split); lotes com lista de assentos + select no checkout + claim FOR UPDATE; assento na carteirinha/relatórios. Migração `000048`. Testes: 390 → 400 (`test_pdv_presencial.py`, `test_lote_assentos.py`). Fora de escopo: maquininha, mapa visual, preços por setor. |
 | 1.33 | 2026-07-31 | **`/review` independente — build aprovada.** Revalidou tip `a32b948` / 390 testes: L1–L5 PASS; §2.9–§2.11 PASS; restos L4/L5 confirmados fechados no código e no corpo da spec. Atualizou §11 (tabelas v1.31 que ainda diziam FAIL) e tip de deploy §7 → `a32b948`. Sem correções novas para `/build`. Ops §2.8 A–C seguem `[ ]`. |
