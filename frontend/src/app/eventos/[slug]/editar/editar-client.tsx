@@ -70,6 +70,7 @@ export function EditarEventoClient({ slug }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nomeParaSlug, setNomeParaSlug] = useState("");
+  const [formDataInicio, setFormDataInicio] = useState("");
   const [origin, setOrigin] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
   const [galeriaUrls, setGaleriaUrls] = useState<string[]>([]);
@@ -170,6 +171,7 @@ export function EditarEventoClient({ slug }: Props) {
         if (!cancelled) {
           setEvento(ev);
           setNomeParaSlug(ev.nome);
+          setFormDataInicio(isoToDatetimeLocalValue(ev.data_inicio));
           setImagemUrl(ev.imagem_url ?? "");
           setGaleriaUrls((ev.galeria_urls ?? []).filter(Boolean).slice(0, 6));
           setClassificacaoEtaria(ev.classificacao_etaria ?? "");
@@ -340,7 +342,7 @@ export function EditarEventoClient({ slug }: Props) {
   const checklistProps = {
     nome: nomeParaSlug,
     descricao: evento.descricao,
-    dataInicio: isoToDatetimeLocalValue(evento.data_inicio),
+    dataInicio: formDataInicio,
     local: evento.local,
     imagemUrl,
     modoSimples: false,
@@ -459,7 +461,8 @@ export function EditarEventoClient({ slug }: Props) {
                 type="datetime-local"
                 step={60}
                 required
-                defaultValue={isoToDatetimeLocalValue(evento.data_inicio)}
+                value={formDataInicio}
+                onChange={(e) => setFormDataInicio(e.target.value)}
               />
               <p className="text-xs text-zinc-500">
                 Sem horário de fim: o evento pode durar várias horas (show, feijoada, etc.).
