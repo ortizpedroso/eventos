@@ -27,6 +27,10 @@ export type LoteFormRow = {
   ativo: boolean;
   vendas_inicio: string;
   vendas_fim: string;
+  /** Texto "A1, A2, B1" — opcional (assentos nomeados MVP). */
+  assentos: string;
+  /** Só leitura — assentos já vendidos/ocupados (painel do organizador). */
+  assentos_ocupados?: string[];
 };
 
 export function defaultLoteRows(precoInicial?: string): LoteFormRow[] {
@@ -41,6 +45,7 @@ export function defaultLoteRows(precoInicial?: string): LoteFormRow[] {
       ativo: true,
       vendas_inicio: "",
       vendas_fim: "",
+      assentos: "",
     },
   ];
 }
@@ -60,6 +65,8 @@ export function eventoLotesToRows(ev: Evento): LoteFormRow[] {
         ativo: l.ativo,
         vendas_inicio: l.vendas_inicio ? isoToDatetimeLocalValue(l.vendas_inicio) : "",
         vendas_fim: l.vendas_fim ? isoToDatetimeLocalValue(l.vendas_fim) : "",
+        assentos: (l.assentos && l.assentos.length > 0 ? l.assentos.join(", ") : "") || "",
+        assentos_ocupados: l.assentos_ocupados?.length ? [...l.assentos_ocupados] : undefined,
       }));
   }
   return defaultLoteRows(moedaBrlFromNumber(ev.preco_ingresso ?? 49.9));
@@ -75,6 +82,7 @@ export type IngressoLotePayload = {
   ativo: boolean;
   vendas_inicio: string | null;
   vendas_fim: string | null;
+  assentos: string | null;
 };
 
 /** Converte linhas do formulário para o JSON da API (datas ISO ou null). */
@@ -85,6 +93,7 @@ export function lotesRowsToApiPayload(rows: LoteFormRow[]): IngressoLotePayload[
     const ordem = Number.isFinite(r.ordem) ? r.ordem : idx + 1;
     const vi = r.vendas_inicio.trim();
     const vf = r.vendas_fim.trim();
+    const assentosTxt = (r.assentos || "").trim();
     const base: IngressoLotePayload = {
       nome: r.nome.trim() || `Lote ${idx + 1}`,
       tipo: r.tipo,
@@ -94,6 +103,7 @@ export function lotesRowsToApiPayload(rows: LoteFormRow[]): IngressoLotePayload[
       ativo: r.ativo,
       vendas_inicio: vi ? new Date(vi).toISOString() : null,
       vendas_fim: vf ? new Date(vf).toISOString() : null,
+      assentos: assentosTxt || null,
     };
     if (r.id) {
       return { ...base, id: r.id };
@@ -134,6 +144,7 @@ function loteGratuitoPadrao(nome = "Ingresso gratuito"): LoteFormRow {
     ativo: true,
     vendas_inicio: "",
     vendas_fim: "",
+    assentos: "",
   };
 }
 
@@ -173,6 +184,7 @@ export function EventoLotesEditor({ rows, onChange, className = "", showCalculad
         ativo: true,
         vendas_inicio: "",
         vendas_fim: "",
+        assentos: "",
       },
     ]);
   }
@@ -342,6 +354,22 @@ export function EventoLotesEditor({ rows, onChange, className = "", showCalculad
                   value={row.vendas_fim}
                   onChange={(e) => setRow(i, { vendas_fim: e.target.value })}
                 />
+              </label>
+              <label className="grid gap-0.5 text-xs font-medium text-zinc-700 sm:col-span-2 lg:col-span-4">
+                Assentos / lugares (opcional)
+                <input
+                  className={cell}
+                  value={row.assentos}
+                  onChange={(e) => setRow(i, { assentos: e.target.value })}
+                  placeholder="Ex.: A1, A2, A3, B1, B2"
+                />
+                <span className="font-normal text-zinc-500">
+                  Separe por vírgula. Se preenchido, o comprador escolhe um assento disponível no
+                  checkout (1 por compra). Deixe vazio para vender só por quantidade.
+                  {row.assentos_ocupados && row.assentos_ocupados.length > 0 ? (
+                    <> Já vendidos/ocupados: {row.assentos_ocupados.join(", ")}.</>
+                  ) : null}
+                </span>
               </label>
             </div>
           </div>

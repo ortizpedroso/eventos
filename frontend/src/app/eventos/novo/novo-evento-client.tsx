@@ -190,6 +190,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
             ativo: true,
             vendas_inicio: "",
             vendas_fim: "",
+            assentos: "",
           },
         ];
       } else {
@@ -203,6 +204,7 @@ export function NovoEventoForm({ variant = "standalone" }: Props) {
             ativo: true,
             vendas_inicio: "",
             vendas_fim: "",
+            assentos: "",
           },
         ];
       }

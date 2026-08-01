@@ -19,7 +19,6 @@ from app.services.evento_repasse import (
 )
 from app.services.ingresso_lotes import (
     motivo_lote_indisponivel,
-    reservar_vaga_lote,
     resolver_lote_compra,
     resolver_lote_por_id,
 )
@@ -64,6 +63,18 @@ class CriarPagamentoRequest(BaseModel):
     token_espera: str | None = Field(default=None, max_length=128)
     # Código de divulgador (?ref=) — só atribuição; sem comissão nesta fase.
     ref: str | None = Field(default=None, max_length=32)
+    # Assento nomeado do lote (MVP) — obrigatório se o lote tiver assentos cadastrados.
+    assento: str | None = Field(default=None, max_length=40)
+
+    @field_validator("assento", mode="before")
+    @classmethod
+    def _strip_assento(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s or None
+        return v
 
     @field_validator("participante_nome", mode="before")
     @classmethod
@@ -310,15 +321,27 @@ async def criar_pagamento(
     promoter_id = promoter.id if promoter else None
     promoter_codigo = promoter.codigo if promoter else None
 
+    from app.services.lote_assentos import lote_usa_assentos, reservar_vaga_e_assento
+
+    assento_req = (body.assento or "").strip() or None
+
     def _ingressos_gratis(fake_prefix: str = "cortesia") -> dict:
         agora = datetime.now(timezone.utc).replace(tzinfo=None)
         ids: list[str] = []
+        try:
+            _, assento_codigo = reservar_vaga_e_assento(
+                db, lote.id, quantidade=quantidade, assento=assento_req
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
         for _ in range(quantidade):
             fake_ref = f"{fake_prefix}_{uuid.uuid4().hex}"
             novo = Ingresso(
                 evento_id=evento.id,
                 usuario_id=usuario_atual.id,
                 lote_id=lote.id,
+                assento=assento_codigo,
+                canal_venda="online",
                 participante_nome=pn,
                 participante_email=pe,
                 participante_cpf=p_cpf,
@@ -350,6 +373,7 @@ async def criar_pagamento(
             "ingresso_ids": ids,
             "quantidade": quantidade,
             "cortesia": eh_cortesia,
+            "assento": assento_codigo,
         }
         if fake_prefix == "disabled":
             resp["payments_disabled"] = True
@@ -394,9 +418,16 @@ async def criar_pagamento(
             detail="Pagamentos temporariamente indisponíveis. Contate o suporte.",
         )
 
-    # ── Reserva de vaga ───────────────────────────────────────────────────
+    # ── Reserva de vaga (+ assento nomeado, se o lote tiver) ─────────────
+    if lote_usa_assentos(lote) and quantidade != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Com assentos nomeados, compre 1 ingresso por vez.",
+        )
     try:
-        reservar_vaga_lote(db, lote.id, quantidade)
+        _, assento_codigo = reservar_vaga_e_assento(
+            db, lote.id, quantidade=quantidade, assento=assento_req
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -408,6 +439,8 @@ async def criar_pagamento(
             evento_id=evento.id,
             usuario_id=usuario_atual.id,
             lote_id=lote.id,
+            assento=assento_codigo,
+            canal_venda="online",
             participante_nome=pn,
             participante_email=pe,
             participante_cpf=p_cpf,

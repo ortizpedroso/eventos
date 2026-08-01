@@ -158,6 +158,7 @@ export default function IngressoDetalhePage() {
       const partEmail = escHtml(ingresso.participante_email || "—");
       const evData = escHtml(ingresso.evento.data || "—");
       const evLocal = escHtml(ingresso.evento.local || "—");
+      const assentoTxt = ingresso.assento ? escHtml(ingresso.assento) : "";
       const statusTxt = escHtml((ingresso.status || "").toUpperCase());
       const codigoHtml = codigo
         ? `<p style="text-align:center;margin:14px 0 0;font-size:14px;color:#18181b">
@@ -171,6 +172,9 @@ export default function IngressoDetalhePage() {
             ${codigoHtml}
             <p style="margin:10px 0 0;font-size:12px;color:#71717a">Apresente este QR ou o código na entrada do evento.</p>
           </div>`
+        : "";
+      const assentoHtml = assentoTxt
+        ? `<p><strong>Assento:</strong> ${assentoTxt}</p>`
         : "";
 
       const html = `<!DOCTYPE html>
@@ -204,6 +208,7 @@ export default function IngressoDetalhePage() {
       <p><strong>E-mail:</strong> ${partEmail}</p>
       <p><strong>Data:</strong> ${evData}</p>
       <p><strong>Local:</strong> ${evLocal}</p>
+      ${assentoHtml}
       ${qrHtml}
       <div class="status">${statusTxt}</div>
     </div>
@@ -367,6 +372,7 @@ export default function IngressoDetalhePage() {
       <p className="text-sm text-zinc-600">
         <strong>{ingresso.evento.nome}</strong>
         {ingresso.participante_nome ? ` · ${ingresso.participante_nome}` : ""}
+        {ingresso.assento ? ` · Assento ${ingresso.assento}` : ""}
         {" · "}
         {labelStatusIngresso(ingresso.status)}
       </p>

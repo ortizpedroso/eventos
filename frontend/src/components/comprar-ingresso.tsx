@@ -91,6 +91,7 @@ export function ComprarIngresso({
 }: Props) {
   const searchParams = useSearchParams();
   const [quantidade, setQuantidade] = useState(1);
+  const [assentoSelecionado, setAssentoSelecionado] = useState("");
 
   const lotesElegiveis = useMemo(
     () =>
@@ -115,8 +116,17 @@ export function ComprarIngresso({
     [lotesElegiveis, loteSelecionadoId],
   );
 
+  const usaAssentos = Boolean(loteAtual?.assentos && loteAtual.assentos.length > 0);
+  const assentosDisponiveis = loteAtual?.assentos_disponiveis ?? [];
+
+  useEffect(() => {
+    setAssentoSelecionado("");
+    if (usaAssentos) setQuantidade(1);
+  }, [loteSelecionadoId, usaAssentos]);
+
   const precoUnitario = loteAtual?.preco ?? precoIngresso;
   const maxQuantidade = useMemo(() => {
+    if (usaAssentos) return 1;
     let max = 10;
     if (limiteIngressosPorCpf && limiteIngressosPorCpf >= 1) {
       max = Math.min(max, limiteIngressosPorCpf);
@@ -126,7 +136,7 @@ export function ComprarIngresso({
       max = Math.min(max, restantes || 1);
     }
     return Math.max(1, max);
-  }, [limiteIngressosPorCpf, loteAtual]);
+  }, [limiteIngressosPorCpf, loteAtual, usaAssentos]);
 
   const totalConfirmados = useMemo(
     () => ingressoLotes.reduce((acc, l) => acc + (l.vendidos ?? 0), 0),
@@ -467,12 +477,20 @@ export function ComprarIngresso({
       return;
     }
 
+    if (usaAssentos && !assentoSelecionado.trim()) {
+      setError("Escolha um assento disponível.");
+      return;
+    }
+
     const body: Record<string, unknown> = {
       evento_id: eventoId,
       valor_centavos,
-      quantidade,
+      quantidade: usaAssentos ? 1 : quantidade,
     };
     if (loteSelecionadoId) body.lote_id = loteSelecionadoId;
+    if (usaAssentos && assentoSelecionado.trim()) {
+      body.assento = assentoSelecionado.trim();
+    }
     if (!mesmoPagador) {
       body.participante_nome = participanteNome.trim();
       body.participante_email = participanteEmail.trim();
@@ -691,7 +709,32 @@ export function ComprarIngresso({
             </div>
           ) : null}
 
-          {maxQuantidade > 1 ? (
+          {usaAssentos ? (
+            <div>
+              <label htmlFor="assento-ingresso" className="text-xs font-medium text-zinc-700">
+                Assento / lugar
+              </label>
+              <select
+                id="assento-ingresso"
+                value={assentoSelecionado}
+                onChange={(e) => {
+                  setAssentoSelecionado(e.target.value);
+                  setError(null);
+                }}
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-2 text-sm"
+              >
+                <option value="">Selecione um assento</option>
+                {assentosDisponiveis.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+              {assentosDisponiveis.length === 0 ? (
+                <p className="mt-1 text-xs text-amber-700">Nenhum assento disponível neste lote.</p>
+              ) : null}
+            </div>
+          ) : maxQuantidade > 1 ? (
             <div>
               <label htmlFor="qtd-ingressos" className="text-xs font-medium text-zinc-700">
                 Quantidade

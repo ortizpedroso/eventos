@@ -52,6 +52,7 @@ async def qr_preview_publico(c: str, db: Session = Depends(get_db)):
             "local": ev.local,
         },
         "participante_nome": ingresso.participante_nome,
+        "assento": getattr(ingresso, "assento", None) or None,
     }
 
 
@@ -83,6 +84,7 @@ async def listar_meus_ingressos(
             "participante_email": ingresso.participante_email,
             "participante_cpf": mask_cpf(ingresso.participante_cpf),
             "participante_telefone": mask_telefone_br(ingresso.participante_telefone),
+            "assento": getattr(ingresso, "assento", None) or None,
             "valor": ingresso.valor,
             "status": ingresso.status,
             "data_compra": ingresso.data_compra,
@@ -268,6 +270,7 @@ async def download_ingresso(
                 <p><strong>Email:</strong> {part_email}</p>
                 <p><strong>Data:</strong> {ev_data}</p>
                 <p><strong>Local:</strong> {ev_local}</p>
+                {f'<p><strong>Assento:</strong> {esc(ingresso.assento)}</p>' if (ingresso.assento or "").strip() else ""}
                 {qr_block}
                 <div class="status">{status_txt}</div>
             </div>

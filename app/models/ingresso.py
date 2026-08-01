@@ -34,6 +34,11 @@ class Ingresso(Base):
     valor_cobrado = Column(Float, nullable=True)
 
     lote_id = Column(String, ForeignKey("evento_ingresso_lotes.id"), nullable=True, index=True)
+    # Assento nomeado do lote (MVP — não é mapa visual).
+    assento = Column(String(40), nullable=True)
+    # online (checkout) | pdv (venda presencial manual)
+    canal_venda = Column(String(20), nullable=False, default="online")
+    forma_pagamento_pdv = Column(String(40), nullable=True)
     cupom_id = Column(String, ForeignKey("evento_cupons.id", ondelete="SET NULL"), nullable=True)
     cortesia_responsavel = Column(String(200), nullable=True)
 

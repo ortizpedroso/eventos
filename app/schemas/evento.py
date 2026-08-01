@@ -29,11 +29,22 @@ class IngressoLoteWrite(BaseModel):
     ativo: bool = True
     vendas_inicio: datetime | None = None
     vendas_fim: datetime | None = None
+    # Texto "A1, A2, B1" ou lista — opcional (MVP assentos nomeados).
+    assentos: str | list[str] | None = None
 
     @field_validator("tipo", mode="before")
     @classmethod
     def _tipo_lote(cls, v: object) -> str:
         return normalizar_tipo_ingresso(str(v) if v is not None else TIPO_PADRAO)
+
+    @field_validator("assentos", mode="before")
+    @classmethod
+    def _assentos_lote(cls, v: object) -> str | None:
+        from app.utils.lote_assentos import normalizar_assentos_campo
+
+        if v is None or v == "":
+            return None
+        return normalizar_assentos_campo(v)  # type: ignore[arg-type]
 
     @model_validator(mode="after")
     def _preco_por_tipo(self):
@@ -61,6 +72,10 @@ class IngressoLoteResponse(BaseModel):
     vendas_fim: datetime | None
     vendidos: int = 0
     elegivel_compra: bool = False
+    # Assentos nomeados (MVP): lista configurada + disponibilidade.
+    assentos: list[str] = Field(default_factory=list)
+    assentos_disponiveis: list[str] = Field(default_factory=list)
+    assentos_ocupados: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -250,8 +265,13 @@ def montar_evento_response(
     if ocupacao_por_lote is None:
         ocupacao_por_lote = contar_ocupacao_por_lotes(db, [l.id for l in lotes_orm])
     agora = agora_utc_naive()
+    from app.services.lote_assentos import assentos_disponiveis, assentos_do_lote, assentos_ocupados
+
     lotes_out: list[IngressoLoteResponse] = []
     for l in lotes_orm:
+        cfg = assentos_do_lote(l)
+        occ_assentos = sorted(assentos_ocupados(db, l.id)) if cfg else []
+        disp = assentos_disponiveis(db, l) if cfg else []
         lotes_out.append(
             IngressoLoteResponse(
                 id=l.id,
@@ -265,6 +285,9 @@ def montar_evento_response(
                 vendas_fim=l.vendas_fim,
                 vendidos=ocupacao_por_lote.get(l.id, 0),
                 elegivel_compra=lote_elegivel_compra(db, l, agora, ocupacao_por_lote=ocupacao_por_lote),
+                assentos=cfg,
+                assentos_disponiveis=disp,
+                assentos_ocupados=occ_assentos,
             )
         )
     cur = resolver_lote_compra(db, evento, ocupacao_por_lote=ocupacao_por_lote)

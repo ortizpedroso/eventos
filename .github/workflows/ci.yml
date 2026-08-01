@@ -18,6 +18,19 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 5
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: eventos_ci_concorrencia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,6 +43,11 @@ jobs:
         run: python -m pytest tests/ -q --tb=short
         env:
           REDIS_URL: redis://localhost:6379/0
+          # Postgres real necessário só pro teste de concorrência de assentos
+          # (test_dois_compradores_mesmo_assento_so_um_consegue) — SQLite (usado
+          # no resto da suíte) não suporta SELECT FOR UPDATE de verdade, então
+          # sem isso o teste pula (skip) em vez de dar falsa confiança.
+          DATABASE_URL_TESTE_CONCORRENCIA: postgresql://postgres:postgres@localhost:5432/eventos_ci_concorrencia
 
   web:
     runs-on: ubuntu-latest

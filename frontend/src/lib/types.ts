@@ -12,6 +12,10 @@ export type IngressoLote = {
   vendas_fim: string | null;
   vendidos: number;
   elegivel_compra?: boolean;
+  /** Assentos nomeados do lote (MVP). Vazio = compra só por quantidade. */
+  assentos?: string[];
+  assentos_disponiveis?: string[];
+  assentos_ocupados?: string[];
 };
 
 export type Evento = {
@@ -139,6 +143,8 @@ export type IngressoListItem = {
   };
   participante_nome: string | null;
   participante_email: string | null;
+  /** Assento nomeado do lote (MVP), quando houver. */
+  assento?: string | null;
   valor: number;
   status: string;
   data_compra: string;

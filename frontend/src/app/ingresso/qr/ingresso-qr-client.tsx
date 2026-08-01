@@ -11,6 +11,7 @@ type QrPreview = {
   status: string;
   evento: { nome: string; data: string | null; local: string };
   participante_nome: string | null;
+  assento?: string | null;
 };
 
 export function IngressoQrClient() {
@@ -81,6 +82,9 @@ export function IngressoQrClient() {
         </h1>
         {preview?.participante_nome ? (
           <p className="mt-2 text-sm font-medium text-zinc-800">{preview.participante_nome}</p>
+        ) : null}
+        {preview?.assento ? (
+          <p className="mt-1 text-sm font-medium text-zinc-800">Assento {preview.assento}</p>
         ) : null}
         {dataFmt || preview?.evento.local ? (
           <p className="mt-1 text-sm text-zinc-600">

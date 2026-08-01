@@ -390,6 +390,12 @@ export function OrganizadorEventosClient() {
                     >
                       Editar
                     </Link>
+                    <Link
+                      href={`/organizador/eventos/${e.id}/pdv`}
+                      className="btn-outline flex-1 px-3 py-2 text-center text-sm sm:flex-none"
+                    >
+                      PDV
+                    </Link>
                     <button
                       type="button"
                       disabled={actionBusyId === e.id}

@@ -92,6 +92,7 @@ def _send_sync(ingresso_id: str) -> bool:
             data_local_fmt=data_local_fmt,
             local=ingresso.evento.local,
             participante_nome=ingresso.participante_nome,
+            assento=getattr(ingresso, "assento", None),
         )
         qr_cid = "ingresso_qr"
         html = _build_html(ingresso, qr_cid, db)
