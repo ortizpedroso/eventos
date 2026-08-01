@@ -27,24 +27,6 @@ const REPASSE_EMPTY: RepasseForm = {
   data_nascimento: "",
 };
 
-function escHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  const buf = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let binary = "";
-  bytes.forEach((b) => {
-    binary += String.fromCharCode(b);
-  });
-  return btoa(binary);
-}
-
 export default function IngressoDetalhePage() {
   const params = useParams();
   const ingressoId =
@@ -103,7 +85,7 @@ export default function IngressoDetalhePage() {
     void (async () => {
       try {
         const base = getApiBaseUrl();
-        const res = await fetch(`${base}/api/ingressos/${ingressoId}/qr`, {
+        const res = await fetch(`${base}/api/ingressos/${ingressoId}/carteirinha`, {
           credentials: "include",
           cache: "no-store",
         });
@@ -134,120 +116,7 @@ export default function IngressoDetalhePage() {
     }
   }
 
-  async function openDownloadPdf() {
-    if (!ingresso || !ingressoId) return;
-    setMessage("");
-
-    try {
-      let qrB64 = "";
-      const st = (ingresso.status || "").toLowerCase();
-      if (st === "pago" || st === "usado") {
-        const base = getApiBaseUrl();
-        const res = await fetch(`${base}/api/ingressos/${ingressoId}/qr`, {
-          credentials: "include",
-          cache: "no-store",
-        });
-        if (res.ok) {
-          qrB64 = await blobToBase64(await res.blob());
-        }
-      }
-
-      const codigo = ingresso.codigo_checkin ?? "";
-      const evNome = escHtml(ingresso.evento.nome);
-      const partNome = escHtml(ingresso.participante_nome || "—");
-      const partEmail = escHtml(ingresso.participante_email || "—");
-      const evData = escHtml(ingresso.evento.data || "—");
-      const evLocal = escHtml(ingresso.evento.local || "—");
-      const assentoTxt = ingresso.assento ? escHtml(ingresso.assento) : "";
-      const statusTxt = escHtml((ingresso.status || "").toUpperCase());
-      const codigoHtml = codigo
-        ? `<p style="text-align:center;margin:14px 0 0;font-size:14px;color:#18181b">
-            <strong>Código para digitar na portaria</strong><br/>
-            <span style="display:inline-block;margin-top:8px;padding:10px 12px;background:#fff;border:1px solid #d4d4d8;border-radius:8px;font-family:monospace;font-size:13px;font-weight:600;color:#18181b;word-break:break-all">${escHtml(codigo)}</span>
-          </p>`
-        : "";
-      const qrHtml = qrB64
-        ? `<div style="text-align:center;margin:20px 0;padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px">
-            <img src="data:image/png;base64,${qrB64}" width="240" height="240" alt="QR Code do ingresso" style="display:block;margin:0 auto"/>
-            ${codigoHtml}
-            <p style="margin:10px 0 0;font-size:12px;color:#71717a">Apresente este QR ou o código na entrada do evento.</p>
-          </div>`
-        : "";
-      const assentoHtml = assentoTxt
-        ? `<p><strong>Assento:</strong> ${assentoTxt}</p>`
-        : "";
-
-      const html = `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8"/>
-  <title>Ingresso - ${evNome}</title>
-  <style>
-    body { font-family: sans-serif; padding: 40px; color: #333; }
-    .ticket { border: 2px dashed #10b981; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 12px; }
-    .header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
-    .header h2 { margin: 0; color: #047857; }
-    .details p { margin: 10px 0; font-size: 16px; }
-    .status { display: inline-block; padding: 4px 12px; background: #d1fae5; color: #047857; border-radius: 999px; font-weight: bold; font-size: 14px; margin-top: 15px; }
-    @media print { body { padding: 0; } .no-print { display: none; } }
-  </style>
-</head>
-<body>
-  <div class="no-print" style="text-align:center;margin-bottom:30px">
-    <button type="button" id="btn-imprimir" style="padding:12px 24px;font-size:16px;cursor:pointer;background:#10b981;color:#fff;border:none;border-radius:8px;font-weight:bold">
-      Imprimir ou Salvar como PDF
-    </button>
-  </div>
-  <div class="ticket">
-    <div class="header">
-      <h2>${evNome}</h2>
-      <p style="margin-top:5px;color:#666">Ingresso Oficial</p>
-    </div>
-    <div class="details">
-      <p><strong>Participante:</strong> ${partNome}</p>
-      <p><strong>E-mail:</strong> ${partEmail}</p>
-      <p><strong>Data:</strong> ${evData}</p>
-      <p><strong>Local:</strong> ${evLocal}</p>
-      ${assentoHtml}
-      ${qrHtml}
-      <div class="status">${statusTxt}</div>
-    </div>
-  </div>
-  <script>
-    (function () {
-      function imprimir() { window.print(); }
-      var btn = document.getElementById("btn-imprimir");
-      if (btn) btn.addEventListener("click", imprimir);
-      window.addEventListener("load", function () {
-        window.setTimeout(imprimir, 400);
-      });
-    })();
-  </script>
-</body>
-</html>`;
-
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      // Sem noopener: precisamos da referência para chamar print() no gesto do clique
-      // (navegadores bloqueiam window.print() automático sem interação do utilizador).
-      const w = window.open(url, "_blank");
-      if (!w) {
-        setMessage("Permita pop-ups para abrir o ingresso numa nova janela.");
-      } else {
-        window.setTimeout(() => {
-          try {
-            w.focus();
-            w.print();
-          } catch {
-            /* o botão na página do ingresso continua disponível */
-          }
-        }, 400);
-      }
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
-      setMessage("Não foi possível abrir o ingresso para impressão.");
-    }
-  }
+  const downloadHref = `${getApiBaseUrl()}/api/ingressos/${ingressoId}/download`;
 
   const handleSendEmail = async (e: FormEvent) => {
     e.preventDefault();
@@ -409,16 +278,15 @@ export default function IngressoDetalhePage() {
             Cada ingresso tem um código diferente. Na portaria, o organizador valida uma única vez.
           </p>
           {qrUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- QR Code dinâmico (blob/data URI), sem ganho de next/image
+            // eslint-disable-next-line @next/next/no-img-element -- carteirinha dinâmica (blob), sem ganho de next/image
             <img
               src={qrUrl}
-              alt="QR Code do ingresso para entrada"
-              width={220}
-              height={220}
-              className="mx-auto mt-4 rounded-lg border border-white bg-white p-2 shadow-sm"
+              alt="Carteirinha do ingresso para entrada, com QR Code"
+              width={260}
+              className="mx-auto mt-4 h-auto rounded-lg border border-white bg-white p-2 shadow-sm"
             />
           ) : (
-            <p className="mt-4 text-sm text-zinc-600">A carregar QR Code…</p>
+            <p className="mt-4 text-sm text-zinc-600">A carregar carteirinha…</p>
           )}
           {ingresso.codigo_checkin ? (
             <div className="mx-auto mt-4 max-w-md rounded-lg border border-emerald-200 bg-white p-4 text-left">
@@ -470,13 +338,14 @@ export default function IngressoDetalhePage() {
             navegador).
           </p>
 
-          <button
-            type="button"
-            onClick={() => void openDownloadPdf()}
+          <a
+            href={downloadHref}
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-auto w-full rounded-lg bg-emerald-600 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
           >
             Gerar vista para impressão / PDF
-          </button>
+          </a>
         </div>
 
         <div className="flex flex-col items-start rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">

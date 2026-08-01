@@ -47,7 +47,7 @@ export function CheckoutConfirmacaoIngresso({
       try {
         const base = getApiBaseUrl();
         const [resQr, resCodigo] = await Promise.all([
-          fetch(`${base}/api/ingressos/${ingressoId}/qr`, {
+          fetch(`${base}/api/ingressos/${ingressoId}/carteirinha`, {
             credentials: "include",
             cache: "no-store",
           }),
@@ -126,8 +126,8 @@ export function CheckoutConfirmacaoIngresso({
 
       {qrUrl ? (
         <div className="checkout-qr-fade mx-auto inline-block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrUrl} alt="QR Code do ingresso" width={240} height={240} className="mx-auto" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- carteirinha (blob), sem ganho de next/image */}
+          <img src={qrUrl} alt="Carteirinha do ingresso, com QR Code" width={260} className="mx-auto h-auto" />
           {codigoCheckin ? (
             <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-left">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">

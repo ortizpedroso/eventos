@@ -11,7 +11,7 @@ import re
 from app.models import Ingresso, Usuario, Evento, get_db
 from app.routes.auth import get_usuario_atual
 from app.services.ingresso_checkin import codigo_checkin
-from app.services.ingresso_qr import gerar_qr_png_bytes, ingresso_qr_payload
+from app.services.ingresso_qr import gerar_qr_png_bytes, ingresso_qr_payload, montar_carteirinha_ingresso_bytes
 from app.services.ticket_email import enqueue_ticket_email
 from app.utils.cpf import cpf_valido
 from app.utils.html_escape import esc
@@ -192,14 +192,14 @@ async def download_ingresso(
     if not ingresso:
         raise HTTPException(status_code=404, detail="Ingresso não encontrado")
 
-    qr_b64 = ""
+    carteirinha_b64 = ""
     if (ingresso.status or "").lower() in ("pago", "usado"):
         import base64
 
-        qr_b64 = base64.b64encode(gerar_qr_png_bytes(ingresso.id)).decode("ascii")
+        carteirinha_b64 = base64.b64encode(montar_carteirinha_ingresso_bytes(ingresso)).decode("ascii")
 
     codigo_portaria = ""
-    if qr_b64:
+    if carteirinha_b64:
         codigo_txt = esc(ingresso_qr_payload(ingresso.id))
         codigo_portaria = (
             f'<p style="text-align:center;margin:14px 0 0;font-size:14px;color:#18181b">'
@@ -207,13 +207,15 @@ async def download_ingresso(
             f'<span style="display:inline-block;margin-top:8px;padding:10px 12px;background:#fff;border:1px solid #d4d4d8;border-radius:8px;'
             f'font-family:monospace;font-size:13px;font-weight:600;color:#18181b;word-break:break-all">{codigo_txt}</span></p>'
         )
+    # Mesma carteirinha usada no e-mail (gerar_ticket_card_png_bytes) — evita ter um
+    # formato de ingresso diferente pra impressão vs. e-mail.
     qr_block = (
         f'<div style="text-align:center;margin:20px 0;padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px">'
-        f'<img src="data:image/png;base64,{qr_b64}" width="240" height="240" alt="QR Code do ingresso" style="display:block;margin:0 auto"/>'
+        f'<img src="data:image/png;base64,{carteirinha_b64}" alt="Carteirinha do ingresso" style="display:block;margin:0 auto;max-width:100%;height:auto;border-radius:8px"/>'
         f"{codigo_portaria}"
-        f'<p style="margin:10px 0 0;font-size:12px;color:#71717a">Apresente este QR ou o código na entrada do evento.</p>'
+        f'<p style="margin:10px 0 0;font-size:12px;color:#71717a">Apresente esta carteirinha (ou o código acima) na entrada do evento.</p>'
         f"</div>"
-        if qr_b64
+        if carteirinha_b64
         else ""
     )
 
@@ -330,6 +332,28 @@ async def qr_ingresso(
             detail="QR disponível apenas para ingressos confirmados (pagos ou já utilizados na entrada).",
         )
     return Response(content=gerar_qr_png_bytes(ingresso.id), media_type="image/png")
+
+
+@router.get("/{ingresso_id}/carteirinha")
+async def carteirinha_ingresso(
+    ingresso_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """PNG da carteirinha do ingresso — mesma imagem enviada por e-mail (nome,
+    evento, data, local e QR numa imagem só), usada pra exibição/impressão na conta."""
+    ingresso = db.query(Ingresso).filter(
+        Ingresso.id == ingresso_id,
+        Ingresso.usuario_id == usuario_atual.id,
+    ).first()
+    if not ingresso:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+    if (ingresso.status or "").lower() not in ("pago", "usado"):
+        raise HTTPException(
+            status_code=400,
+            detail="Carteirinha disponível apenas para ingressos confirmados (pagos ou já utilizados na entrada).",
+        )
+    return Response(content=montar_carteirinha_ingresso_bytes(ingresso), media_type="image/png")
 
 
 @router.post("/{ingresso_id}/enviar-email")

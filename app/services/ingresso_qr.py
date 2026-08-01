@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import base64
 import io
+from typing import TYPE_CHECKING
 from urllib.parse import quote
 
 from app.services.ingresso_checkin import ingresso_qr_payload as codigo_portaria_payload
 from config.settings import settings
+
+if TYPE_CHECKING:
+    from app.models import Ingresso
 
 
 def ingresso_qr_payload(ingresso_id: str) -> str:
@@ -169,3 +173,22 @@ def gerar_ticket_card_png_bytes(
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
     return buf.getvalue()
+
+
+def montar_carteirinha_ingresso_bytes(ingresso: "Ingresso") -> bytes:
+    """Carteirinha padrão do ingresso — usada tanto no e-mail quanto na tela de
+    impressão/conta, pra evitar dois formatos visuais diferentes pro mesmo ingresso."""
+    evento = ingresso.evento
+    data_local_fmt = (
+        evento.data_inicio.strftime("%d/%m/%Y às %H:%M")
+        if getattr(evento, "data_inicio", None)
+        else "Data a confirmar"
+    )
+    return gerar_ticket_card_png_bytes(
+        ingresso_id=ingresso.id,
+        evento_nome=evento.nome,
+        data_local_fmt=data_local_fmt,
+        local=evento.local,
+        participante_nome=ingresso.participante_nome,
+        assento=getattr(ingresso, "assento", None),
+    )

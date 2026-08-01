@@ -14,8 +14,9 @@ from sqlalchemy.orm import Session, joinedload
 from app.models import Evento, Ingresso
 from app.utils.html_escape import esc
 from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
-from app.services.ingresso_qr import gerar_ticket_card_png_bytes, ingresso_qr_payload
+from app.services.ingresso_qr import ingresso_qr_payload, montar_carteirinha_ingresso_bytes
 from app.services.redis_conn import get_redis_optional
+from app.services.senha_definir import gerar_link_definir_senha
 from config.database import SessionLocal
 from config.settings import settings
 
@@ -35,14 +36,30 @@ _stop_worker = threading.Event()
 from app.services.smtp_client import format_from_header_branded, send_prebuilt_message, smtp_configured
 
 
-def _build_html(ingresso: Ingresso, qr_cid: str, db) -> str:
+def _build_html(ingresso: Ingresso, qr_cid: str, db: Session) -> str:
     evento = ingresso.evento
     branding = get_email_branding(db)
     valor_fmt = f"{ingresso.valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
-    link = f"{base}/conta/ingressos/{ingresso.id}"
     org = getattr(evento, "organizador", None)
     org_name = (org.brand_name or org.nome) if org else None
+
+    dono = getattr(ingresso, "usuario", None)
+    if dono is not None and not dono.senha_hash:
+        # Conta sem senha (ex.: criada na hora pra uma venda de PDV) — o link não
+        # pode levar direto pra tela do ingresso, já que a pessoa ainda não tem
+        # como entrar na conta.
+        link = gerar_link_definir_senha(db, dono)
+        link_texto = "Criar senha e ver ingresso"
+        aviso_senha = (
+            '<p style="font-size:13px;color:#3f3f46">Sua conta foi criada automaticamente para '
+            "este ingresso. Antes de acessá-la, defina uma senha clicando no botão abaixo.</p>"
+        )
+    else:
+        link = f"{base}/conta/ingressos/{ingresso.id}"
+        link_texto = "Ver ingresso na conta"
+        aviso_senha = ""
+
     body = (
         f"<p>Olá, <strong>{esc(ingresso.participante_nome)}</strong>!</p>"
         f"<p>Seu ingresso está confirmado. Apresente a carteirinha abaixo (com o QR Code) na entrada — "
@@ -52,7 +69,8 @@ def _build_html(ingresso: Ingresso, qr_cid: str, db) -> str:
         f'<p style="font-size:12px;color:#71717a">Código para digitar na portaria (se o scanner falhar):<br/>'
         f'<span style="font-family:monospace;word-break:break-all">{esc(ingresso_qr_payload(ingresso.id))}</span></p>'
         f'<p><strong>Valor:</strong> R$ {valor_fmt}</p>'
-        f'<p><a href="{link}" style="{link_style(branding)}">Ver ingresso na conta</a></p>'
+        f"{aviso_senha}"
+        f'<p><a href="{link}" style="{link_style(branding)}">{link_texto}</a></p>'
         f'<p style="font-size:11px;color:#a1a1aa">Reembolso: até 10 dias em Minha conta → Pagamentos.</p>'
     )
     return build_email_html(
@@ -68,7 +86,10 @@ def _send_sync(ingresso_id: str) -> bool:
     try:
         ingresso = (
             db.query(Ingresso)
-            .options(joinedload(Ingresso.evento).joinedload(Evento.organizador))
+            .options(
+                joinedload(Ingresso.evento).joinedload(Evento.organizador),
+                joinedload(Ingresso.usuario),
+            )
             .filter(Ingresso.id == ingresso_id, Ingresso.status == "pago")
             .first()
         )
@@ -81,19 +102,7 @@ def _send_sync(ingresso_id: str) -> bool:
             logger.warning("E-mail ingresso %s: sem destino", ingresso_id)
             return False
 
-        data_local_fmt = (
-            ingresso.evento.data_inicio.strftime("%d/%m/%Y às %H:%M")
-            if getattr(ingresso.evento, "data_inicio", None)
-            else "Data a confirmar"
-        )
-        qr_bytes = gerar_ticket_card_png_bytes(
-            ingresso_id=ingresso.id,
-            evento_nome=ingresso.evento.nome,
-            data_local_fmt=data_local_fmt,
-            local=ingresso.evento.local,
-            participante_nome=ingresso.participante_nome,
-            assento=getattr(ingresso, "assento", None),
-        )
+        qr_bytes = montar_carteirinha_ingresso_bytes(ingresso)
         qr_cid = "ingresso_qr"
         html = _build_html(ingresso, qr_cid, db)
         branding = get_email_branding(db)
