@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.35
+**Versão:** 1.38
 **Data:** 2026-07-31
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `d8f3b4b` — v1.35 (PDV + assentos MVP mesclado; achado crítico de supervisão corrigido — teste de concorrência era falso-negativo por SQLite, agora verificado contra Postgres real). pytest **400** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 399+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da `main` em `216d0d8` — v1.37 (e-mail obrigatório no PDV + envio de carteirinha garantido, v1.36; PDV+assentos MVP v1.35; config de ambiente Cursor Cloud Agent, sem impacto em produto). pytest **402** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 401+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -308,7 +308,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (400 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (402 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -587,7 +587,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (400 testes)
+- [x] `pytest` verde (402 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -599,9 +599,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — `4b18643` (v1.36 — e-mail obrigatório no PDV + envio de carteirinha garantido); anterior `d8f3b4b` (v1.35), `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …` não entram neste ponteiro.
+- [x] tip de produto — `4b18643` (v1.36 — e-mail obrigatório no PDV + envio de carteirinha garantido; revisado e aprovado na consolidação v1.37); anterior `d8f3b4b` (v1.35), `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …` e config de ambiente (`environment.json`) não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
-- [x] Deploy VPS: **confirmado pelo usuário** (31/07/2026) — cobrindo o acumulado de produto até tip `a32b948` (carrinho/promoters/galeria, ficha, duplicar/deletar+usado, SEO, lint, fix teste `/workspace`, L4/L5)
+- [ ] Deploy VPS do tip atual (`216d0d8` / v1.37) **precisa reconfirmação** — última confirmação explícita do usuário cobria até `a32b948` (31/07/2026); desde então entrou PDV+assentos (v1.34/1.35, migração `000048`) e e-mail obrigatório no PDV (v1.36) sem confirmação de deploy registrada aqui
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
@@ -720,6 +720,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.37 | 2026-08-01 | **Consolidação `/build`+`/review`**: revisão ativa encontrou e corrigiu 3 inconsistências (mesmo padrão dos ciclos L1-L5 anteriores) — cabeçalho ainda apontava pra v1.35/`d8f3b4b` quando o `main` já tinha v1.36 (e-mail obrigatório no PDV, revisado e aprovado: exige e-mail válido pois o ingresso de PDV vai pro `usuario_id` do organizador, sem conta de cliente associada — sem e-mail o comprador não teria como receber o ingresso; `enqueue_ticket_email` chamado incondicionalmente agora) mais um PR de configuração de ambiente (Cursor Cloud Agent, sem impacto em produto); contagem de testes desatualizada (400→402); confirmação de deploy travada em `a32b948`, marcada novamente como pendente de reconfirmação (PDV+assentos+e-mail obrigatório entraram depois sem confirmação registrada). 402/402 (2x), tsc/eslint/build limpos. |
 | 1.36 | 2026-08-01 | **Fix: e-mail obrigatório no PDV presencial.** Bug real: e-mail do participante era opcional na venda PDV e o envio de carteirinha era condicional (`if email:`) — diferente do checkout online (onde o e-mail é opcional só porque cai na conta logada do comprador), no PDV o ingresso vai pro `usuario_id` do organizador, sem conta de cliente associada, então sem e-mail o comprador não tinha nenhuma garantia de receber o ingresso. Corrigido: `vender_ingresso_pdv` e `PdvBody` agora exigem e-mail válido (mesma checagem leve `"@" not in email` de `lista_espera.py`), `enqueue_ticket_email` passou a ser chamado incondicionalmente após a venda, e a UI do PDV marca o campo como obrigatório. §2.12 atualizada. |
 | 1.35 | 2026-07-31 | **PDV + assentos MVP mesclado no main**, após supervisão completa (migração, trava atômica, bypass de gateway, autorização — tudo confirmado correto). **Achado crítico da supervisão**: o teste de concorrência real (duas threads, mesmo assento) falhava não por bug de produção, mas porque toda a suíte roda em SQLite em memória e o dialeto SQLite descarta silenciosamente `FOR UPDATE` — rodado 5x contra Postgres real, a lógica passa sempre. Corrigido com um fixture que troca o banco pra Postgres real só nesse teste (`DATABASE_URL_TESTE_CONCORRENCIA`, pula com aviso se não configurada); CI ganhou serviço Postgres pra isso nunca mais passar despercebido. Revela que a trava de capacidade de lote pré-existente nunca tinha sido verificada sob concorrência real — este foi o primeiro teste desse tipo em todo o sistema. |
 | 1.34 | 2026-07-31 | **PDV presencial + assentos nomeados (MVP).** §2.12: venda presencial (`canal_venda=pdv`, sem Asaas/split); lotes com lista de assentos + select no checkout + claim FOR UPDATE; assento na carteirinha/relatórios. Migração `000048`. Testes: 390 → 400 (`test_pdv_presencial.py`, `test_lote_assentos.py`). Fora de escopo: maquininha, mapa visual, preços por setor. |

@@ -1008,7 +1008,7 @@ export function ComprarIngresso({
                 type="button"
                 data-testid="checkout-continuar"
                 onClick={() => void criarIntent()}
-                disabled={creating || !termoAceito}
+                disabled={creating || !termoAceito || !!alertaEmailParticipante || !!alertaCpfParticipante}
                 className="btn-primary w-full"
               >
                 {creating
