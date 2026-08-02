@@ -17,8 +17,8 @@ export default function SobrePage() {
           Sobre a <span className="text-emerald-700">EventosBR.</span>
         </h1>
         <p className="mt-6 text-lg text-zinc-600 sm:text-xl">
-          Uma plataforma robusta para criar eventos, vender ingressos e receber com segurança —
-          com foco em quem produz e em quem participa.
+          Plataforma para criar eventos, vender ingressos e receber com segurança — para quem
+          produz e para quem participa.
         </p>
       </div>
 
@@ -94,9 +94,10 @@ export default function SobrePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
                 </svg>
               </div>
-              <h3 className="mt-5 text-lg font-semibold text-zinc-900">Equipes Tech</h3>
+              <h3 className="mt-5 text-lg font-semibold text-zinc-900">Equipes e integrações</h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-                Desenvolvedores e agências que valorizam uma API bem documentada (OpenAPI) e uma stack moderna para realizar integrações customizadas.
+                Agências e times que precisam conectar CRM, automações ou relatórios customizados —
+                com documentação para desenvolvedores quando a operação exige.
               </p>
             </div>
           </div>
@@ -109,12 +110,17 @@ export default function SobrePage() {
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-50" />
             
             <div className="relative z-10 lg:max-w-2xl">
-              <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Tecnologia de alto tráfego</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                Estabilidade no dia do evento
+              </h2>
               <p className="mt-6 text-lg leading-relaxed text-zinc-300">
-                Construída para não te deixar na mão no momento da virada de lote. O nosso painel web é desenvolvido em <strong className="text-emerald-400 font-semibold">Next.js e TypeScript</strong> para velocidade máxima. A API roda em <strong className="text-emerald-400 font-semibold">FastAPI</strong> (Python), com arquitetura escalável e pronta para alta concorrência.
+                Construída para picos de venda e check-in simultâneo. O painel é rápido no celular
+                e no desktop; pagamentos e reembolsos passam por infraestrutura financeira
+                robusta, com proteção antifraude em cada transação.
               </p>
               <p className="mt-4 text-lg leading-relaxed text-zinc-300">
-                Pagamentos e reembolsos passam por um ecossistema financeiro externo robusto, garantindo estabilidade bancária e segurança antifraude global em cada transação processada.
+                Você não precisa entender a tecnologia por trás — só precisa que funcione quando o
+                lote vira e a fila na entrada começa.
               </p>
             </div>
 

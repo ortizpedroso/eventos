@@ -15,6 +15,7 @@ import {
 } from "@/components/organizador-cadastro-pendente";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import type { LoginTotpChallenge, TokenResponse, Usuario } from "@/lib/types";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import { onlyDigits } from "@/lib/cpf";
@@ -266,6 +267,9 @@ export default function AuthClient({
       }
 
       if (mode === "register" && data.pending_email_verification) {
+        trackAnalyticsEvent("CompleteRegistration", {
+          content_name: defaultTipoRegistro === "organizador" ? "organizador_pendente" : "cliente_pendente",
+        });
         const pendente = {
           email: data.email || String(formData.get("email") ?? ""),
           message:
@@ -280,6 +284,12 @@ export default function AuthClient({
         const qs = sp.toString();
         router.replace(qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
         return;
+      }
+
+      if (mode === "register") {
+        trackAnalyticsEvent("CompleteRegistration", {
+          content_name: data.usuario?.tipo ?? defaultTipoRegistro,
+        });
       }
 
       finishAuth(data);

@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.46.1
+**Versão:** 1.47
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`d608169`** — **v1.46** em produção (UX cadastro organizador + Turnstile wired). pytest **452** (CI). **Lançamento:** `/review` v1.46 **APROVADA**; deploy VPS **confirmado** 02/08/2026.
+> **Produção (VPS):** **`d608169`** — **v1.46** em produção. **v1.47** (home dual + Ads/SEO lançamento) **aguarda deploy**. pytest **460** (CI). **Lançamento:** `/review` v1.47 **APROVADA**.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -88,6 +88,22 @@ Testes: `test_evento_ficha_tecnica.py`, `test_contato_whatsapp_cta.py`, `test_ev
 **JSON-LD Event:** `typicalAgeRange` só se `classificacao_etaria` preenchida — mapeamento schema.org formato aberto `min-`: `livre`→`0-`, `12+`→`12-`, `16+`→`16-`, `18+`→`18-`. Sem classificação o campo some (mesmo padrão de `endDate`). Helper: `typicalAgeRangeFromClassificacao` em `evento-ficha.ts`.
 
 Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/workspace`); subprocess herda CWD da raiz do repo (fix `f3f2e8b`).
+
+### 2.13 Lançamento comercial — home dual, Ads e SEO (v1.47)
+
+**Home — separação comprador × organizador:** `HomeAudienciasDual` — duas colunas (mobile: empilhadas): participante («Encontre o evento…», CTA «Explorar eventos») e organizador («Crie seu evento…», CTAs «Começar meu evento grátis» + «Sou produtor»). `HomeProdutorFeatures` (grid ingressos, check-in, financeiro, repasse, whitelabel, relatórios). `HomeFaq` (FAQ + link `/contato`). Mantém vitrine de eventos e diferenciais do comprador.
+
+**Cards vitrine:** cidade no meta; CTA explícito «Comprar ingresso» / «Ver evento».
+
+**Wizard criar evento:** indicador «Etapa {n} de 3» em `WizardBar`.
+
+**Copy marketing:** `/funcionalidades` e `/sobre` sem jargon técnico (FastAPI/OpenAPI) na comunicação comercial; novos blocos financeiro/relatórios/whitelabel em funcionalidades.
+
+**SEO:** JSON-LD `Organization` no root layout; `og-image.png` e placeholders `/marketing/*.webp`; `robots: noindex` em layouts `/organizador` e `/conta`.
+
+**Ads (Facebook / Instagram):** `NEXT_PUBLIC_META_PIXEL_ID` + `NEXT_PUBLIC_GTM_ID` — scripts só em produção (`marketing-analytics.tsx`). Eventos: `ViewContent` (página evento), `InitiateCheckout` (reserva checkout), `Purchase` (`?compra=ok`), `CompleteRegistration` (cadastro), `Lead` (contato). Docker build passa vars ao `web`.
+
+Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py`.
 
 ### 2.12 PDV presencial + assentos nomeados (MVP, v1.34; e-mail obrigatório desde v1.36)
 
@@ -620,7 +636,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (452 testes)
+- [x] `pytest` verde (**460** testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -679,7 +695,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Compressão de imagem | `lib/comprimir-imagem.ts` (navegador), `utils/imagem_processamento.py` (servidor, Pillow) |
 | CAPTCHA | `services/turnstile.py`, `components/turnstile-widget.tsx` |
 | Cifra em repouso (CPF/CNPJ, API keys) | `utils/secret_storage.py` (esquema `enc:v2`), `utils/cpf.py` |
-| SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `lib/eventos-listagem-metadata.ts`, `lib/json-ld-html.ts`, `app/eventos/page.tsx` (metadata cidade), `app/eventos/[slug]/page.tsx` (JSON-LD + typicalAgeRange) |
+| SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `lib/organization-json-ld.ts`, `lib/analytics.ts`, `components/marketing-analytics.tsx`, `lib/eventos-listagem-metadata.ts`, `lib/json-ld-html.ts`, `app/eventos/page.tsx` (metadata cidade), `app/eventos/[slug]/page.tsx` (JSON-LD + typicalAgeRange) |
 | Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh`, `configure-turnstile-env.sh`, `setup-turnstile-e2e.sh`, `turnstile-spin/` |
@@ -714,6 +730,22 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.45 | `9c6044a` / **449** | APROVADA — e-mail organizador + imagens + Turnstile build |
 | v1.46 | `d608169` / **452** | APROVADA — UX cadastro organizador + Turnstile ops |
 | **v1.46.1 (este)** | `d608169` / **452** | **APROVADA** — deploy VPS v1.46 confirmado |
+| **v1.47** | pendente / **460** | **APROVADA** — home dual + Ads/SEO lançamento |
+
+### 11.1 Requisitos recentes — resultado (v1.47)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.13 | Home dual comprador × organizador + FAQ + features produtor | **PASS** |
+| §2.13 | Cards vitrine cidade + CTA comprar | **PASS** |
+| §2.13 | Wizard «Etapa n de 3» | **PASS** |
+| §2.13 | Copy sem jargon em funcionalidades/sobre | **PASS** |
+| §2.13 | Organization JSON-LD + og-image + marketing webp | **PASS** |
+| §2.13 | noindex organizador/conta layouts | **PASS** |
+| §2.13 | Pixel/GTM + eventos ViewContent/Lead/Register/Checkout/Purchase | **PASS** (código; IDs = ops no `.env`) |
+| §2.9–§2.12 / §3.3 | Baseline v1.46 sem regressão | **PASS** |
+| §7 Qualidade | `pytest` 460 | **PASS** |
+| §7 Ops | `NEXT_PUBLIC_META_PIXEL_ID` / `GTM_ID` no VPS | **PENDENTE** (ops — campanhas Ads) |
 
 ### 11.1 Requisitos recentes — resultado (v1.46)
 
@@ -811,7 +843,13 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.46.1)
+### 11.6 Critério de aprovação — ✅ atingido (v1.47)
+
+**Aprovado para lançamento comercial com campanhas Ads.** Código Pixel/GTM e eventos de conversão prontos; configurar IDs no `.env` do `web` antes de rodar anúncios. Home com separação explícita comprador × organizador. `pytest` **460** (CI).
+
+---
+
+### 11.6 histórico (v1.46.1)
 
 **Aprovado para lançamento comercial.** VPS **`d608169`** / v1.46 em produção (UX cadastro organizador + Turnstile). `pytest` **452** (CI). Turnstile operacional no VPS (§7 Ops fechado).
 
@@ -821,6 +859,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.47 | 2026-08-02 | **Lançamento comercial — home dual + Ads/SEO.** §2.13: `HomeAudienciasDual`, `HomeProdutorFeatures`, FAQ; cards vitrine; wizard etapas; copy funcionalidades/sobre; Organization JSON-LD; og-image + marketing webp; noindex conta/organizador; Meta Pixel + GTM + eventos conversão. Testes: 452 → 460. |
 | 1.46.1 | 2026-08-02 | **Deploy VPS v1.46 confirmado** pelo usuário — `d608169` em produção; Turnstile operacional (Managed). §7 e cabeçalho atualizados; PR #97 fechado (superseded). Teste CI: timeout worker contato mais robusto (45s). |
 | 1.46 | 2026-08-02 | **UX cadastro organizador + Turnstile ops.** §3.3: tela pública dedicada após cadastro (`organizador-cadastro-pendente.tsx`, `/cadastro?confirmar=1`, sem login). §5.3: `configure-turnstile-env.sh`, `setup-turnstile-e2e.sh`, Spin scripts; widget `action=turnstile-spin-v2`, reset em erro; siteverify canônico. Testes Turnstile: 4 → 5. |
 | 1.45 | 2026-08-02 | **Cadastro organizador + endurecimento imagens.** §3.3: confirmação e-mail 24h, boas-vindas com botão e link copiável, login bloqueado até confirmar, `reenviar-verificacao-cadastro`. §5.8: `imagem_url` só hosts da plataforma/R2/uploads; UI evento só upload. §5.3: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` no build Docker. Testes: 445 → 449. |

@@ -7,8 +7,10 @@ import { OrganizadorPanelViews } from "@/components/organizador-panel-views";
 
 import { OrganizadorShell } from "./organizador-shell";
 
-export const metadata: Metadata = {  title: "Painel do organizador | EventosBR",
+export const metadata: Metadata = {
+  title: "Painel do organizador | EventosBR",
   description: "Gerencie seus eventos, relatórios e finanças na EventosBR.",
+  robots: { index: false, follow: false },
 };
 
 export default function OrganizadorLayout({ children }: { children: ReactNode }) {

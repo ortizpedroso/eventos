@@ -5,6 +5,7 @@ import { GeistSans } from "geist/font/sans";
 import { BackToTopButton } from "@/components/back-to-top-button";
 import { BuildMarker } from "@/components/build-marker";
 import { EarlyScrollReset } from "@/components/early-scroll-reset";
+import { MarketingAnalytics } from "@/components/marketing-analytics";
 import { Navbar } from "@/components/navbar";
 import { PlatformSettingsProvider } from "@/components/platform-settings-provider";
 import { PlatformTheme } from "@/components/platform-theme";
@@ -13,6 +14,7 @@ import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { SkipToContent } from "@/components/skip-to-content";
 import { fetchPlatformSettings } from "@/lib/platform-settings";
+import { buildOrganizationJsonLd } from "@/lib/organization-json-ld";
 import { buildMetadata } from "@/lib/site-metadata";
 import "./globals.css";
 
@@ -38,6 +40,12 @@ export default async function RootLayout({
       <head>
         <EarlyScrollReset nonce={nonce} />
         {platform.favicon_url ? <link rel="icon" href={platform.favicon_url} /> : null}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: buildOrganizationJsonLd(platform.site_name || "EventosBR"),
+          }}
+        />
       </head>
       <body
         className="grid min-h-dvh grid-rows-[auto_1fr_auto] antialiased"
@@ -46,6 +54,7 @@ export default async function RootLayout({
       >
         <PlatformTheme settings={platform} />
         <PlatformSettingsProvider settings={platform}>
+          <MarketingAnalytics />
           <SkipToContent />
           <BuildMarker />
           <ScrollToTop />

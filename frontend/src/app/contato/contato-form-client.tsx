@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 
 import { TurnstileWidget, turnstileSiteKeyConfigurada } from "@/components/turnstile-widget";
 import { apiFetch } from "@/lib/api";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 export function ContatoFormClient() {
   const [enviando, setEnviando] = useState(false);
@@ -34,6 +35,7 @@ export function ContatoFormClient() {
         tipo: "sucesso",
         texto: "Sua mensagem foi enviada com sucesso!",
       });
+      trackAnalyticsEvent("Lead", { content_name: "contato_site" });
       formRef.current?.reset();
       turnstileResetRef.current?.();
     } catch (err) {

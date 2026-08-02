@@ -16,11 +16,13 @@ export function EventoCardVitrine({ evento: e }: Props) {
   const vendasAbertas = e.compra_disponivel !== false && Boolean(e.lote_compra_id);
   const thumbSrc = resolveEventoImagemSrc(e.imagem_url);
 
+  const localLinha = [e.cidade, e.local].filter(Boolean).join(" · ");
+
   return (
     <Link
       href={`/eventos/${e.slug}`}
       prefetch
-      className="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:border-emerald-600 hover:shadow-md hover:ring-1 hover:ring-emerald-600"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:border-emerald-600 hover:shadow-md hover:ring-1 hover:ring-emerald-600"
     >
       {thumbSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -40,11 +42,19 @@ export function EventoCardVitrine({ evento: e }: Props) {
           <EventoCategoriaBadge categoria={e.categoria} variant="card" />
         </div>
         <p className="mt-2 text-xs text-zinc-600">
-          {fmtInicio} · {e.local}
+          {fmtInicio}
+          {localLinha ? ` · ${localLinha}` : ""}
         </p>
-        <p className="mt-auto pt-4 text-sm font-semibold text-emerald-700">
-          {vendasAbertas ? `A partir de ${preco}` : "Vendas encerradas"}
-        </p>
+        <div className="mt-auto flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-emerald-700">
+            {vendasAbertas ? `A partir de ${preco}` : "Vendas encerradas"}
+          </p>
+          <span
+            className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition group-hover:bg-emerald-700"
+          >
+            {vendasAbertas ? "Comprar ingresso" : "Ver evento"}
+          </span>
+        </div>
       </div>
     </Link>
   );

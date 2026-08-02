@@ -79,7 +79,11 @@ const WIZARD_STEPS = [
 
 function WizardBar({ step }: { step: number }) {
   return (
-    <ol className="mb-8 flex gap-2" aria-label="Progresso do formulário">
+    <div className="mb-8">
+      <p className="mb-3 text-center text-sm font-semibold text-emerald-800">
+        Etapa {step} de {WIZARD_STEPS.length}
+      </p>
+      <ol className="flex gap-2" aria-label="Progresso do formulário">
       {WIZARD_STEPS.map((s) => {
         const ativo = s.id === step;
         const feito = s.id < step;
@@ -98,7 +102,8 @@ function WizardBar({ step }: { step: number }) {
           </li>
         );
       })}
-    </ol>
+      </ol>
+    </div>
   );
 }
 

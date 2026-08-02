@@ -194,17 +194,32 @@ const outrosRecursos = [
   {
     icone: "reembolso",
     titulo: "Reembolsos automatizados",
-    texto: "Regras de prazo claras para cancelamento. O sistema sincroniza diretamente com o provedor de pagamentos, reduzindo o trabalho manual do produtor.",
+    texto: "Regras de prazo claras para cancelamento. O sistema sincroniza com o provedor de pagamentos, reduzindo trabalho manual.",
   },
   {
     icone: "conta",
-    titulo: "Área do Participante",
-    texto: "Seu público tem acesso fácil a um painel onde ficam salvos todos os ingressos, faturas e históricos de eventos.",
+    titulo: "Área do participante",
+    texto: "Ingressos, histórico e repasse oficial de ingresso — tudo em Minha conta, no celular.",
+  },
+  {
+    icone: "pagamento",
+    titulo: "Financeiro e repasse",
+    texto: "Extrato, saldo e saque na plataforma. O líquido da venda cai na sua conta de recebimento com split automático.",
+  },
+  {
+    icone: "resumo",
+    titulo: "Relatórios completos",
+    texto: "Vendas por lote, taxa de conversão e exportação de participantes para operar o evento com dados reais.",
+  },
+  {
+    icone: "ingresso",
+    titulo: "Página com sua marca",
+    texto: "Whitelabel: logo, cores e domínio personalizado na página pública do evento e nos e-mails.",
   },
   {
     icone: "api",
-    titulo: "API documentada",
-    texto: "Precisa de uma integração específica? Nosso backend em FastAPI possui documentação interativa completa (OpenAPI).",
+    titulo: "Integrações quando precisar",
+    texto: "Conecte ferramentas externas ou automações — documentação disponível para equipes técnicas.",
   },
 ] as const;
 
@@ -216,8 +231,8 @@ export default function FuncionalidadesPage() {
           Tudo o que você precisa para <span className="text-emerald-700">fazer acontecer.</span>
         </h1>
         <p className="mt-6 text-lg text-zinc-600 sm:text-xl">
-          Uma estrutura completa de vendas, pagamentos e check-in. Esqueça as planilhas e 
-          foque no que realmente importa: a experiência do seu público.
+          Uma estrutura completa de vendas, pagamentos e check-in. Esqueça as planilhas e foque no
+          que importa: vender ingressos e entregar uma boa experiência.
         </p>
       </div>
 

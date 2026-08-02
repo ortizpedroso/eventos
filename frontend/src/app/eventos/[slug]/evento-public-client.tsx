@@ -16,6 +16,7 @@ import { EventoRelacionados } from "@/components/evento-relacionados";
 import { ListaEsperaForm } from "@/components/lista-espera-form";
 import { ListaInteresseForm } from "@/components/lista-interesse-form";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { formatEventoDataHora } from "@/lib/eventos";
@@ -136,6 +137,18 @@ export function EventoPublicClient({
       cancelled = true;
     };
   }, [slug, initialEvento]);
+
+  useEffect(() => {
+    if (!evento?.id) return;
+    const valor = Number(evento.preco_compra ?? evento.preco_ingresso ?? 0);
+    trackAnalyticsEvent("ViewContent", {
+      content_ids: [evento.id],
+      content_name: evento.nome,
+      content_type: "evento",
+      value: valor > 0 ? valor : undefined,
+      currency: "BRL",
+    });
+  }, [evento?.id, evento?.nome, evento?.preco_compra, evento?.preco_ingresso]);
 
   useEffect(() => {
     if (!tokenEsperaQuery || !slug) {

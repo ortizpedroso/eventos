@@ -22,6 +22,7 @@ import { formatTelefoneBrMask, isTelefoneBrasilOk } from "@/lib/telefone-br";
 import { INGRESSO_MINIMO_PAGO_REAIS } from "@/lib/taxas-asaas-publicas";
 import type { CriarPagamentoResponse, IngressoLote, RetomarPagamentoResponse, Usuario } from "@/lib/types";
 import { lerRefPromoter, limparRefPromoter } from "@/lib/promoter-ref";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { urlRetomarPagamento } from "@/lib/reserva-pagamento";
 
 type Props = {
@@ -211,6 +212,14 @@ export function ComprarIngresso({
     posCompraProcessadoRef.current = true;
     setIngressoId(ing);
     setStep(3);
+    trackAnalyticsEvent("Purchase", {
+      content_ids: [eventoId],
+      content_name: eventoNome,
+      content_type: "ingresso",
+      value: precoIngresso > 0 ? precoIngresso : undefined,
+      currency: "BRL",
+      event_id: ing,
+    });
     if (typeof window !== "undefined") {
       window.requestAnimationFrame(() => {
         document.getElementById("comprar")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -340,6 +349,13 @@ export function ComprarIngresso({
         }
 
         if (data.reservado_ate) setReservadoAte(new Date(data.reservado_ate));
+        trackAnalyticsEvent("InitiateCheckout", {
+          content_ids: [eventoId],
+          content_name: eventoNome,
+          content_type: "ingresso",
+          value: precoIngresso > 0 ? precoIngresso : undefined,
+          currency: "BRL",
+        });
         setStep(2);
       } catch (e) {
         setError(mapCheckoutError(e instanceof Error ? e.message : "Não foi possível retomar o pagamento"));
@@ -544,10 +560,27 @@ export function ComprarIngresso({
         setPagamentoModoTeste(Boolean(data.payments_disabled && !data.cortesia));
         setIngressoId(data.ingresso_id);
         setStep(3);
+        if (data.cortesia) {
+          trackAnalyticsEvent("Purchase", {
+            content_ids: [eventoId],
+            content_name: eventoNome,
+            content_type: "ingresso",
+            value: 0,
+            currency: "BRL",
+            event_id: data.ingresso_id,
+          });
+        }
         return;
       }
       setIngressoId(data.ingresso_id);
       if (data.reservado_ate) setReservadoAte(new Date(data.reservado_ate));
+      trackAnalyticsEvent("InitiateCheckout", {
+        content_ids: [eventoId],
+        content_name: eventoNome,
+        content_type: "ingresso",
+        value: precoIngresso > 0 ? precoIngresso : undefined,
+        currency: "BRL",
+      });
       setStep(2);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Não foi possível iniciar o pagamento";
