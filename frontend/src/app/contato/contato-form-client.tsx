@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 
-import { TurnstileWidget } from "@/components/turnstile-widget";
+import { TurnstileWidget, turnstileSiteKeyConfigurada } from "@/components/turnstile-widget";
 import { apiFetch } from "@/lib/api";
 
 export function ContatoFormClient() {
@@ -10,6 +10,8 @@ export function ContatoFormClient() {
   const [aviso, setAviso] = useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const turnstileResetRef = useRef<(() => void) | null>(null);
+  const turnstileObrigatorio = turnstileSiteKeyConfigurada();
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,19 +35,20 @@ export function ContatoFormClient() {
         texto: "Sua mensagem foi enviada com sucesso!",
       });
       formRef.current?.reset();
-      setTurnstileToken(null);
+      turnstileResetRef.current?.();
     } catch (err) {
+      turnstileResetRef.current?.();
       setAviso({
         tipo: "erro",
         texto: err instanceof Error ? err.message : "Não foi possível enviar sua mensagem. Tente novamente.",
       });
     } finally {
       setEnviando(false);
-      // Some sozinho depois de uns segundos — formulário fica pronto pra um novo envio,
-      // sem precisar recarregar a página.
       setTimeout(() => setAviso(null), 6000);
     }
   }
+
+  const submitDesabilitado = enviando || (turnstileObrigatorio && !turnstileToken);
 
   return (
     <form
@@ -123,9 +126,9 @@ export function ContatoFormClient() {
         />
       </div>
 
-      <TurnstileWidget onToken={setTurnstileToken} />
+      <TurnstileWidget onToken={setTurnstileToken} resetRef={turnstileResetRef} />
 
-      <button disabled={enviando} className="btn-success w-full" type="submit">
+      <button disabled={submitDesabilitado} className="btn-success w-full" type="submit">
         {enviando ? "Enviando…" : "Enviar mensagem"}
       </button>
     </form>

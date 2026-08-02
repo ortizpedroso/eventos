@@ -2,11 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import {
+  limparOrganizadorCadastroPendente,
+  lerOrganizadorCadastroPendente,
+  OrganizadorCadastroPendente,
+  salvarOrganizadorCadastroPendente,
+} from "@/components/organizador-cadastro-pendente";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import type { LoginTotpChallenge, TokenResponse, Usuario } from "@/lib/types";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
@@ -36,6 +42,8 @@ function isLoginTotpChallenge(
 ): data is LoginTotpChallenge {
   return (data as LoginTotpChallenge).requires_2fa === true;
 }
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
 
 export default function AuthClient({
   resetToken,
@@ -75,6 +83,7 @@ export default function AuthClient({
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
   const [senhaDigitada, setSenhaDigitada] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileResetRef = useRef<(() => void) | null>(null);
   const [login2fa, setLogin2fa] = useState<{ loginToken: string } | null>(null);
   const [codigo2fa, setCodigo2fa] = useState("");
   const [lembrarDispositivo, setLembrarDispositivo] = useState(true);
@@ -103,6 +112,14 @@ export default function AuthClient({
       });
     }
   }, [sessaoVerificada, aguardandoRedirect]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("confirmar") !== "1") return;
+    const stored = lerOrganizadorCadastroPendente();
+    if (stored) setCadastroOrganizadorPendente(stored);
+  }, []);
 
   useEffect(() => {
     const cached = peekSessionCache();
@@ -249,18 +266,25 @@ export default function AuthClient({
       }
 
       if (mode === "register" && data.pending_email_verification) {
-        setCadastroOrganizadorPendente({
+        const pendente = {
           email: data.email || String(formData.get("email") ?? ""),
           message:
             data.message ||
             "Enviamos um e-mail de confirmação. Abra o link (válido por 24 horas) para ativar sua conta.",
-        });
-        setAuthMode("login");
+        };
+        salvarOrganizadorCadastroPendente(pendente);
+        setCadastroOrganizadorPendente(pendente);
+        const sp = new URLSearchParams(window.location.search);
+        sp.delete("mode");
+        sp.set("confirmar", "1");
+        const qs = sp.toString();
+        router.replace(qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
         return;
       }
 
       finishAuth(data);
     } catch (e) {
+      turnstileResetRef.current?.();
       const message = e instanceof Error ? e.message : "Erro";
       const lower = message.toLowerCase();
       const isDev = process.env.NODE_ENV === "development";
@@ -300,6 +324,7 @@ export default function AuthClient({
       });
       finishAuth(data);
     } catch (e2) {
+      turnstileResetRef.current?.();
       setError(e2 instanceof Error ? e2.message : "Código inválido.");
     } finally {
       setLoading(false);
@@ -324,13 +349,26 @@ export default function AuthClient({
       );
       setInfoMsg(r.dev_link ? `${r.message} Link dev: ${r.dev_link}` : r.message);
     } catch (e) {
+      turnstileResetRef.current?.();
       setError(e instanceof Error ? e.message : "Não foi possível reenviar.");
     } finally {
       setReenviandoConfirmacao(false);
     }
   }
 
-  const formularioDesabilitado = loading || aguardandoRedirect;
+  const turnstileObrigatorio =
+    Boolean(TURNSTILE_SITE_KEY) && mode !== "reset" && !cadastroOrganizadorPendente;
+  const formularioDesabilitado =
+    loading || aguardandoRedirect || (turnstileObrigatorio && !turnstileToken);
+
+  function irParaLoginAposCadastro() {
+    limparOrganizadorCadastroPendente();
+    setCadastroOrganizadorPendente(null);
+    setInfoMsg(null);
+    setError(null);
+    setTurnstileToken(null);
+    setAuthMode("login");
+  }
 
   if (!sessaoVerificada) {
     return (
@@ -344,6 +382,22 @@ export default function AuthClient({
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (cadastroOrganizadorPendente) {
+    return (
+      <OrganizadorCadastroPendente
+        data={cadastroOrganizadorPendente}
+        infoMsg={infoMsg}
+        error={error}
+        reenviando={reenviandoConfirmacao}
+        reenviarDesabilitado={Boolean(TURNSTILE_SITE_KEY) && !turnstileToken}
+        onReenviar={() => void reenviarConfirmacaoCadastro()}
+        onIrLogin={irParaLoginAposCadastro}
+        onToken={setTurnstileToken}
+        turnstileResetRef={turnstileResetRef}
+      />
     );
   }
 
@@ -420,31 +474,6 @@ export default function AuthClient({
         >
           <p className="font-semibold">Sua sessão expirou</p>
           <p className="mt-1">Faça login novamente para continuar de onde parou.</p>
-        </div>
-      ) : null}
-      {cadastroOrganizadorPendente ? (
-        <div
-          className="mb-4 rounded-xl border border-sky-300 bg-sky-50 px-4 py-4 text-sm text-sky-950"
-          role="status"
-        >
-          <p className="font-semibold text-sky-950">Confirme seu e-mail para ativar a conta</p>
-          <p className="mt-2 text-sky-900">{cadastroOrganizadorPendente.message}</p>
-          <p className="mt-2 text-sky-900">
-            E-mail cadastrado:{" "}
-            <strong className="font-semibold">{cadastroOrganizadorPendente.email}</strong>
-          </p>
-          <p className="mt-2 text-xs text-sky-800">
-            O link no e-mail vale por 24 horas. Você pode clicar no botão «Ativar minha conta» ou copiar e colar o
-            link no navegador.
-          </p>
-          <button
-            type="button"
-            disabled={reenviandoConfirmacao}
-            onClick={() => void reenviarConfirmacaoCadastro()}
-            className="mt-3 text-sm font-medium text-sky-950 underline underline-offset-2 disabled:opacity-60"
-          >
-            {reenviandoConfirmacao ? "Enviando…" : "Reenviar e-mail de confirmação"}
-          </button>
         </div>
       ) : null}
       <div className="mb-8 text-center">
@@ -643,7 +672,7 @@ export default function AuthClient({
           ) : null}
 
           {mode !== "reset" ? (
-            <TurnstileWidget onToken={setTurnstileToken} />
+            <TurnstileWidget onToken={setTurnstileToken} resetRef={turnstileResetRef} />
           ) : null}
 
           <button disabled={formularioDesabilitado} className="btn-success w-full" type="submit">

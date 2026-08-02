@@ -59,12 +59,16 @@ bash "$ROOT/scripts/verify-production.sh"
 echo ""
 
 echo "==> Turnstile (recomendado — anti-bot login/registro)"
-if [ -n "$(env_get TURNSTILE_SECRET_KEY "$ENV_FILE" || true)" ]; then
-  echo "    OK  TURNSTILE_SECRET_KEY definida na API"
+_turnstile_secret="$(env_get TURNSTILE_SECRET "$ENV_FILE" || true)"
+if [ -z "$_turnstile_secret" ]; then
+  _turnstile_secret="$(env_get TURNSTILE_SECRET_KEY "$ENV_FILE" || true)"
+fi
+if [ -n "$_turnstile_secret" ]; then
+  echo "    OK  TURNSTILE_SECRET (ou TURNSTILE_SECRET_KEY) definida na API"
 else
-  echo "    AVISO  TURNSTILE_SECRET_KEY vazia — configure Cloudflare Turnstile (spec §5.3)"
+  echo "    AVISO  TURNSTILE_SECRET vazia — configure Cloudflare Turnstile (spec §5.3)"
   echo "    Crie o site em https://dash.cloudflare.com → Turnstile"
-  echo "    API: TURNSTILE_SECRET_KEY | Frontend: NEXT_PUBLIC_TURNSTILE_SITE_KEY"
+  echo "    API: TURNSTILE_SECRET | Frontend: NEXT_PUBLIC_TURNSTILE_SITE_KEY"
 fi
 echo ""
 

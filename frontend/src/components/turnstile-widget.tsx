@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, type RefObject } from "react";
 
 const SCRIPT_ID = "cf-turnstile-script";
 const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+const DEFAULT_ACTION = "turnstile-spin-v2";
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
 
@@ -14,6 +15,7 @@ declare global {
         container: string | HTMLElement,
         options: {
           sitekey: string;
+          action?: string;
           callback: (token: string) => void;
           "expired-callback"?: () => void;
           "error-callback"?: () => void;
@@ -33,7 +35,6 @@ function loadScript(): Promise<void> {
       return;
     }
     if (document.getElementById(SCRIPT_ID)) {
-      // Já está carregando — aguarda via polling simples.
       const check = setInterval(() => {
         if (window.turnstile) {
           clearInterval(check);
@@ -53,18 +54,38 @@ function loadScript(): Promise<void> {
   });
 }
 
+export function turnstileSiteKeyConfigurada(): boolean {
+  return Boolean(SITE_KEY);
+}
+
 type TurnstileWidgetProps = {
   onToken: (token: string | null) => void;
+  /** Ref opcional para reset após erro de submit (token Turnstile é single-use). */
+  resetRef?: RefObject<(() => void) | null>;
+  action?: string;
 };
 
-/** Widget anti-bot (Cloudflare Turnstile). Não renderiza nada se NEXT_PUBLIC_TURNSTILE_SITE_KEY não estiver definida. */
-export function TurnstileWidget({ onToken }: TurnstileWidgetProps) {
+/**
+ * Widget anti-bot (Cloudflare Turnstile).
+ * Não renderiza nada se NEXT_PUBLIC_TURNSTILE_SITE_KEY não estiver definida no build.
+ */
+export function TurnstileWidget({ onToken, resetRef, action = DEFAULT_ACTION }: TurnstileWidgetProps) {
   const containerId = `turnstile-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const widgetIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!SITE_KEY) return;
     let cancelado = false;
+
+    const bindReset = () => {
+      if (!resetRef) return;
+      resetRef.current = () => {
+        if (widgetIdRef.current && window.turnstile) {
+          window.turnstile.reset(widgetIdRef.current);
+        }
+        onToken(null);
+      };
+    };
 
     loadScript()
       .then(() => {
@@ -73,24 +94,34 @@ export function TurnstileWidget({ onToken }: TurnstileWidgetProps) {
         if (!el) return;
         widgetIdRef.current = window.turnstile.render(el, {
           sitekey: SITE_KEY,
+          action,
           theme: "light",
           callback: (token) => onToken(token),
           "expired-callback": () => onToken(null),
           "error-callback": () => onToken(null),
         });
+        bindReset();
       })
       .catch(() => onToken(null));
 
     return () => {
       cancelado = true;
+      if (resetRef) resetRef.current = null;
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [containerId]);
+  }, [containerId, action]);
 
   if (!SITE_KEY) return null;
 
-  return <div id={containerId} className="mt-1" />;
+  return (
+    <div
+      id={containerId}
+      className="cf-turnstile mt-1"
+      data-sitekey={SITE_KEY}
+      data-action={action}
+    />
+  );
 }
