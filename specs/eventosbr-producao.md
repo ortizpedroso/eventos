@@ -620,7 +620,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (449 testes)
+- [x] `pytest` verde (450 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -682,7 +682,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `lib/eventos-listagem-metadata.ts`, `lib/json-ld-html.ts`, `app/eventos/page.tsx` (metadata cidade), `app/eventos/[slug]/page.tsx` (JSON-LD + typicalAgeRange) |
 | Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
-| Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh`, `configure-turnstile-env.sh` |
+| Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh`, `configure-turnstile-env.sh`, `setup-turnstile-e2e.sh`, `turnstile-spin/` |
 | Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py`, `test_pdv_correcao_email.py` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
@@ -820,7 +820,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.46 | 2026-08-02 | **UX cadastro organizador + Turnstile ops.** §3.3: tela pública dedicada após cadastro (`organizador-cadastro-pendente.tsx`, `/cadastro?confirmar=1`, sem login). §5.3: `configure-turnstile-env.sh`, Turnstile em `.env.production.example` e `bootstrap-vps-env.sh`; frontend exige token Turnstile quando site key no build. §11 `/review` v1.46 APROVADA. |
+| 1.46 | 2026-08-02 | **UX cadastro organizador + Turnstile ops.** §3.3: tela pública dedicada após cadastro (`organizador-cadastro-pendente.tsx`, `/cadastro?confirmar=1`, sem login). §5.3: `configure-turnstile-env.sh`, `setup-turnstile-e2e.sh`, Spin scripts; widget `action=turnstile-spin-v2`, reset em erro; siteverify canônico. Testes Turnstile: 4 → 5. |
 | 1.45 | 2026-08-02 | **Cadastro organizador + endurecimento imagens.** §3.3: confirmação e-mail 24h, boas-vindas com botão e link copiável, login bloqueado até confirmar, `reenviar-verificacao-cadastro`. §5.8: `imagem_url` só hosts da plataforma/R2/uploads; UI evento só upload. §5.3: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` no build Docker. Testes: 445 → 449. |
 | 1.44.3 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — `df08e23` / v1.44 em produção (`verificar-versao-site.sh`: API/Web `df08e23`, health/ready OK). §7 e cabeçalho atualizados; §11 deploy PASS. |
 | 1.44.2 | 2026-08-02 | **Fechamento de pendências.** `main` `68bd595` (PR #92). §7: `baas`/CNPJ/`asaas_platform_cnpj` fechados por decisão ou N/A; §2.8 A/B fechados via 1ª venda; histórico §11 v1.33 alinhado. PR #87 fechado. Deploy VPS v1.44 pendente até confirmação. |
