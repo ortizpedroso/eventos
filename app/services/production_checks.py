@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from config.settings import settings
+from app.services.turnstile import turnstile_secret
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ def build_setup_status() -> dict:
 
     frontend_url_ok = bool((settings.FRONTEND_PUBLIC_URL or "").strip())
 
-    turnstile_ok = bool((settings.TURNSTILE_SECRET_KEY or "").strip())
+    turnstile_ok = bool(turnstile_secret())
     if turnstile_ok:
         turnstile_status = "ok"
     elif production:

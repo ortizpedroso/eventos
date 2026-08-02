@@ -6,6 +6,7 @@ Documentação: https://developers.cloudflare.com/turnstile/get-started/server-s
 from __future__ import annotations
 
 import logging
+import os
 
 import httpx
 
@@ -16,8 +17,17 @@ logger = logging.getLogger(__name__)
 _VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 
 
+def turnstile_secret() -> str:
+    """Secret do widget — env TURNSTILE_SECRET (canônico) ou TURNSTILE_SECRET_KEY (legado)."""
+    return (
+        (os.environ.get("TURNSTILE_SECRET") or "").strip()
+        or (settings.TURNSTILE_SECRET or "").strip()
+        or (settings.TURNSTILE_SECRET_KEY or "").strip()
+    )
+
+
 def turnstile_habilitado() -> bool:
-    return bool((settings.TURNSTILE_SECRET_KEY or "").strip())
+    return bool(turnstile_secret())
 
 
 async def verificar_turnstile(token: str | None, remote_ip: str | None = None) -> bool:
@@ -29,7 +39,8 @@ async def verificar_turnstile(token: str | None, remote_ip: str | None = None) -
     if not token:
         return False
 
-    payload = {"secret": settings.TURNSTILE_SECRET_KEY, "response": token}
+    secret = turnstile_secret()
+    payload: dict[str, str] = {"secret": secret, "response": token}
     if remote_ip:
         payload["remoteip"] = remote_ip
 

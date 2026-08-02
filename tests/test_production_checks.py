@@ -122,13 +122,13 @@ def test_onboarding_linked_aceito_em_producao():
 
 
 def test_turnstile_recomendado_em_producao_sem_chave():
-    with patch.multiple(settings, ENVIRONMENT="production", TURNSTILE_SECRET_KEY=""):
+    with patch.multiple(settings, ENVIRONMENT="production", TURNSTILE_SECRET="", TURNSTILE_SECRET_KEY=""):
         s = build_setup_status()
     assert s["checks"]["turnstile"] == "recomendado"
 
 
 def test_turnstile_ok_quando_configurado():
-    with patch.multiple(settings, ENVIRONMENT="production", TURNSTILE_SECRET_KEY="secret-turnstile"):
+    with patch.multiple(settings, ENVIRONMENT="production", TURNSTILE_SECRET="secret-turnstile", TURNSTILE_SECRET_KEY=""):
         s = build_setup_status()
     assert s["checks"]["turnstile"] == "ok"
 

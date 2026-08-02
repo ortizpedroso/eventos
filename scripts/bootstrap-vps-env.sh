@@ -42,7 +42,10 @@ if [ -f "$ENV_FILE" ]; then
   old_email_pass="$(env_get EMAIL_PASSWORD "$ENV_FILE" || true)"
   old_google="$(env_get GOOGLE_OAUTH_CLIENT_ID "$ENV_FILE" || true)"
   old_onboarding_mode="$(env_get ASAAS_ONBOARDING_MODE "$ENV_FILE" || true)"
-  old_turnstile_secret="$(env_get TURNSTILE_SECRET_KEY "$ENV_FILE" || true)"
+  old_turnstile_secret="$(env_get TURNSTILE_SECRET "$ENV_FILE" || true)"
+  if [ -z "$old_turnstile_secret" ]; then
+    old_turnstile_secret="$(env_get TURNSTILE_SECRET_KEY "$ENV_FILE" || true)"
+  fi
   old_turnstile_site="$(env_get NEXT_PUBLIC_TURNSTILE_SITE_KEY "$ENV_FILE" || true)"
 fi
 
@@ -142,7 +145,8 @@ _write_env "ENVIRONMENT"                  "production"
 _write_env "DEBUG"                        "False"
 printf '\n' >> "$ENV_FILE"
 
-_write_env "TURNSTILE_SECRET_KEY"         "$old_turnstile_secret"
+_write_env "TURNSTILE_SECRET"           "$old_turnstile_secret"
+_write_env "TURNSTILE_SECRET_KEY"     "$old_turnstile_secret"
 _write_env "NEXT_PUBLIC_TURNSTILE_SITE_KEY" "$old_turnstile_site"
 
 chmod 600 "$ENV_FILE" 2>/dev/null || true

@@ -69,7 +69,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173"
 
     # Cloudflare Turnstile (anti-bot em login/cadastro/recuperação de senha).
+    # TURNSTILE_SECRET — nome canônico (Spin / Cloudflare). TURNSTILE_SECRET_KEY = alias legado.
     # Vazio = feature desligada (não bloqueia); defina para habilitar a verificação.
+    TURNSTILE_SECRET: str = ""
     TURNSTILE_SECRET_KEY: str = ""
 
     # Cloudflare R2 (armazenamento de imagens de capa de evento) — opcional.

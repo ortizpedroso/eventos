@@ -6,12 +6,8 @@
 #
 # Uso não interativo:
 #   ./scripts/configure-turnstile-env.sh \
-#     --secret-key '0x...' \
-#     --site-key '0x...'
-#
-# Após gravar: rebuild do frontend (site key no bundle) + recriar API:
-#   docker compose -f docker-compose.prod.yml up -d --build web
-#   docker compose -f docker-compose.prod.yml up -d api
+#     --secret '0x...' \
+#     --site-key '0x4AAAAAAEEo9-dlOUxCWAz5'
 
 set -euo pipefail
 
@@ -22,18 +18,20 @@ source "$ROOT/scripts/env-file-lib.sh"
 
 ENV_FILE="${ENV_FILE:-.env}"
 EXAMPLE="$ROOT/.env.production.example"
+DEFAULT_SITE_KEY="0x4AAAAAAEEo9-dlOUxCWAz5"
 
-SECRET_KEY=""
+SECRET=""
 SITE_KEY=""
 
 usage() {
-  echo "Uso: $0 [--secret-key KEY] [--site-key KEY]"
+  echo "Uso: $0 [--secret KEY] [--site-key KEY]"
   exit 1
 }
 
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --secret-key) SECRET_KEY="$2"; shift 2 ;;
+  case $1 in
+    --secret) SECRET="$2"; shift 2 ;;
+    --secret-key) SECRET="$2"; shift 2 ;;
     --site-key) SITE_KEY="$2"; shift 2 ;;
     -h|--help) usage ;;
     *) echo "Opção desconhecida: $1" >&2; usage ;;
@@ -50,30 +48,32 @@ if [ ! -f "$ENV_FILE" ]; then
   fi
 fi
 
-if [ -z "$SECRET_KEY" ]; then
-  read -r -p "TURNSTILE_SECRET_KEY (Cloudflare Turnstile — Secret): " SECRET_KEY
+if [ -z "$SECRET" ]; then
+  read -r -p "TURNSTILE_SECRET (Secret Key do painel — não commitar): " SECRET
 fi
 if [ -z "$SITE_KEY" ]; then
-  read -r -p "NEXT_PUBLIC_TURNSTILE_SITE_KEY (Site Key — mesma widget): " SITE_KEY
+  read -r -p "NEXT_PUBLIC_TURNSTILE_SITE_KEY [${DEFAULT_SITE_KEY}]: " SITE_KEY
+  SITE_KEY="${SITE_KEY:-$DEFAULT_SITE_KEY}"
 fi
 
-if [ -z "$SECRET_KEY" ] || [ -z "$SITE_KEY" ]; then
-  echo "ERRO: ambas as chaves são obrigatórias." >&2
+if [ -z "$SECRET" ] || [ -z "$SITE_KEY" ]; then
+  echo "ERRO: secret e site key são obrigatórios." >&2
   exit 1
 fi
 
-set_env_var "TURNSTILE_SECRET_KEY" "$SECRET_KEY" "$ENV_FILE"
+set_env_var "TURNSTILE_SECRET" "$SECRET" "$ENV_FILE"
+set_env_var "TURNSTILE_SECRET_KEY" "$SECRET" "$ENV_FILE"
 set_env_var "NEXT_PUBLIC_TURNSTILE_SITE_KEY" "$SITE_KEY" "$ENV_FILE"
 
 echo ""
 echo "==> Turnstile gravado em $ENV_FILE"
-echo ""
-echo "    Se o painel Cloudflare deu erro de hostname:"
-echo "    adicione UM domínio por campo (não cole vírgulas num único campo)."
-echo "    Ver scripts/turnstile-spin/README.md"
+echo "    API: TURNSTILE_SECRET | Frontend build: NEXT_PUBLIC_TURNSTILE_SITE_KEY"
 echo ""
 echo "    Próximo passo no VPS:"
 echo "      docker compose -f docker-compose.prod.yml up -d --build web"
 echo "      docker compose -f docker-compose.prod.yml up -d api"
 echo ""
-echo "    Validar: bash scripts/validar-go-live-vps.sh"
+if command -v ./scripts/turnstile-spin/validate.sh >/dev/null 2>&1; then
+  export TURNSTILE_SECRET="$SECRET"
+  ./scripts/turnstile-spin/validate.sh || true
+fi

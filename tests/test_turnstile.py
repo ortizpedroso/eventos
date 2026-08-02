@@ -47,6 +47,19 @@ def test_turnstile_ligado_rejeita_token_invalido(monkeypatch):
         assert asyncio.run(turnstile.verificar_turnstile("token-invalido")) is False
 
 
+def test_turnstile_usa_turnstile_secret_env(monkeypatch):
+    monkeypatch.setattr(settings, "TURNSTILE_SECRET", "secret-spin")
+    monkeypatch.setattr(settings, "TURNSTILE_SECRET_KEY", "")
+    assert turnstile.turnstile_secret() == "secret-spin"
+    assert turnstile.turnstile_habilitado() is True
+
+
+def test_turnstile_fallback_secret_key_legado(monkeypatch):
+    monkeypatch.setattr(settings, "TURNSTILE_SECRET", "")
+    monkeypatch.setattr(settings, "TURNSTILE_SECRET_KEY", "legado-key")
+    assert turnstile.turnstile_secret() == "legado-key"
+
+
 def test_turnstile_falha_em_http_error(monkeypatch):
     monkeypatch.setattr(settings, "TURNSTILE_SECRET_KEY", "chave-de-teste")
 
