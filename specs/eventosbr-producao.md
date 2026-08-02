@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `4125ff4` — **v1.42** (PDV: confirmação de e-mail, correção de venda e reenvio). Merge PR #81 (`fbe08a7`). Anterior `b735902` (v1.41 — XSS rodada 1). **Deploy VPS v1.42 pendente de reconfirmação** (v1.41 confirmado 02/08/2026). pytest **437** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 436+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da `main` em `4125ff4` — **v1.42** (PDV: confirmação de e-mail, correção de venda e reenvio). **Deploy confirmado no VPS** (02/08/2026, usuário). Merge PR #81 (`fbe08a7`). Anterior `b735902` (v1.41 — XSS rodada 1). pytest **437** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 436+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
