@@ -1,6 +1,6 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.42.2
+**Versão:** 1.43
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
@@ -106,6 +106,7 @@ Duas funcionalidades classificadas como alto esforço na pesquisa de concorrente
   - `PATCH /api/eventos/id/{evento_id}/pdv/vendas/{ingresso_id}`
   - `POST /api/eventos/id/{evento_id}/pdv/vendas/{ingresso_id}/reenviar-email`
   Atualiza participante e **reatribui `usuario_id`** à conta do e-mail certo (`conta_cliente`); rate limit `pdv_reenviar` no reenvio. Log de auditoria em `pdv_correcao.py`. **Sem busca pública** — só organizador do evento.
+- **Self-service comprador (v1.43):** em **Minha conta → Ingressos**, o comprador pode **vincular ingresso** com o código da carteirinha/e-mail (`POST /api/ingressos/vincular`, rate limit `ingresso_vincular`). Só ingressos `pago`/`usado`; exige que o e-mail da conta logada coincida com `participante_email`. Serviço: `ingresso_vincular.py`. Testes: `test_ingresso_vincular.py`.
 - Gera `Ingresso` com `status=pago`, `canal_venda=pdv`, `forma_pagamento_pdv` — **sem Asaas, sem split, sem repasse automático** (reconciliação manual).
 - Respeita `quantidade_maxima` do lote (via `reservar_vaga_e_assento` / FOR UPDATE).
 - Carteirinha/QR: mesmo fluxo (`codigo_checkin` → `/ingresso/qr?c=…`); e-mail com carteirinha via `send_ticket_email_sync` + fallback fila.
@@ -702,8 +703,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §7 Ops | Deploy `4125ff4` / v1.42 confirmado 02/08 | **PASS** |
 | §2.8 A–C | Webhook / SMTP / 1ª venda | **PENDENTE ops** |
 | §7 Pagamentos | Conta `baas` | **aberto** até CNPJ |
-| §2.12 pendente | Self-service “vincular ingresso” | fora de escopo v1.42 |
-| §5.8 pendente UX | `accept` favicon admin SVG/ICO | fora de escopo v1.41 |
+| §2.12 pendente | Self-service “vincular ingresso” | **PASS** (v1.43) |
+| §5.8 pendente UX | `accept` favicon admin SVG/ICO | **PASS** (v1.43) |
 
 ### 11.1 histórico (v1.33)
 
@@ -745,7 +746,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 ### 11.6 Critério de aprovação — ✅ atingido (v1.42.2)
 
-**Build de código aprovada.** L1–L5 sem regressão; `pytest` **438** verde; tip produto `4125ff4`; deploy v1.42 confirmado. §2.12 (PDV confirmação/correção/reenvio) e §5.8 (XSS rodada 1) revalidados no código e nos testes. Nenhuma correção pendente para `/build`. Pendências: §2.8 ops, CNPJ, self-service “vincular ingresso”, favicon `accept` admin.
+**Build de código aprovada.** L1–L5 sem regressão; `pytest` **442** verde; tip produto `4125ff4`; deploy v1.42 confirmado. §2.12 (PDV + self-service vincular ingresso) e §5.8 (XSS rodada 1 + favicon admin) revalidados. Pendências ops: §2.8, CNPJ.
 
 ---
 
@@ -753,6 +754,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.43 | 2026-08-02 | **Self-service “vincular ingresso” (v1.43).** Comprador logado vincula ingresso confirmado à conta com código da carteirinha/e-mail (`POST /api/ingressos/vincular`); exige e-mail da conta = `participante_email`; rate limit `ingresso_vincular`. UI em `/conta/ingressos`. Fix UX admin: `accept` do favicon alinhado ao backend (sem SVG/ICO). Serviço `ingresso_vincular.py`. Testes: `test_ingresso_vincular.py`. 438 → 442. |
 | 1.42.2 | 2026-08-02 | **`/review` v1.42.2 — build aprovada.** Revalidou tip `4125ff4` / 438 testes: §2.12 PDV v1.42 PASS; §5.8 XSS PASS; L1–L5 sem regressão; §11 atualizado (estava em v1.33/390). Rotas PDV documentadas em §2.12. Teste auth na busca PDV. 437 → 438. |
 | 1.42.1 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — tip `4125ff4` / v1.42 (PDV confirmação/correção de e-mail) em produção; §7 e cabeçalho atualizados. |
 | 1.42 | 2026-08-02 | **PDV — confirmação e correção de e-mail (v1.42).** Confirmação dupla de e-mail na venda; envio síncrono com fallback na fila; seção “Corrigir venda” (busca por nome/e-mail/telefone/CPF só do evento, `PATCH` reassocia `usuario_id`, `POST` reenviar com rate limit). Serviços: `conta_cliente.py`, `pdv_correcao.py`; `send_ticket_email_sync` aceita ingressos `pago`/`usado`. Spec §2.12 corrigida (ingresso na conta do comprador). **Pendente:** self-service comprador (“vincular ingresso”). Merge PR #81 (`fbe08a7`); tip produto `4125ff4`. Testes: `test_pdv_correcao_email.py`. 432 → 437. |

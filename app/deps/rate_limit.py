@@ -34,6 +34,7 @@ _LIMITS: dict[str, tuple[int, int]] = {
     "financeiro_saque": (5, 60),
     "contato_publico": (5, 60),
     "pdv_reenviar": (15, 60),
+    "ingresso_vincular": (10, 60),
 }
 
 
@@ -190,6 +191,10 @@ def rate_limit_financeiro_saque(request: Request) -> None:
 def rate_limit_pdv_reenviar(request: Request, evento_id: str = "") -> None:
     ip = _client_ip(request)
     enforce_rate_limit(request, "pdv_reenviar", f"{ip}:{evento_id}")
+
+
+def rate_limit_ingresso_vincular(request: Request) -> None:
+    enforce_rate_limit(request, "ingresso_vincular")
 
 
 def client_ip_from_request(request: Request) -> str:
