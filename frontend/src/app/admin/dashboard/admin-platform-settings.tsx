@@ -277,7 +277,7 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
           value={form.favicon_url}
           onChange={(v) => setField("favicon_url", v)}
           uploadUrl="/api/admin/proxy/assets/upload"
-          accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml"
+          accept="image/jpeg,image/png,image/webp,image/gif"
           larguraAlvo={256}
           alturaAlvo={256}
         />

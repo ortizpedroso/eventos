@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -10,6 +10,7 @@ import re
 
 from app.models import Ingresso, Usuario, Evento, get_db
 from app.routes.auth import get_usuario_atual
+from app.deps.rate_limit import rate_limit_ingresso_vincular
 from app.services.ingresso_checkin import codigo_checkin
 from app.services.ingresso_qr import gerar_qr_png_bytes, ingresso_qr_payload, montar_carteirinha_ingresso_bytes
 from app.services.ticket_email import enqueue_ticket_email
@@ -101,6 +102,54 @@ async def listar_meus_ingressos(
             item["codigo_checkin"] = codigo_checkin(ingresso.id)
         items.append(item)
     return items
+
+
+class VincularIngressoRequest(BaseModel):
+    codigo: str
+
+    @field_validator("codigo")
+    @classmethod
+    def _codigo_nao_vazio(cls, v: str) -> str:
+        c = (v or "").strip()
+        if not c:
+            raise ValueError("Informe o código do ingresso.")
+        if len(c) > 500:
+            raise ValueError("Código inválido.")
+        return c
+
+
+@router.post("/vincular")
+async def vincular_ingresso(
+    body: VincularIngressoRequest,
+    request: Request,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Vincula ingresso confirmado à conta logada (código da carteirinha + e-mail igual ao da compra)."""
+    from app.services.ingresso_vincular import vincular_ingresso_a_conta
+
+    rate_limit_ingresso_vincular(request)
+    try:
+        ingresso, ja_vinculado = vincular_ingresso_a_conta(
+            db,
+            usuario=usuario_atual,
+            codigo=body.codigo,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    ev = ingresso.evento
+    return {
+        "ingresso_id": ingresso.id,
+        "evento_nome": ev.nome,
+        "ja_vinculado": ja_vinculado,
+        "message": (
+            "Este ingresso já estava na sua conta."
+            if ja_vinculado
+            else f"Ingresso vinculado: {ev.nome}."
+        ),
+    }
+
 
 class EmailRequest(BaseModel):
     pass

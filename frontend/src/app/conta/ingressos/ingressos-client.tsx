@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { ContinuarPagamentoLink } from "@/components/continuar-pagamento-link";
 import { ListaSkeleton } from "@/components/lista-skeleton";
@@ -48,6 +48,47 @@ export function IngressosClient() {
     readContaCache<IngressoListItem[]>(CONTA_CACHE_KEYS.ingressos) ?? null,
   );
   const [error, setError] = useState<string | null>(null);
+  const [codigoVincular, setCodigoVincular] = useState("");
+  const [vincularMsg, setVincularMsg] = useState<string | null>(null);
+  const [vincularErro, setVincularErro] = useState<string | null>(null);
+  const [vinculando, setVinculando] = useState(false);
+
+  async function recarregarIngressos() {
+    const data = await apiFetch<IngressoListItem[]>("/api/ingressos/meus", {
+      cache: "no-store",
+    });
+    setItems(data);
+    writeContaCache(CONTA_CACHE_KEYS.ingressos, data);
+  }
+
+  async function vincularIngresso(e: FormEvent) {
+    e.preventDefault();
+    setVincularMsg(null);
+    setVincularErro(null);
+    setVinculando(true);
+    try {
+      const res = await apiFetch<{
+        ingresso_id: string;
+        evento_nome: string;
+        ja_vinculado: boolean;
+        message: string;
+      }>("/api/ingressos/vincular", {
+        method: "POST",
+        body: JSON.stringify({ codigo: codigoVincular }),
+      });
+      setVincularMsg(res.message);
+      setCodigoVincular("");
+      if (!res.ja_vinculado) {
+        await recarregarIngressos();
+      }
+    } catch (err) {
+      setVincularErro(
+        err instanceof Error ? err.message : "Não foi possível vincular o ingresso.",
+      );
+    } finally {
+      setVinculando(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +131,40 @@ export function IngressosClient() {
           </div>
         </div>
       ) : null}
+
+      <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <h2 className="text-base font-semibold text-zinc-900">Vincular ingresso</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Comprou com outro e-mail ou não encontra o ingresso na lista? Cole o código que veio no
+          e-mail ou na carteirinha. O e-mail da sua conta deve ser o mesmo usado na compra.
+        </p>
+        <form onSubmit={vincularIngresso} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="grid flex-1 gap-1 text-sm">
+            <span className="font-medium text-zinc-800">Código do ingresso</span>
+            <input
+              type="text"
+              value={codigoVincular}
+              onChange={(e) => setCodigoVincular(e.target.value)}
+              placeholder="EBR1:…"
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+              autoComplete="off"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={vinculando || !codigoVincular.trim()}
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50"
+          >
+            {vinculando ? "Vinculando…" : "Vincular ingresso"}
+          </button>
+        </form>
+        {vincularMsg ? (
+          <p className="mt-3 text-sm text-emerald-800">{vincularMsg}</p>
+        ) : null}
+        {vincularErro ? (
+          <p className="mt-3 text-sm text-red-700">{vincularErro}</p>
+        ) : null}
+      </section>
 
       {items === null && !error ? <ListaSkeleton linhas={3} /> : null}
 

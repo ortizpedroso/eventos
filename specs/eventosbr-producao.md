@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.42.2
+**Versão:** 1.43.1
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `4125ff4` — **v1.42** (PDV: confirmação de e-mail, correção de venda e reenvio). **Deploy confirmado no VPS** (02/08/2026, usuário). Merge PR #81 (`fbe08a7`). pytest **438** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 437+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da `main` em `4125ff4` — **v1.42** (PDV). **v1.43** (self-service vincular ingresso + favicon admin) em PR #85 — deploy pendente após merge. pytest **442**. **Onboarding (decisão 02/08/2026):** manter `ASAAS_ONBOARDING_MODE=linked` em produção — o organizador **cria a conta no Asaas** (link de cadastro ou “Vincular conta existente”) e preenche KYC lá; **não** migrar a `baas` até a plataforma ter **CNPJ** na conta mãe Asaas (só trocar `.env` quando existir). **§2.8 C:** primeira venda real validada (02/08/2026, usuário). §2.8 A/B (webhook/SMTP formal) seguem checklist opcional.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -106,6 +106,7 @@ Duas funcionalidades classificadas como alto esforço na pesquisa de concorrente
   - `PATCH /api/eventos/id/{evento_id}/pdv/vendas/{ingresso_id}`
   - `POST /api/eventos/id/{evento_id}/pdv/vendas/{ingresso_id}/reenviar-email`
   Atualiza participante e **reatribui `usuario_id`** à conta do e-mail certo (`conta_cliente`); rate limit `pdv_reenviar` no reenvio. Log de auditoria em `pdv_correcao.py`. **Sem busca pública** — só organizador do evento.
+- **Self-service comprador (v1.43):** em **Minha conta → Ingressos**, o comprador pode **vincular ingresso** com o código da carteirinha/e-mail (`POST /api/ingressos/vincular`, rate limit `ingresso_vincular`). Só ingressos `pago`/`usado`; exige que o e-mail da conta logada coincida com `participante_email`. Serviço: `ingresso_vincular.py`. Testes: `test_ingresso_vincular.py`.
 - Gera `Ingresso` com `status=pago`, `canal_venda=pdv`, `forma_pagamento_pdv` — **sem Asaas, sem split, sem repasse automático** (reconciliação manual).
 - Respeita `quantidade_maxima` do lote (via `reservar_vaga_e_assento` / FOR UPDATE).
 - Carteirinha/QR: mesmo fluxo (`codigo_checkin` → `/ingresso/qr?c=…`); e-mail com carteirinha via `send_ticket_email_sync` + fallback fila.
@@ -144,7 +145,7 @@ Em `baas`, o organizador não cria nem vincula conta em painel externo — tudo 
 
 **Acompanhamento dinâmico (tracker):** após criar conta ou iniciar assinatura, UI exibe stepper com polling (`GET /api/organizador/onboarding/conta/{trackingId}/status` e `GET /api/organizador/onboarding/assinatura/{subscriptionId}/status`, intervalo ~4s). E-mails automáticos no backend em `APPROVED`/`REJECTED` (conta) e `SUBSCRIBED`/`PAYMENT_FAILED` (assinatura). Componente reutilizável: `frontend/src/components/status-tracker.tsx`.
 
-**Modo de lançamento atual:** `ASAAS_ONBOARDING_MODE=linked` (organizador vincula conta Asaas própria — ativo em produção desde 25/07/2026, ver `specs/onboarding-linked-lancamento.md`). `baas` (conta criada pela própria plataforma, onboarding 100% invisível) é o **alvo futuro**, quando houver CNPJ da conta mãe — não é bloqueio de lançamento.
+**Modo de produção (decisão 02/08/2026):** `ASAAS_ONBOARDING_MODE=linked` — o organizador **abre o Asaas**, cria ou vincula a própria conta e completa os dados/KYC no painel do processador (link de cadastro EventosBR ou walletId). **Não** alterar para `baas` até existir CNPJ na conta mãe da plataforma; a migração futura é só `ASAAS_ONBOARDING_MODE=baas` (ou `both`) no `.env`, sem mudança de código — ver `specs/onboarding-linked-lancamento.md`. Ativo em produção desde 25/07/2026.
 
 ### 2.3 Configuração Asaas — somente produção
 
@@ -351,6 +352,8 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 3. Compra PIX ou cartão concluída
 4. Ingresso com QR na conta do comprador + e-mail recebido
 5. Split visível no extrato Financeiro do organizador
+
+**Status:** [x] validado em produção (02/08/2026, usuário).
 
 ---
 
@@ -581,7 +584,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 ### Pagamentos (código)
 
 - [x] Split só para organizador; taxa na conta emissora
-- [ ] Conta de recebimento criada pela plataforma (`ASAAS_ONBOARDING_MODE=baas`) — *hoje em produção é `linked` (organizador vincula conta); item fica aberto até CNPJ mãe + `baas`; ver §11 L2*
+- [ ] Conta de recebimento criada pela plataforma (`ASAAS_ONBOARDING_MODE=baas`) — **fora do escopo atual**; produção segue `linked` (organizador cria/vincula no Asaas) até CNPJ da conta mãe — decisão 02/08/2026
 - [x] Organizador PF ou PJ — rotas `conta-recebimento`; sem “subconta” na UX
 - [x] Pré-check conta mãe CNPJ + mensagem clara se plataforma PF (`asaas_plataforma.py`)
 - [x] Tracker dinâmico de conta e assinatura com polling + e-mails (`onboarding_tracker.py`, `status-tracker.tsx`)
@@ -602,7 +605,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (438 testes)
+- [x] `pytest` verde (442 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -610,16 +613,17 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 - [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
 - [x] Checkout: código `repasse` + aviso proativo antes do pagamento (`compra_indisponivel_codigo`)
 
-### Operação (VPS — após deploy + CNPJ Asaas)
+### Operação (VPS)
 
 **Estado do repositório:**
 
-- [x] tip de produto — `4125ff4` (v1.42 — PDV confirmação/correção de e-mail + reenvio); anterior `b735902` (v1.41), `b0f0225` (v1.40), `c9ab63a` (v1.39), `a6d8412` (v1.38), `4b18643` (v1.36), `d8f3b4b` (v1.35), `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …`, merges de PR e config de ambiente (`environment.json`) não entram neste ponteiro.
-- [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
-- [x] Deploy VPS do tip atual (`4125ff4` / v1.42) — **confirmado pelo usuário** em 02/08/2026 (PDV: confirmação de e-mail, corrigir venda, reenvio ingresso)
+- [x] tip de produto — `4125ff4` (v1.42); **v1.43** (self-service vincular ingresso) em PR #85 — ponteiro de produto sobe após merge
+- [ ] Conta mãe Asaas em **CNPJ** — **adiado** até a plataforma abrir PJ no Asaas; não bloqueia `linked` (decisão 02/08/2026)
+- [x] Deploy VPS v1.42 (`4125ff4`) — confirmado 02/08/2026
+- [ ] Deploy VPS v1.43 — após merge PR #85
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
-- [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
-- [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
+- [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` — modelo **definitivo até CNPJ**; organizador cria conta no Asaas e preenche dados lá (02/08/2026)
+- [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` — N/A em `linked`; relevante só ao migrar para `baas`
 
 **Validado no VPS em produção (deploy `e6df57d`, 25/07/2026 — baseline; modo atual = `linked`):**
 
@@ -628,7 +632,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 - [x] `verify-production.sh` / `verificar-versao-site.sh`
 - [x] Webhook token HTTP 200 (`test-asaas-webhook.sh --expect-ok`) — revalidar após trocar conta Asaas
 
-**Pendente — testes reais (§2.8) — após CNPJ e deploy:**
+**Checklist §2.8 (opcional — formalizar webhook/SMTP):**
 
 ```bash
 cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
@@ -636,7 +640,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 
 - [ ] Webhook configurado e testado com evento real (`PAYMENT_RECEIVED`) — §2.8 A
 - [ ] SMTP + SPF/DKIM validados (envio real de ingresso) — §2.8 B
-- [ ] Primeira venda real validada (PIX ou cartão + e-mail recebido) — §2.8 C
+- [x] Primeira venda real validada (PIX ou cartão + e-mail recebido) — §2.8 C *(02/08/2026, usuário)*
 
 ---
 
@@ -700,10 +704,11 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.2–§2.4 / §4 | Narrativa `linked` | **PASS** (L4) |
 | §7 Qualidade | `pytest` 438 | **PASS** |
 | §7 Ops | Deploy `4125ff4` / v1.42 confirmado 02/08 | **PASS** |
-| §2.8 A–C | Webhook / SMTP / 1ª venda | **PENDENTE ops** |
-| §7 Pagamentos | Conta `baas` | **aberto** até CNPJ |
-| §2.12 pendente | Self-service “vincular ingresso” | fora de escopo v1.42 |
-| §5.8 pendente UX | `accept` favicon admin SVG/ICO | fora de escopo v1.41 |
+| §2.8 C | Primeira venda real | **PASS** (02/08/2026) |
+| §2.8 A–B | Webhook / SMTP formal | checklist opcional |
+| §7 Pagamentos | Conta `baas` | **N/A** — `linked` até CNPJ (decisão 02/08) |
+| §2.12 pendente | Self-service “vincular ingresso” | **PASS** (v1.43) |
+| §5.8 pendente UX | `accept` favicon admin SVG/ICO | **PASS** (v1.43) |
 
 ### 11.1 histórico (v1.33)
 
@@ -734,8 +739,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 ### 11.3 Não são lacunas de código desta build
 
-- CNPJ conta mãe, §2.8 A/B/C, `asaas_platform_cnpj` em `linked` — `[ ]` / N/A.
-- Item §7 “conta criada pela plataforma (`baas`)” aberto até CNPJ+`baas`.
+- CNPJ conta mãe adiado (não é lacuna); `baas` fora de escopo até PJ no Asaas — decisão 02/08/2026.
+- §2.8 A/B — checklist opcional de formalização.
 - Rotação automática de chave — descartada (changelog 1.29).
 
 ### 11.5 Evidência L4/L5 (revalidação v1.33)
@@ -745,7 +750,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 ### 11.6 Critério de aprovação — ✅ atingido (v1.42.2)
 
-**Build de código aprovada.** L1–L5 sem regressão; `pytest` **438** verde; tip produto `4125ff4`; deploy v1.42 confirmado. §2.12 (PDV confirmação/correção/reenvio) e §5.8 (XSS rodada 1) revalidados no código e nos testes. Nenhuma correção pendente para `/build`. Pendências: §2.8 ops, CNPJ, self-service “vincular ingresso”, favicon `accept` admin.
+**Build de código aprovada.** `pytest` **442**; v1.43 em PR #85. §2.8 C validado em produção. Onboarding `linked` confirmado como modelo até CNPJ.
 
 ---
 
@@ -753,6 +758,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.43.1 | 2026-08-02 | **Ops produção — `linked` até CNPJ + 1ª venda.** Decisão: manter `ASAAS_ONBOARDING_MODE=linked` (organizador cria/vincula conta no Asaas e preenche KYC lá); `baas` só quando plataforma tiver CNPJ na conta mãe. §2.8 C marcado validado (02/08/2026). §7 e cabeçalho alinhados; §2.8 A/B checklist opcional. |
+| 1.43 | 2026-08-02 | **Self-service “vincular ingresso” (v1.43).** Comprador logado vincula ingresso confirmado à conta com código da carteirinha/e-mail (`POST /api/ingressos/vincular`); exige e-mail da conta = `participante_email`; rate limit `ingresso_vincular`. UI em `/conta/ingressos`. Fix UX admin: `accept` do favicon alinhado ao backend (sem SVG/ICO). Serviço `ingresso_vincular.py`. Testes: `test_ingresso_vincular.py`. 438 → 442. |
 | 1.42.2 | 2026-08-02 | **`/review` v1.42.2 — build aprovada.** Revalidou tip `4125ff4` / 438 testes: §2.12 PDV v1.42 PASS; §5.8 XSS PASS; L1–L5 sem regressão; §11 atualizado (estava em v1.33/390). Rotas PDV documentadas em §2.12. Teste auth na busca PDV. 437 → 438. |
 | 1.42.1 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — tip `4125ff4` / v1.42 (PDV confirmação/correção de e-mail) em produção; §7 e cabeçalho atualizados. |
 | 1.42 | 2026-08-02 | **PDV — confirmação e correção de e-mail (v1.42).** Confirmação dupla de e-mail na venda; envio síncrono com fallback na fila; seção “Corrigir venda” (busca por nome/e-mail/telefone/CPF só do evento, `PATCH` reassocia `usuario_id`, `POST` reenviar com rate limit). Serviços: `conta_cliente.py`, `pdv_correcao.py`; `send_ticket_email_sync` aceita ingressos `pago`/`usado`. Spec §2.12 corrigida (ingresso na conta do comprador). **Pendente:** self-service comprador (“vincular ingresso”). Merge PR #81 (`fbe08a7`); tip produto `4125ff4`. Testes: `test_pdv_correcao_email.py`. 432 → 437. |
