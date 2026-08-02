@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.45
+**Versão:** 1.45.1
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`df08e23`** — **v1.44** em produção. Tip de **produto** `6c2e031` (+ **v1.45** pendente deploy). pytest **449** (CI). **Lançamento:** `/review` v1.45 **APROVADA**.
+> **Produção (VPS):** **`6c5a6f6`** — **v1.45** em produção (confirmação e-mail organizador + imagens + Turnstile build). Tip de **produto** `9c6044a`. Deploy confirmado pelo usuário em **02/08/2026**. pytest **449** (CI). **Lançamento:** `/review` v1.45 **APROVADA**.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -316,7 +316,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (442 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (449 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -630,11 +630,12 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — `6c2e031` (v1.44); VPS `df08e23` (spec v1.44.2 + deploy confirmado 02/08/2026); anterior `d2c9e4b` (v1.43)
+- [x] tip de produto — `9c6044a` (v1.45); VPS `6c5a6f6` (deploy confirmado 02/08/2026); anterior `df08e23` (v1.44)
 - [x] Conta mãe Asaas em **CNPJ** — **fechado por decisão** (adiado até PJ no Asaas); não bloqueia `linked` (02/08/2026)
 - [x] Deploy VPS — **`d2c9e4b`** / v1.43 — confirmado 02/08/2026 (`verificar-versao-site.sh`)
 - [x] Deploy VPS `de12227` / v1.42.2 — confirmado 02/08/2026
-- [x] Deploy VPS v1.44 — **`df08e23`** confirmado 02/08/2026 (`verificar-versao-site.sh`; API/Web commit `df08e23`)
+- [x] Deploy VPS v1.44 — **`df08e23`** confirmado 02/08/2026
+- [x] Deploy VPS v1.45 — **`6c5a6f6`** confirmado 02/08/2026 (`verificar-versao-site.sh`; inclui PR #95 + #96)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` — modelo **definitivo até CNPJ**; organizador cria conta no Asaas e preenche dados lá (02/08/2026)
 - [x] `GET /api/admin/setup` → `asaas_platform_cnpj` — **N/A em `linked`**; relevante só ao migrar para `baas` (fechado)
@@ -708,7 +709,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.44 | `6c2e031` / **445** | APROVADA — merge PR #91 `733d227` |
 | v1.44.2 | `68bd595` / **445** | APROVADA — fechamento pendências spec/ops |
 | v1.44.3 | `df08e23` / **445** | APROVADA — deploy VPS v1.44 confirmado |
-| **v1.45 (este)** | pendente / **449** | **APROVADA** — e-mail organizador + imagens + Turnstile build |
+| v1.45 | `9c6044a` / **449** | APROVADA — e-mail organizador + imagens + Turnstile build |
+| **v1.45.1 (este)** | `6c5a6f6` / **449** | **APROVADA** — deploy VPS v1.45 confirmado |
 
 ### 11.1 Requisitos recentes — resultado (v1.45)
 
@@ -719,6 +721,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §5.3 | Turnstile `NEXT_PUBLIC` no build Docker produção | **PASS** |
 | §3.3 / §2.9–§2.12 | Baseline v1.44 sem regressão | **PASS** |
 | §7 Qualidade | `pytest` 449 | **PASS** |
+| §7 Ops | Deploy `6c5a6f6` / v1.45 em produção | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.44)
 
@@ -794,9 +797,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.45)
+### 11.6 Critério de aprovação — ✅ atingido (v1.45.1)
 
-**Aprovado para lançamento comercial.** VPS `df08e23` / v1.44 em produção; **v1.45** aguarda deploy. `pytest` **449** (CI). Turnstile recomendado. Cadastro organizador com confirmação de e-mail implementado.
+**Aprovado para lançamento comercial.** VPS **`6c5a6f6`** / **v1.45** em produção (deploy confirmado 02/08/2026). Tip de produto `9c6044a`. `pytest` **449** (CI). Turnstile recomendado. Cadastro organizador com confirmação de e-mail em produção.
 
 ---
 
@@ -804,6 +807,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.45.1 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — `6c5a6f6` / v1.45 em produção (confirmação e-mail organizador + imagens + Turnstile build; PR #95 + #96). §7 e cabeçalho atualizados; §11 deploy PASS. |
 | 1.45 | 2026-08-02 | **Cadastro organizador + endurecimento imagens.** §3.3: confirmação e-mail 24h, boas-vindas com botão e link copiável, login bloqueado até confirmar, `reenviar-verificacao-cadastro`. §5.8: `imagem_url` só hosts da plataforma/R2/uploads; UI evento só upload. §5.3: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` no build Docker. Testes: 445 → 449. |
 | 1.44.3 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — `df08e23` / v1.44 em produção (`verificar-versao-site.sh`: API/Web `df08e23`, health/ready OK). §7 e cabeçalho atualizados; §11 deploy PASS. |
 | 1.44.2 | 2026-08-02 | **Fechamento de pendências.** `main` `68bd595` (PR #92). §7: `baas`/CNPJ/`asaas_platform_cnpj` fechados por decisão ou N/A; §2.8 A/B fechados via 1ª venda; histórico §11 v1.33 alinhado. PR #87 fechado. Deploy VPS v1.44 pendente até confirmação. |
