@@ -1,6 +1,6 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.43.3
+**Versão:** 1.43.4
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
@@ -316,7 +316,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (438 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (442 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -617,7 +617,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — `a665533` (v1.43 — vincular ingresso + favicon admin); merge PR #86 (`7d6823d`); anterior `4125ff4` (v1.42)
+- [x] tip de produto — `a665533` (v1.43); `main` deploy `d2c9e4b` confirmado 02/08/2026; merge PR #86; anterior `4125ff4` (v1.42)
 - [ ] Conta mãe Asaas em **CNPJ** — **adiado** até a plataforma abrir PJ no Asaas; não bloqueia `linked` (decisão 02/08/2026)
 - [x] Deploy VPS — **`d2c9e4b`** / v1.43 — **confirmado pelo usuário** em 02/08/2026 (`verificar-versao-site.sh`)
 - [x] Deploy VPS `de12227` / v1.42.2 — confirmado 02/08/2026
@@ -689,9 +689,24 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | build `a32b948` | fechou L4+L5 | — |
 | v1.32 | `a32b948` / 390 | aprovada (pelo build que fechou L4/L5) |
 | v1.33 | `a32b948` / 390 | APROVADA — L1–L5 |
-| **v1.42.2 (este)** | `4125ff4` / **438** | **APROVADA** — §2.12 v1.42 + §5.8 + §7 revalidados |
+| v1.42.2 | `4125ff4` / 438 | APROVADA — §2.12 v1.42 + §5.8 |
+| **v1.43.3 (este)** | `a665533` / **442** | **APROVADA** — v1.43 + ops produção + deploy `d2c9e4b` |
 
-### 11.1 Requisitos recentes — resultado (v1.42.2)
+### 11.1 Requisitos recentes — resultado (v1.43.3)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.12 | Self-service `POST /api/ingressos/vincular` + UI Minha conta | **PASS** |
+| §2.12 | Confirmação/correção/reenvio PDV (v1.42) | **PASS** |
+| §5.8 | SVG/ICO bloqueados; JSON-LD escapado; favicon `accept` admin | **PASS** |
+| §2.2–§2.4 / §4 | `linked` até CNPJ; organizador cria conta no Asaas | **PASS** (decisão 02/08) |
+| §2.8 C | Primeira venda real | **PASS** (02/08/2026) |
+| §2.8 A–B | Webhook / SMTP formal | checklist opcional |
+| §7 Qualidade | `pytest` 442 | **PASS** |
+| §7 Ops | Deploy `d2c9e4b` / v1.43 confirmado 02/08 | **PASS** |
+| §7 Pagamentos | Conta `baas` | **N/A** — `linked` até CNPJ |
+
+### 11.1 histórico (v1.42.2)
 
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
@@ -701,14 +716,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.12 | Busca por telefone (`ingresso_busca`) | **PASS** |
 | §5.8 | SVG/ICO bloqueados; JSON-LD escapado | **PASS** |
 | §2.9–§2.11 | Baseline v1.33 sem regressão | **PASS** |
-| §2.2–§2.4 / §4 | Narrativa `linked` | **PASS** (L4) |
 | §7 Qualidade | `pytest` 438 | **PASS** |
-| §7 Ops | Deploy `d2c9e4b` / v1.43 confirmado 02/08 | **PASS** |
-| §2.8 C | Primeira venda real | **PASS** (02/08/2026) |
-| §2.8 A–B | Webhook / SMTP formal | checklist opcional |
-| §7 Pagamentos | Conta `baas` | **N/A** — `linked` até CNPJ (decisão 02/08) |
-| §2.12 pendente | Self-service “vincular ingresso” | **PASS** (v1.43) |
-| §5.8 pendente UX | `accept` favicon admin SVG/ICO | **PASS** (v1.43) |
+| §7 Ops | Deploy `4125ff4` / v1.42 confirmado 02/08 | **PASS** |
 
 ### 11.1 histórico (v1.33)
 
@@ -748,9 +757,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.42.2)
+### 11.6 Critério de aprovação — ✅ atingido (v1.43.3)
 
-**Build de código aprovada.** `pytest` **442**; tip `a665533`; deploy v1.43 confirmado (`d2c9e4b`).
+**Produção estável.** Tip `a665533` / v1.43 em VPS (`d2c9e4b`, 02/08/2026). `pytest` **442**. Onboarding `linked` até CNPJ. §2.8 C validado. Sem lacunas L1–L5. Pendências não bloqueantes: §2.8 A/B (formalização), CNPJ/`baas` (futuro).
 
 ---
 
@@ -758,6 +767,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.43.4 | 2026-08-02 | **Consolidação spec v1.43.3.** §11 alinhado à produção atual (`a665533`, deploy `d2c9e4b`, 442 testes); tabela `/review` v1.43.3; CI §7 pytest 442. |
 | 1.43.3 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — `d2c9e4b` / v1.43 (vincular ingresso + favicon admin) em produção; §7 e cabeçalho atualizados. |
 | 1.43.2 | 2026-08-02 | **Merge PR #86** — v1.43 na `main` (`7d6823d`, tip `a665533`). Spec §7 e cabeçalho atualizados; deploy VPS v1.43 pendente. Incorpora confirmação deploy `de12227` (PR #87 fechado por conflito). |
 | 1.43.1 | 2026-08-02 | **Ops produção — `linked` até CNPJ + 1ª venda.** Decisão: manter `ASAAS_ONBOARDING_MODE=linked` (organizador cria/vincula conta no Asaas e preenche KYC lá); `baas` só quando plataforma tiver CNPJ na conta mãe. §2.8 C marcado validado (02/08/2026). §7 e cabeçalho alinhados; §2.8 A/B checklist opcional. |
