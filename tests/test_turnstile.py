@@ -25,6 +25,8 @@ def test_turnstile_ligado_valida_com_cloudflare(monkeypatch):
     monkeypatch.setattr(settings, "TURNSTILE_SECRET_KEY", "chave-de-teste")
 
     class FakeResponse:
+        is_success = True
+
         def json(self):
             return {"success": True}
 
@@ -36,8 +38,24 @@ def test_turnstile_ligado_rejeita_token_invalido(monkeypatch):
     monkeypatch.setattr(settings, "TURNSTILE_SECRET_KEY", "chave-de-teste")
 
     class FakeResponse:
+        is_success = True
+
         def json(self):
             return {"success": False, "error-codes": ["invalid-input-response"]}
 
     with patch("httpx.AsyncClient.post", new=AsyncMock(return_value=FakeResponse())):
         assert asyncio.run(turnstile.verificar_turnstile("token-invalido")) is False
+
+
+def test_turnstile_falha_em_http_error(monkeypatch):
+    monkeypatch.setattr(settings, "TURNSTILE_SECRET_KEY", "chave-de-teste")
+
+    class FakeResponse:
+        is_success = False
+        status_code = 503
+
+        def json(self):
+            return {}
+
+    with patch("httpx.AsyncClient.post", new=AsyncMock(return_value=FakeResponse())):
+        assert asyncio.run(turnstile.verificar_turnstile("token")) is False

@@ -514,7 +514,7 @@ Ambas as correções têm comentários extensos no próprio `Caddyfile` e em `ne
 
 ### 5.3 CAPTCHA — Cloudflare Turnstile (adicionado v1.8)
 
-Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (frontend); desligado por padrão, não bloqueia `ready_for_production`. **Recomendado em produção** — `GET /api/admin/setup` → `checks.turnstile` = `recomendado` se a chave API estiver vazia; `validar-go-live-vps.sh` avisa. **Configuração VPS:** `scripts/configure-turnstile-env.sh` (grava ambas as chaves no `.env`); placeholders em `.env.production.example`; `bootstrap-vps-env.sh` preserva chaves existentes. Build Docker produção passa `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (`docker-compose.prod.yml`, `frontend/Dockerfile`). Após configurar: `docker compose -f docker-compose.prod.yml up -d --build web` + `up -d api`. Verificação server-side em `app/services/turnstile.py`, aplicado em `/api/auth/{login,registrar,solicitar-recuperacao-senha,reenviar-verificacao-cadastro}` e `/contato`. Widget: `frontend/src/components/turnstile-widget.tsx`; submit desabilitado no frontend quando a site key está no build mas o token ainda não foi emitido.
+Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (frontend); desligado por padrão, não bloqueia `ready_for_production`. **Recomendado em produção** — `GET /api/admin/setup` → `checks.turnstile` = `recomendado` se a chave API estiver vazia; `validar-go-live-vps.sh` avisa. **Configuração VPS:** `scripts/configure-turnstile-env.sh` ou `scripts/setup-turnstile-e2e.sh` (cria widget via API se `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`; valida secret com `scripts/turnstile-spin/validate.sh`). Widget React: `turnstile-widget.tsx` com `action=turnstile-spin-v2`, reset após erro de submit (token single-use). Build Docker produção passa `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (`docker-compose.prod.yml`, `frontend/Dockerfile`). Verificação server-side canônica em `app/services/turnstile.py` → `https://challenges.cloudflare.com/turnstile/v0/siteverify`, aplicada em `/api/auth/{login,registrar,solicitar-recuperacao-senha,reenviar-verificacao-cadastro}` e `/api/public/contato`.
 
 ### 5.4 Rate limiting (`app/deps/rate_limit.py`)
 
@@ -682,7 +682,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `lib/eventos-listagem-metadata.ts`, `lib/json-ld-html.ts`, `app/eventos/page.tsx` (metadata cidade), `app/eventos/[slug]/page.tsx` (JSON-LD + typicalAgeRange) |
 | Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
-| Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh` |
+| Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh`, `configure-turnstile-env.sh` |
 | Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py`, `test_pdv_correcao_email.py` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |

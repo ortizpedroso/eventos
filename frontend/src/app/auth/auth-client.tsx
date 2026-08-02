@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { OAuthLoginButtons } from "@/components/oauth-login-buttons";
@@ -83,6 +83,7 @@ export default function AuthClient({
   const [telefoneCadastro, setTelefoneCadastro] = useState("");
   const [senhaDigitada, setSenhaDigitada] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileResetRef = useRef<(() => void) | null>(null);
   const [login2fa, setLogin2fa] = useState<{ loginToken: string } | null>(null);
   const [codigo2fa, setCodigo2fa] = useState("");
   const [lembrarDispositivo, setLembrarDispositivo] = useState(true);
@@ -283,6 +284,7 @@ export default function AuthClient({
 
       finishAuth(data);
     } catch (e) {
+      turnstileResetRef.current?.();
       const message = e instanceof Error ? e.message : "Erro";
       const lower = message.toLowerCase();
       const isDev = process.env.NODE_ENV === "development";
@@ -322,6 +324,7 @@ export default function AuthClient({
       });
       finishAuth(data);
     } catch (e2) {
+      turnstileResetRef.current?.();
       setError(e2 instanceof Error ? e2.message : "Código inválido.");
     } finally {
       setLoading(false);
@@ -346,6 +349,7 @@ export default function AuthClient({
       );
       setInfoMsg(r.dev_link ? `${r.message} Link dev: ${r.dev_link}` : r.message);
     } catch (e) {
+      turnstileResetRef.current?.();
       setError(e instanceof Error ? e.message : "Não foi possível reenviar.");
     } finally {
       setReenviandoConfirmacao(false);
@@ -392,6 +396,7 @@ export default function AuthClient({
         onReenviar={() => void reenviarConfirmacaoCadastro()}
         onIrLogin={irParaLoginAposCadastro}
         onToken={setTurnstileToken}
+        turnstileResetRef={turnstileResetRef}
       />
     );
   }
@@ -667,7 +672,7 @@ export default function AuthClient({
           ) : null}
 
           {mode !== "reset" ? (
-            <TurnstileWidget onToken={setTurnstileToken} />
+            <TurnstileWidget onToken={setTurnstileToken} resetRef={turnstileResetRef} />
           ) : null}
 
           <button disabled={formularioDesabilitado} className="btn-success w-full" type="submit">

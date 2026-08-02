@@ -36,6 +36,9 @@ async def verificar_turnstile(token: str | None, remote_ip: str | None = None) -
     try:
         async with httpx.AsyncClient(timeout=8.0) as client:
             resp = await client.post(_VERIFY_URL, data=payload)
+        if not resp.is_success:
+            logger.error("siteverify HTTP %s", resp.status_code)
+            return False
         data = resp.json()
         return bool(data.get("success"))
     except (httpx.HTTPError, ValueError):

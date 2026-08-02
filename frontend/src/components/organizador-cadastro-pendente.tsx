@@ -1,5 +1,7 @@
 "use client";
 
+import { type RefObject } from "react";
+
 import { TurnstileWidget } from "@/components/turnstile-widget";
 
 const SESSION_KEY = "eventosbr_org_cadastro_pendente";
@@ -39,6 +41,7 @@ type OrganizadorCadastroPendenteProps = {
   onReenviar: () => void;
   onIrLogin: () => void;
   onToken: (token: string | null) => void;
+  turnstileResetRef?: RefObject<(() => void) | null>;
 };
 
 /** Tela pública após cadastro de organizador — conta criada, confirme e-mail (sem login). */
@@ -51,6 +54,7 @@ export function OrganizadorCadastroPendente({
   onReenviar,
   onIrLogin,
   onToken,
+  turnstileResetRef,
 }: OrganizadorCadastroPendenteProps) {
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
@@ -87,7 +91,7 @@ export function OrganizadorCadastroPendente({
         ) : null}
 
         <div className="mt-5">
-          <TurnstileWidget onToken={onToken} />
+          <TurnstileWidget onToken={onToken} resetRef={turnstileResetRef} />
         </div>
 
         <button
