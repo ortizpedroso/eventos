@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Cria widget Turnstile via API Cloudflare (Spin skill).
 # Uso: CLOUDFLARE_API_TOKEN=... ./scripts/turnstile-spin/widget-create.sh \
-#   --account-id <id> --name "EventosBR" --domains localhost,127.0.0.1,eventosbr.app.br
+#   --account-id <id> --name "EventosBR" --domains eventosbr.app.br,www.eventosbr.app.br
+#
+# Domínios: separados por vírgula SEM espaços, ou um hostname por linha.
+# No painel Cloudflare: um hostname por campo — NÃO cole "a, b, c" num único campo.
 
 set -euo pipefail
 
@@ -9,6 +12,8 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 # shellcheck source=scripts/env-file-lib.sh
 source "$ROOT/scripts/env-file-lib.sh"
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 ACCOUNT_ID=""
 NAME=""
@@ -38,15 +43,19 @@ done
   exit 2
 }
 
+domains_json=$(python3 "$SCRIPT_DIR/normalize-domains.py" "$DOMAINS") || {
+  echo "widget-create: domínios inválidos — $DOMAINS" >&2
+  exit 1
+}
+
 body_json=$(python3 -c '
 import json, sys
-name, domains_csv, mode = sys.argv[1], sys.argv[2], sys.argv[3]
-print(json.dumps({
-  "name": name,
-  "domains": [d.strip() for d in domains_csv.split(",") if d.strip()],
-  "mode": mode,
-}))
-' "$NAME" "$DOMAINS" "$MODE")
+name, domains_json, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+domains = json.loads(domains_json)
+print(json.dumps({"name": name, "domains": domains, "mode": mode}))
+' "$NAME" "$domains_json" "$MODE")
+
+echo "widget-create: domínios normalizados: $domains_json" >&2
 
 account_enc=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$ACCOUNT_ID")
 
@@ -69,7 +78,8 @@ with open(path) as f:
     data = json.load(f)
 if not data.get("success"):
     err = (data.get("errors") or [{}])[0]
-    print(json.dumps({"status":"error","message":err.get("message","failed")}))
+    msg = err.get("message", "failed")
+    print(json.dumps({"status":"error","message":msg}))
     sys.exit(1)
 r = data.get("result") or {}
 print(json.dumps({"status":"ok","sitekey":r["sitekey"],"secret":r["secret"]}))

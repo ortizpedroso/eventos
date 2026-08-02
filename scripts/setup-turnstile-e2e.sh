@@ -18,7 +18,8 @@ source "$ROOT/scripts/env-file-lib.sh"
 
 ENV_FILE="${ENV_FILE:-.env}"
 DOMAIN="${DOMAIN:-eventosbr.app.br}"
-DOMAINS="localhost,127.0.0.1,${DOMAIN},www.${DOMAIN}"
+# Produção: só apex + www (localhost opcional para dev — ver README turnstile-spin)
+DOMAINS="${DOMAIN},www.${DOMAIN}"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -27,7 +28,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo "==> Turnstile E2E — domínios: $DOMAINS"
+echo "==> Turnstile E2E — domínios (normalizados na criação): $DOMAINS"
+echo "    (um hostname por entrada no painel; CSV sem espaços no script)"
 
 if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
   echo "==> Criando widget via API Cloudflare..."
