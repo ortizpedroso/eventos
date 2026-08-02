@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.43.1
+**Versão:** 1.43.2
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `4125ff4` — **v1.42** (PDV). **v1.43** (self-service vincular ingresso + favicon admin) em PR #85 — deploy pendente após merge. pytest **442**. **Onboarding (decisão 02/08/2026):** manter `ASAAS_ONBOARDING_MODE=linked` em produção — o organizador **cria a conta no Asaas** (link de cadastro ou “Vincular conta existente”) e preenche KYC lá; **não** migrar a `baas` até a plataforma ter **CNPJ** na conta mãe Asaas (só trocar `.env` quando existir). **§2.8 C:** primeira venda real validada (02/08/2026, usuário). §2.8 A/B (webhook/SMTP formal) seguem checklist opcional.
+> **Produção (VPS):** `main` em **`7d6823d`** — **v1.43** (self-service vincular ingresso + favicon admin; merge PR #86). Tip de **produto** `a665533`. Deploy anterior `de12227` / v1.42.2 confirmado (02/08/2026). **Deploy v1.43 pendente** no VPS após `atualizar-vps-agora.sh`. pytest **442**. **Onboarding (decisão 02/08/2026):** `linked` até CNPJ na conta mãe Asaas. **§2.8 C:** primeira venda validada (02/08/2026).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -617,10 +617,11 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — `4125ff4` (v1.42); **v1.43** (self-service vincular ingresso) em PR #85 — ponteiro de produto sobe após merge
+- [x] tip de produto — `a665533` (v1.43 — vincular ingresso + favicon admin); merge PR #86 (`7d6823d`); anterior `4125ff4` (v1.42)
 - [ ] Conta mãe Asaas em **CNPJ** — **adiado** até a plataforma abrir PJ no Asaas; não bloqueia `linked` (decisão 02/08/2026)
-- [x] Deploy VPS v1.42 (`4125ff4`) — confirmado 02/08/2026
-- [ ] Deploy VPS v1.43 — após merge PR #85
+- [x] Deploy VPS `de12227` / v1.42.2 — confirmado 02/08/2026
+- [x] Deploy VPS `4125ff4` / v1.42 — confirmado 02/08/2026
+- [ ] Deploy VPS v1.43 (`a665533`) — após `atualizar-vps-agora.sh`
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` — modelo **definitivo até CNPJ**; organizador cria conta no Asaas e preenche dados lá (02/08/2026)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` — N/A em `linked`; relevante só ao migrar para `baas`
@@ -750,7 +751,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 ### 11.6 Critério de aprovação — ✅ atingido (v1.42.2)
 
-**Build de código aprovada.** `pytest` **442**; v1.43 em PR #85. §2.8 C validado em produção. Onboarding `linked` confirmado como modelo até CNPJ.
+**Build de código aprovada.** `pytest` **442**; v1.43 mergeado na `main` (PR #86, `7d6823d`). Deploy VPS v1.43 pendente.
 
 ---
 
@@ -758,6 +759,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.43.2 | 2026-08-02 | **Merge PR #86** — v1.43 na `main` (`7d6823d`, tip `a665533`). Spec §7 e cabeçalho atualizados; deploy VPS v1.43 pendente. Incorpora confirmação deploy `de12227` (PR #87 fechado por conflito). |
 | 1.43.1 | 2026-08-02 | **Ops produção — `linked` até CNPJ + 1ª venda.** Decisão: manter `ASAAS_ONBOARDING_MODE=linked` (organizador cria/vincula conta no Asaas e preenche KYC lá); `baas` só quando plataforma tiver CNPJ na conta mãe. §2.8 C marcado validado (02/08/2026). §7 e cabeçalho alinhados; §2.8 A/B checklist opcional. |
 | 1.43 | 2026-08-02 | **Self-service “vincular ingresso” (v1.43).** Comprador logado vincula ingresso confirmado à conta com código da carteirinha/e-mail (`POST /api/ingressos/vincular`); exige e-mail da conta = `participante_email`; rate limit `ingresso_vincular`. UI em `/conta/ingressos`. Fix UX admin: `accept` do favicon alinhado ao backend (sem SVG/ICO). Serviço `ingresso_vincular.py`. Testes: `test_ingresso_vincular.py`. 438 → 442. |
 | 1.42.2 | 2026-08-02 | **`/review` v1.42.2 — build aprovada.** Revalidou tip `4125ff4` / 438 testes: §2.12 PDV v1.42 PASS; §5.8 XSS PASS; L1–L5 sem regressão; §11 atualizado (estava em v1.33/390). Rotas PDV documentadas em §2.12. Teste auth na busca PDV. 437 → 438. |
