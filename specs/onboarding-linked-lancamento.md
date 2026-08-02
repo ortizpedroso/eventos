@@ -1,8 +1,10 @@
 # Spec: Onboarding de repasse em modo `linked` para o lançamento
 
-**Versão:** 1.1
-**Data:** 2026-07-25
-**Status:** ✅ Implementado e validado em produção
+**Versão:** 1.2
+**Data:** 2026-08-02
+**Status:** ✅ Modelo de produção até CNPJ da plataforma
+
+> **Decisão 02/08/2026 (usuário):** manter `linked` indefinidamente até a EventosBR abrir conta **CNPJ** no Asaas. Fluxo atual: organizador vai ao Asaas, cria a conta, preenche dados/KYC lá, vincula via chave de API. Migrar a `baas` só depois do CNPJ — ver `specs/eventosbr-producao.md` v1.43.1.
 
 ## 1. Objetivo
 
