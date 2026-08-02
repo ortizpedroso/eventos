@@ -18,6 +18,19 @@ def test_analytics_lib_eventos_padrao():
         assert ev in src
     assert "NEXT_PUBLIC_META_PIXEL_ID" in src
     assert "NEXT_PUBLIC_GTM_ID" in src
+    assert "setMarketingRuntimeIds" in src
+
+
+def test_admin_platform_settings_marketing_fields():
+    admin = (ROOT / "frontend/src/app/admin/dashboard/admin-platform-settings.tsx").read_text(encoding="utf-8")
+    assert "meta_pixel_id" in admin
+    assert "Marketing / anúncios" in admin
+
+
+def test_platform_settings_tipo_marketing():
+    src = (ROOT / "frontend/src/lib/platform-settings.ts").read_text(encoding="utf-8")
+    assert "meta_pixel_id" in src
+    assert "gtm_id" in src
 
 
 def test_layout_organization_json_ld():

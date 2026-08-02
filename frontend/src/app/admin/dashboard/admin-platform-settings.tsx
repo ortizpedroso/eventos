@@ -23,6 +23,8 @@ export type PlatformSettingsForm = {
   social_linkedin_url: string;
   social_x_url: string;
   social_youtube_url: string;
+  meta_pixel_id: string;
+  gtm_id: string;
   updated_at: string | null;
 };
 
@@ -43,6 +45,8 @@ const EMPTY: PlatformSettingsForm = {
   social_linkedin_url: "",
   social_x_url: "",
   social_youtube_url: "",
+  meta_pixel_id: "",
+  gtm_id: "",
   updated_at: null,
 };
 
@@ -62,6 +66,8 @@ function toForm(data: PlatformSettingsForm): PlatformSettingsForm {
     social_linkedin_url: data.social_linkedin_url ?? "",
     social_x_url: data.social_x_url ?? "",
     social_youtube_url: data.social_youtube_url ?? "",
+    meta_pixel_id: data.meta_pixel_id ?? "",
+    gtm_id: data.gtm_id ?? "",
   };
 }
 
@@ -84,6 +90,8 @@ function payloadFromForm(form: PlatformSettingsForm): Record<string, string | nu
     social_linkedin_url: trim(form.social_linkedin_url),
     social_x_url: trim(form.social_x_url),
     social_youtube_url: trim(form.social_youtube_url),
+    meta_pixel_id: trim(form.meta_pixel_id),
+    gtm_id: trim(form.gtm_id),
   };
 }
 
@@ -365,6 +373,36 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             />
           </label>
         ))}
+      </section>
+
+      <section className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 sm:grid-cols-2">
+        <h3 className="sm:col-span-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          Marketing / anúncios
+        </h3>
+        <p className="sm:col-span-2 text-xs text-zinc-500">
+          Cole o ID do Meta Pixel (Facebook/Instagram Ads) e do Google Tag Manager. Os scripts só rodam em
+          produção. Se vazio aqui, o sistema usa{" "}
+          <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_META_PIXEL_ID</code> /{" "}
+          <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_GTM_ID</code> do servidor, se configurados.
+        </p>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-zinc-800">Meta Pixel ID</span>
+          <input
+            className="input font-mono"
+            value={form.meta_pixel_id}
+            onChange={(e) => setField("meta_pixel_id", e.target.value)}
+            placeholder="123456789012345"
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-zinc-800">Google Tag Manager</span>
+          <input
+            className="input font-mono"
+            value={form.gtm_id}
+            onChange={(e) => setField("gtm_id", e.target.value)}
+            placeholder="GTM-XXXXXXX"
+          />
+        </label>
       </section>
 
       {localError ? (

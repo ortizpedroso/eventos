@@ -39,6 +39,8 @@ def _defaults() -> dict[str, str | None]:
         "social_linkedin_url": _env("NEXT_PUBLIC_SOCIAL_LINKEDIN_URL"),
         "social_x_url": _env("NEXT_PUBLIC_SOCIAL_X_URL"),
         "social_youtube_url": _env("NEXT_PUBLIC_SOCIAL_YOUTUBE_URL"),
+        "meta_pixel_id": _env("NEXT_PUBLIC_META_PIXEL_ID"),
+        "gtm_id": _env("NEXT_PUBLIC_GTM_ID"),
     }
 
 
@@ -70,6 +72,8 @@ def _merge_row(row: PlatformSettings | None) -> PlatformSettingsPublic:
         social_linkedin_url=pick("social_linkedin_url"),
         social_x_url=pick("social_x_url"),
         social_youtube_url=pick("social_youtube_url"),
+        meta_pixel_id=pick("meta_pixel_id"),
+        gtm_id=pick("gtm_id"),
     )
 
 

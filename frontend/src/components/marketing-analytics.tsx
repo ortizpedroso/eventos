@@ -2,13 +2,23 @@
 
 import Script from "next/script";
 
-import { getGtmId, getMetaPixelId, gtmIdConfigurado, metaPixelIdConfigurado } from "@/lib/analytics";
+import { usePlatformSettings } from "@/components/platform-settings-provider";
+import {
+  getGtmId,
+  getMetaPixelId,
+  gtmIdConfigurado,
+  metaPixelIdConfigurado,
+  setMarketingRuntimeIds,
+} from "@/lib/analytics";
 
 /**
- * Scripts de Meta Pixel e GTM — apenas em produção com env configurada.
+ * Scripts de Meta Pixel e GTM — produção, com IDs do admin ou `.env`.
  * Montado no root layout; não bloqueia renderização da página.
  */
 export function MarketingAnalytics() {
+  const settings = usePlatformSettings();
+  setMarketingRuntimeIds(settings.meta_pixel_id, settings.gtm_id);
+
   if (process.env.NODE_ENV !== "production") return null;
 
   const pixelId = getMetaPixelId();

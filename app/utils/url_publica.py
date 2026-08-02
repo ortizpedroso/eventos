@@ -112,3 +112,38 @@ def normalizar_url_whatsapp(v: object) -> str | None:
 def validar_url_whatsapp(v: object) -> str | None:
     """Compat: normaliza número/URL de WhatsApp para link clicável."""
     return normalizar_url_whatsapp(v)
+
+
+_META_PIXEL_RE = re.compile(r"^\d{5,20}$")
+_GTM_RE = re.compile(r"^GTM-[A-Z0-9]+$", re.I)
+
+
+def normalizar_meta_pixel_id(v: object) -> str | None:
+    """Aceita ID numérico do Meta Events Manager (5–20 dígitos)."""
+    if v is None:
+        return None
+    if not isinstance(v, str):
+        raise ValueError("Meta Pixel ID deve ser texto ou nulo")
+    s = v.strip()
+    if not s:
+        return None
+    digits = _DIGITS_RE.sub("", s)
+    if not _META_PIXEL_RE.match(digits):
+        raise ValueError(
+            "Meta Pixel ID inválido. Use o número do Events Manager (ex.: 123456789012345)."
+        )
+    return digits
+
+
+def normalizar_gtm_id(v: object) -> str | None:
+    """Aceita container GTM-XXXXXXX."""
+    if v is None:
+        return None
+    if not isinstance(v, str):
+        raise ValueError("GTM ID deve ser texto ou nulo")
+    s = v.strip().upper()
+    if not s:
+        return None
+    if not _GTM_RE.match(s):
+        raise ValueError("GTM ID inválido. Use o formato GTM-XXXXXXX.")
+    return s

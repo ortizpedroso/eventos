@@ -1,5 +1,5 @@
 /**
- * Meta Pixel + Google Tag Manager — só dispara quando IDs estão no build e em produção.
+ * Meta Pixel + Google Tag Manager — IDs do painel admin (prioridade) ou build (.env).
  * Eventos padronizados para campanhas Facebook/Instagram Ads.
  */
 
@@ -30,15 +30,35 @@ declare global {
   }
 }
 
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() ?? "";
-const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID?.trim() ?? "";
+const ENV_META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() ?? "";
+const ENV_GTM_ID = process.env.NEXT_PUBLIC_GTM_ID?.trim() ?? "";
+
+let runtimeMetaPixelId: string | null = null;
+let runtimeGtmId: string | null = null;
+
+/** Sincroniza IDs vindos de `/api/public/platform` (admin). */
+export function setMarketingRuntimeIds(
+  metaPixelId: string | null | undefined,
+  gtmId: string | null | undefined,
+) {
+  runtimeMetaPixelId = metaPixelId?.trim() || null;
+  runtimeGtmId = gtmId?.trim() || null;
+}
+
+export function getMetaPixelId(): string {
+  return runtimeMetaPixelId || ENV_META_PIXEL_ID;
+}
+
+export function getGtmId(): string {
+  return runtimeGtmId || ENV_GTM_ID;
+}
 
 export function metaPixelIdConfigurado(): boolean {
-  return Boolean(META_PIXEL_ID);
+  return Boolean(getMetaPixelId());
 }
 
 export function gtmIdConfigurado(): boolean {
-  return Boolean(GTM_ID);
+  return Boolean(getGtmId());
 }
 
 export function analyticsHabilitado(): boolean {
@@ -68,12 +88,4 @@ export function trackAnalyticsEvent(name: AnalyticsEventName, payload: Analytics
     if (currency) fbParams.currency = currency;
     window.fbq("track", name, fbParams);
   }
-}
-
-export function getMetaPixelId(): string {
-  return META_PIXEL_ID;
-}
-
-export function getGtmId(): string {
-  return GTM_ID;
 }

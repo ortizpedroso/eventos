@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.utils.imagem_url import validar_imagem_url
 from app.utils.url_publica import (
+    normalizar_gtm_id,
+    normalizar_meta_pixel_id,
     normalizar_url_instagram,
     normalizar_url_whatsapp,
     validar_url_http_https,
@@ -48,6 +50,8 @@ class PlatformSettingsPublic(BaseModel):
     social_linkedin_url: str | None = None
     social_x_url: str | None = None
     social_youtube_url: str | None = None
+    meta_pixel_id: str | None = None
+    gtm_id: str | None = None
 
 
 class PlatformSettingsUpdate(BaseModel):
@@ -67,6 +71,18 @@ class PlatformSettingsUpdate(BaseModel):
     social_linkedin_url: str | None = None
     social_x_url: str | None = None
     social_youtube_url: str | None = None
+    meta_pixel_id: str | None = None
+    gtm_id: str | None = None
+
+    @field_validator("meta_pixel_id", mode="before")
+    @classmethod
+    def _meta_pixel(cls, v: object) -> str | None:
+        return normalizar_meta_pixel_id(v)
+
+    @field_validator("gtm_id", mode="before")
+    @classmethod
+    def _gtm(cls, v: object) -> str | None:
+        return normalizar_gtm_id(v)
 
     @field_validator("logo_url", "logo_light_url", "favicon_url", mode="before")
     @classmethod

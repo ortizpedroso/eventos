@@ -15,6 +15,8 @@ export type PlatformSettings = {
   social_linkedin_url: string | null;
   social_x_url: string | null;
   social_youtube_url: string | null;
+  meta_pixel_id: string | null;
+  gtm_id: string | null;
 };
 
 export const PLATFORM_SETTINGS_TAG = "platform-settings";
@@ -37,6 +39,8 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   social_linkedin_url: process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN_URL?.trim() || null,
   social_x_url: process.env.NEXT_PUBLIC_SOCIAL_X_URL?.trim() || null,
   social_youtube_url: process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE_URL?.trim() || null,
+  meta_pixel_id: process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() || null,
+  gtm_id: process.env.NEXT_PUBLIC_GTM_ID?.trim() || null,
 };
 
 function apiOrigin(): string {

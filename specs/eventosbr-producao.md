@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.47
+**Versão:** 1.47.1
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`d608169`** — **v1.46** em produção. **v1.47** (home dual + Ads/SEO lançamento) **aguarda deploy**. pytest **460** (CI). **Lançamento:** `/review` v1.47 **APROVADA**.
+> **Produção (VPS):** branch **`cursor/lancamento-ux-ads-v147-c0b1`** deployada (`650846e`+). **v1.47.1** — Pixel/GTM no admin. pytest **468** (CI). **Lançamento:** `/review` v1.47 **APROVADA**; v1.47.1 em PR #99.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -101,9 +101,17 @@ Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/wor
 
 **SEO:** JSON-LD `Organization` no root layout; `og-image.png` e placeholders `/marketing/*.webp`; `robots: noindex` em layouts `/organizador` e `/conta`.
 
-**Ads (Facebook / Instagram):** `NEXT_PUBLIC_META_PIXEL_ID` + `NEXT_PUBLIC_GTM_ID` — scripts só em produção (`marketing-analytics.tsx`). Eventos: `ViewContent` (página evento), `InitiateCheckout` (reserva checkout), `Purchase` (`?compra=ok`), `CompleteRegistration` (cadastro), `Lead` (contato). Docker build passa vars ao `web`.
+**Ads (Facebook / Instagram):** Meta Pixel + GTM — scripts só em produção (`marketing-analytics.tsx`). IDs configuráveis em **Admin → Configurações da plataforma** (`meta_pixel_id`, `gtm_id` em `platform_settings`; migração `20260802_000049`); fallback `NEXT_PUBLIC_META_PIXEL_ID` / `NEXT_PUBLIC_GTM_ID` no build. Eventos: `ViewContent` (página evento), `InitiateCheckout` (reserva checkout), `Purchase` (`?compra=ok`), `CompleteRegistration` (cadastro), `Lead` (contato). `setMarketingRuntimeIds` prioriza IDs do painel.
 
-Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py`.
+Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py`, `tests/test_platform_marketing_ids.py`.
+
+### 2.14 Pixel/GTM no admin (v1.47.1)
+
+**Objetivo:** configurar campanhas Ads sem editar `.env` no servidor — colar Pixel ID e GTM no painel admin.
+
+**Backend:** colunas `meta_pixel_id`, `gtm_id` em `platform_settings`; validação `normalizar_meta_pixel_id` / `normalizar_gtm_id`; exposto em `/api/public/platform` e PATCH `/api/admin/settings`.
+
+**Frontend:** seção «Marketing / anúncios» em `admin-platform-settings.tsx`; `MarketingAnalytics` + `trackAnalyticsEvent` leem IDs via `usePlatformSettings()` (DB > env).
 
 ### 2.12 PDV presencial + assentos nomeados (MVP, v1.34; e-mail obrigatório desde v1.36)
 
@@ -730,7 +738,20 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.45 | `9c6044a` / **449** | APROVADA — e-mail organizador + imagens + Turnstile build |
 | v1.46 | `d608169` / **452** | APROVADA — UX cadastro organizador + Turnstile ops |
 | v1.46.1 | `d608169` / **452** | APROVADA — deploy VPS v1.46 confirmado |
-| **v1.47 (este)** | pendente / **460** | **APROVADA** — home dual + Ads/SEO lançamento |
+| **v1.47.1 (este)** | pendente / **468** | **APROVADA** — Pixel/GTM no admin |
+| v1.47 | pendente / **460** | **APROVADA** — home dual + Ads/SEO lançamento |
+
+### 11.1 Requisitos recentes — resultado (v1.47.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.14 | Admin salva Meta Pixel ID + GTM ID | **PASS** |
+| §2.14 | `/api/public/platform` expõe IDs + fallback env | **PASS** |
+| §2.14 | Frontend injeta scripts com IDs do painel | **PASS** |
+| §2.14 | Migração `20260802_000049` | **PASS** |
+| §2.13 / baseline | Sem regressão v1.47 | **PASS** |
+| §7 Qualidade | `pytest` 468 | **PASS** |
+| §7 Ops | `alembic upgrade head` na VPS após deploy | **PENDENTE** (ops) |
 
 ### 11.1 Requisitos recentes — resultado (v1.47)
 
@@ -742,10 +763,10 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.13 | Copy sem jargon em funcionalidades/sobre | **PASS** |
 | §2.13 | Organization JSON-LD + og-image + marketing webp | **PASS** |
 | §2.13 | noindex organizador/conta layouts | **PASS** |
-| §2.13 | Pixel/GTM + eventos ViewContent/Lead/Register/Checkout/Purchase | **PASS** (código; IDs = ops no `.env`) |
+| §2.13 | Pixel/GTM + eventos ViewContent/Lead/Register/Checkout/Purchase | **PASS** (admin ou `.env`) |
 | §2.9–§2.12 / §3.3 | Baseline v1.46 sem regressão | **PASS** |
 | §7 Qualidade | `pytest` 460 | **PASS** |
-| §7 Ops | `NEXT_PUBLIC_META_PIXEL_ID` / `GTM_ID` no VPS | **PENDENTE** (ops — campanhas Ads) |
+| §7 Ops | Pixel/GTM no admin ou `.env` no VPS | **PENDENTE** (ops — campanhas Ads) |
 
 ### 11.1 Requisitos recentes — resultado (v1.46)
 
@@ -859,6 +880,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.47.1 | 2026-08-02 | **Pixel/GTM no admin.** §2.14: `meta_pixel_id` + `gtm_id` em `platform_settings`; UI Admin → Marketing/anúncios; runtime IDs no frontend (`setMarketingRuntimeIds`); fallback env. Migração `20260802_000049`. Testes: 460 → 468. |
 | 1.47 | 2026-08-02 | **Lançamento comercial — home dual + Ads/SEO.** §2.13: `HomeAudienciasDual`, `HomeProdutorFeatures`, FAQ; cards vitrine; wizard etapas; copy funcionalidades/sobre; Organization JSON-LD; og-image + marketing webp; noindex conta/organizador; Meta Pixel + GTM + eventos conversão. Testes: 452 → 460. |
 | 1.46.1 | 2026-08-02 | **Deploy VPS v1.46 confirmado** pelo usuário — `d608169` em produção; Turnstile operacional (Managed). §7 e cabeçalho atualizados; PR #97 fechado (superseded). Teste CI: timeout worker contato mais robusto (45s). |
 | 1.46 | 2026-08-02 | **UX cadastro organizador + Turnstile ops.** §3.3: tela pública dedicada após cadastro (`organizador-cadastro-pendente.tsx`, `/cadastro?confirmar=1`, sem login). §5.3: `configure-turnstile-env.sh`, `setup-turnstile-e2e.sh`, Spin scripts; widget `action=turnstile-spin-v2`, reset em erro; siteverify canônico. Testes Turnstile: 4 → 5. |

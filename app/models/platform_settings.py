@@ -25,4 +25,6 @@ class PlatformSettings(Base):
     social_linkedin_url = Column(String(512), nullable=True)
     social_x_url = Column(String(512), nullable=True)
     social_youtube_url = Column(String(512), nullable=True)
+    meta_pixel_id = Column(String(32), nullable=True)
+    gtm_id = Column(String(32), nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
