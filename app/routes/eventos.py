@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Response
+from fastapi import APIRouter, HTTPException, Depends, Query, Request, Response
+from app.deps.rate_limit import rate_limit_pdv_reenviar
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_
 from slugify import slugify
@@ -450,7 +451,7 @@ async def vender_pdv_presencial(
 
     evento = _evento_do_organizador(db, evento_id, usuario_atual)
     try:
-        ingresso = vender_ingresso_pdv(
+        ingresso, email_destino, email_enviado_sync = vender_ingresso_pdv(
             db,
             evento=evento,
             organizador=usuario_atual,
@@ -476,8 +477,117 @@ async def vender_pdv_presencial(
         "forma_pagamento_pdv": ingresso.forma_pagamento_pdv,
         "valor": float(ingresso.valor or 0),
         "participante_nome": ingresso.participante_nome,
+        "participante_email": email_destino,
+        "email_enviado_sync": email_enviado_sync,
         "codigo_checkin": codigo,
         "qr_url": f"/ingresso/qr?c={codigo}",
+    }
+
+
+@router.get("/id/{evento_id}/pdv/vendas/buscar")
+async def buscar_vendas_pdv(
+    evento_id: str,
+    q: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Busca ingressos do evento (nome, e-mail, telefone, CPF) para correção PDV."""
+    from app.services.ingresso_busca import buscar_ingressos_evento
+
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    return {"resultados": buscar_ingressos_evento(db, evento.id, q)}
+
+
+@router.patch("/id/{evento_id}/pdv/vendas/{ingresso_id}")
+async def corrigir_venda_pdv(
+    evento_id: str,
+    ingresso_id: str,
+    body: dict,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Corrige dados do participante e reassocia ingresso à conta do e-mail certo."""
+    from pydantic import BaseModel, Field
+
+    from app.services.pdv_correcao import corrigir_participante_ingresso, ingresso_editavel_organizador
+
+    class CorrigirPdvBody(BaseModel):
+        participante_nome: str = Field(min_length=1, max_length=200)
+        participante_email: str = Field(min_length=1, max_length=255)
+        participante_telefone: str | None = Field(default=None, max_length=20)
+
+    try:
+        payload = CorrigirPdvBody.model_validate(body)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    try:
+        ingresso = ingresso_editavel_organizador(db, ingresso_id=ingresso_id, evento=evento)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if ingresso is None:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+
+    try:
+        ingresso = corrigir_participante_ingresso(
+            db,
+            ingresso=ingresso,
+            organizador=usuario_atual,
+            participante_nome=payload.participante_nome,
+            participante_email=payload.participante_email,
+            participante_telefone=payload.participante_telefone,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return {
+        "ok": True,
+        "ingresso_id": ingresso.id,
+        "participante_nome": ingresso.participante_nome,
+        "participante_email": ingresso.participante_email,
+        "participante_telefone": ingresso.participante_telefone,
+        "usuario_id": ingresso.usuario_id,
+    }
+
+
+@router.post("/id/{evento_id}/pdv/vendas/{ingresso_id}/reenviar-email")
+async def reenviar_email_venda_pdv(
+    evento_id: str,
+    ingresso_id: str,
+    request: Request,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Reenvia ingresso por e-mail (síncrono com fallback na fila)."""
+    from app.services.pdv_correcao import ingresso_editavel_organizador, reenviar_email_ingresso
+
+    rate_limit_pdv_reenviar(request, evento_id)
+
+    evento = _evento_do_organizador(db, evento_id, usuario_atual)
+    try:
+        ingresso = ingresso_editavel_organizador(db, ingresso_id=ingresso_id, evento=evento)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if ingresso is None:
+        raise HTTPException(status_code=404, detail="Ingresso não encontrado")
+
+    try:
+        ok_sync, destino = reenviar_email_ingresso(
+            db, ingresso, organizador=usuario_atual
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return {
+        "ok": True,
+        "email_destino": destino,
+        "email_enviado_sync": ok_sync,
+        "message": (
+            f"Ingresso enviado para {destino}."
+            if ok_sync
+            else f"Ingresso enfileirado para envio a {destino} (verifique também o spam)."
+        ),
     }
 
 

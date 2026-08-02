@@ -5,46 +5,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import Evento, EventoIngressoLote, Ingresso, Usuario
+from app.services.conta_cliente import obter_ou_criar_conta_cliente
 from app.services.lote_assentos import reservar_vaga_e_assento
 from app.services.senha_definir import enviar_email_primeiro_acesso
-from app.services.ticket_email import enqueue_ticket_email
+from app.services.ticket_email import enqueue_ticket_email, send_ticket_email_sync
 from app.utils.ingresso_tipos import lote_e_cortesia
 
 FORMAS_PAGAMENTO_PDV = frozenset({"dinheiro", "pix_manual", "cartao"})
-
-
-def _obter_ou_criar_conta_cliente(db: Session, *, email: str, nome: str) -> tuple[Usuario, bool]:
-    """Reaproveita ou cria a conta do COMPRADOR pro ingresso do PDV.
-
-    Mesma lógica de colisão de e-mail usada em compra_rapida (app/routes/auth.py):
-    conta desativada -> erro; conta com senha -> reaproveita essa conta; conta sem
-    senha -> reaproveita; e-mail novo -> cria conta cliente sem senha. Sem chamada
-    ao Asaas aqui — venda de PDV não usa gateway de pagamento.
-    """
-    existente = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
-    if existente:
-        if not existente.ativo:
-            raise ValueError(
-                "Este e-mail pertence a uma conta desativada. Use outro e-mail para o ingresso."
-            )
-        return existente, False
-
-    novo_usuario = Usuario(
-        email=email,
-        nome=nome,
-        senha_hash=None,
-        tipo="cliente",
-        auth_provider="email",
-        email_verificado=False,
-    )
-    db.add(novo_usuario)
-    db.commit()
-    db.refresh(novo_usuario)
-    return novo_usuario, True
 
 
 def vender_ingresso_pdv(
@@ -80,7 +50,7 @@ def vender_ingresso_pdv(
     if lote_chk is None or lote_chk.evento_id != evento.id:
         raise ValueError("Lote não pertence a este evento.")
 
-    comprador, conta_nova = _obter_ou_criar_conta_cliente(db, email=email, nome=nome)
+    comprador, conta_nova = obter_ou_criar_conta_cliente(db, email=email, nome=nome)
 
     lote, assento_codigo = reservar_vaga_e_assento(
         db, lote_id, quantidade=1, assento=assento
@@ -114,6 +84,9 @@ def vender_ingresso_pdv(
 
     if conta_nova:
         enviar_email_primeiro_acesso(db, comprador)
-    enqueue_ticket_email(ingresso.id)
 
-    return ingresso
+    email_enviado_sync = send_ticket_email_sync(ingresso.id)
+    if not email_enviado_sync:
+        enqueue_ticket_email(ingresso.id)
+
+    return ingresso, email, email_enviado_sync

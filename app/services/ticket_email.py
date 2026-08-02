@@ -90,7 +90,10 @@ def _send_sync(ingresso_id: str) -> bool:
                 joinedload(Ingresso.evento).joinedload(Evento.organizador),
                 joinedload(Ingresso.usuario),
             )
-            .filter(Ingresso.id == ingresso_id, Ingresso.status == "pago")
+            .filter(
+                Ingresso.id == ingresso_id,
+                Ingresso.status.in_(("pago", "usado")),
+            )
             .first()
         )
         if not ingresso:
@@ -301,6 +304,11 @@ def enqueue_ticket_email(ingresso_id: str) -> None:
     start_ticket_email_worker()
     if not _enqueue_redis(ingresso_id):
         _memory_queue.put(ingresso_id)
+
+
+def send_ticket_email_sync(ingresso_id: str) -> bool:
+    """Envio síncrono (PDV / correção) — retorna False se SMTP falhou ou não configurado."""
+    return _send_sync(ingresso_id)
 
 
 def _send_comunicado_sync(evento_id: str, assunto: str, mensagem: str) -> int:

@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.41.1
+**Versão:** 1.42
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `b735902` — v1.41 (auditoria XSS rodada 1: SVG/ICO bloqueados no upload; JSON-LD escapado na página pública do evento). **Deploy confirmado no VPS** (02/08/2026, usuário). Merge PR #77 (`60c000d`). Anterior `b0f0225` (v1.40 — impressão do ingresso sem repetir dados da carteirinha em texto). pytest **432** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 431+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da `main` em desenvolvimento — **v1.42** (PDV: confirmação de e-mail, correção de venda e reenvio). Anterior `b735902` (v1.41 — XSS rodada 1). **Deploy VPS v1.41 confirmado** (02/08/2026). pytest **437** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 436+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -98,10 +98,13 @@ Duas funcionalidades classificadas como alto esforço na pesquisa de concorrente
 - Rota UI: `/organizador/eventos/{id}/pdv` (link “PDV” na listagem do organizador).
 - API: `POST /api/eventos/id/{evento_id}/pdv` — só o dono (`_evento_do_organizador`).
 - Formulário: nome e e-mail (**obrigatórios**), telefone (opcional), lote, forma de pagamento textual (`dinheiro` | `pix_manual` | `cartao`), assento se o lote tiver lista.
-- **E-mail obrigatório (v1.36):** diferente do checkout online (onde o e-mail do participante é opcional porque cai no e-mail da conta logada do comprador), no PDV o ingresso é atribuído ao `usuario_id` do organizador — não existe conta de cliente associada. Sem e-mail obrigatório, o comprador não tinha garantia de receber o ingresso. Backend (`vender_ingresso_pdv`) e schema (`PdvBody`) rejeitam venda sem e-mail válido (`400`/`422`, mesma checagem leve `"@" not in email` usada em `lista_espera.py`/`lista_interesse.py`); UI marca o campo como obrigatório.
+- **E-mail obrigatório (v1.36):** no PDV o ingresso vai para a **conta cliente** criada/reaproveitada pelo e-mail informado (`usuario_id` do comprador — v1.39). Backend rejeita venda sem e-mail válido; UI marca o campo como obrigatório.
+- **Confirmação de e-mail (v1.42):** campo “Confirme o e-mail” na UI — venda bloqueada se não coincidir; após venda, feedback com destino e status de envio (`email_enviado_sync`).
+- **Envio na venda (v1.42):** `send_ticket_email_sync` tenta SMTP imediato; se falha, `enqueue_ticket_email` (fila confiável). Comprador deve conferir o celular na hora.
+- **Correção de venda (v1.42):** seção “Corrigir venda” no PDV — busca ingressos **do evento** (só dono) por nome, e-mail, telefone ou CPF (`ingresso_busca` + telefone); `PATCH /pdv/vendas/{ingresso_id}` atualiza participante e **reatribui `usuario_id`** à conta do e-mail certo (`conta_cliente`); `POST …/reenviar-email` reenvia ingresso (rate limit `pdv_reenviar`). Log de auditoria em `pdv_correcao.py`. **Sem busca pública** — só organizador do evento.
 - Gera `Ingresso` com `status=pago`, `canal_venda=pdv`, `forma_pagamento_pdv` — **sem Asaas, sem split, sem repasse automático** (reconciliação manual).
 - Respeita `quantidade_maxima` do lote (via `reservar_vaga_e_assento` / FOR UPDATE).
-- Carteirinha/QR: mesmo fluxo (`codigo_checkin` → `/ingresso/qr?c=…`); e-mail com `gerar_ticket_card_png_bytes` **sempre enviado** (`enqueue_ticket_email`), já que o e-mail agora é obrigatório.
+- Carteirinha/QR: mesmo fluxo (`codigo_checkin` → `/ingresso/qr?c=…`); e-mail com carteirinha via `send_ticket_email_sync` + fallback fila.
 - **Fora de escopo:** maquininha, split/NF automática, UI só-tablet.
 
 #### Assentos nomeados (sem mapa visual)
@@ -114,7 +117,7 @@ Duas funcionalidades classificadas como alto esforço na pesquisa de concorrente
 
 Migração: `20260731_000048_pdv_assentos_mvp.py` (`assentos` no lote; `assento`, `canal_venda`, `forma_pagamento_pdv` no ingresso). Validada upgrade→downgrade→upgrade contra Postgres real.
 
-Testes: `tests/test_pdv_presencial.py`, `tests/test_lote_assentos.py` (auth dono, limite de lote, race de assento, carteirinha, compatibilidade sem assentos).
+Testes: `tests/test_pdv_presencial.py`, `tests/test_pdv_correcao_email.py`, `tests/test_lote_assentos.py` (auth dono, limite de lote, race de assento, carteirinha, correção de e-mail + reassociação de conta, busca por telefone, reenvio).
 
 **Achado da supervisão (importante, primeiro teste de concorrência real do sistema):** `test_dois_compradores_mesmo_assento_so_um_consegue` falhava — as duas threads conseguiam o mesmo assento — não porque o código de trava estivesse errado, mas porque a suíte inteira roda em SQLite em memória (`tests/test_api.py`, `StaticPool`), e o dialeto SQLite do SQLAlchemy **descarta silenciosamente a cláusula `FOR UPDATE`** (sem suporte a lock de linha). Rodado 5x contra Postgres real, a mesma lógica passa consistentemente — o código de produção está correto, só a verificação por SQLite não conseguia detectar isso (nem detectaria um bug de verdade, se houvesse). Corrigido: fixture `db_postgres_real` troca `get_db` temporariamente pra um Postgres real só durante esse teste (via `DATABASE_URL_TESTE_CONCORRENCIA`; pula com aviso se não configurada — nunca dá falsa confiança). CI (`ci.yml`) ganhou serviço Postgres pra essa variável ficar sempre disponível lá. Isso também expõe que a trava pré-existente de capacidade de lote (`reservar_vaga_lote`, usada há mais tempo) nunca tinha sido verificada sob concorrência real antes.
 
@@ -308,7 +311,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (432 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (437 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -595,7 +598,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (432 testes)
+- [x] `pytest` verde (437 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -654,7 +657,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh` |
-| Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py` |
+| Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py`, `test_pdv_correcao_email.py` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
 
@@ -728,6 +731,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.42 | 2026-08-02 | **PDV — confirmação e correção de e-mail (v1.42).** Confirmação dupla de e-mail na venda; envio síncrono com fallback na fila; seção “Corrigir venda” (busca por nome/e-mail/telefone/CPF só do evento, `PATCH` reassocia `usuario_id`, `POST` reenviar com rate limit). Serviços: `conta_cliente.py`, `pdv_correcao.py`; `send_ticket_email_sync` aceita ingressos `pago`/`usado`. Spec §2.12 corrigida (ingresso na conta do comprador, não do organizador). Testes: `test_pdv_correcao_email.py`. 432 → 437. |
 | 1.41.1 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — tip `b735902` / v1.41 (XSS rodada 1) em produção; §7 e cabeçalho atualizados. |
 | 1.41 | 2026-08-02 | **Auditoria XSS — rodada 1 (bloqueia lançamento).** (1) **Crítico:** removidos SVG e ICO do upload (`asset_storage.py`, `assets.py`, `imagem_processamento.py`) — vetor de XSS armazenado via `/uploads` no mesmo domínio; só JPEG/PNG/WebP/GIF. (2) **Alto:** JSON-LD da página pública do evento escapado com `serializeJsonLdForScript` (`json-ld-html.ts`) antes de `dangerouslySetInnerHTML` — impede `</script>` em nome/descrição/local do organizador. Spec §5.8. Testes: `test_xss_auditoria_lancamento.py`. **Pendente UX:** `accept` do favicon no admin ainda menciona SVG/ICO (backend rejeita com 400). **Pendente auditoria:** PDV, locks, rate limits (rodadas seguintes). Merge PR #77 (`60c000d`); tip produto `b735902`. Testes: 428 → 432. |
 | 1.40 | 2026-08-02 | **Bug real corrigido** (achado do usuário, confirmado no código antes de escrever o prompt): a página de impressão do ingresso (`GET /api/ingressos/{id}/download`) embutia a carteirinha padrão (já com nome do evento, data, local, participante e QR na própria imagem), mas envolvia isso num card HTML que repetia tudo de novo como texto solto (`<h2>` do evento, "Participante:", "Email:", "Data:", "Local:", "Assento:", badge de status). Corrigido: removida toda a duplicação, mantido só o essencial que a carteirinha não mostra (aviso de repasse, código da portaria, botão de imprimir). Teste novo confirma ausência dos rótulos duplicados **e** que nome/participante/local não aparecem em nenhum lugar do `<body>` fora da tag `<img>`. Validado também visualmente (renderização real do HTML em imagem) antes de aprovar — layout limpo, centralizado, consistente com o e-mail. Testes: 427 → 428. |
