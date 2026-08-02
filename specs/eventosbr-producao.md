@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em **`d2c9e4b`** — **v1.43** + **v1.44** (auditoria pré-lançamento) pendente deploy após merge. Tip de **produto** `a665533` (v1.44 incrementa só UX/setup). Deploy v1.43 confirmado (02/08/2026). pytest **445**. **Onboarding:** `linked` até CNPJ. **§2.8 C:** 1ª venda validada. **Lançamento:** `/review` v1.44 **APROVADA**.
+> **Produção (VPS):** `main` em **`733d227`** — **v1.44** (auditoria pré-lançamento; merge PR #91). Tip de **produto** `6c2e031`. Deploy v1.43 `d2c9e4b` confirmado (02/08/2026). **Deploy v1.44 pendente** no VPS após `atualizar-vps-agora.sh`. pytest **445**. **Onboarding:** `linked` até CNPJ. **Lançamento:** `/review` v1.44 **APROVADA**.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
