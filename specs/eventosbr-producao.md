@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em desenvolvimento — **v1.42** (PDV: confirmação de e-mail, correção de venda e reenvio). Anterior `b735902` (v1.41 — XSS rodada 1). **Deploy VPS v1.41 confirmado** (02/08/2026). pytest **437** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 436+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da `main` em `4125ff4` — **v1.42** (PDV: confirmação de e-mail, correção de venda e reenvio). Merge PR #81 (`fbe08a7`). Anterior `b735902` (v1.41 — XSS rodada 1). **Deploy VPS v1.42 pendente de reconfirmação** (v1.41 confirmado 02/08/2026). pytest **437** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 436+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -610,9 +610,10 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — `b735902` (v1.41 — XSS rodada 1: bloqueio SVG/ICO no upload + escape JSON-LD); anterior `b0f0225` (v1.40), `c9ab63a` (v1.39), `a6d8412` (v1.38), `4b18643` (v1.36), `d8f3b4b` (v1.35), `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …`, merges de PR e config de ambiente (`environment.json`) não entram neste ponteiro.
+- [x] tip de produto — `4125ff4` (v1.42 — PDV confirmação/correção de e-mail + reenvio); anterior `b735902` (v1.41), `b0f0225` (v1.40), `c9ab63a` (v1.39), `a6d8412` (v1.38), `4b18643` (v1.36), `d8f3b4b` (v1.35), `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …`, merges de PR e config de ambiente (`environment.json`) não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
-- [x] Deploy VPS do tip atual (`b735902` / v1.41) — **confirmado pelo usuário** em 02/08/2026 (inclui v1.34–v1.41 acumulados desde `a32b948`: PDV+assentos, e-mail obrigatório no PDV, auditoria UX, conta própria do comprador no PDV, carteirinha padronizada, impressão sem duplicação, correções XSS)
+- [ ] Deploy VPS do tip atual (`4125ff4` / v1.42) **precisa reconfirmação** — merge PR #81 em 02/08/2026; última confirmação explícita do usuário cobria v1.41 (`b735902`, 02/08/2026)
+- [x] Deploy VPS v1.41 (`b735902`) — confirmado pelo usuário em 02/08/2026
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
@@ -650,6 +651,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | 2FA (organizador + admin) | `services/totp.py`, `services/organizador_2fa.py`, `components/seguranca-2fa.tsx`, `lib/admin-totp.ts`, `app/api/admin/session/route.ts` |
 | Admin integrado à conta | `deps/platform_admin.py`, `routes/admin.py` (`/usuarios/{id}/admin`), `scripts/set_platform_admin.py`, `components/tornar-organizador-card.tsx`, `specs/admin-integrado-usuario.md` |
 | Contato do evento / plataforma | `schemas/evento.py` (contato_telefone/email), `models/platform_settings.py`, `routes/public.py` (`/contato`), `app/contato/` |
+| PDV presencial + correção | `services/pdv_presencial.py`, `services/pdv_correcao.py`, `services/conta_cliente.py`, `routes/eventos.py` (`/pdv`, `/pdv/vendas/*`), `pdv-presencial-client.tsx` |
 | Compressão de imagem | `lib/comprimir-imagem.ts` (navegador), `utils/imagem_processamento.py` (servidor, Pillow) |
 | CAPTCHA | `services/turnstile.py`, `components/turnstile-widget.tsx` |
 | Cifra em repouso (CPF/CNPJ, API keys) | `utils/secret_storage.py` (esquema `enc:v2`), `utils/cpf.py` |
@@ -696,7 +698,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.2–§2.4 / §4 | Narrativa `linked` = lançamento; `baas` = alvo | **PASS** (L4) |
 | §2.10 docstring API | Menciona `usado` | **PASS** (L5) |
 | §7 Qualidade | `pytest` 390 | **PASS** (rodado neste review) |
-| §7 Ops | Deploy confirmado 02/08 (`b735902` / v1.41) | **PASS** (ops) |
+| §7 Ops | Deploy v1.42 pendente reconfirmação (`4125ff4`) | **PENDENTE** (ops) |
 | §2.8 A–C | Webhook real / SMTP / 1ª venda | **PENDENTE ops** — não bloqueia aprovação de código |
 | §7 Pagamentos | Conta criada pela plataforma (`baas`) | **aberto de propósito** até CNPJ+`baas` |
 
@@ -731,7 +733,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.42 | 2026-08-02 | **PDV — confirmação e correção de e-mail (v1.42).** Confirmação dupla de e-mail na venda; envio síncrono com fallback na fila; seção “Corrigir venda” (busca por nome/e-mail/telefone/CPF só do evento, `PATCH` reassocia `usuario_id`, `POST` reenviar com rate limit). Serviços: `conta_cliente.py`, `pdv_correcao.py`; `send_ticket_email_sync` aceita ingressos `pago`/`usado`. Spec §2.12 corrigida (ingresso na conta do comprador, não do organizador). Testes: `test_pdv_correcao_email.py`. 432 → 437. |
+| 1.42 | 2026-08-02 | **PDV — confirmação e correção de e-mail (v1.42).** Confirmação dupla de e-mail na venda; envio síncrono com fallback na fila; seção “Corrigir venda” (busca por nome/e-mail/telefone/CPF só do evento, `PATCH` reassocia `usuario_id`, `POST` reenviar com rate limit). Serviços: `conta_cliente.py`, `pdv_correcao.py`; `send_ticket_email_sync` aceita ingressos `pago`/`usado`. Spec §2.12 corrigida (ingresso na conta do comprador). **Pendente:** self-service comprador (“vincular ingresso”). Merge PR #81 (`fbe08a7`); tip produto `4125ff4`. Testes: `test_pdv_correcao_email.py`. 432 → 437. |
 | 1.41.1 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — tip `b735902` / v1.41 (XSS rodada 1) em produção; §7 e cabeçalho atualizados. |
 | 1.41 | 2026-08-02 | **Auditoria XSS — rodada 1 (bloqueia lançamento).** (1) **Crítico:** removidos SVG e ICO do upload (`asset_storage.py`, `assets.py`, `imagem_processamento.py`) — vetor de XSS armazenado via `/uploads` no mesmo domínio; só JPEG/PNG/WebP/GIF. (2) **Alto:** JSON-LD da página pública do evento escapado com `serializeJsonLdForScript` (`json-ld-html.ts`) antes de `dangerouslySetInnerHTML` — impede `</script>` em nome/descrição/local do organizador. Spec §5.8. Testes: `test_xss_auditoria_lancamento.py`. **Pendente UX:** `accept` do favicon no admin ainda menciona SVG/ICO (backend rejeita com 400). **Pendente auditoria:** PDV, locks, rate limits (rodadas seguintes). Merge PR #77 (`60c000d`); tip produto `b735902`. Testes: 428 → 432. |
 | 1.40 | 2026-08-02 | **Bug real corrigido** (achado do usuário, confirmado no código antes de escrever o prompt): a página de impressão do ingresso (`GET /api/ingressos/{id}/download`) embutia a carteirinha padrão (já com nome do evento, data, local, participante e QR na própria imagem), mas envolvia isso num card HTML que repetia tudo de novo como texto solto (`<h2>` do evento, "Participante:", "Email:", "Data:", "Local:", "Assento:", badge de status). Corrigido: removida toda a duplicação, mantido só o essencial que a carteirinha não mostra (aviso de repasse, código da portaria, botão de imprimir). Teste novo confirma ausência dos rótulos duplicados **e** que nome/participante/local não aparecem em nenhum lugar do `<body>` fora da tag `<img>`. Validado também visualmente (renderização real do HTML em imagem) antes de aprovar — layout limpo, centralizado, consistente com o e-mail. Testes: 427 → 428. |
