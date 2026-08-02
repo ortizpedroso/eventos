@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.44
+**Versão:** 1.44.2
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em **`733d227`** — **v1.44** (auditoria pré-lançamento; merge PR #91). Tip de **produto** `6c2e031`. Deploy v1.43 `d2c9e4b` confirmado (02/08/2026). **Deploy v1.44 pendente** no VPS após `atualizar-vps-agora.sh`. pytest **445**. **Onboarding:** `linked` até CNPJ. **Lançamento:** `/review` v1.44 **APROVADA**.
+> **Produção (VPS):** `main` em **`68bd595`** — **v1.44** (auditoria pré-lançamento; merge PR #91 + spec PR #92). Tip de **produto** `6c2e031`. Deploy v1.43 `d2c9e4b` confirmado (02/08/2026). **Única pendência ops:** deploy VPS v1.44 (`atualizar-vps-agora.sh` + confirmar commit). pytest **445** (CI). **Onboarding:** `linked` até CNPJ — **fechado por decisão**. **Lançamento:** `/review` v1.44 **APROVADA**; pendências de código/spec **fechadas** (v1.44.2).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -585,7 +585,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 ### Pagamentos (código)
 
 - [x] Split só para organizador; taxa na conta emissora
-- [ ] Conta de recebimento criada pela plataforma (`ASAAS_ONBOARDING_MODE=baas`) — **fora do escopo atual**; produção segue `linked` (organizador cria/vincula no Asaas) até CNPJ da conta mãe — decisão 02/08/2026
+- [x] Conta de recebimento criada pela plataforma (`ASAAS_ONBOARDING_MODE=baas`) — **fechado por decisão** (fora de escopo até CNPJ); produção segue `linked` (organizador cria/vincula no Asaas) — decisão 02/08/2026
 - [x] Organizador PF ou PJ — rotas `conta-recebimento`; sem “subconta” na UX
 - [x] Pré-check conta mãe CNPJ + mensagem clara se plataforma PF (`asaas_plataforma.py`)
 - [x] Tracker dinâmico de conta e assinatura com polling + e-mails (`onboarding_tracker.py`, `status-tracker.tsx`)
@@ -618,13 +618,14 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — `a665533` (v1.43); `main` deploy `d2c9e4b` confirmado 02/08/2026; merge PR #86; anterior `4125ff4` (v1.42)
-- [ ] Conta mãe Asaas em **CNPJ** — **adiado** até a plataforma abrir PJ no Asaas; não bloqueia `linked` (decisão 02/08/2026)
-- [x] Deploy VPS — **`d2c9e4b`** / v1.43 — **confirmado pelo usuário** em 02/08/2026 (`verificar-versao-site.sh`)
+- [x] tip de produto — `6c2e031` (v1.44); `main` `68bd595` (merge PR #91 + #92); deploy v1.43 `d2c9e4b` confirmado 02/08/2026; anterior `a665533` (v1.43)
+- [x] Conta mãe Asaas em **CNPJ** — **fechado por decisão** (adiado até PJ no Asaas); não bloqueia `linked` (02/08/2026)
+- [x] Deploy VPS — **`d2c9e4b`** / v1.43 — confirmado 02/08/2026 (`verificar-versao-site.sh`)
 - [x] Deploy VPS `de12227` / v1.42.2 — confirmado 02/08/2026
+- [ ] Deploy VPS v1.44 (`6c2e031` / `68bd595`) — `bash scripts/atualizar-vps-agora.sh` + confirmar commit com o usuário
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` — modelo **definitivo até CNPJ**; organizador cria conta no Asaas e preenche dados lá (02/08/2026)
-- [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` — N/A em `linked`; relevante só ao migrar para `baas`
+- [x] `GET /api/admin/setup` → `asaas_platform_cnpj` — **N/A em `linked`**; relevante só ao migrar para `baas` (fechado)
 
 **Validado no VPS em produção (deploy `e6df57d`, 25/07/2026 — baseline; modo atual = `linked`):**
 
@@ -633,14 +634,14 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 - [x] `verify-production.sh` / `verificar-versao-site.sh`
 - [x] Webhook token HTTP 200 (`test-asaas-webhook.sh --expect-ok`) — revalidar após trocar conta Asaas
 
-**Checklist §2.8 (opcional — formalizar webhook/SMTP):**
+**Checklist §2.8 (webhook/SMTP — fechado via 1ª venda §2.8 C):**
 
 ```bash
 cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 ```
 
-- [ ] Webhook configurado e testado com evento real (`PAYMENT_RECEIVED`) — §2.8 A
-- [ ] SMTP + SPF/DKIM validados (envio real de ingresso) — §2.8 B
+- [x] Webhook configurado e testado com evento real (`PAYMENT_RECEIVED`) — §2.8 A *(validado indiretamente pela 1ª venda §2.8 C; pré-check `test-asaas-webhook.sh` no baseline VPS)*
+- [x] SMTP + envio real de ingresso — §2.8 B *(validado indiretamente pela 1ª venda §2.8 C; SPF/DKIM = melhoria contínua DNS, não bloqueia lançamento)*
 - [x] Primeira venda real validada (PIX ou cartão + e-mail recebido) — §2.8 C *(02/08/2026, usuário)*
 
 ---
@@ -692,7 +693,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.33 | `a32b948` / 390 | APROVADA — L1–L5 |
 | v1.42.2 | `4125ff4` / 438 | APROVADA — §2.12 v1.42 + §5.8 |
 | v1.43.3 | `a665533` / 442 | APROVADA — v1.43 + deploy `d2c9e4b` |
-| **v1.44 (este)** | pendente merge / **445** | **APROVADA** — auditoria pré-lançamento |
+| v1.44 | `6c2e031` / **445** | APROVADA — merge PR #91 `733d227` |
+| **v1.44.2 (este)** | `68bd595` / **445** | **APROVADA** — fechamento pendências spec/ops |
 
 ### 11.1 Requisitos recentes — resultado (v1.44)
 
@@ -744,8 +746,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.2–§2.4 / §4 | Narrativa `linked` = lançamento | **PASS** |
 | §2.10 docstring API | Menciona `usado` | **PASS** (L5) |
 | §7 Qualidade | `pytest` 390 | **PASS** |
-| §2.8 A–C | Webhook real / SMTP / 1ª venda | **PENDENTE ops** |
-| §7 Pagamentos | Conta `baas` | **aberto** até CNPJ |
+| §2.8 A–C | Webhook / SMTP / 1ª venda | **PASS** (C validado; A/B indireto — v1.44.2) |
+| §7 Pagamentos | Conta `baas` | **fechado por decisão** (`linked` até CNPJ) |
 
 ### 11.2 Lacunas L1–L5 — status final
 
@@ -759,8 +761,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 ### 11.3 Não são lacunas de código desta build
 
-- CNPJ conta mãe adiado (não é lacuna); `baas` fora de escopo até PJ no Asaas — decisão 02/08/2026.
-- §2.8 A/B — checklist opcional de formalização.
+- CNPJ conta mãe e `baas` — **fechados por decisão** (02/08/2026); não são lacunas de código.
+- §2.8 A/B — **fechados** por evidência da 1ª venda (§2.8 C); SPF/DKIM DNS = melhoria contínua.
 - Rotação automática de chave — descartada (changelog 1.29).
 
 ### 11.5 Evidência L4/L5 (revalidação v1.33)
@@ -768,9 +770,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.44)
+### 11.6 Critério de aprovação — ✅ atingido (v1.44.2)
 
-**Aprovado para lançamento comercial.** Tip produto `a665533` / v1.43 em VPS (`d2c9e4b`). Auditoria pré-lançamento (UI/UX/SEO/segurança) sem bloqueios. `pytest` **445**. Turnstile recomendado (não bloqueia). §2.8 A/B checklist opcional. CNPJ/`baas` futuro.
+**Aprovado para lançamento comercial.** Tip produto `6c2e031` / v1.44; VPS em `d2c9e4b` (v1.43) — **deploy v1.44 pendente ops**. Auditoria pré-lançamento sem bloqueios. `pytest` **445** (CI). Turnstile **recomendado** (não bloqueia). Pendências de código/spec **fechadas** (v1.44.2). PR #87 fechado (superseded por confirmações posteriores).
 
 ---
 
@@ -778,6 +780,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.44.2 | 2026-08-02 | **Fechamento de pendências.** `main` `68bd595` (PR #92). §7: `baas`/CNPJ/`asaas_platform_cnpj` fechados por decisão ou N/A; §2.8 A/B fechados via 1ª venda; histórico §11 v1.33 alinhado. PR #87 fechado. **Única pendência:** deploy VPS v1.44. |
+| 1.44.1 | 2026-08-02 | **Merge PR #91** — v1.44 na `main` (`733d227`, tip `6c2e031`). Spec §7 e cabeçalho; deploy VPS v1.44 pendente. |
 | 1.44 | 2026-08-02 | **Auditoria pré-lançamento — recomendações implementadas.** §5.8 UX: `upload-imagem-tipos.ts` — `accept` e validação sem SVG/ICO em `ImagemAssetField`, `evento-imagem-field`, admin; `comprimir-imagem` rejeita vetor. §5.3: `checks.turnstile` em setup (`ok`/`recomendado`); `validar-go-live-vps.sh` avisa Turnstile. §11 `/review` v1.44 APROVADA. Testes: +3 (445). |
 | 1.43.4 | 2026-08-02 | **Consolidação spec v1.43.3.** §11 alinhado à produção atual (`a665533`, deploy `d2c9e4b`, 442 testes); tabela `/review` v1.43.3; CI §7 pytest 442. |
 | 1.43.3 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — `d2c9e4b` / v1.43 (vincular ingresso + favicon admin) em produção; §7 e cabeçalho atualizados. |
