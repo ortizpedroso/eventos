@@ -578,8 +578,8 @@ Testes: `tests/test_xss_auditoria_lancamento.py` (upload SVG rejeitado; escape J
 | `CORS_ORIGINS` | HTTPS, sem `*` | |
 | `FRONTEND_PUBLIC_URL` | URL pública | |
 | `POSTGRES_PASSWORD` | Sim | |
-| `TURNSTILE_SECRET_KEY` | Recomendado | Anti-bot login/registro/contato; par com `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; `configure-turnstile-env.sh` |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Recomendado | Build do frontend Docker; mesma widget que `TURNSTILE_SECRET_KEY` |
+| `TURNSTILE_SECRET` | Recomendado | Secret do widget (canônico Spin); alias legado `TURNSTILE_SECRET_KEY` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Recomendado | Site key `0x4AAAAAAEEo9-dlOUxCWAz5` — build Docker frontend |
 
 Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida:
 
