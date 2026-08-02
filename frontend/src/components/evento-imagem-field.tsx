@@ -23,11 +23,7 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [dimWarning, setDimWarning] = useState<string | null>(null);
-  // Não dá mais pra inferir a origem pelo formato do valor (upload e URL colada geram
-  // ambos uma URL http normal agora) — rastreamos explicitamente.
-  const [viaArquivo, setViaArquivo] = useState(false);
 
-  const urlModo = !viaArquivo;
   const displaySrc = resolveEventoImagemSrc(value);
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -39,7 +35,7 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
-      setHint("Arquivo muito grande (máx. 5 MB). Comprima a imagem ou use a opção URL.");
+      setHint("Arquivo muito grande (máx. 5 MB). Comprima a imagem e tente novamente.");
       return;
     }
     setBusy(true);
@@ -98,7 +94,6 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
         const data = (await res.json()) as { url?: string };
         if (!data.url) throw new Error("Resposta inválida do servidor ao enviar imagem.");
         onChange(data.url);
-        setViaArquivo(true);
         setDimWarning(dimWarn);
       } catch (err) {
         setHint(err instanceof Error ? err.message : "Não foi possível enviar o arquivo.");
@@ -111,7 +106,6 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
   function limparImagem() {
     setHint(null);
     setDimWarning(null);
-    setViaArquivo(false);
     onChange("");
   }
 
@@ -122,8 +116,12 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
           Imagem / banner do evento <span className="font-normal text-zinc-500">(opcional)</span>
         </label>
         <p className="mt-1 text-xs text-zinc-500">
-          Escolha <strong className="font-medium text-zinc-700">uma</strong> das duas formas abaixo. A mesma imagem
-          aparece na vitrine <Link href="/eventos" className="font-medium text-emerald-700 underline-offset-2 hover:underline">/eventos</Link> e no topo da página pública do evento.
+          Escolha <strong className="font-medium text-zinc-700">uma</strong> imagem do seu computador. A mesma imagem
+          aparece na vitrine{" "}
+          <Link href="/eventos" className="font-medium text-emerald-700 underline-offset-2 hover:underline">
+            /eventos
+          </Link>{" "}
+          e no topo da página pública do evento. URLs externas não são aceitas — use o envio de arquivo.
         </p>
       </div>
 
@@ -133,78 +131,33 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
           {EVENTO_BANNER_MEDIDAS_RESUMO.map((line) => (
             <li key={line}>{line}</li>
           ))}
-          <li>Ficheiro local: até 5 MB (JPG, PNG, WebP ou GIF).</li>
-          <li>URL: ligação direta a um ficheiro de imagem (ex.: já hospedado em outro serviço).</li>
+          <li>Arquivo local: até 5 MB (JPG, PNG, WebP ou GIF).</li>
         </ul>
       </div>
 
-      <div className="grid gap-6 rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 sm:p-5">
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-900">Opção 1 — Colar URL da imagem</h3>
-          <p className="mt-1 text-xs text-zinc-600">
-            Use um endereço que comece por <code className="rounded bg-white px-1 py-0.5 text-[11px]">https://</code>{" "}
-            (ou <code className="rounded bg-white px-1 py-0.5 text-[11px]">http://</code>). A imagem tem de ser
-            pública (sem login).
-          </p>
-          {urlModo ? (
-            <input
-              id={id}
-              type="url"
-              inputMode="url"
-              autoComplete="off"
-              placeholder="https://exemplo.com/banner-do-evento.jpg"
-              value={value}
-              onChange={(e) => {
-                setHint(null);
-                setDimWarning(null);
-                onChange(e.target.value);
-              }}
-              disabled={busy}
-              className="mt-2 min-h-10 w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm transition-colors hover:border-emerald-300 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 disabled:opacity-60"
-            />
-          ) : (
-            <div className="mt-2 rounded-lg border border-dashed border-zinc-300 bg-white px-3 py-3 text-sm text-zinc-700">
-              <p>De momento a imagem veio de um <strong>ficheiro</strong> carregado.</p>
-              <button
-                type="button"
-                className="mt-2 text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
-                onClick={limparImagem}
-              >
-                Remover ficheiro para voltar a colar uma URL
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="relative flex items-center gap-3">
-          <div className="h-px flex-1 bg-zinc-200" aria-hidden />
-          <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-zinc-500">ou</span>
-          <div className="h-px flex-1 bg-zinc-200" aria-hidden />
-        </div>
-
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-900">Opção 2 — Enviar ficheiro do computador</h3>
-          <p className="mt-1 text-xs text-zinc-600">
-            Respeite as medidas acima para o melhor resultado. O ficheiro é enviado e hospedado automaticamente.
-          </p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => fileRef.current?.click()}
-            className="btn-outline mt-2 px-4 py-2.5 text-sm disabled:opacity-60"
-          >
-            {busy ? "A processar…" : "Escolher imagem no computador"}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept={UPLOAD_IMAGEM_ACCEPT}
-            className="sr-only"
-            tabIndex={-1}
-            aria-hidden
-            onChange={onPickFile}
-          />
-        </div>
+      <div className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 sm:p-5">
+        <h3 className="text-sm font-semibold text-zinc-900">Enviar imagem do computador</h3>
+        <p className="mt-1 text-xs text-zinc-600">
+          Respeite as medidas acima para o melhor resultado. O arquivo é enviado e hospedado na plataforma.
+        </p>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+          className="btn-outline mt-2 px-4 py-2.5 text-sm disabled:opacity-60"
+        >
+          {busy ? "A processar…" : "Escolher imagem no computador"}
+        </button>
+        <input
+          ref={fileRef}
+          id={id}
+          type="file"
+          accept={UPLOAD_IMAGEM_ACCEPT}
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden
+          onChange={onPickFile}
+        />
       </div>
 
       {hint ? (

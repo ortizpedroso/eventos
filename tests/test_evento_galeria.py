@@ -44,13 +44,13 @@ def test_galeria_max_e_substituicao():
         db.refresh(ev)
 
         assert listar_urls(db, ev.id) == []
-        urls = [f"https://cdn.example.com/foto{i}.webp" for i in range(GALERIA_MAX)]
+        urls = [f"/uploads/eventos/test/foto{i}.webp" for i in range(GALERIA_MAX)]
         out = substituir_galeria(db, ev, urls)
         assert len(out) == GALERIA_MAX
         assert listar_urls(db, ev.id) == urls
 
         with pytest.raises(ValueError, match="Máximo"):
-            substituir_galeria(db, ev, urls + ["https://cdn.example.com/extra.webp"])
+            substituir_galeria(db, ev, urls + ["/uploads/eventos/test/extra.webp"])
 
         # limpar
         assert substituir_galeria(db, ev, []) == []
@@ -86,9 +86,9 @@ def test_montar_evento_response_inclui_galeria():
         db.add(ev)
         db.commit()
         db.refresh(ev)
-        substituir_galeria(db, ev, ["https://cdn.example.com/a.webp"])
+        substituir_galeria(db, ev, ["/uploads/eventos/test/a.webp"])
         resp = montar_evento_response(db, ev)
-        assert resp.galeria_urls == ["https://cdn.example.com/a.webp"]
+        assert resp.galeria_urls == ["/uploads/eventos/test/a.webp"]
     finally:
         db.close()
 
@@ -159,13 +159,13 @@ def test_resposta_publica_omite_secao_com_zero_fotos_e_mostra_com_fotos():
             "preco_ingresso": 25.0,
             "categoria": "Outros",
             "publicado": True,
-            "galeria_urls": ["https://cdn.example.com/edicao.webp"],
+            "galeria_urls": ["/uploads/eventos/test/edicao.webp"],
         },
     )
     assert pr.status_code == 200, pr.text
     pub1 = client.get(f"/api/eventos/{slug}")
     assert pub1.status_code == 200, pub1.text
-    assert pub1.json().get("galeria_urls") == ["https://cdn.example.com/edicao.webp"]
+    assert pub1.json().get("galeria_urls") == ["/uploads/eventos/test/edicao.webp"]
 
 
 def test_organizador_b_nao_patch_galeria_do_evento_de_a():
@@ -228,7 +228,7 @@ def test_organizador_b_nao_patch_galeria_do_evento_de_a():
             "preco_ingresso": 30.0,
             "categoria": "Outros",
             "publicado": False,
-            "galeria_urls": ["https://cdn.example.com/invasao.webp"],
+            "galeria_urls": ["/uploads/eventos/test/invasao.webp"],
         },
     )
     assert bad.status_code in (403, 404), bad.text
@@ -247,8 +247,8 @@ def test_organizador_b_nao_patch_galeria_do_evento_de_a():
             "preco_ingresso": 30.0,
             "categoria": "Outros",
             "publicado": False,
-            "galeria_urls": ["https://cdn.example.com/ok.webp"],
+            "galeria_urls": ["/uploads/eventos/test/ok.webp"],
         },
     )
     assert ok.status_code == 200, ok.text
-    assert ok.json().get("galeria_urls") == ["https://cdn.example.com/ok.webp"]
+    assert ok.json().get("galeria_urls") == ["/uploads/eventos/test/ok.webp"]

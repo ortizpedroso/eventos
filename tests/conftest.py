@@ -19,3 +19,22 @@ def _sync_test_db_schema():
 
     Base.metadata.drop_all(bind=test_api.engine)
     Base.metadata.create_all(bind=test_api.engine)
+
+
+@pytest.fixture(autouse=True)
+def organizador_email_auto_verified_in_tests(request, monkeypatch):
+    """Mantém a suíte existente: organizador registrado recebe token imediato nos testes."""
+    if request.node.get_closest_marker("organizador_email_flow"):
+        return
+
+    def auto_verify(db, usuario):
+        usuario.email_verificado = True
+        usuario.email_verificacao_token = None
+        usuario.email_verificacao_expires = None
+        db.commit()
+        return True
+
+    monkeypatch.setattr(
+        "app.routes.auth.disparar_verificacao_organizador",
+        auto_verify,
+    )

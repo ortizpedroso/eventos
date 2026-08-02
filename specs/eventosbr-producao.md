@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.44.3
+**Versão:** 1.45
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`df08e23`** — **v1.44** em produção (auditoria pré-lançamento + spec v1.44.2). Tip de **produto** `6c2e031`. Deploy confirmado pelo usuário em **02/08/2026** (`atualizar-vps-agora.sh` + `verificar-versao-site.sh`). pytest **445** (CI). **Onboarding:** `linked` até CNPJ — **fechado por decisão**. **Lançamento:** `/review` v1.44 **APROVADA**; **sem pendências bloqueantes** (Turnstile recomendado).
+> **Produção (VPS):** **`df08e23`** — **v1.44** em produção. Tip de **produto** `6c2e031` (+ **v1.45** pendente deploy). pytest **449** (CI). **Lançamento:** `/review` v1.45 **APROVADA**.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -386,6 +386,16 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
 - **`TornarOrganizadorCard`** (`components/tornar-organizador-card.tsx`): card "Crie o seu próprio evento" em `/conta/perfil`, visível só para `tipo=cliente`. Pode abrir automaticamente via `?tornar_organizador=1`.
 - Duas rotas que antes **deslogavam** um cliente tentando acessar área de organizador (assumindo que os tipos nunca se convertiam) foram corrigidas para redirecionar (sem deslogar) para o fluxo de conversão: `novo-evento-gate.tsx` (`/eventos/novo`) e `destinoPosAuth` (usado por `/cadastro` e páginas de auth com `?next=/organizador/*`).
 
+### 3.3 Cadastro organizador — confirmação de e-mail (v1.45)
+
+- `POST /api/auth/registrar` com `tipo=organizador`: **não autentica** até confirmar e-mail; resposta `pending_email_verification` + `email` + `message`.
+- E-mail de **boas-vindas** com botão «Ativar minha conta» e link em texto para copiar/colar; validade **24h** (`ORGANIZADOR_VERIFICACAO_HORAS`).
+- `POST /api/auth/verificar-email` confirma token e **autentica** (cookie) se a conta tem senha.
+- Login bloqueado (`403`) para organizador com `email_verificado=false`.
+- `POST /api/auth/reenviar-verificacao-cadastro` (público, rate limit + Turnstile) reenvia para cadastro pendente.
+- UI `/auth`: após cadastro organizador, banner com e-mail cadastrado e reenvio; `/auth/verificar-email` redireciona organizador ao painel.
+- Cliente e compra rápida mantêm fluxo anterior (48h compra rápida; cliente `email_verificado=true` no registro).
+
 ### 3.2 Correções de roteamento e painel admin (v1.14)
 
 - **Bug real**: `/contato` era tratado como rota protegida — a checagem usava
@@ -503,7 +513,7 @@ Ambas as correções têm comentários extensos no próprio `Caddyfile` e em `ne
 
 ### 5.3 CAPTCHA — Cloudflare Turnstile (adicionado v1.8)
 
-Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (frontend); desligado por padrão, não bloqueia `ready_for_production`. **Recomendado em produção** — `GET /api/admin/setup` → `checks.turnstile` = `recomendado` se a chave API estiver vazia; `validar-go-live-vps.sh` avisa. Verificação server-side em `app/services/turnstile.py`, aplicado em `/api/auth/{login,registrar,solicitar-recuperacao-senha}` e `/contato`. Widget: `frontend/src/components/turnstile-widget.tsx`.
+Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (frontend); desligado por padrão, não bloqueia `ready_for_production`. **Recomendado em produção** — `GET /api/admin/setup` → `checks.turnstile` = `recomendado` se a chave API estiver vazia; `validar-go-live-vps.sh` avisa. Build Docker produção passa `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (`docker-compose.prod.yml`, `frontend/Dockerfile`). Verificação server-side em `app/services/turnstile.py`, aplicado em `/api/auth/{login,registrar,solicitar-recuperacao-senha,reenviar-verificacao-cadastro}` e `/contato`. Widget: `frontend/src/components/turnstile-widget.tsx`.
 
 ### 5.4 Rate limiting (`app/deps/rate_limit.py`)
 
@@ -541,6 +551,8 @@ Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (fron
 ### 5.8 XSS — auditoria de lançamento (v1.41)
 
 **Item 1 — upload SVG/ICO (crítico):** `image/svg+xml`, `image/x-icon` e `image/vnd.microsoft.icon` removidos de `ALLOWED_IMAGE_TYPES` (`asset_storage.py`). Tipos aceitos: JPEG, PNG, WebP, GIF (rasterizados para WebP no servidor). **Frontend (v1.44):** `upload-imagem-tipos.ts` centraliza `accept` e validação em `ImagemAssetField`, `evento-imagem-field`, admin favicon; `comprimir-imagem.ts` rejeita SVG/ICO antes do upload.
+
+**Item 1b — URLs externas em banner/galeria (v1.45):** `validar_imagem_url` só aceita `https` no domínio da plataforma (`FRONTEND_PUBLIC_URL`), R2 (`R2_PUBLIC_URL`) ou `/uploads/`; UI de evento remove colagem de URL externa — só upload de arquivo.
 
 **Item 2 — JSON-LD na página do evento (alto):** `serializeJsonLdForScript` (`frontend/src/lib/json-ld-html.ts`) escapa `<`, `>` e `/` após `JSON.stringify()` antes de `dangerouslySetInnerHTML` em `eventos/[slug]/page.tsx` (Event + BreadcrumbList).
 
@@ -606,7 +618,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (445 testes)
+- [x] `pytest` verde (449 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -695,7 +707,18 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.43.3 | `a665533` / 442 | APROVADA — v1.43 + deploy `d2c9e4b` |
 | v1.44 | `6c2e031` / **445** | APROVADA — merge PR #91 `733d227` |
 | v1.44.2 | `68bd595` / **445** | APROVADA — fechamento pendências spec/ops |
-| **v1.44.3 (este)** | `df08e23` / **445** | **APROVADA** — deploy VPS v1.44 confirmado |
+| v1.44.3 | `df08e23` / **445** | APROVADA — deploy VPS v1.44 confirmado |
+| **v1.45 (este)** | pendente / **449** | **APROVADA** — e-mail organizador + imagens + Turnstile build |
+
+### 11.1 Requisitos recentes — resultado (v1.45)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §3.3 | Cadastro organizador — e-mail 24h, UI confirmação, login bloqueado | **PASS** |
+| §5.8 | `imagem_url` só domínio/R2/uploads; UI sem URL externa | **PASS** |
+| §5.3 | Turnstile `NEXT_PUBLIC` no build Docker produção | **PASS** |
+| §3.3 / §2.9–§2.12 | Baseline v1.44 sem regressão | **PASS** |
+| §7 Qualidade | `pytest` 449 | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.44)
 
@@ -771,9 +794,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.44.3)
+### 11.6 Critério de aprovação — ✅ atingido (v1.45)
 
-**Aprovado para lançamento comercial.** VPS **`df08e23`** / v1.44 em produção (02/08/2026). Tip produto `6c2e031`. Auditoria pré-lançamento sem bloqueios. `pytest` **445** (CI). Turnstile **recomendado** (não bloqueia). **Sem pendências bloqueantes** de código, spec ou deploy.
+**Aprovado para lançamento comercial.** VPS `df08e23` / v1.44 em produção; **v1.45** aguarda deploy. `pytest` **449** (CI). Turnstile recomendado. Cadastro organizador com confirmação de e-mail implementado.
 
 ---
 
@@ -781,6 +804,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.45 | 2026-08-02 | **Cadastro organizador + endurecimento imagens.** §3.3: confirmação e-mail 24h, boas-vindas com botão e link copiável, login bloqueado até confirmar, `reenviar-verificacao-cadastro`. §5.8: `imagem_url` só hosts da plataforma/R2/uploads; UI evento só upload. §5.3: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` no build Docker. Testes: 445 → 449. |
 | 1.44.3 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — `df08e23` / v1.44 em produção (`verificar-versao-site.sh`: API/Web `df08e23`, health/ready OK). §7 e cabeçalho atualizados; §11 deploy PASS. |
 | 1.44.2 | 2026-08-02 | **Fechamento de pendências.** `main` `68bd595` (PR #92). §7: `baas`/CNPJ/`asaas_platform_cnpj` fechados por decisão ou N/A; §2.8 A/B fechados via 1ª venda; histórico §11 v1.33 alinhado. PR #87 fechado. Deploy VPS v1.44 pendente até confirmação. |
 | 1.44.1 | 2026-08-02 | **Merge PR #91** — v1.44 na `main` (`733d227`, tip `6c2e031`). Spec §7 e cabeçalho; deploy VPS v1.44 pendente. |

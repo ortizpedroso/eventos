@@ -16,6 +16,7 @@ from app.schemas.usuario import (
     UsuarioCreate,
     UsuarioLogin,
     UsuarioResponse,
+    ReenviarVerificacaoCadastroRequest,
     Token,
     SolicitarRecuperacaoSenhaRequest,
     RedefinirSenhaRequest,
@@ -55,8 +56,13 @@ from app.services.password_reset_email import enviar_email_recuperacao_senha
 from app.services.email_verificacao import (
     confirmar_email_por_token,
     disparar_verificacao_compra_rapida,
+    disparar_verificacao_organizador,
+    enviar_email_boas_vindas_organizador,
     enviar_email_verificacao,
+    ORGANIZADOR_VERIFICACAO_HORAS,
     preparar_verificacao_email,
+    VERIFICACAO_VALIDADE_HORAS,
+    _link_verificacao,
 )
 from app.utils.auth_cookie import (
     AUTH_COOKIE_NAME,
@@ -195,7 +201,7 @@ async def registrar(
         nome=usuario_data.nome,
         senha_hash=hash_password(usuario_data.senha),
         tipo=usuario_data.tipo,
-        email_verificado=True,
+        email_verificado=usuario_data.tipo != "organizador",
         asaas_customer_id=asaas_customer_id,
         asaas_wallet_id=asaas_wallet_id,
         asaas_account_id=asaas_account_id,
@@ -212,6 +218,33 @@ async def registrar(
 
     logger.info("Usuário criado: %s", novo_usuario.id)
 
+    if usuario_data.tipo == "organizador":
+        enviado = disparar_verificacao_organizador(db, novo_usuario)
+        db.refresh(novo_usuario)
+        if not novo_usuario.email_verificado:
+            msg = (
+                f"Enviamos um e-mail de confirmação para {email}. "
+                f"Abra o link (válido por {ORGANIZADOR_VERIFICACAO_HORAS} horas) para ativar sua conta de organizador."
+            )
+            if not enviado and settings.ENVIRONMENT == "development":
+                link = _link_verificacao(novo_usuario.email_verificacao_token or "")
+                return {
+                    "access_token": None,
+                    "token_type": "bearer",
+                    "usuario": None,
+                    "pending_email_verification": True,
+                    "email": email,
+                    "message": msg + f" (dev: {link})",
+                }
+            return {
+                "access_token": None,
+                "token_type": "bearer",
+                "usuario": None,
+                "pending_email_verification": True,
+                "email": email,
+                "message": msg,
+            }
+
     access_token = _issue_token(novo_usuario)
     set_auth_cookie(response, access_token)
 
@@ -219,6 +252,7 @@ async def registrar(
         "access_token": access_token,
         "token_type": "bearer",
         "usuario": UsuarioResponse.model_validate(novo_usuario),
+        "pending_email_verification": False,
     }
 
 
@@ -345,6 +379,15 @@ async def login(
     if not verify_password(credenciais.senha, usuario.senha_hash):
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
 
+    if usuario.tipo == "organizador" and not usuario.email_verificado:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Confirme seu e-mail antes de entrar. Verifique a caixa de entrada (e o spam) "
+                "ou solicite um novo link na tela de cadastro."
+            ),
+        )
+
     if usuario.totp_ativado:
         trusted_cookie = request.cookies.get(TRUSTED_DEVICE_COOKIE_NAME)
         if trusted_cookie and decode_trusted_device_token(
@@ -468,19 +511,28 @@ async def redefinir_senha(
 @router.post("/verificar-email")
 async def verificar_email(
     body: VerificarEmailRequest,
+    response: Response,
     db: Session = Depends(get_db),
 ):
-    """Confirma propriedade do e-mail via link enviado na compra rápida."""
+    """Confirma propriedade do e-mail via link enviado no cadastro ou compra rápida."""
     usuario = confirmar_email_por_token(db, body.token)
     if not usuario:
         raise HTTPException(
             status_code=400,
             detail="Link inválido ou expirado. Solicite um novo e-mail de confirmação.",
         )
-    return {
+    payload: dict = {
         "message": "E-mail confirmado com sucesso!",
         "email_verificado": True,
+        "tipo": usuario.tipo,
     }
+    if usuario.senha_hash:
+        access_token = _issue_token(usuario)
+        set_auth_cookie(response, access_token)
+        payload["access_token"] = access_token
+        payload["token_type"] = "bearer"
+        payload["usuario"] = UsuarioResponse.model_validate(usuario)
+    return payload
 
 
 def _issue_token(usuario: Usuario) -> str:
@@ -614,17 +666,56 @@ async def reenviar_verificacao_email(
     """Reenvia link de confirmação para a conta autenticada."""
     if usuario.email_verificado:
         return {"message": "Seu e-mail já está confirmado."}
-    token = preparar_verificacao_email(usuario)
+    horas = ORGANIZADOR_VERIFICACAO_HORAS if usuario.tipo == "organizador" else VERIFICACAO_VALIDADE_HORAS
+    token = preparar_verificacao_email(usuario, validade_horas=horas)
     db.commit()
-    base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
-    link = f"{base}/auth/verificar-email?token={token}"
-    enviado = enviar_email_verificacao(destino=usuario.email, nome=usuario.nome, link=link)
+    link = _link_verificacao(token)
+    if usuario.tipo == "organizador":
+        enviado = enviar_email_boas_vindas_organizador(destino=usuario.email, nome=usuario.nome, link=link)
+    else:
+        enviado = enviar_email_verificacao(
+            destino=usuario.email,
+            nome=usuario.nome,
+            link=link,
+            validade_horas=horas,
+        )
     if not enviado and settings.ENVIRONMENT == "development":
         return {
             "message": "SMTP não configurado. Em desenvolvimento, use o link no log da API.",
             "dev_link": link,
         }
     return {"message": "Enviamos um novo link de confirmação para o seu e-mail."}
+
+
+@router.post("/reenviar-verificacao-cadastro")
+async def reenviar_verificacao_cadastro(
+    body: ReenviarVerificacaoCadastroRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit_login),
+):
+    """Reenvia confirmação de e-mail sem sessão (cadastro de organizador pendente)."""
+    await _checar_turnstile(request, body.turnstile_token)
+
+    email = str(body.email).strip().lower()
+    usuario = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
+    msg = (
+        "Se este e-mail tem cadastro pendente de confirmação, enviamos um novo link. "
+        "Confira a caixa de entrada e o spam."
+    )
+    if not usuario or not usuario.ativo or usuario.email_verificado:
+        return {"message": msg}
+    if usuario.tipo != "organizador":
+        return {"message": msg}
+
+    horas = ORGANIZADOR_VERIFICACAO_HORAS
+    token = preparar_verificacao_email(usuario, validade_horas=horas)
+    db.commit()
+    link = _link_verificacao(token)
+    enviar_email_boas_vindas_organizador(destino=usuario.email, nome=usuario.nome, link=link)
+    if settings.ENVIRONMENT == "development":
+        return {"message": msg, "dev_link": link}
+    return {"message": msg}
 
 
 @router.post("/vincular-google", response_model=UsuarioResponse)

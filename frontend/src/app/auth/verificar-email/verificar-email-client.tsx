@@ -6,12 +6,15 @@ import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
+import { destinoPosAuth } from "@/lib/criar-evento-routes";
+import type { TokenResponse, Usuario } from "@/lib/types";
 
 export function VerificarEmailClient() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
   const [message, setMessage] = useState("");
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -23,14 +26,18 @@ export function VerificarEmailClient() {
     setStatus("loading");
     void (async () => {
       try {
-        const r = await apiFetch<{ message: string }>("/api/auth/verificar-email", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ token }),
-        });
+        const r = await apiFetch<TokenResponse & { message: string; tipo?: string }>(
+          "/api/auth/verificar-email",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ token }),
+          },
+        );
         if (!cancelled) {
           setStatus("ok");
           setMessage(r.message);
+          if (r.usuario) setUsuario(r.usuario);
           dispatchAuthSync();
         }
       } catch (e) {
@@ -45,6 +52,8 @@ export function VerificarEmailClient() {
     };
   }, [token]);
 
+  const ehOrganizador = usuario?.tipo === "organizador";
+
   return (
     <div className="mx-auto mt-10 max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
       <h1 className="text-2xl font-bold text-zinc-900">Confirmar e-mail</h1>
@@ -57,12 +66,20 @@ export function VerificarEmailClient() {
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
           {message}
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link href="/conta/ingressos" className="btn-success px-4 py-2 text-sm">
-              Meus ingressos
-            </Link>
-            <Link href="/eventos" className="text-sm font-medium text-emerald-700 underline">
-              Explorar eventos
-            </Link>
+            {ehOrganizador ? (
+              <Link href={destinoPosAuth(usuario!, null)} className="btn-success px-4 py-2 text-sm">
+                Ir ao painel do organizador
+              </Link>
+            ) : (
+              <>
+                <Link href="/conta/ingressos" className="btn-success px-4 py-2 text-sm">
+                  Meus ingressos
+                </Link>
+                <Link href="/eventos" className="text-sm font-medium text-emerald-700 underline">
+                  Explorar eventos
+                </Link>
+              </>
+            )}
           </div>
         </div>
       ) : null}
@@ -71,8 +88,8 @@ export function VerificarEmailClient() {
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {message}
           </p>
-          <Link href="/conta/perfil" className="text-sm font-medium text-emerald-700 underline">
-            Ir ao perfil para reenviar confirmação
+          <Link href="/auth" className="text-sm font-medium text-emerald-700 underline">
+            Voltar ao login para reenviar confirmação
           </Link>
         </div>
       ) : null}

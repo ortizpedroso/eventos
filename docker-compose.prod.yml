@@ -90,6 +90,7 @@ services:
         NEXT_PUBLIC_PLATFORM_DOMAIN: ${DOMAIN}
         # Mesma variável usada pela API (R2_PUBLIC_URL) — só precisa ser definida uma vez no .env.
         NEXT_PUBLIC_R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
     restart: unless-stopped
     environment:
       INTERNAL_API_URL: http://api:8000
