@@ -729,8 +729,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.44.3 | `df08e23` / **445** | APROVADA — deploy VPS v1.44 confirmado |
 | v1.45 | `9c6044a` / **449** | APROVADA — e-mail organizador + imagens + Turnstile build |
 | v1.46 | `d608169` / **452** | APROVADA — UX cadastro organizador + Turnstile ops |
-| **v1.46.1 (este)** | `d608169` / **452** | **APROVADA** — deploy VPS v1.46 confirmado |
-| **v1.47** | pendente / **460** | **APROVADA** — home dual + Ads/SEO lançamento |
+| v1.46.1 | `d608169` / **452** | APROVADA — deploy VPS v1.46 confirmado |
+| **v1.47 (este)** | pendente / **460** | **APROVADA** — home dual + Ads/SEO lançamento |
 
 ### 11.1 Requisitos recentes — resultado (v1.47)
 
