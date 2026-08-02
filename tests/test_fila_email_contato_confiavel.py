@@ -183,7 +183,9 @@ class TestFilaConfiavelContato:
             duracao = time.monotonic() - inicio
             assert duracao < 1.0, "enfileirar não deveria bloquear esperando o SMTP"
 
-            for _ in range(30):
+            # Worker usa blmove(timeout=2) quando a fila está vazia — em CI pode levar
+            # alguns segundos até o thread pegar a mensagem enfileirada.
+            for _ in range(75):
                 db = TestingSessionLocal()
                 try:
                     registro = db.get(ContatoSiteMensagem, mensagem_id)
