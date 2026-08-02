@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.44.2
+**Versão:** 1.44.3
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em **`68bd595`** — **v1.44** (auditoria pré-lançamento; merge PR #91 + spec PR #92). Tip de **produto** `6c2e031`. Deploy v1.43 `d2c9e4b` confirmado (02/08/2026). **Única pendência ops:** deploy VPS v1.44 (`atualizar-vps-agora.sh` + confirmar commit). pytest **445** (CI). **Onboarding:** `linked` até CNPJ — **fechado por decisão**. **Lançamento:** `/review` v1.44 **APROVADA**; pendências de código/spec **fechadas** (v1.44.2).
+> **Produção (VPS):** **`df08e23`** — **v1.44** em produção (auditoria pré-lançamento + spec v1.44.2). Tip de **produto** `6c2e031`. Deploy confirmado pelo usuário em **02/08/2026** (`atualizar-vps-agora.sh` + `verificar-versao-site.sh`). pytest **445** (CI). **Onboarding:** `linked` até CNPJ — **fechado por decisão**. **Lançamento:** `/review` v1.44 **APROVADA**; **sem pendências bloqueantes** (Turnstile recomendado).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -618,11 +618,11 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — `6c2e031` (v1.44); `main` `68bd595` (merge PR #91 + #92); deploy v1.43 `d2c9e4b` confirmado 02/08/2026; anterior `a665533` (v1.43)
+- [x] tip de produto — `6c2e031` (v1.44); VPS `df08e23` (spec v1.44.2 + deploy confirmado 02/08/2026); anterior `d2c9e4b` (v1.43)
 - [x] Conta mãe Asaas em **CNPJ** — **fechado por decisão** (adiado até PJ no Asaas); não bloqueia `linked` (02/08/2026)
 - [x] Deploy VPS — **`d2c9e4b`** / v1.43 — confirmado 02/08/2026 (`verificar-versao-site.sh`)
 - [x] Deploy VPS `de12227` / v1.42.2 — confirmado 02/08/2026
-- [ ] Deploy VPS v1.44 (`6c2e031` / `68bd595`) — `bash scripts/atualizar-vps-agora.sh` + confirmar commit com o usuário
+- [x] Deploy VPS v1.44 — **`df08e23`** confirmado 02/08/2026 (`verificar-versao-site.sh`; API/Web commit `df08e23`)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` — modelo **definitivo até CNPJ**; organizador cria conta no Asaas e preenche dados lá (02/08/2026)
 - [x] `GET /api/admin/setup` → `asaas_platform_cnpj` — **N/A em `linked`**; relevante só ao migrar para `baas` (fechado)
@@ -694,7 +694,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.42.2 | `4125ff4` / 438 | APROVADA — §2.12 v1.42 + §5.8 |
 | v1.43.3 | `a665533` / 442 | APROVADA — v1.43 + deploy `d2c9e4b` |
 | v1.44 | `6c2e031` / **445** | APROVADA — merge PR #91 `733d227` |
-| **v1.44.2 (este)** | `68bd595` / **445** | **APROVADA** — fechamento pendências spec/ops |
+| v1.44.2 | `68bd595` / **445** | APROVADA — fechamento pendências spec/ops |
+| **v1.44.3 (este)** | `df08e23` / **445** | **APROVADA** — deploy VPS v1.44 confirmado |
 
 ### 11.1 Requisitos recentes — resultado (v1.44)
 
@@ -706,7 +707,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.8 | Script go-live §2.8 A/B/C + Turnstile | **PASS** (automatizado + manual) |
 | §2.12 / §2.9–§2.11 | Baseline v1.43 sem regressão | **PASS** |
 | §7 Qualidade | `pytest` 445 | **PASS** |
-| §7 Ops | Deploy `d2c9e4b` / v1.43 em produção | **PASS** |
+| §7 Ops | Deploy `df08e23` / v1.44 em produção | **PASS** |
 
 ### 11.1 histórico (v1.43.3)
 
@@ -770,9 +771,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.44.2)
+### 11.6 Critério de aprovação — ✅ atingido (v1.44.3)
 
-**Aprovado para lançamento comercial.** Tip produto `6c2e031` / v1.44; VPS em `d2c9e4b` (v1.43) — **deploy v1.44 pendente ops**. Auditoria pré-lançamento sem bloqueios. `pytest` **445** (CI). Turnstile **recomendado** (não bloqueia). Pendências de código/spec **fechadas** (v1.44.2). PR #87 fechado (superseded por confirmações posteriores).
+**Aprovado para lançamento comercial.** VPS **`df08e23`** / v1.44 em produção (02/08/2026). Tip produto `6c2e031`. Auditoria pré-lançamento sem bloqueios. `pytest` **445** (CI). Turnstile **recomendado** (não bloqueia). **Sem pendências bloqueantes** de código, spec ou deploy.
 
 ---
 
@@ -780,7 +781,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.44.2 | 2026-08-02 | **Fechamento de pendências.** `main` `68bd595` (PR #92). §7: `baas`/CNPJ/`asaas_platform_cnpj` fechados por decisão ou N/A; §2.8 A/B fechados via 1ª venda; histórico §11 v1.33 alinhado. PR #87 fechado. **Única pendência:** deploy VPS v1.44. |
+| 1.44.3 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — `df08e23` / v1.44 em produção (`verificar-versao-site.sh`: API/Web `df08e23`, health/ready OK). §7 e cabeçalho atualizados; §11 deploy PASS. |
+| 1.44.2 | 2026-08-02 | **Fechamento de pendências.** `main` `68bd595` (PR #92). §7: `baas`/CNPJ/`asaas_platform_cnpj` fechados por decisão ou N/A; §2.8 A/B fechados via 1ª venda; histórico §11 v1.33 alinhado. PR #87 fechado. Deploy VPS v1.44 pendente até confirmação. |
 | 1.44.1 | 2026-08-02 | **Merge PR #91** — v1.44 na `main` (`733d227`, tip `6c2e031`). Spec §7 e cabeçalho; deploy VPS v1.44 pendente. |
 | 1.44 | 2026-08-02 | **Auditoria pré-lançamento — recomendações implementadas.** §5.8 UX: `upload-imagem-tipos.ts` — `accept` e validação sem SVG/ICO em `ImagemAssetField`, `evento-imagem-field`, admin; `comprimir-imagem` rejeita vetor. §5.3: `checks.turnstile` em setup (`ok`/`recomendado`); `validar-go-live-vps.sh` avisa Turnstile. §11 `/review` v1.44 APROVADA. Testes: +3 (445). |
 | 1.43.4 | 2026-08-02 | **Consolidação spec v1.43.3.** §11 alinhado à produção atual (`a665533`, deploy `d2c9e4b`, 442 testes); tabela `/review` v1.43.3; CI §7 pytest 442. |
