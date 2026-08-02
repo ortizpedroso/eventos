@@ -58,6 +58,16 @@ echo "==> Pré-check: verify-production.sh"
 bash "$ROOT/scripts/verify-production.sh"
 echo ""
 
+echo "==> Turnstile (recomendado — anti-bot login/registro)"
+if [ -n "$(env_get TURNSTILE_SECRET_KEY "$ENV_FILE" || true)" ]; then
+  echo "    OK  TURNSTILE_SECRET_KEY definida na API"
+else
+  echo "    AVISO  TURNSTILE_SECRET_KEY vazia — configure Cloudflare Turnstile (spec §5.3)"
+  echo "    Crie o site em https://dash.cloudflare.com → Turnstile"
+  echo "    API: TURNSTILE_SECRET_KEY | Frontend: NEXT_PUBLIC_TURNSTILE_SITE_KEY"
+fi
+echo ""
+
 if [ "$RUN_WEBHOOK" -eq 1 ]; then
   echo "==> §2.8 A — Webhook (token + URL)"
   bash "$ROOT/scripts/test-asaas-webhook.sh" --expect-ok

@@ -87,3 +87,13 @@ def test_page_evento_usa_serialize_json_ld_para_scripts():
     assert "dangerouslySetInnerHTML" in page
     assert "return JSON.stringify(jsonLd)" not in page
     assert "return JSON.stringify({" not in page
+
+
+def test_ui_upload_imagem_sem_svg_ico():
+    field = Path("frontend/src/components/imagem-asset-field.tsx").read_text(encoding="utf-8")
+    comprimir = Path("frontend/src/lib/comprimir-imagem.ts").read_text(encoding="utf-8")
+    assert "UPLOAD_IMAGEM_ACCEPT" in field
+    assert "image/svg+xml" not in field
+    assert "image/x-icon" not in field
+    assert "UPLOAD_IMAGEM_MIME" in comprimir
+    assert "image/svg+xml" not in comprimir

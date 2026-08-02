@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 
 import { getApiBaseUrl } from "@/lib/api";
 import { comprimirImagem } from "@/lib/comprimir-imagem";
+import { UPLOAD_IMAGEM_ACCEPT } from "@/lib/upload-imagem-tipos";
 import { EVENTO_BANNER_MEDIDAS_RESUMO, EVENTO_BANNER_RECOMMENDED } from "@/lib/evento-imagem-spec";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 
@@ -197,7 +198,7 @@ export function EventoImagemField({ id = "imagem_url", value, onChange }: Props)
           <input
             ref={fileRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept={UPLOAD_IMAGEM_ACCEPT}
             className="sr-only"
             tabIndex={-1}
             aria-hidden

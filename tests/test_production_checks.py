@@ -121,6 +121,18 @@ def test_onboarding_linked_aceito_em_producao():
     assert s["checks"]["asaas_onboarding_mode"] == "ok"
 
 
+def test_turnstile_recomendado_em_producao_sem_chave():
+    with patch.multiple(settings, ENVIRONMENT="production", TURNSTILE_SECRET_KEY=""):
+        s = build_setup_status()
+    assert s["checks"]["turnstile"] == "recomendado"
+
+
+def test_turnstile_ok_quando_configurado():
+    with patch.multiple(settings, ENVIRONMENT="production", TURNSTILE_SECRET_KEY="secret-turnstile"):
+        s = build_setup_status()
+    assert s["checks"]["turnstile"] == "ok"
+
+
 def test_onboarding_invalido_bloqueado_em_producao():
     with patch.multiple(settings, ENVIRONMENT="production", ASAAS_ONBOARDING_MODE="modo-inexistente"):
         s = build_setup_status()

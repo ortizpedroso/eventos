@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ImagemAssetField } from "@/components/imagem-asset-field";
+import { UPLOAD_IMAGEM_ACCEPT } from "@/lib/upload-imagem-tipos";
 import { adminFetch } from "@/lib/admin-api";
 
 export type PlatformSettingsForm = {
@@ -277,7 +278,7 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
           value={form.favicon_url}
           onChange={(v) => setField("favicon_url", v)}
           uploadUrl="/api/admin/proxy/assets/upload"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={UPLOAD_IMAGEM_ACCEPT}
           larguraAlvo={256}
           alturaAlvo={256}
         />

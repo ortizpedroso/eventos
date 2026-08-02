@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.43.4
+**Versão:** 1.44
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** `main` em **`d2c9e4b`** — **v1.43** (self-service vincular ingresso + favicon admin). Tip de **produto** `a665533`. **Deploy confirmado no VPS** (02/08/2026, usuário — `d2c9e4b`). pytest **442**. **Onboarding (decisão 02/08/2026):** `linked` até CNPJ na conta mãe Asaas. **§2.8 C:** primeira venda validada (02/08/2026).
+> **Produção (VPS):** `main` em **`d2c9e4b`** — **v1.43** + **v1.44** (auditoria pré-lançamento) pendente deploy após merge. Tip de **produto** `a665533` (v1.44 incrementa só UX/setup). Deploy v1.43 confirmado (02/08/2026). pytest **445**. **Onboarding:** `linked` até CNPJ. **§2.8 C:** 1ª venda validada. **Lançamento:** `/review` v1.44 **APROVADA**.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -503,7 +503,7 @@ Ambas as correções têm comentários extensos no próprio `Caddyfile` e em `ne
 
 ### 5.3 CAPTCHA — Cloudflare Turnstile (adicionado v1.8)
 
-Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (frontend); desligado por padrão, não bloqueia nada se não configurado. Verificação server-side em `app/services/turnstile.py`, aplicado em `/api/auth/{login,registrar,solicitar-recuperacao-senha}`. Widget: `frontend/src/components/turnstile-widget.tsx`.
+Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (frontend); desligado por padrão, não bloqueia `ready_for_production`. **Recomendado em produção** — `GET /api/admin/setup` → `checks.turnstile` = `recomendado` se a chave API estiver vazia; `validar-go-live-vps.sh` avisa. Verificação server-side em `app/services/turnstile.py`, aplicado em `/api/auth/{login,registrar,solicitar-recuperacao-senha}` e `/contato`. Widget: `frontend/src/components/turnstile-widget.tsx`.
 
 ### 5.4 Rate limiting (`app/deps/rate_limit.py`)
 
@@ -540,11 +540,11 @@ Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (fron
 
 ### 5.8 XSS — auditoria de lançamento (v1.41)
 
-**Item 1 — upload SVG/ICO (crítico):** `image/svg+xml`, `image/x-icon` e `image/vnd.microsoft.icon` removidos de `ALLOWED_IMAGE_TYPES` (`asset_storage.py`). SVG/ICO não passam pelo Pillow e eram servidos em `/uploads` no mesmo domínio — vetor de XSS armazenado. Tipos aceitos: JPEG, PNG, WebP, GIF (rasterizados para WebP no servidor). **Nota:** o admin ainda lista SVG/ICO no `accept` do formulário de favicon (`admin-platform-settings.tsx`) — upload falha com 400; ajuste de UX do frontend fica para rodada seguinte.
+**Item 1 — upload SVG/ICO (crítico):** `image/svg+xml`, `image/x-icon` e `image/vnd.microsoft.icon` removidos de `ALLOWED_IMAGE_TYPES` (`asset_storage.py`). Tipos aceitos: JPEG, PNG, WebP, GIF (rasterizados para WebP no servidor). **Frontend (v1.44):** `upload-imagem-tipos.ts` centraliza `accept` e validação em `ImagemAssetField`, `evento-imagem-field`, admin favicon; `comprimir-imagem.ts` rejeita SVG/ICO antes do upload.
 
-**Item 2 — JSON-LD na página do evento (alto):** `serializeJsonLdForScript` (`frontend/src/lib/json-ld-html.ts`) escapa `<`, `>` e `/` após `JSON.stringify()` antes de `dangerouslySetInnerHTML` em `eventos/[slug]/page.tsx` (Event + BreadcrumbList). Impede organizador de fechar `</script>` com nome/descrição/local maliciosos.
+**Item 2 — JSON-LD na página do evento (alto):** `serializeJsonLdForScript` (`frontend/src/lib/json-ld-html.ts`) escapa `<`, `>` e `/` após `JSON.stringify()` antes de `dangerouslySetInnerHTML` em `eventos/[slug]/page.tsx` (Event + BreadcrumbList).
 
-Testes: `tests/test_xss_auditoria_lancamento.py` (upload SVG rejeitado; escape JSON-LD).
+Testes: `tests/test_xss_auditoria_lancamento.py` (upload SVG rejeitado; escape JSON-LD; UI sem SVG/ICO).
 
 ---
 
@@ -565,6 +565,7 @@ Testes: `tests/test_xss_auditoria_lancamento.py` (upload SVG rejeitado; escape J
 | `CORS_ORIGINS` | HTTPS, sem `*` | |
 | `FRONTEND_PUBLIC_URL` | URL pública | |
 | `POSTGRES_PASSWORD` | Sim | |
+| `TURNSTILE_SECRET_KEY` | Recomendado | Anti-bot login/registro/contato; par com `NEXT_PUBLIC_TURNSTILE_SITE_KEY` |
 
 Checks: `production_checks.py` → `GET /api/admin/setup`. Em produção valida:
 
@@ -605,7 +606,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (442 testes)
+- [x] `pytest` verde (445 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -690,21 +691,31 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.32 | `a32b948` / 390 | aprovada (pelo build que fechou L4/L5) |
 | v1.33 | `a32b948` / 390 | APROVADA — L1–L5 |
 | v1.42.2 | `4125ff4` / 438 | APROVADA — §2.12 v1.42 + §5.8 |
-| **v1.43.3 (este)** | `a665533` / **442** | **APROVADA** — v1.43 + ops produção + deploy `d2c9e4b` |
+| v1.43.3 | `a665533` / 442 | APROVADA — v1.43 + deploy `d2c9e4b` |
+| **v1.44 (este)** | pendente merge / **445** | **APROVADA** — auditoria pré-lançamento |
 
-### 11.1 Requisitos recentes — resultado (v1.43.3)
+### 11.1 Requisitos recentes — resultado (v1.44)
 
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
-| §2.12 | Self-service `POST /api/ingressos/vincular` + UI Minha conta | **PASS** |
-| §2.12 | Confirmação/correção/reenvio PDV (v1.42) | **PASS** |
-| §5.8 | SVG/ICO bloqueados; JSON-LD escapado; favicon `accept` admin | **PASS** |
-| §2.2–§2.4 / §4 | `linked` até CNPJ; organizador cria conta no Asaas | **PASS** (decisão 02/08) |
-| §2.8 C | Primeira venda real | **PASS** (02/08/2026) |
-| §2.8 A–B | Webhook / SMTP formal | checklist opcional |
+| §5.8 | `ImagemAssetField` / `comprimir-imagem` sem SVG/ICO (UX alinhada ao backend) | **PASS** |
+| §5.8 | JSON-LD + upload backend (regressão v1.41) | **PASS** |
+| §5.3 | Turnstile: check `recomendado` em setup + aviso no `validar-go-live-vps.sh` | **PASS** |
+| §2.8 | Script go-live §2.8 A/B/C + Turnstile | **PASS** (automatizado + manual) |
+| §2.12 / §2.9–§2.11 | Baseline v1.43 sem regressão | **PASS** |
+| §7 Qualidade | `pytest` 445 | **PASS** |
+| §7 Ops | Deploy `d2c9e4b` / v1.43 em produção | **PASS** |
+
+### 11.1 histórico (v1.43.3)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.12 | Self-service vincular ingresso + PDV v1.42 | **PASS** |
+| §5.8 | SVG/ICO backend + favicon admin `accept` | **PASS** |
+| §2.2–§2.4 | `linked` até CNPJ | **PASS** |
+| §2.8 C | Primeira venda real | **PASS** |
+| §7 Ops | Deploy `d2c9e4b` confirmado | **PASS** |
 | §7 Qualidade | `pytest` 442 | **PASS** |
-| §7 Ops | Deploy `d2c9e4b` / v1.43 confirmado 02/08 | **PASS** |
-| §7 Pagamentos | Conta `baas` | **N/A** — `linked` até CNPJ |
 
 ### 11.1 histórico (v1.42.2)
 
@@ -757,9 +768,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.43.3)
+### 11.6 Critério de aprovação — ✅ atingido (v1.44)
 
-**Produção estável.** Tip `a665533` / v1.43 em VPS (`d2c9e4b`, 02/08/2026). `pytest` **442**. Onboarding `linked` até CNPJ. §2.8 C validado. Sem lacunas L1–L5. Pendências não bloqueantes: §2.8 A/B (formalização), CNPJ/`baas` (futuro).
+**Aprovado para lançamento comercial.** Tip produto `a665533` / v1.43 em VPS (`d2c9e4b`). Auditoria pré-lançamento (UI/UX/SEO/segurança) sem bloqueios. `pytest` **445**. Turnstile recomendado (não bloqueia). §2.8 A/B checklist opcional. CNPJ/`baas` futuro.
 
 ---
 
@@ -767,6 +778,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.44 | 2026-08-02 | **Auditoria pré-lançamento — recomendações implementadas.** §5.8 UX: `upload-imagem-tipos.ts` — `accept` e validação sem SVG/ICO em `ImagemAssetField`, `evento-imagem-field`, admin; `comprimir-imagem` rejeita vetor. §5.3: `checks.turnstile` em setup (`ok`/`recomendado`); `validar-go-live-vps.sh` avisa Turnstile. §11 `/review` v1.44 APROVADA. Testes: +3 (445). |
 | 1.43.4 | 2026-08-02 | **Consolidação spec v1.43.3.** §11 alinhado à produção atual (`a665533`, deploy `d2c9e4b`, 442 testes); tabela `/review` v1.43.3; CI §7 pytest 442. |
 | 1.43.3 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — `d2c9e4b` / v1.43 (vincular ingresso + favicon admin) em produção; §7 e cabeçalho atualizados. |
 | 1.43.2 | 2026-08-02 | **Merge PR #86** — v1.43 na `main` (`7d6823d`, tip `a665533`). Spec §7 e cabeçalho atualizados; deploy VPS v1.43 pendente. Incorpora confirmação deploy `de12227` (PR #87 fechado por conflito). |

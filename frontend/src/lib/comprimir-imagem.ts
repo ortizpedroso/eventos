@@ -1,21 +1,26 @@
 "use client";
 
+import {
+  UPLOAD_IMAGEM_MIME,
+  UPLOAD_IMAGEM_REJEITADO_MSG,
+} from "@/lib/upload-imagem-tipos";
+
 /**
  * Redimensiona e comprime uma imagem no navegador antes do upload — reduz o
- * tamanho do arquivo sem perder qualidade perceptível, e sem exigir que o
- * usuário edite a imagem manualmente antes de enviar.
+ * tamanho do arquivo sem perder qualidade perceptível.
  *
- * - SVG passa direto (é vetor, não faz sentido rasterizar/comprimir).
  * - Preserva transparência: usa WebP (com alpha) em vez de JPEG.
  * - Só redimensiona se a imagem for maior que o alvo — nunca aumenta.
- * - Se o resultado comprimido ficar maior que o original (raro, arquivos já
- *   pequenos), mantém o original.
+ * - SVG/ICO não são aceitos (XSS / vetor não rasterizado no servidor).
  */
 export async function comprimirImagem(
   file: File,
   { maxWidth, maxHeight, qualidade = 0.86 }: { maxWidth: number; maxHeight: number; qualidade?: number },
 ): Promise<File> {
-  if (file.type === "image/svg+xml") return file;
+  const mime = (file.type || "").trim().toLowerCase();
+  if (!UPLOAD_IMAGEM_MIME.has(mime)) {
+    throw new Error(UPLOAD_IMAGEM_REJEITADO_MSG);
+  }
   if (typeof window === "undefined" || typeof createImageBitmap !== "function") return file;
 
   let bitmap: ImageBitmap;
