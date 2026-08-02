@@ -41,6 +41,8 @@ def _filtro_texto(q: str, ingresso_alias=Ingresso) -> list:
     if len(digitos) >= 3:
         preds.append(ingresso_alias.participante_cpf.ilike(f"%{digitos}%"))
         preds.append(ingresso_alias.repassado_para_cpf.ilike(f"%{digitos}%"))
+        preds.append(ingresso_alias.participante_telefone.ilike(f"%{digitos}%"))
+        preds.append(ingresso_alias.repassado_para_telefone.ilike(f"%{digitos}%"))
 
     return preds
 
@@ -55,7 +57,10 @@ def _serializar(ingresso: Ingresso, evento: Evento) -> dict[str, Any]:
         "participante_nome": nome,
         "participante_email": email,
         "participante_cpf": cpf,
+        "participante_telefone": ingresso.participante_telefone or ingresso.repassado_para_telefone,
         "status": ingresso.status,
+        "canal_venda": ingresso.canal_venda,
+        "assento": getattr(ingresso, "assento", None) or None,
         "checkin_em": ingresso.checkin_em.isoformat() if ingresso.checkin_em else None,
         "evento_id": evento.id,
         "evento_nome": evento.nome,

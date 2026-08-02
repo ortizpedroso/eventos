@@ -10,6 +10,17 @@ type Props = { eventoId: string };
 
 type FormaPagamento = "dinheiro" | "pix_manual" | "cartao";
 
+type VendaBuscaItem = {
+  ingresso_id: string;
+  participante_nome: string | null;
+  participante_email: string | null;
+  participante_telefone: string | null;
+  status: string;
+  canal_venda: string | null;
+  assento: string | null;
+  lote_nome: string | null;
+};
+
 const FORMAS: { value: FormaPagamento; label: string }[] = [
   { value: "dinheiro", label: "Dinheiro" },
   { value: "pix_manual", label: "PIX (manual)" },
@@ -24,10 +35,23 @@ export function PdvPresencialClient({ eventoId }: Props) {
   const [loteId, setLoteId] = useState("");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [emailConfirm, setEmailConfirm] = useState("");
   const [telefone, setTelefone] = useState("");
   const [forma, setForma] = useState<FormaPagamento>("dinheiro");
   const [assento, setAssento] = useState("");
   const [ultimoQrUrl, setUltimoQrUrl] = useState<string | null>(null);
+  const [ultimoEmailDestino, setUltimoEmailDestino] = useState<string | null>(null);
+
+  const [buscaQ, setBuscaQ] = useState("");
+  const [buscaResultados, setBuscaResultados] = useState<VendaBuscaItem[]>([]);
+  const [buscaBusy, setBuscaBusy] = useState(false);
+  const [selecionado, setSelecionado] = useState<VendaBuscaItem | null>(null);
+  const [editNome, setEditNome] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editTelefone, setEditTelefone] = useState("");
+  const [correcaoMsg, setCorrecaoMsg] = useState<string | null>(null);
+  const [correcaoErro, setCorrecaoErro] = useState<string | null>(null);
+  const [correcaoBusy, setCorrecaoBusy] = useState(false);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -56,11 +80,97 @@ export function PdvPresencialClient({ eventoId }: Props) {
   const assentosDisp = loteAtual?.assentos_disponiveis ?? [];
   const assentosOcc = loteAtual?.assentos_ocupados ?? [];
 
+  function selecionarVenda(item: VendaBuscaItem) {
+    setSelecionado(item);
+    setEditNome(item.participante_nome ?? "");
+    setEditEmail(item.participante_email ?? "");
+    setEditTelefone(item.participante_telefone ?? "");
+    setCorrecaoMsg(null);
+    setCorrecaoErro(null);
+  }
+
+  async function buscarVendas() {
+    const q = buscaQ.trim();
+    if (q.length < 2) {
+      setCorrecaoErro("Digite pelo menos 2 caracteres (nome, e-mail, telefone ou CPF).");
+      return;
+    }
+    setCorrecaoErro(null);
+    setCorrecaoMsg(null);
+    setBuscaBusy(true);
+    try {
+      const res = await apiFetch<{ resultados: VendaBuscaItem[] }>(
+        `/api/eventos/id/${eventoId}/pdv/vendas/buscar?q=${encodeURIComponent(q)}`,
+      );
+      setBuscaResultados(res.resultados ?? []);
+      if (!res.resultados?.length) {
+        setCorrecaoErro("Nenhum ingresso encontrado com esse termo.");
+        setSelecionado(null);
+      }
+    } catch (e) {
+      setCorrecaoErro(e instanceof Error ? e.message : "Falha na busca.");
+      setBuscaResultados([]);
+    } finally {
+      setBuscaBusy(false);
+    }
+  }
+
+  async function salvarCorrecao() {
+    if (!selecionado) return;
+    if (!editNome.trim()) {
+      setCorrecaoErro("Informe o nome do participante.");
+      return;
+    }
+    if (!editEmail.trim() || !editEmail.includes("@")) {
+      setCorrecaoErro("Informe um e-mail válido.");
+      return;
+    }
+    setCorrecaoBusy(true);
+    setCorrecaoErro(null);
+    setCorrecaoMsg(null);
+    try {
+      await apiFetch(`/api/eventos/id/${eventoId}/pdv/vendas/${selecionado.ingresso_id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          participante_nome: editNome.trim(),
+          participante_email: editEmail.trim(),
+          participante_telefone: editTelefone.trim() || null,
+        }),
+      });
+      setCorrecaoMsg("Dados atualizados. Peça o comprador conferir o e-mail após reenviar.");
+      await buscarVendas();
+    } catch (e) {
+      setCorrecaoErro(e instanceof Error ? e.message : "Falha ao salvar correção.");
+    } finally {
+      setCorrecaoBusy(false);
+    }
+  }
+
+  async function reenviarIngresso() {
+    if (!selecionado) return;
+    setCorrecaoBusy(true);
+    setCorrecaoErro(null);
+    setCorrecaoMsg(null);
+    try {
+      const res = await apiFetch<{ message: string; email_destino: string }>(
+        `/api/eventos/id/${eventoId}/pdv/vendas/${selecionado.ingresso_id}/reenviar-email`,
+        { method: "POST" },
+      );
+      setCorrecaoMsg(res.message || `Ingresso enviado para ${res.email_destino}.`);
+    } catch (e) {
+      setCorrecaoErro(e instanceof Error ? e.message : "Falha ao reenviar ingresso.");
+    } finally {
+      setCorrecaoBusy(false);
+    }
+  }
+
   async function confirmarVenda(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
     setOkMsg(null);
     setUltimoQrUrl(null);
+    setUltimoEmailDestino(null);
     if (!loteAtual) {
       setErro("Selecione um lote.");
       return;
@@ -71,6 +181,10 @@ export function PdvPresencialClient({ eventoId }: Props) {
     }
     if (!email.trim() || !email.includes("@")) {
       setErro("Informe um e-mail válido do participante.");
+      return;
+    }
+    if (email.trim().toLowerCase() !== emailConfirm.trim().toLowerCase()) {
+      setErro("Os e-mails não coincidem. Confira com o comprador antes de vender.");
       return;
     }
     if (usaAssentos && !assento.trim()) {
@@ -92,6 +206,8 @@ export function PdvPresencialClient({ eventoId }: Props) {
         ingresso_id: string;
         status: string;
         assento?: string | null;
+        participante_email?: string;
+        email_enviado_sync?: boolean;
         qr_url?: string;
         codigo_checkin?: string;
       }>(`/api/eventos/id/${eventoId}/pdv`, {
@@ -99,12 +215,18 @@ export function PdvPresencialClient({ eventoId }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
+      const dest = res.participante_email || email.trim();
+      setUltimoEmailDestino(dest);
+      const envio = res.email_enviado_sync
+        ? `Ingresso enviado para ${dest}. Peça o comprador conferir agora (incluindo spam).`
+        : `Ingresso enfileirado para ${dest} — deve chegar em instantes. Peça o comprador conferir agora.`;
       setOkMsg(
-        `Venda registrada. Ingresso ${res.status}${res.assento ? ` · assento ${res.assento}` : ""}.`,
+        `Venda registrada (${res.status}${res.assento ? ` · assento ${res.assento}` : ""}). ${envio}`,
       );
-      setUltimoQrUrl(res.qr_url || `/conta/ingressos/${res.ingresso_id}`);
+      setUltimoQrUrl(res.qr_url || `/ingresso/qr?c=${res.codigo_checkin}`);
       setNome("");
       setEmail("");
+      setEmailConfirm("");
       setTelefone("");
       setAssento("");
       await carregar();
@@ -209,6 +331,18 @@ export function PdvPresencialClient({ eventoId }: Props) {
           />
         </label>
         <label className="grid gap-1 text-sm font-medium text-zinc-800">
+          Confirme o e-mail *
+          <input
+            type="email"
+            className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
+            value={emailConfirm}
+            onChange={(e) => setEmailConfirm(e.target.value)}
+            required
+            maxLength={255}
+            placeholder="Repita o e-mail do comprador"
+          />
+        </label>
+        <label className="grid gap-1 text-sm font-medium text-zinc-800">
           Telefone (opcional)
           <input
             className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
@@ -234,6 +368,11 @@ export function PdvPresencialClient({ eventoId }: Props) {
 
         {erro ? <p className="text-sm text-red-700">{erro}</p> : null}
         {okMsg ? <p className="text-sm text-emerald-700">{okMsg}</p> : null}
+        {ultimoEmailDestino ? (
+          <p className="text-xs text-zinc-600">
+            Não recebeu? Corrija abaixo em &quot;Corrigir venda&quot; antes que o comprador saia.
+          </p>
+        ) : null}
         {ultimoQrUrl ? (
           <Link
             href={ultimoQrUrl}
@@ -251,6 +390,112 @@ export function PdvPresencialClient({ eventoId }: Props) {
           {busy ? "Registrando…" : "Confirmar venda presencial"}
         </button>
       </form>
+
+      <section className="mt-10 border-t border-zinc-200 pt-8">
+        <h2 className="text-lg font-semibold text-zinc-900">Corrigir venda</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          E-mail errado ou comprador não recebeu? Busque por nome, telefone ou e-mail digitado na
+          venda (mín. 2 caracteres). Corrija os dados e reenvie o ingresso.
+        </p>
+
+        <div className="mt-4 flex gap-2">
+          <input
+            className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm"
+            value={buscaQ}
+            onChange={(e) => setBuscaQ(e.target.value)}
+            placeholder="Nome, e-mail, telefone ou CPF"
+            maxLength={120}
+          />
+          <button
+            type="button"
+            disabled={buscaBusy}
+            onClick={() => void buscarVendas()}
+            className="shrink-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
+          >
+            {buscaBusy ? "Buscando…" : "Buscar"}
+          </button>
+        </div>
+
+        {correcaoErro ? <p className="mt-3 text-sm text-red-700">{correcaoErro}</p> : null}
+        {correcaoMsg ? <p className="mt-3 text-sm text-emerald-700">{correcaoMsg}</p> : null}
+
+        {buscaResultados.length > 0 ? (
+          <ul className="mt-4 space-y-2">
+            {buscaResultados.map((item) => (
+              <li key={item.ingresso_id}>
+                <button
+                  type="button"
+                  onClick={() => selecionarVenda(item)}
+                  className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
+                    selecionado?.ingresso_id === item.ingresso_id
+                      ? "border-emerald-600 bg-emerald-50"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  }`}
+                >
+                  <span className="font-medium text-zinc-900">{item.participante_nome}</span>
+                  <span className="text-zinc-600"> · {item.participante_email}</span>
+                  {item.assento ? <span className="text-zinc-500"> · {item.assento}</span> : null}
+                  {item.canal_venda ? (
+                    <span className="text-xs text-zinc-400"> · {item.canal_venda}</span>
+                  ) : null}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {selecionado ? (
+          <div className="mt-4 space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+            <p className="text-sm font-medium text-zinc-800">Editar participante</p>
+            <label className="grid gap-1 text-sm font-medium text-zinc-800">
+              Nome
+              <input
+                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
+                value={editNome}
+                onChange={(e) => setEditNome(e.target.value)}
+                maxLength={200}
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-zinc-800">
+              E-mail
+              <input
+                type="email"
+                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                maxLength={255}
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-zinc-800">
+              Telefone
+              <input
+                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
+                value={editTelefone}
+                onChange={(e) => setEditTelefone(e.target.value)}
+                maxLength={20}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                disabled={correcaoBusy}
+                onClick={() => void salvarCorrecao()}
+                className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+              >
+                Salvar correção
+              </button>
+              <button
+                type="button"
+                disabled={correcaoBusy}
+                onClick={() => void reenviarIngresso()}
+                className="btn-success px-3 py-2 text-sm disabled:opacity-60"
+              >
+                Reenviar ingresso por e-mail
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </section>
 
       <Link
         href="/organizador/eventos"
