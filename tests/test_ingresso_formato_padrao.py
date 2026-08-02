@@ -112,6 +112,49 @@ def test_download_html_embute_a_mesma_carteirinha_do_endpoint_dedicado():
     assert embutida == esperado
 
 
+def test_download_html_nao_repete_dados_da_carteirinha_em_texto():
+    """Fora da <img>, o HTML de impressão não deve duplicar nome/data/local/participante."""
+    db = TestingSessionLocal()
+    try:
+        cliente, ev, ing = _criar_conta_evento_ingresso(db, suf="semtexto")
+        email, ingresso_id = cliente.email, ing.id
+        ev_nome, local = ev.nome, ev.local
+        participante = ing.participante_nome
+    finally:
+        db.close()
+
+    token = _login(email)
+    resp = client.get(
+        f"/api/ingressos/{ingresso_id}/download",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    html = resp.text
+
+    for label in (
+        "<p><strong>Participante:</strong>",
+        "<p><strong>Email:</strong>",
+        "<p><strong>Data:</strong>",
+        "<p><strong>Local:</strong>",
+        "<p><strong>Assento:</strong>",
+    ):
+        assert label not in html
+
+    assert "<h2>" not in html
+    assert "Ingresso Oficial" not in html
+    assert "class=\"status\"" not in html
+
+    body_match = re.search(r"<body[^>]*>(.*)</body>", html, re.DOTALL | re.IGNORECASE)
+    assert body_match, "corpo HTML ausente"
+    body_sem_img = re.sub(r"<img[^>]*>", "", body_match.group(1), flags=re.IGNORECASE)
+    assert ev_nome not in body_sem_img
+    assert participante not in body_sem_img
+    assert local not in body_sem_img
+
+    assert 'id="btn-imprimir"' in html
+    assert "data:image/png;base64," in html
+
+
 def test_carteirinha_endpoint_exige_ingresso_confirmado():
     db = TestingSessionLocal()
     try:

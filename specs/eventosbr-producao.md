@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.39
+**Versão:** 1.40
 **Data:** 2026-07-31
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `c9ab63a` — v1.39 (PDV cria conta própria do comprador em vez de usar a do organizador + carteirinha padronizada entre e-mail/download/tela da conta). pytest **427** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 426+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da `main` em `7a02ae8` — v1.40 (página de impressão do ingresso não repete mais em texto o que a carteirinha já mostra — bug real, confirmado visualmente com renderização de imagem antes de aprovar). pytest **428** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 427+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -308,7 +308,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (427 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (428 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -587,7 +587,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (427 testes)
+- [x] `pytest` verde (428 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -599,9 +599,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — `c9ab63a` (v1.39 — PDV cria conta própria do comprador + carteirinha padronizada); anterior `a6d8412` (v1.38), `4b18643` (v1.36), `d8f3b4b` (v1.35), `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …` e config de ambiente (`environment.json`) não entram neste ponteiro.
+- [x] tip de produto — `7a02ae8` (v1.40 — impressão do ingresso sem repetir dados da carteirinha em texto); anterior `c9ab63a` (v1.39), `a6d8412` (v1.38), `4b18643` (v1.36), `d8f3b4b` (v1.35), `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …` e config de ambiente (`environment.json`) não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
-- [ ] Deploy VPS do tip atual (`c9ab63a` / v1.39) **precisa reconfirmação** — última confirmação explícita do usuário cobria até `a32b948` (31/07/2026); desde então entrou PDV+assentos (v1.34/1.35, migração `000048`), e-mail obrigatório no PDV (v1.36), auditoria UX (v1.38) e conta própria do comprador no PDV + carteirinha padronizada (v1.39) sem confirmação de deploy registrada aqui
+- [ ] Deploy VPS do tip atual (`7a02ae8` / v1.40) **precisa reconfirmação** — última confirmação explícita do usuário cobria até `a32b948` (31/07/2026); desde então entrou PDV+assentos (v1.34/1.35, migração `000048`), e-mail obrigatório no PDV (v1.36), auditoria UX (v1.38), conta própria do comprador no PDV + carteirinha padronizada (v1.39) e impressão sem duplicação (v1.40) sem confirmação de deploy registrada aqui
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
@@ -720,6 +720,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.40 | 2026-08-02 | **Bug real corrigido** (achado do usuário, confirmado no código antes de escrever o prompt): a página de impressão do ingresso (`GET /api/ingressos/{id}/download`) embutia a carteirinha padrão (já com nome do evento, data, local, participante e QR na própria imagem), mas envolvia isso num card HTML que repetia tudo de novo como texto solto (`<h2>` do evento, "Participante:", "Email:", "Data:", "Local:", "Assento:", badge de status). Corrigido: removida toda a duplicação, mantido só o essencial que a carteirinha não mostra (aviso de repasse, código da portaria, botão de imprimir). Teste novo confirma ausência dos rótulos duplicados **e** que nome/participante/local não aparecem em nenhum lugar do `<body>` fora da tag `<img>`. Validado também visualmente (renderização real do HTML em imagem) antes de aprovar — layout limpo, centralizado, consistente com o e-mail. Testes: 427 → 428. |
 | 1.39 | 2026-08-01 | **Bug real corrigido**: `vender_ingresso_pdv` associava o ingresso à conta do ORGANIZADOR (`usuario_id=organizador.id`), não do comprador — o link "Ver ingresso na conta" no e-mail só funcionava se o organizador estivesse logado; o comprador de verdade nunca conseguiria acessar o próprio ingresso. Corrigido: cria/reaproveita uma conta cliente própria pro e-mail informado (mesmo padrão de colisão já usado em `compra_rapida`); conta nova recebe e-mail de "primeiro acesso". O link do e-mail do ingresso agora é decidido **a cada envio** pelo status real de senha do dono (`dono.senha_hash`), não só na criação — cobre também compras repetidas de contas ainda sem senha. **Carteirinha padronizada**: nova função central `montar_carteirinha_ingresso_bytes` usada no e-mail, no endpoint de download/impressão e num endpoint novo dedicado (`GET /api/ingressos/{id}/carteirinha`, só o dono) — elimina o QR "nu" que a tela de impressão usava antes, agora idêntica à imagem do e-mail em todo lugar. **Nota de processo**: o branch veio baseado num ponto do `main` anterior à auditoria UX (v1.38) — confirmei arquivo a arquivo que a diferença aparente era só desatualização, não reversão intencional, e apliquei via `cherry-pick` só o que era genuinamente novo, preservando os itens 1-4 da v1.38 intactos. Testes: 417 → 427. |
 | 1.38 | 2026-08-01 | **Auditoria de UX competitiva** (20+ plataformas pesquisadas: Sympla, Eventbrite, Ingresse etc., cruzada com o código real). 4 itens implementados: (1) aviso obrigatório de documento (DNE/CIE) pra meia-entrada no checkout, conforme Lei 12.933/2013; (2) confirmação de e-mail do participante no checkout — supervisão encontrou que já havia proteção funcional real (`criarIntent` já bloqueava com `setError`+`return`), mas o botão "Finalizar compra" não refletia isso visualmente; corrigido pra desabilitar proativamente em mismatch de e-mail **ou CPF** (mesmo bug pré-existente no alerta de CPF, corrigido junto); (3) modo offline no check-in da portaria (MVP) — pré-carrega IDs válidos, distingue falha de rede de rejeição real do servidor, marca localmente como usado pra evitar double-checkin mesmo offline, sincroniza automaticamente ao reconectar; (4) retry automático com backoff em falha de pagamento — supervisão verificou que o mecanismo de não-duplicar-cobrança já existia (reaproveita/cancela `asaas_payment_id` pendente antes de recriar), a alegação do comentário ("chave de idempotência") era tecnicamente imprecisa mas o efeito prático é real. Um quinto item (checkout de convidado) foi avaliado e **deliberadamente não implementado** — mantém login obrigatório, é decisão de produto que precisa de mais discussão. Testes: 402 → 417. |
 | 1.37 | 2026-08-01 | **Consolidação `/build`+`/review`**: revisão ativa encontrou e corrigiu 3 inconsistências (mesmo padrão dos ciclos L1-L5 anteriores) — cabeçalho ainda apontava pra v1.35/`d8f3b4b` quando o `main` já tinha v1.36 (e-mail obrigatório no PDV, revisado e aprovado: exige e-mail válido pois o ingresso de PDV vai pro `usuario_id` do organizador, sem conta de cliente associada — sem e-mail o comprador não teria como receber o ingresso; `enqueue_ticket_email` chamado incondicionalmente agora) mais um PR de configuração de ambiente (Cursor Cloud Agent, sem impacto em produto); contagem de testes desatualizada (400→402); confirmação de deploy travada em `a32b948`, marcada novamente como pendente de reconfirmação (PDV+assentos+e-mail obrigatório entraram depois sem confirmação registrada). 402/402 (2x), tsc/eslint/build limpos. |
