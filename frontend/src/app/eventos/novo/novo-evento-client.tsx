@@ -78,11 +78,23 @@ const WIZARD_STEPS = [
 ] as const;
 
 function WizardBar({ step }: { step: number }) {
+  const etapaAtual = WIZARD_STEPS.find((s) => s.id === step);
   return (
     <div className="mb-8">
-      <p className="mb-3 text-center text-sm font-semibold text-emerald-800">
-        Etapa {step} de {WIZARD_STEPS.length}
-      </p>
+      <div
+        className="mb-4 flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between"
+        aria-live="polite"
+      >
+        <p className="text-lg font-bold tracking-tight text-emerald-900 sm:text-xl">
+          Etapa {step} de {WIZARD_STEPS.length}
+          {etapaAtual ? (
+            <span className="text-zinc-600 font-semibold"> — {etapaAtual.label}</span>
+          ) : null}
+        </p>
+        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+          {step}/{WIZARD_STEPS.length}
+        </span>
+      </div>
       <ol className="flex gap-2" aria-label="Progresso do formulário">
       {WIZARD_STEPS.map((s) => {
         const ativo = s.id === step;

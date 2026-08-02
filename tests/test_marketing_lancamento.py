@@ -36,6 +36,7 @@ def test_noindex_conta_organizador_layouts():
 def test_wizard_etapa_de_tres():
     wizard = (ROOT / "frontend/src/app/eventos/novo/novo-evento-client.tsx").read_text(encoding="utf-8")
     assert "Etapa {step} de" in wizard
+    assert "WIZARD_STEPS.length" in wizard
 
 
 def test_evento_card_cidade_e_cta():
