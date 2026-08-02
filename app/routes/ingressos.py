@@ -198,26 +198,24 @@ async def download_ingresso(
 
         carteirinha_b64 = base64.b64encode(montar_carteirinha_ingresso_bytes(ingresso)).decode("ascii")
 
-    codigo_portaria = ""
+    carteirinha_block = ""
     if carteirinha_b64:
         codigo_txt = esc(ingresso_qr_payload(ingresso.id))
         codigo_portaria = (
-            f'<p style="text-align:center;margin:14px 0 0;font-size:14px;color:#18181b">'
+            f'<p style="text-align:center;margin:16px 0 0;font-size:14px;color:#18181b">'
             f"<strong>Código para digitar na portaria</strong><br/>"
             f'<span style="display:inline-block;margin-top:8px;padding:10px 12px;background:#fff;border:1px solid #d4d4d8;border-radius:8px;'
             f'font-family:monospace;font-size:13px;font-weight:600;color:#18181b;word-break:break-all">{codigo_txt}</span></p>'
         )
-    # Mesma carteirinha usada no e-mail (gerar_ticket_card_png_bytes) — evita ter um
-    # formato de ingresso diferente pra impressão vs. e-mail.
-    qr_block = (
-        f'<div style="text-align:center;margin:20px 0;padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px">'
-        f'<img src="data:image/png;base64,{carteirinha_b64}" alt="Carteirinha do ingresso" style="display:block;margin:0 auto;max-width:100%;height:auto;border-radius:8px"/>'
-        f"{codigo_portaria}"
-        f'<p style="margin:10px 0 0;font-size:12px;color:#71717a">Apresente esta carteirinha (ou o código acima) na entrada do evento.</p>'
-        f"</div>"
-        if carteirinha_b64
-        else ""
-    )
+        carteirinha_block = (
+            f'<div style="text-align:center;margin:0 auto;max-width:480px">'
+            f'<img src="data:image/png;base64,{carteirinha_b64}" alt="Carteirinha do ingresso" '
+            f'style="display:block;margin:0 auto;max-width:100%;height:auto;border-radius:8px;border:1px solid #e4e4e7"/>'
+            f"{codigo_portaria}"
+            f'<p style="margin:10px 0 0;font-size:12px;color:#71717a">'
+            f"Apresente esta carteirinha (ou o código acima) na entrada do evento.</p>"
+            f"</div>"
+        )
 
     repasse_block = ""
     if ingresso.repassado_em and ingresso.repassado_para_nome:
@@ -229,11 +227,6 @@ async def download_ingresso(
         </div>"""
 
     ev_nome = esc(ingresso.evento.nome)
-    part_nome = esc(ingresso.participante_nome)
-    part_email = esc(ingresso.participante_email)
-    ev_data = esc(ingresso.evento.data_inicio)
-    ev_local = esc(ingresso.evento.local)
-    status_txt = esc((ingresso.status or "").upper())
 
     html_content = f"""
     <!DOCTYPE html>
@@ -243,12 +236,8 @@ async def download_ingresso(
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';"/>
         <title>Ingresso - {ev_nome}</title>
         <style>
-            body {{ font-family: sans-serif; padding: 40px; color: #333; }}
-            .ticket {{ border: 2px dashed #10b981; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 12px; }}
-            .header {{ text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }}
-            .header h2 {{ margin: 0; color: #047857; }}
-            .details p {{ margin: 10px 0; font-size: 16px; }}
-            .status {{ display: inline-block; padding: 4px 12px; background: #d1fae5; color: #047857; border-radius: 999px; font-weight: bold; font-size: 14px; margin-top: 15px; }}
+            body {{ font-family: sans-serif; padding: 40px; color: #333; background: #fff; }}
+            .print-shell {{ max-width: 520px; margin: 0 auto; }}
             @media print {{
                 body {{ padding: 0; }}
                 .no-print {{ display: none; }}
@@ -256,26 +245,14 @@ async def download_ingresso(
         </style>
     </head>
     <body>
-        <div class="no-print" style="text-align: center; margin-bottom: 30px;">
+        <div class="no-print" style="text-align: center; margin-bottom: 24px;">
             <button type="button" id="btn-imprimir" style="padding: 12px 24px; font-size: 16px; cursor: pointer; background-color: #10b981; color: white; border: none; border-radius: 8px; font-weight: bold;">
                 Imprimir ou Salvar como PDF
             </button>
         </div>
-        <div class="ticket">
-            <div class="header">
-                <h2>{ev_nome}</h2>
-                <p style="margin-top: 5px; color: #666;">Ingresso Oficial</p>
-            </div>
-            <div class="details">
-                {repasse_block}
-                <p><strong>Participante:</strong> {part_nome}</p>
-                <p><strong>Email:</strong> {part_email}</p>
-                <p><strong>Data:</strong> {ev_data}</p>
-                <p><strong>Local:</strong> {ev_local}</p>
-                {f'<p><strong>Assento:</strong> {esc(ingresso.assento)}</p>' if (ingresso.assento or "").strip() else ""}
-                {qr_block}
-                <div class="status">{status_txt}</div>
-            </div>
+        <div class="print-shell">
+            {carteirinha_block}
+            {repasse_block}
         </div>
         <script>
           (function () {{
