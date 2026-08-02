@@ -183,20 +183,23 @@ class TestFilaConfiavelContato:
             duracao = time.monotonic() - inicio
             assert duracao < 1.0, "enfileirar não deveria bloquear esperando o SMTP"
 
-            # Worker usa blmove(timeout=2) quando a fila está vazia — em CI pode levar
-            # alguns segundos até o thread pegar a mensagem enfileirada.
-            for _ in range(75):
+            thread = contato_email._worker_thread
+            assert thread is not None and thread.is_alive(), "worker de contato não iniciou"
+
+            # Worker usa blmove(timeout=2) — sob carga do suite completa em CI pode demorar.
+            deadline = time.monotonic() + 45.0
+            enviado = False
+            while time.monotonic() < deadline:
                 db = TestingSessionLocal()
                 try:
                     registro = db.get(ContatoSiteMensagem, mensagem_id)
-                    enviado = registro.email_enviado
+                    enviado = bool(registro and registro.email_enviado)
                 finally:
                     db.close()
                 if enviado:
                     break
                 time.sleep(0.2)
-            else:
-                pytest.fail("worker não processou a mensagem em segundo plano a tempo")
+            assert enviado, "worker não processou a mensagem em segundo plano a tempo"
 
         contato_email.stop_contato_email_worker(aguardar_segundos=5)
         if contato_email._worker_thread is not None:

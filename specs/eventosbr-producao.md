@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.46
+**Versão:** 1.46.1
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`6c5a6f6`** — **v1.45** em produção (confirmação e-mail organizador + imagens). **v1.46** (Turnstile ops + UX cadastro organizador) **aguarda deploy**. pytest **449** (CI). **Lançamento:** `/review` v1.46 **APROVADA**.
+> **Produção (VPS):** **`d608169`** — **v1.46** em produção (UX cadastro organizador + Turnstile wired). pytest **452** (CI). **Lançamento:** `/review` v1.46 **APROVADA**; deploy VPS **confirmado** 02/08/2026.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -632,8 +632,8 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — v1.45 mergeado; VPS `6c5a6f6` (deploy v1.45 confirmado 02/08/2026); **v1.46 aguarda deploy**
-- [ ] **Turnstile em produção** — rodar `bash scripts/configure-turnstile-env.sh` no VPS (chaves Cloudflare) + rebuild `web` e recreate `api` (spec §5.3)
+- [x] tip de produto — v1.46 mergeado; VPS **`d608169`** (deploy v1.46 confirmado 02/08/2026)
+- [x] **Turnstile em produção** — chaves no `.env` + rebuild `web`/`api` (confirmado 02/08/2026; Managed mode — validação automática para visitantes legítimos)
 - [x] Conta mãe Asaas em **CNPJ** — **fechado por decisão** (adiado até PJ no Asaas); não bloqueia `linked` (02/08/2026)
 - [x] Deploy VPS — **`d2c9e4b`** / v1.43 — confirmado 02/08/2026 (`verificar-versao-site.sh`)
 - [x] Deploy VPS `de12227` / v1.42.2 — confirmado 02/08/2026
@@ -712,7 +712,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.44.2 | `68bd595` / **445** | APROVADA — fechamento pendências spec/ops |
 | v1.44.3 | `df08e23` / **445** | APROVADA — deploy VPS v1.44 confirmado |
 | v1.45 | `9c6044a` / **449** | APROVADA — e-mail organizador + imagens + Turnstile build |
-| **v1.46 (este)** | pendente / **449** | **APROVADA** — UX cadastro organizador + Turnstile ops |
+| v1.46 | `d608169` / **452** | APROVADA — UX cadastro organizador + Turnstile ops |
+| **v1.46.1 (este)** | `d608169` / **452** | **APROVADA** — deploy VPS v1.46 confirmado |
 
 ### 11.1 Requisitos recentes — resultado (v1.46)
 
@@ -810,9 +811,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.46)
+### 11.6 Critério de aprovação — ✅ atingido (v1.46.1)
 
-**Aprovado para lançamento comercial.** VPS **`6c5a6f6`** / v1.45 em produção. v1.46 aguarda deploy (UX cadastro + scripts Turnstile). `pytest` **449** (CI). Turnstile: código e scripts prontos; **configuração das chaves no VPS** é passo operacional pendente (§7 Ops).
+**Aprovado para lançamento comercial.** VPS **`d608169`** / v1.46 em produção (UX cadastro organizador + Turnstile). `pytest` **452** (CI). Turnstile operacional no VPS (§7 Ops fechado).
 
 ---
 
@@ -820,6 +821,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.46.1 | 2026-08-02 | **Deploy VPS v1.46 confirmado** pelo usuário — `d608169` em produção; Turnstile operacional (Managed). §7 e cabeçalho atualizados; PR #97 fechado (superseded). Teste CI: timeout worker contato mais robusto (45s). |
 | 1.46 | 2026-08-02 | **UX cadastro organizador + Turnstile ops.** §3.3: tela pública dedicada após cadastro (`organizador-cadastro-pendente.tsx`, `/cadastro?confirmar=1`, sem login). §5.3: `configure-turnstile-env.sh`, `setup-turnstile-e2e.sh`, Spin scripts; widget `action=turnstile-spin-v2`, reset em erro; siteverify canônico. Testes Turnstile: 4 → 5. |
 | 1.45 | 2026-08-02 | **Cadastro organizador + endurecimento imagens.** §3.3: confirmação e-mail 24h, boas-vindas com botão e link copiável, login bloqueado até confirmar, `reenviar-verificacao-cadastro`. §5.8: `imagem_url` só hosts da plataforma/R2/uploads; UI evento só upload. §5.3: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` no build Docker. Testes: 445 → 449. |
 | 1.44.3 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — `df08e23` / v1.44 em produção (`verificar-versao-site.sh`: API/Web `df08e23`, health/ready OK). §7 e cabeçalho atualizados; §11 deploy PASS. |
