@@ -24,7 +24,7 @@ async def upload_asset_admin(
 ):
     content_type = (file.content_type or "").strip().lower()
     if content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(status_code=400, detail="Envie uma imagem (JPEG, PNG, WebP, GIF, SVG ou ICO)")
+        raise HTTPException(status_code=400, detail="Envie uma imagem (JPEG, PNG, WebP ou GIF)")
     data = await file.read()
     try:
         url = save_image_upload(content=data, content_type=content_type, subdir="platform")
@@ -42,7 +42,7 @@ async def upload_asset_organizador(
         raise HTTPException(status_code=403, detail="Apenas organizadores")
     content_type = (file.content_type or "").strip().lower()
     if content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(status_code=400, detail="Envie uma imagem (JPEG, PNG, WebP, GIF ou SVG)")
+        raise HTTPException(status_code=400, detail="Envie uma imagem (JPEG, PNG, WebP ou GIF)")
     data = await file.read()
     try:
         url = save_image_upload(content=data, content_type=content_type, subdir=f"org/{usuario_atual.id[:8]}")

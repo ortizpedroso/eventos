@@ -15,9 +15,6 @@ ALLOWED_IMAGE_TYPES = frozenset(
         "image/png",
         "image/webp",
         "image/gif",
-        "image/svg+xml",
-        "image/x-icon",
-        "image/vnd.microsoft.icon",
     }
 )
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
@@ -27,9 +24,6 @@ _EXT_BY_TYPE = {
     "image/png": ".png",
     "image/webp": ".webp",
     "image/gif": ".gif",
-    "image/svg+xml": ".svg",
-    "image/x-icon": ".ico",
-    "image/vnd.microsoft.icon": ".ico",
 }
 
 _SAFE_SUBDIR = re.compile(r"^[a-z0-9_-]{1,32}(/[a-z0-9_-]{1,32})?$")

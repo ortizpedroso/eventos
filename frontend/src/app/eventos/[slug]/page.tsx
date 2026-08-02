@@ -4,6 +4,7 @@ import { EventoPublicClient } from "./evento-public-client";
 import { typicalAgeRangeFromClassificacao } from "@/lib/evento-ficha";
 import { getEventoPublicoBySlug } from "@/lib/eventos-publicos";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
+import { serializeJsonLdForScript } from "@/lib/json-ld-html";
 
 export async function generateMetadata({
   params,
@@ -69,13 +70,13 @@ function buildEventoJsonLd(evento: NonNullable<Awaited<ReturnType<typeof getEven
     typicalAgeRange: typicalAgeRangeFromClassificacao(evento.classificacao_etaria),
   };
 
-  return JSON.stringify(jsonLd);
+  return serializeJsonLdForScript(jsonLd);
 }
 
 /** JSON-LD BreadcrumbList — trilha de navegação nos resultados do Google. */
 function buildBreadcrumbJsonLd(evento: { nome: string; slug: string }) {
   const base = (process.env.NEXT_PUBLIC_LAN_ORIGIN || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
-  return JSON.stringify({
+  return serializeJsonLdForScript({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [

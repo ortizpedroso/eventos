@@ -13,11 +13,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Formatos que NÃO passam por aqui — SVG é vetor (não faz sentido rasterizar) e
-# ICO já é um formato de ícone compacto por natureza.
-_PULAR_PROCESSAMENTO = frozenset({"image/svg+xml", "image/x-icon", "image/vnd.microsoft.icon"})
-
-
 def redimensionar_imagem(
     content: bytes,
     content_type: str,
@@ -32,9 +27,6 @@ def redimensionar_imagem(
     que o original, devolve o conteúdo original sem alterações — nunca bloqueia o
     upload por causa de uma falha aqui.
     """
-    if content_type in _PULAR_PROCESSAMENTO:
-        return content, content_type
-
     try:
         from PIL import Image
     except ImportError:

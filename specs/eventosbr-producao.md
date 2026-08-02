@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.40
-**Data:** 2026-07-31
+**Versão:** 1.41
+**Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `7a02ae8` — v1.40 (página de impressão do ingresso não repete mais em texto o que a carteirinha já mostra — bug real, confirmado visualmente com renderização de imagem antes de aprovar). pytest **428** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 427+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da `main` em `b0f0225` — v1.40 (página de impressão do ingresso não repete em texto o que a carteirinha já mostra). **Build em curso v1.41:** correções XSS da auditoria (SVG/ICO bloqueados no upload; JSON-LD escapado na página do evento). pytest **432** após esta rodada (com `DATABASE_URL_TESTE_CONCORRENCIA`; 431+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -308,7 +308,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (428 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (432 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -528,6 +528,14 @@ Opt-in via `TURNSTILE_SECRET_KEY` (API) + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (fron
 - Reembolso com `valor=0.0` bloqueado (`pagamento_asaas.py`).
 - HMAC do QR de check-in fortalecido de 12 para 20 caracteres (48→80 bits) em **novos** códigos; assinatura legada de 12 chars ainda aceita para não invalidar ingressos já emitidos antes da mudança (`ingresso_checkin.py`).
 
+### 5.8 XSS — auditoria de lançamento (v1.41)
+
+**Item 1 — upload SVG/ICO (crítico):** `image/svg+xml`, `image/x-icon` e `image/vnd.microsoft.icon` removidos de `ALLOWED_IMAGE_TYPES` (`asset_storage.py`). SVG/ICO não passam pelo Pillow e eram servidos em `/uploads` no mesmo domínio — vetor de XSS armazenado. Tipos aceitos: JPEG, PNG, WebP, GIF (rasterizados para WebP no servidor). **Nota:** o admin ainda lista SVG/ICO no `accept` do formulário de favicon (`admin-platform-settings.tsx`) — upload falha com 400; ajuste de UX do frontend fica para rodada seguinte.
+
+**Item 2 — JSON-LD na página do evento (alto):** `serializeJsonLdForScript` (`frontend/src/lib/json-ld-html.ts`) escapa `<`, `>` e `/` após `JSON.stringify()` antes de `dangerouslySetInnerHTML` em `eventos/[slug]/page.tsx` (Event + BreadcrumbList). Impede organizador de fechar `</script>` com nome/descrição/local maliciosos.
+
+Testes: `tests/test_xss_auditoria_lancamento.py` (upload SVG rejeitado; escape JSON-LD).
+
 ---
 
 ## 6. Variáveis de ambiente (produção)
@@ -587,7 +595,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (428 testes)
+- [x] `pytest` verde (432 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -642,11 +650,11 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Compressão de imagem | `lib/comprimir-imagem.ts` (navegador), `utils/imagem_processamento.py` (servidor, Pillow) |
 | CAPTCHA | `services/turnstile.py`, `components/turnstile-widget.tsx` |
 | Cifra em repouso (CPF/CNPJ, API keys) | `utils/secret_storage.py` (esquema `enc:v2`), `utils/cpf.py` |
-| SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `lib/eventos-listagem-metadata.ts`, `app/eventos/page.tsx` (metadata cidade), `app/eventos/[slug]/page.tsx` (JSON-LD + typicalAgeRange) |
+| SEO | `app/sitemap.ts`, `app/robots.ts`, `lib/site-metadata.ts`, `lib/eventos-listagem-metadata.ts`, `lib/json-ld-html.ts`, `app/eventos/page.tsx` (metadata cidade), `app/eventos/[slug]/page.tsx` (JSON-LD + typicalAgeRange) |
 | Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh` |
-| Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh` |
+| Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
 
@@ -720,6 +728,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.41 | 2026-08-02 | **Auditoria XSS — rodada 1 (bloqueia lançamento).** (1) **Crítico:** removidos SVG e ICO do upload (`asset_storage.py`, `assets.py`, `imagem_processamento.py`) — vetor de XSS armazenado via `/uploads` no mesmo domínio; só JPEG/PNG/WebP/GIF. (2) **Alto:** JSON-LD da página pública do evento escapado com `serializeJsonLdForScript` antes de `dangerouslySetInnerHTML` — impede `</script>` em nome/descrição/local do organizador. Spec §5.8. Testes: `test_xss_auditoria_lancamento.py`. **Pendente UX:** `accept` do favicon no admin ainda menciona SVG/ICO. Testes: 428 → 432. |
 | 1.40 | 2026-08-02 | **Bug real corrigido** (achado do usuário, confirmado no código antes de escrever o prompt): a página de impressão do ingresso (`GET /api/ingressos/{id}/download`) embutia a carteirinha padrão (já com nome do evento, data, local, participante e QR na própria imagem), mas envolvia isso num card HTML que repetia tudo de novo como texto solto (`<h2>` do evento, "Participante:", "Email:", "Data:", "Local:", "Assento:", badge de status). Corrigido: removida toda a duplicação, mantido só o essencial que a carteirinha não mostra (aviso de repasse, código da portaria, botão de imprimir). Teste novo confirma ausência dos rótulos duplicados **e** que nome/participante/local não aparecem em nenhum lugar do `<body>` fora da tag `<img>`. Validado também visualmente (renderização real do HTML em imagem) antes de aprovar — layout limpo, centralizado, consistente com o e-mail. Testes: 427 → 428. |
 | 1.39 | 2026-08-01 | **Bug real corrigido**: `vender_ingresso_pdv` associava o ingresso à conta do ORGANIZADOR (`usuario_id=organizador.id`), não do comprador — o link "Ver ingresso na conta" no e-mail só funcionava se o organizador estivesse logado; o comprador de verdade nunca conseguiria acessar o próprio ingresso. Corrigido: cria/reaproveita uma conta cliente própria pro e-mail informado (mesmo padrão de colisão já usado em `compra_rapida`); conta nova recebe e-mail de "primeiro acesso". O link do e-mail do ingresso agora é decidido **a cada envio** pelo status real de senha do dono (`dono.senha_hash`), não só na criação — cobre também compras repetidas de contas ainda sem senha. **Carteirinha padronizada**: nova função central `montar_carteirinha_ingresso_bytes` usada no e-mail, no endpoint de download/impressão e num endpoint novo dedicado (`GET /api/ingressos/{id}/carteirinha`, só o dono) — elimina o QR "nu" que a tela de impressão usava antes, agora idêntica à imagem do e-mail em todo lugar. **Nota de processo**: o branch veio baseado num ponto do `main` anterior à auditoria UX (v1.38) — confirmei arquivo a arquivo que a diferença aparente era só desatualização, não reversão intencional, e apliquei via `cherry-pick` só o que era genuinamente novo, preservando os itens 1-4 da v1.38 intactos. Testes: 417 → 427. |
 | 1.38 | 2026-08-01 | **Auditoria de UX competitiva** (20+ plataformas pesquisadas: Sympla, Eventbrite, Ingresse etc., cruzada com o código real). 4 itens implementados: (1) aviso obrigatório de documento (DNE/CIE) pra meia-entrada no checkout, conforme Lei 12.933/2013; (2) confirmação de e-mail do participante no checkout — supervisão encontrou que já havia proteção funcional real (`criarIntent` já bloqueava com `setError`+`return`), mas o botão "Finalizar compra" não refletia isso visualmente; corrigido pra desabilitar proativamente em mismatch de e-mail **ou CPF** (mesmo bug pré-existente no alerta de CPF, corrigido junto); (3) modo offline no check-in da portaria (MVP) — pré-carrega IDs válidos, distingue falha de rede de rejeição real do servidor, marca localmente como usado pra evitar double-checkin mesmo offline, sincroniza automaticamente ao reconectar; (4) retry automático com backoff em falha de pagamento — supervisão verificou que o mecanismo de não-duplicar-cobrança já existia (reaproveita/cancela `asaas_payment_id` pendente antes de recriar), a alegação do comentário ("chave de idempotência") era tecnicamente imprecisa mas o efeito prático é real. Um quinto item (checkout de convidado) foi avaliado e **deliberadamente não implementado** — mantém login obrigatório, é decisão de produto que precisa de mais discussão. Testes: 402 → 417. |
