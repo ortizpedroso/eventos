@@ -4,6 +4,11 @@ import { useRef, useState } from "react";
 
 import { comprimirImagem } from "@/lib/comprimir-imagem";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
+import {
+  UPLOAD_IMAGEM_ACCEPT,
+  UPLOAD_IMAGEM_REJEITADO_MSG,
+  uploadImagemTipoPermitido,
+} from "@/lib/upload-imagem-tipos";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -29,7 +34,7 @@ export function ImagemAssetField({
   onChange,
   uploadUrl,
   uploadHeaders,
-  accept = "image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon",
+  accept = UPLOAD_IMAGEM_ACCEPT,
   larguraAlvo = 512,
   alturaAlvo = 512,
 }: Props) {
@@ -45,8 +50,8 @@ export function ImagemAssetField({
     const fileOriginal = e.target.files?.[0];
     e.target.value = "";
     if (!fileOriginal) return;
-    if (!fileOriginal.type.startsWith("image/")) {
-      setError("Escolha um arquivo de imagem.");
+    if (!uploadImagemTipoPermitido(fileOriginal.type)) {
+      setError(UPLOAD_IMAGEM_REJEITADO_MSG);
       return;
     }
     setBusy(true);

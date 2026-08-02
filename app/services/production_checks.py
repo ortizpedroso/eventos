@@ -106,6 +106,14 @@ def build_setup_status() -> dict:
 
     frontend_url_ok = bool((settings.FRONTEND_PUBLIC_URL or "").strip())
 
+    turnstile_ok = bool((settings.TURNSTILE_SECRET_KEY or "").strip())
+    if turnstile_ok:
+        turnstile_status = "ok"
+    elif production:
+        turnstile_status = "recomendado"
+    else:
+        turnstile_status = "desligado"
+
     asaas_platform_cnpj_required = (
         production
         and not settings.ASAAS_DISABLED
@@ -167,6 +175,7 @@ def build_setup_status() -> dict:
             "postgres_password": "ok" if postgres_ok else "pendente",
             "redis": "ok" if (settings.REDIS_URL or "").strip() else "pendente",
             "frontend_url": "ok" if (settings.FRONTEND_PUBLIC_URL or "").strip() else "pendente",
+            "turnstile": turnstile_status,
         },
         "ready_for_production": ready,
     }
