@@ -78,6 +78,11 @@ export default function AuthClient({
   const [login2fa, setLogin2fa] = useState<{ loginToken: string } | null>(null);
   const [codigo2fa, setCodigo2fa] = useState("");
   const [lembrarDispositivo, setLembrarDispositivo] = useState(true);
+  const [cadastroOrganizadorPendente, setCadastroOrganizadorPendente] = useState<{
+    email: string;
+    message: string;
+  } | null>(null);
+  const [reenviandoConfirmacao, setReenviandoConfirmacao] = useState(false);
 
   const redirecionar = useCallback(
     (destino: string) => {
@@ -140,6 +145,10 @@ export default function AuthClient({
   }
 
   function finishAuth(data: TokenResponse) {
+    if (!data.access_token || !data.usuario) {
+      setError("Resposta de autenticação incompleta.");
+      return;
+    }
     dispatchAuthSync();
     const next =
       nextParam ||
@@ -239,6 +248,17 @@ export default function AuthClient({
         return;
       }
 
+      if (mode === "register" && data.pending_email_verification) {
+        setCadastroOrganizadorPendente({
+          email: data.email || String(formData.get("email") ?? ""),
+          message:
+            data.message ||
+            "Enviamos um e-mail de confirmação. Abra o link (válido por 24 horas) para ativar sua conta.",
+        });
+        setAuthMode("login");
+        return;
+      }
+
       finishAuth(data);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Erro";
@@ -283,6 +303,30 @@ export default function AuthClient({
       setError(e2 instanceof Error ? e2.message : "Código inválido.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function reenviarConfirmacaoCadastro() {
+    if (!cadastroOrganizadorPendente) return;
+    setReenviandoConfirmacao(true);
+    setError(null);
+    try {
+      const r = await apiFetch<{ message: string; dev_link?: string }>(
+        "/api/auth/reenviar-verificacao-cadastro",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email: cadastroOrganizadorPendente.email,
+            turnstile_token: turnstileToken,
+          }),
+        },
+      );
+      setInfoMsg(r.dev_link ? `${r.message} Link dev: ${r.dev_link}` : r.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível reenviar.");
+    } finally {
+      setReenviandoConfirmacao(false);
     }
   }
 
@@ -376,6 +420,31 @@ export default function AuthClient({
         >
           <p className="font-semibold">Sua sessão expirou</p>
           <p className="mt-1">Faça login novamente para continuar de onde parou.</p>
+        </div>
+      ) : null}
+      {cadastroOrganizadorPendente ? (
+        <div
+          className="mb-4 rounded-xl border border-sky-300 bg-sky-50 px-4 py-4 text-sm text-sky-950"
+          role="status"
+        >
+          <p className="font-semibold text-sky-950">Confirme seu e-mail para ativar a conta</p>
+          <p className="mt-2 text-sky-900">{cadastroOrganizadorPendente.message}</p>
+          <p className="mt-2 text-sky-900">
+            E-mail cadastrado:{" "}
+            <strong className="font-semibold">{cadastroOrganizadorPendente.email}</strong>
+          </p>
+          <p className="mt-2 text-xs text-sky-800">
+            O link no e-mail vale por 24 horas. Você pode clicar no botão «Ativar minha conta» ou copiar e colar o
+            link no navegador.
+          </p>
+          <button
+            type="button"
+            disabled={reenviandoConfirmacao}
+            onClick={() => void reenviarConfirmacaoCadastro()}
+            className="mt-3 text-sm font-medium text-sky-950 underline underline-offset-2 disabled:opacity-60"
+          >
+            {reenviandoConfirmacao ? "Enviando…" : "Reenviar e-mail de confirmação"}
+          </button>
         </div>
       ) : null}
       <div className="mb-8 text-center">

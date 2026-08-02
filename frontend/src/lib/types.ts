@@ -85,9 +85,12 @@ export type Usuario = {
 };
 
 export type TokenResponse = {
-  access_token: string;
+  access_token: string | null;
   token_type: string;
-  usuario: Usuario;
+  usuario: Usuario | null;
+  pending_email_verification?: boolean;
+  message?: string | null;
+  email?: string | null;
 };
 
 /** Resposta do /api/auth/login quando a conta tem 2FA ativado (segunda etapa pendente). */

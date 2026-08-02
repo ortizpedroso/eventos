@@ -100,9 +100,17 @@ class AtualizarPerfilRequest(BaseModel):
         return s if s else None
 
 class Token(BaseModel):
-    access_token: str
-    token_type: str
-    usuario: UsuarioResponse
+    access_token: str | None = None
+    token_type: str = "bearer"
+    usuario: UsuarioResponse | None = None
+    pending_email_verification: bool = False
+    message: str | None = None
+    email: str | None = None
+
+
+class ReenviarVerificacaoCadastroRequest(BaseModel):
+    email: EmailStr
+    turnstile_token: str | None = None
 
 
 class SolicitarRecuperacaoSenhaRequest(BaseModel):

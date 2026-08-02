@@ -10,6 +10,7 @@ import type { Usuario } from "@/lib/types";
 export function ContaBanners() {
   const [semSenha, setSemSenha] = useState(false);
   const [emailPendente, setEmailPendente] = useState(false);
+  const [usuarioTipo, setUsuarioTipo] = useState<string | null>(null);
   const [reenviando, setReenviando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [perfilHref, setPerfilHref] = useState("/conta/perfil");
@@ -29,6 +30,7 @@ export function ContaBanners() {
         if (cancelled) return;
         setSemSenha(u.tem_senha === false);
         setEmailPendente(u.email_verificado === false);
+        setUsuarioTipo(u.tipo);
       } catch {
         if (!cancelled) {
           setSemSenha(false);
@@ -73,7 +75,9 @@ export function ContaBanners() {
         >
           <p className="font-semibold">Confirme seu e-mail</p>
           <p className="mt-1 text-sky-900">
-            Enviamos um link de confirmação. Isso protege seus ingressos e permite recuperar a conta.
+            {usuarioTipo === "organizador"
+              ? "Confirme seu e-mail para publicar eventos e acessar o painel completo."
+              : "Enviamos um link de confirmação. Isso protege seus ingressos e permite recuperar a conta."}
           </p>
           <button
             type="button"
