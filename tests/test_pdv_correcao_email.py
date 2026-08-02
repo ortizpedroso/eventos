@@ -168,6 +168,20 @@ def test_reenviar_email_venda_pdv():
     mock_sync.assert_called_once_with(ingresso_id)
 
 
+def test_buscar_vendas_pdv_so_dono():
+    suf = uuid.uuid4().hex[:8]
+    tok_a, email_a = _registrar("organizador", f"a{suf}")
+    tok_b, _ = _registrar("organizador", f"b{suf}")
+    ev = _criar_evento(tok_a, email_a)
+    _vender_pdv(tok_a, ev, participante_nome="Busca Teste", participante_telefone="11999001122")
+
+    r = client.get(
+        f"/api/eventos/id/{ev['id']}/pdv/vendas/buscar?q=Busca",
+        headers={"Authorization": f"Bearer {tok_b}"},
+    )
+    assert r.status_code == 404, r.text
+
+
 def test_correcao_pdv_so_dono():
     suf = uuid.uuid4().hex[:8]
     tok_a, email_a = _registrar("organizador", f"a{suf}")

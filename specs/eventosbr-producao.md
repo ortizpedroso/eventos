@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.42
+**Versão:** 1.42.2
 **Data:** 2026-08-02
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip de **produto** da `main` em `4125ff4` — **v1.42** (PDV: confirmação de e-mail, correção de venda e reenvio). **Deploy confirmado no VPS** (02/08/2026, usuário). Merge PR #81 (`fbe08a7`). Anterior `b735902` (v1.41 — XSS rodada 1). pytest **437** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 436+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
+> **Produção (VPS):** tip de **produto** da `main` em `4125ff4` — **v1.42** (PDV: confirmação de e-mail, correção de venda e reenvio). **Deploy confirmado no VPS** (02/08/2026, usuário). Merge PR #81 (`fbe08a7`). pytest **438** (com `DATABASE_URL_TESTE_CONCORRENCIA`; 437+1 skip sem ela). **Onboarding:** modo `linked` desde 25/07/2026 — ver `specs/onboarding-linked-lancamento.md`. CNPJ conta mãe pendente; **não bloqueia lançamento**; só para reativar `baas`. Pendências ops §2.8 A–C permanecem `[ ]` (não são lacuna de código).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -101,7 +101,11 @@ Duas funcionalidades classificadas como alto esforço na pesquisa de concorrente
 - **E-mail obrigatório (v1.36):** no PDV o ingresso vai para a **conta cliente** criada/reaproveitada pelo e-mail informado (`usuario_id` do comprador — v1.39). Backend rejeita venda sem e-mail válido; UI marca o campo como obrigatório.
 - **Confirmação de e-mail (v1.42):** campo “Confirme o e-mail” na UI — venda bloqueada se não coincidir; após venda, feedback com destino e status de envio (`email_enviado_sync`).
 - **Envio na venda (v1.42):** `send_ticket_email_sync` tenta SMTP imediato; se falha, `enqueue_ticket_email` (fila confiável). Comprador deve conferir o celular na hora.
-- **Correção de venda (v1.42):** seção “Corrigir venda” no PDV — busca ingressos **do evento** (só dono) por nome, e-mail, telefone ou CPF (`ingresso_busca` + telefone); `PATCH /pdv/vendas/{ingresso_id}` atualiza participante e **reatribui `usuario_id`** à conta do e-mail certo (`conta_cliente`); `POST …/reenviar-email` reenvia ingresso (rate limit `pdv_reenviar`). Log de auditoria em `pdv_correcao.py`. **Sem busca pública** — só organizador do evento.
+- **Correção de venda (v1.42):** seção “Corrigir venda” no PDV — busca ingressos **do evento** (só dono) por nome, e-mail, telefone ou CPF (`ingresso_busca` + telefone); APIs:
+  - `GET /api/eventos/id/{evento_id}/pdv/vendas/buscar?q=`
+  - `PATCH /api/eventos/id/{evento_id}/pdv/vendas/{ingresso_id}`
+  - `POST /api/eventos/id/{evento_id}/pdv/vendas/{ingresso_id}/reenviar-email`
+  Atualiza participante e **reatribui `usuario_id`** à conta do e-mail certo (`conta_cliente`); rate limit `pdv_reenviar` no reenvio. Log de auditoria em `pdv_correcao.py`. **Sem busca pública** — só organizador do evento.
 - Gera `Ingresso` com `status=pago`, `canal_venda=pdv`, `forma_pagamento_pdv` — **sem Asaas, sem split, sem repasse automático** (reconciliação manual).
 - Respeita `quantidade_maxima` do lote (via `reservar_vaga_e_assento` / FOR UPDATE).
 - Carteirinha/QR: mesmo fluxo (`codigo_checkin` → `/ingresso/qr?c=…`); e-mail com carteirinha via `send_ticket_email_sync` + fallback fila.
@@ -311,7 +315,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (437 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (438 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -598,7 +602,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (437 testes)
+- [x] `pytest` verde (438 testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -612,8 +616,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 - [x] tip de produto — `4125ff4` (v1.42 — PDV confirmação/correção de e-mail + reenvio); anterior `b735902` (v1.41), `b0f0225` (v1.40), `c9ab63a` (v1.39), `a6d8412` (v1.38), `4b18643` (v1.36), `d8f3b4b` (v1.35), `c9ea77f` (v1.34), `a32b948` (L4/L5). Hash = último commit de produto; commits `docs(spec): …`, merges de PR e config de ambiente (`environment.json`) não entram neste ponteiro.
 - [ ] Conta mãe Asaas em **CNPJ** *(segue pendente — não bloqueia mais o lançamento, ver nota de topo; necessário só para reativar `baas` no futuro)*
-- [ ] Deploy VPS do tip atual (`4125ff4` / v1.42) **precisa reconfirmação** — merge PR #81 em 02/08/2026; última confirmação explícita do usuário cobria v1.41 (`b735902`, 02/08/2026)
-- [x] Deploy VPS v1.41 (`b735902`) — confirmado pelo usuário em 02/08/2026
+- [x] Deploy VPS do tip atual (`4125ff4` / v1.42) — **confirmado pelo usuário** em 02/08/2026 (PDV: confirmação de e-mail, corrigir venda, reenvio ingresso)
 - [x] Migration `20260724_000042_encrypt_cpf_cnpj_repasse` aplicada em produção (confirmado no log de deploy)
 - [x] Onboarding `ASAAS_ONBOARDING_MODE=linked` ativo e validado em produção (fluxo de vínculo de conta testado e funcionando)
 - [ ] `GET /api/admin/setup` → `asaas_platform_cnpj` *(não aplicável em modo `linked` — só relevante quando/se voltar a `baas`/`both`)*
@@ -681,9 +684,28 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.31 | `9082c90` / 390 | NÃO aprovada — L4 restos linked, L5 docstring |
 | build `a32b948` | fechou L4+L5 | — |
 | v1.32 | `a32b948` / 390 | aprovada (pelo build que fechou L4/L5) |
-| **v1.33 (este, independente)** | `a32b948` / **390** | **APROVADA** — L1–L5 revalidados no código e na spec; sem lacunas de código |
+| v1.33 | `a32b948` / 390 | APROVADA — L1–L5 |
+| **v1.42.2 (este)** | `4125ff4` / **438** | **APROVADA** — §2.12 v1.42 + §5.8 + §7 revalidados |
 
-### 11.1 Requisitos recentes — resultado (v1.33)
+### 11.1 Requisitos recentes — resultado (v1.42.2)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.12 | Confirmação dupla de e-mail na venda PDV | **PASS** |
+| §2.12 | `send_ticket_email_sync` + fallback; `email_enviado_sync` na API | **PASS** |
+| §2.12 | Busca/correção/reenvio só dono; reatribui `usuario_id` | **PASS** |
+| §2.12 | Busca por telefone (`ingresso_busca`) | **PASS** |
+| §5.8 | SVG/ICO bloqueados; JSON-LD escapado | **PASS** |
+| §2.9–§2.11 | Baseline v1.33 sem regressão | **PASS** |
+| §2.2–§2.4 / §4 | Narrativa `linked` | **PASS** (L4) |
+| §7 Qualidade | `pytest` 438 | **PASS** |
+| §7 Ops | Deploy `4125ff4` / v1.42 confirmado 02/08 | **PASS** |
+| §2.8 A–C | Webhook / SMTP / 1ª venda | **PENDENTE ops** |
+| §7 Pagamentos | Conta `baas` | **aberto** até CNPJ |
+| §2.12 pendente | Self-service “vincular ingresso” | fora de escopo v1.42 |
+| §5.8 pendente UX | `accept` favicon admin SVG/ICO | fora de escopo v1.41 |
+
+### 11.1 histórico (v1.33)
 
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
@@ -691,16 +713,14 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.10 | Ficha técnica + migração `000047` + UI sem placeholder | **PASS** |
 | §2.10 | WhatsApp `/contato` via `social_whatsapp_url` | **PASS** |
 | §2.10 | Duplicar → editar, `publicado=false` | **PASS** |
-| §2.10 | DELETE dono-only; bloqueia `pago`/`pendente`/`usado`; UI confirma; disabled+explicação | **PASS** (`9082c90` + docstring `a32b948`) |
-| §2.11 | Metadata `?cidade=` (+ categoria); `q`/categoria/padrão intactos | **PASS** |
-| §2.11 | `typicalAgeRange` (`0-`/`12-`/`16-`/`18-`) | **PASS** |
+| §2.10 | DELETE dono-only; bloqueia `pago`/`pendente`/`usado` | **PASS** |
+| §2.11 | Metadata `?cidade=`; `typicalAgeRange` | **PASS** |
 | §2.11 | Teste SEO sem `cwd="/workspace"` | **PASS** |
-| §2.2–§2.4 / §4 | Narrativa `linked` = lançamento; `baas` = alvo | **PASS** (L4) |
+| §2.2–§2.4 / §4 | Narrativa `linked` = lançamento | **PASS** |
 | §2.10 docstring API | Menciona `usado` | **PASS** (L5) |
-| §7 Qualidade | `pytest` 390 | **PASS** (rodado neste review) |
-| §7 Ops | Deploy v1.42 pendente reconfirmação (`4125ff4`) | **PENDENTE** (ops) |
-| §2.8 A–C | Webhook real / SMTP / 1ª venda | **PENDENTE ops** — não bloqueia aprovação de código |
-| §7 Pagamentos | Conta criada pela plataforma (`baas`) | **aberto de propósito** até CNPJ+`baas` |
+| §7 Qualidade | `pytest` 390 | **PASS** |
+| §2.8 A–C | Webhook real / SMTP / 1ª venda | **PENDENTE ops** |
+| §7 Pagamentos | Conta `baas` | **aberto** até CNPJ |
 
 ### 11.2 Lacunas L1–L5 — status final
 
@@ -723,9 +743,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.33)
+### 11.6 Critério de aprovação — ✅ atingido (v1.42.2)
 
-**Build de código aprovada.** L1–L5 fechados; `pytest` 390 verde; tip produto `a32b948`. Nenhuma correção pendente para `/build` nesta rodada. Pendências restantes são só operacionais (§2.8 / CNPJ).
+**Build de código aprovada.** L1–L5 sem regressão; `pytest` **438** verde; tip produto `4125ff4`; deploy v1.42 confirmado. §2.12 (PDV confirmação/correção/reenvio) e §5.8 (XSS rodada 1) revalidados no código e nos testes. Nenhuma correção pendente para `/build`. Pendências: §2.8 ops, CNPJ, self-service “vincular ingresso”, favicon `accept` admin.
 
 ---
 
@@ -733,6 +753,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.42.2 | 2026-08-02 | **`/review` v1.42.2 — build aprovada.** Revalidou tip `4125ff4` / 438 testes: §2.12 PDV v1.42 PASS; §5.8 XSS PASS; L1–L5 sem regressão; §11 atualizado (estava em v1.33/390). Rotas PDV documentadas em §2.12. Teste auth na busca PDV. 437 → 438. |
+| 1.42.1 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — tip `4125ff4` / v1.42 (PDV confirmação/correção de e-mail) em produção; §7 e cabeçalho atualizados. |
 | 1.42 | 2026-08-02 | **PDV — confirmação e correção de e-mail (v1.42).** Confirmação dupla de e-mail na venda; envio síncrono com fallback na fila; seção “Corrigir venda” (busca por nome/e-mail/telefone/CPF só do evento, `PATCH` reassocia `usuario_id`, `POST` reenviar com rate limit). Serviços: `conta_cliente.py`, `pdv_correcao.py`; `send_ticket_email_sync` aceita ingressos `pago`/`usado`. Spec §2.12 corrigida (ingresso na conta do comprador). **Pendente:** self-service comprador (“vincular ingresso”). Merge PR #81 (`fbe08a7`); tip produto `4125ff4`. Testes: `test_pdv_correcao_email.py`. 432 → 437. |
 | 1.41.1 | 2026-08-02 | **Deploy VPS confirmado** pelo usuário — tip `b735902` / v1.41 (XSS rodada 1) em produção; §7 e cabeçalho atualizados. |
 | 1.41 | 2026-08-02 | **Auditoria XSS — rodada 1 (bloqueia lançamento).** (1) **Crítico:** removidos SVG e ICO do upload (`asset_storage.py`, `assets.py`, `imagem_processamento.py`) — vetor de XSS armazenado via `/uploads` no mesmo domínio; só JPEG/PNG/WebP/GIF. (2) **Alto:** JSON-LD da página pública do evento escapado com `serializeJsonLdForScript` (`json-ld-html.ts`) antes de `dangerouslySetInnerHTML` — impede `</script>` em nome/descrição/local do organizador. Spec §5.8. Testes: `test_xss_auditoria_lancamento.py`. **Pendente UX:** `accept` do favicon no admin ainda menciona SVG/ICO (backend rejeita com 400). **Pendente auditoria:** PDV, locks, rate limits (rodadas seguintes). Merge PR #77 (`60c000d`); tip produto `b735902`. Testes: 428 → 432. |
