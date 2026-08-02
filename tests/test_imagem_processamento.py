@@ -37,11 +37,12 @@ class TestRedimensionarImagem:
         img_original = Image.open(io.BytesIO(original))
         assert img_original.width == 200 and img_original.height == 150
 
-    def test_svg_nao_e_processado(self):
-        svg = b"<svg xmlns='http://www.w3.org/2000/svg'></svg>"
-        conteudo, tipo = redimensionar_imagem(svg, "image/svg+xml", max_width=100, max_height=100)
-        assert conteudo == svg
-        assert tipo == "image/svg+xml"
+    def test_gif_passa_por_pipeline_webp(self):
+        original = _png_bytes(400, 400)
+        novo_conteudo, novo_tipo = redimensionar_imagem(original, "image/gif", max_width=200, max_height=200)
+        assert novo_tipo == "image/webp"
+        img = Image.open(io.BytesIO(novo_conteudo))
+        assert img.width <= 200
 
     def test_transparencia_preservada(self):
         original = _png_bytes(1200, 1200, mode="RGBA")
