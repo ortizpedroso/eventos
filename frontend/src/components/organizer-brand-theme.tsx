@@ -1,5 +1,7 @@
 "use client";
 
+import { buildBrandCssBlock } from "@/lib/brand-color-palette";
+
 type OrganizerBrand = {
   brand_primary_color?: string | null;
   brand_primary_color_dark?: string | null;
@@ -11,10 +13,7 @@ export function OrganizerBrandTheme({ brand }: { brand: OrganizerBrand }) {
   const dark = brand.brand_primary_color_dark?.trim();
   if (!primary && !dark) return null;
 
-  const css = `:root {
-  ${primary ? `--brand-primary: ${primary};` : ""}
-  ${dark ? `--brand-primary-dark: ${dark};` : ""}
-}`;
+  const css = buildBrandCssBlock(":root", primary || "#10b981", dark || undefined);
 
   return <style id="eventosbr-organizer-brand">{css}</style>;
 }

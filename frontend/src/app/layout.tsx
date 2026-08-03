@@ -8,7 +8,7 @@ import { EarlyScrollReset } from "@/components/early-scroll-reset";
 import { MarketingAnalytics } from "@/components/marketing-analytics";
 import { Navbar } from "@/components/navbar";
 import { PlatformSettingsProvider } from "@/components/platform-settings-provider";
-import { PlatformTheme } from "@/components/platform-theme";
+import { PlatformThemeLive } from "@/components/platform-theme-live";
 import { ScrollRevealObserver } from "@/components/scroll-reveal-observer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
@@ -52,8 +52,8 @@ export default async function RootLayout({
         suppressHydrationWarning
         nonce={nonce}
       >
-        <PlatformTheme settings={platform} />
         <PlatformSettingsProvider settings={platform}>
+          <PlatformThemeLive />
           <MarketingAnalytics />
           <SkipToContent />
           <BuildMarker />

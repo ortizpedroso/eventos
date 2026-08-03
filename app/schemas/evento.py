@@ -202,6 +202,8 @@ class EventoResponse(BaseModel):
     slug: str
     organizador_id: str
     organizador_nome: str | None = None
+    organizador_brand_primary_color: str | None = None
+    organizador_brand_primary_color_dark: str | None = None
     nome: str
     descricao: str
     data_inicio: datetime
@@ -322,6 +324,16 @@ def montar_evento_response(
         "organizador_id": evento.organizador_id,
         "organizador_nome": (
             (evento.organizador.brand_name or evento.organizador.nome)
+            if getattr(evento, "organizador", None)
+            else None
+        ),
+        "organizador_brand_primary_color": (
+            evento.organizador.brand_primary_color
+            if getattr(evento, "organizador", None)
+            else None
+        ),
+        "organizador_brand_primary_color_dark": (
+            evento.organizador.brand_primary_color_dark
             if getattr(evento, "organizador", None)
             else None
         ),

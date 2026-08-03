@@ -1,6 +1,6 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.48.1
+**Versão:** 1.49
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
@@ -132,6 +132,22 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 **Navbar:** `lg+` (≥1024px) menu em **uma linha** (logo, busca, links incluindo Sobre, login); `md–lg` (768–1023) duas linhas (logo+conta / busca+links); celular usa menu ☰. Dropdowns **Categorias** e **conta** via `createPortal` (`z-80`, `position: fixed`) — nunca dentro de `overflow-x-auto`. Em `md–lg`, **Sobre** e **Categorias** fora da área rolável. Links do menu com `inline-flex items-center` para alinhamento vertical. Menu da conta: um portal único.
 
 **Telefone:** componente `TelefoneInput` — máscara BR em campos que faltavam (admin config, PDV, whitelabel).
+
+### 2.17 Tema de marca proporcional (v1.49)
+
+**Objetivo:** a paleta escolhida no **Admin → Configurações** ou no **whitelabel do organizador** deve aplicar-se **em todo o sistema** com tonalidades proporcionais (50–950), não só em `--brand-primary` / `--brand-primary-dark`.
+
+**Derivação:** `frontend/src/lib/brand-color-palette.ts` — `generateBrandScale(primary, dark)` gera `--brand-50` … `--brand-950` (600 = primária, 700 = escura; restante por curva HSL alinhada à escala Tailwind).
+
+**Injeção CSS:**
+- `PlatformTheme` / `PlatformThemeLive` — escala da plataforma em `:root` (reativo após refresh client-side de `/api/public/platform`).
+- `OrganizerBrandTheme` — escala do organizador em `:root` nas páginas públicas (`/produtor/[slug]`, `/eventos/[slug]` quando o organizador definiu cores).
+
+**Remapeamento global:** em `globals.css` `@theme inline`, `--color-emerald-*` → `var(--brand-*)`. Todas as classes Tailwind `emerald-*` (~400+ usos) seguem a paleta ativa sem refatorar componentes.
+
+**Componentes globais:** `.btn-success`, `.input` (foco), `content-prose` links, `checkout-check-pop`, outline de foco nativo usam variáveis `--brand-*` (não hex fixo).
+
+**API evento público:** `organizador_brand_primary_color` e `organizador_brand_primary_color_dark` em `EventoResponse` para tema do organizador na página do evento/checkout.
 
 ### 2.15 Admin — configurações UX (v1.47.2)
 
@@ -792,6 +808,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` |
 | **v1.48 (este)** | `84c4cba` / **475** | **APROVADA** — UX admin, whitelabel, contato |
 | **v1.48.1** | branch `cursor/fix-navbar-final-c0b1` / **475** | **APROVADA** — regressão navbar (dropdowns portal, Sobre visível, menu conta) |
+| **v1.49 (este)** | branch `cursor/brand-theme-system-c0b1` / **477** | **APROVADA** — tema de marca proporcional (§2.17) |
+
+### 11.1 Requisitos recentes — resultado (v1.49)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.17 | Escala `--brand-50`…`950` derivada de primária + escura | **PASS** |
+| §2.17 | `emerald-*` remapeado via `@theme` | **PASS** |
+| §2.17 | Admin: alteração de cor reflete no site (PlatformThemeLive) | **PASS** |
+| §2.17 | Whitelabel organizador: tema em `/produtor` e `/eventos` | **PASS** |
+| §2.17 | globals.css sem hex emerald fixo em componentes globais | **PASS** |
+| §7 Qualidade | `pytest` 477 | **PASS** |
+| §7 Qualidade | `next build` frontend | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.48.1)
 
@@ -1012,6 +1041,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.49 | 2026-08-03 | **Tema de marca proporcional.** §2.17: escala `--brand-50`…`950`; remapeamento `emerald-*`; `PlatformThemeLive`; whitelabel em evento público; API `organizador_brand_*`. Testes: 475 → 477. `/review` v1.49 APROVADA. |
 | 1.48.1 | 2026-08-03 | **Hotfix navbar.** §2.16: regressão após layout 2 linhas — dropdowns via portal (`z-80`); Sobre/Categorias fora de `overflow-x-auto`; menu conta único portal; E2E patamar navbar. `/review` v1.48.1 APROVADA. |
 | 1.48 | 2026-08-03 | **UX admin + whitelabel + contato.** §2.16: e-mail duplicado; admin config (tamanhos, paleta cores); editar usuário; PDV sucesso; contato layout; marketing webp + `MarketingScreenshot`; navbar `lg+`; `TelefoneInput`. Testes: 474 → 475. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |

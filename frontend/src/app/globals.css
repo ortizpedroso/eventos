@@ -4,13 +4,37 @@
   /* Paleta "Conversão & Confiança" */
   --background: #fafafa; /* zinc-50 */
   --foreground: #18181b; /* zinc-900 */
-  --brand-primary: #047857;
-  --brand-primary-dark: #065f46;
+  /* Escala de marca padrão (verde emerald) — sobrescrita por PlatformTheme / OrganizerBrandTheme */
+  --brand-primary: #10b981;
+  --brand-primary-dark: #047857;
+  --brand-50: #f4fbf9;
+  --brand-100: #eaf8f3;
+  --brand-200: #daf4eb;
+  --brand-300: #bceedd;
+  --brand-400: #9de9d0;
+  --brand-500: #7de6c3;
+  --brand-600: #10b981;
+  --brand-700: #047857;
+  --brand-800: #0d8261;
+  --brand-900: #08684d;
+  --brand-950: #044633;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Remapeia emerald → escala de marca (admin / whitelabel) */
+  --color-emerald-50: var(--brand-50);
+  --color-emerald-100: var(--brand-100);
+  --color-emerald-200: var(--brand-200);
+  --color-emerald-300: var(--brand-300);
+  --color-emerald-400: var(--brand-400);
+  --color-emerald-500: var(--brand-500);
+  --color-emerald-600: var(--brand-600);
+  --color-emerald-700: var(--brand-700);
+  --color-emerald-800: var(--brand-800);
+  --color-emerald-900: var(--brand-900);
+  --color-emerald-950: var(--brand-950);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -47,13 +71,13 @@ body > footer {
   
   .btn-success {
     @apply flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
-    background-color: var(--brand-primary, #047857);
+    background-color: var(--brand-600);
   }
   .btn-success:hover {
-    background-color: var(--brand-primary-dark, #065f46);
+    background-color: var(--brand-700);
   }
   .btn-success:focus-visible {
-    --tw-ring-color: var(--brand-primary, #047857);
+    --tw-ring-color: var(--brand-600);
   }
 
   .btn-outline {
@@ -120,7 +144,7 @@ body > footer {
 
   .content-prose a {
     font-weight: 500;
-    color: #065f46;
+    color: var(--brand-700);
     text-underline-offset: 2px;
   }
 
@@ -185,8 +209,8 @@ body > footer {
     width: 3rem;
     height: 3rem;
     border-radius: 9999px;
-    background: #ecfdf5;
-    color: #047857;
+    background: var(--brand-50);
+    color: var(--brand-700);
     font-size: 1.5rem;
     font-weight: 700;
     animation: checkout-check-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -267,6 +291,6 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid #059669;
+  outline: 2px solid var(--brand-600);
   outline-offset: 2px;
 }
