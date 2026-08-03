@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.47.3
+**Versão:** 1.47.3.1
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`main`** tip **`915d2aa`** (v1.47.2). PR **#99 MERGED**. Deploy v1.47.2 na VPS **aguarda confirmação** (`atualizar-vps-agora.sh`). pytest **470** (CI). `/review` v1.47.3 **APROVADA** — fechamento pendências spec/ops código.
+> **Produção (VPS):** **`915d2aa`** — **v1.47.2 em produção** (deploy confirmado 03/08/2026; `verificar-versao-site.sh` OK). PR #99 MERGED. pytest **470** (CI). Pendência ops: colar Pixel/GTM no admin **só ao rodar campanhas Ads**.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -664,7 +664,8 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 - [x] tip de produto — **`915d2aa`** / v1.47.2 na `main` (PR #99 mergeado 03/08/2026)
 - [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
-- [ ] Deploy VPS v1.47.2 — **`915d2aa`** — aguarda confirmação (`bash scripts/atualizar-vps-agora.sh` + `alembic upgrade head`)
+- [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
+- [x] Migração `20260802_000049` (Pixel/GTM em `platform_settings`) — aplicada (`alembic upgrade head`)
 - [ ] Meta Pixel / GTM — colar IDs em Admin → Configurações (ou `.env`); só necessário ao rodar campanhas Ads
 - [x] tip de produto — v1.46 mergeado; VPS **`d608169`** (deploy v1.46 confirmado 02/08/2026)
 - [x] **Turnstile em produção** — chaves no `.env` + rebuild `web`/`api` (confirmado 02/08/2026; Managed mode — validação automática para visitantes legítimos)
@@ -751,7 +752,18 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.47 | `915d2aa` / **470** | APROVADA — home dual + Ads/SEO |
 | v1.47.1 | `915d2aa` / **470** | APROVADA — Pixel/GTM no admin |
 | v1.47.2 | `915d2aa` / **470** | APROVADA — admin config UX + `.input` |
-| **v1.47.3 (este)** | `915d2aa` / **470** | **APROVADA** — fechamento spec/PR #99 |
+| **v1.47.3** | `915d2aa` / **470** | APROVADA — fechamento spec/PR #99 |
+| **v1.47.3.1 (este)** | `915d2aa` / **470** | **APROVADA** — deploy VPS v1.47 confirmado |
+
+### 11.1 Requisitos recentes — resultado (v1.47.3.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §7 Ops | Deploy VPS `915d2aa` (`atualizar-vps-agora.sh`) | **PASS** |
+| §7 Ops | `verificar-versao-site.sh` + verify-production | **PASS** |
+| §7 Ops | Migração `20260802_000049` | **PASS** |
+| §7 Ops | Pixel/GTM no admin (campanhas) | **PENDENTE** (ops — ao iniciar Ads) |
+| §2.13–§2.15 | Baseline em produção | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.47.3)
 
@@ -759,7 +771,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 |------|-----------|-----------|
 | §11 / PR | PR #99 mergeado na `main` | **PASS** |
 | §7 | Spec §2.7/§7 contagens pytest 470 | **PASS** |
-| §7 Ops | Deploy VPS `915d2aa` | **PENDENTE** (ops — `atualizar-vps-agora.sh`) |
+| §7 Ops | Deploy VPS `915d2aa` | **PASS** (v1.47.3.1) |
 | §7 Ops | Pixel/GTM no admin (campanhas) | **PENDENTE** (ops — colar ID no painel) |
 | §2.13–§2.15 | Baseline v1.47.2 sem regressão | **PASS** |
 | §7 Qualidade | `pytest` 470 | **PASS** |
@@ -783,7 +795,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.14 | Migração `20260802_000049` | **PASS** |
 | §2.13 / baseline | Sem regressão v1.47 | **PASS** |
 | §7 Qualidade | `pytest` 470 | **PASS** |
-| §7 Ops | `alembic upgrade head` na VPS após deploy | **PENDENTE** (ops — junto com deploy v1.47.2) |
+| §7 Ops | `alembic upgrade head` na VPS após deploy | **PASS** (v1.47.3.1) |
 
 ### 11.1 Requisitos recentes — resultado (v1.47)
 
