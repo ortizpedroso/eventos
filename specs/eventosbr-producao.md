@@ -810,7 +810,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` |
 | **v1.48 (este)** | `84c4cba` / **475** | **APROVADA** — UX admin, whitelabel, contato |
 | **v1.48.1** | branch `cursor/fix-navbar-final-c0b1` / **475** | **APROVADA** — regressão navbar (dropdowns portal, Sobre visível, menu conta) |
-| **v1.49 (este)** | branch `cursor/brand-theme-system-c0b1` / **478** | **APROVADA** — tema de marca proporcional (§2.17) |
+| **v1.49 (este)** | branch `cursor/brand-theme-system-c0b1` / **479** | **APROVADA** — tema de marca proporcional (§2.17) |
 
 ### 11.1 Requisitos recentes — resultado (v1.49)
 
@@ -1047,7 +1047,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.49 | 2026-08-03 | **Tema de marca proporcional.** §2.17: escala `--brand-50`…`950`; remapeamento `emerald-*`; `PlatformThemeLive`; apply imediato ao salvar; logo dinâmico; whitelabel em evento público. Testes: 475 → 478. `/review` v1.49 APROVADA. |
+| 1.49 | 2026-08-03 | **Tema de marca proporcional.** §2.17: escala `--brand-50`…`950` no `<html>`; remapeamento `emerald-*`; apply imediato; logo 180×44; Eventos+Categorias adjacentes; whitelabel evento. Testes: 475 → 479. `/review` v1.49 APROVADA. |
 | 1.48.1 | 2026-08-03 | **Hotfix navbar.** §2.16: regressão após layout 2 linhas — dropdowns via portal (`z-80`); Sobre/Categorias fora de `overflow-x-auto`; menu conta único portal; E2E patamar navbar. `/review` v1.48.1 APROVADA. |
 | 1.48 | 2026-08-03 | **UX admin + whitelabel + contato.** §2.16: e-mail duplicado; admin config (tamanhos, paleta cores); editar usuário; PDV sucesso; contato layout; marketing webp + `MarketingScreenshot`; navbar `lg+`; `TelefoneInput`. Testes: 474 → 475. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |
