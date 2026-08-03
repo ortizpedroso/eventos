@@ -1,4 +1,4 @@
-"""Garante posicionamento da home: organizador no hero + caminho comprador (v1.50)."""
+"""Garante posicionamento da home: organizador no hero + caminho comprador (v1.50.1)."""
 
 from pathlib import Path
 
@@ -8,6 +8,8 @@ FEATURES = Path("frontend/src/components/home-produtor-features.tsx").read_text(
 FAQ = Path("frontend/src/components/home-faq.tsx").read_text(encoding="utf-8")
 PROVA = Path("frontend/src/components/home-prova-social.tsx").read_text(encoding="utf-8")
 CENARIOS = Path("frontend/src/components/home-depoimentos.tsx").read_text(encoding="utf-8")
+HERO_WEBP = Path("frontend/public/marketing/hero-evento.webp")
+HERO_JPG = Path("frontend/public/marketing/hero-evento.jpg")
 
 
 def test_home_hero_marca_e_promessa_organizador():
@@ -16,6 +18,14 @@ def test_home_hero_marca_e_promessa_organizador():
     assert "Começar meu evento grátis" in DUAL
     assert 'href="/produtores"' in DUAL
     assert "HomeAudienciasDual" in HOME
+
+
+def test_home_hero_claro_com_foto_marketing():
+    """Hero claro (não zinc-950) + foto stock em /marketing (trocar arquivo depois)."""
+    assert "bg-zinc-950" not in DUAL
+    assert "/marketing/hero-evento.webp" in DUAL
+    assert HERO_WEBP.is_file() and HERO_WEBP.stat().st_size > 10_000
+    assert HERO_JPG.is_file() and HERO_JPG.stat().st_size > 10_000
 
 
 def test_home_caminho_comprador_secundario():
