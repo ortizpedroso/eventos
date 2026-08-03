@@ -12,9 +12,9 @@ import { HomeHeroExplorar } from "@/components/home-hero-explorar";
 export function HomeAudienciasDual() {
   return (
     <div>
-      {/* Full-bleed: sai do max-w-7xl + padding do <main> */}
+      {/* Edge-to-edge no <main>: cancela só o padding (sem w-screen → sem overflow mobile) */}
       <section
-        className="relative left-1/2 isolate w-screen max-w-[100vw] -translate-x-1/2 overflow-hidden border-b border-emerald-100 bg-[#f7faf8] text-zinc-900 -mt-6"
+        className="relative isolate -mx-4 -mt-6 overflow-hidden border-b border-emerald-100 bg-[#f7faf8] text-zinc-900 sm:-mx-6 lg:-mx-8"
         aria-labelledby="home-hero-titulo"
       >
         {/* Foto full-bleed (stock — substituir no mesmo path) */}
