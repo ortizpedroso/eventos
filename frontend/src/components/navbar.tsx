@@ -145,7 +145,7 @@ export function Navbar() {
 
             <form
               onSubmit={submitBusca}
-              className="hidden shrink-0 md:block md:w-44 lg:w-52 xl:w-60"
+              className="hidden shrink-0 lg:block lg:w-52 xl:w-60"
               role="search"
             >
               <label htmlFor="nav-busca" className="sr-only">Buscar eventos</label>
@@ -160,7 +160,7 @@ export function Navbar() {
             </form>
 
             <nav
-              className="relative z-10 hidden shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-zinc-600 md:flex lg:gap-x-6"
+              className="relative z-10 hidden shrink-0 items-center gap-x-5 text-sm font-medium text-zinc-600 lg:flex lg:gap-x-6"
               aria-label="Principal (ambiente de trabalho)"
             >
               {/* Cliente, organizador ou deslogado: mesmo menu completo — um cliente pode
@@ -188,7 +188,7 @@ export function Navbar() {
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <button
               type="button"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 md:hidden"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 lg:hidden"
               aria-expanded={mobileNavOpen}
               aria-controls="nav-mobile-menu"
               aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}
@@ -280,7 +280,7 @@ export function Navbar() {
         {mobileNavOpen ? (
           <nav
             id="nav-mobile-menu"
-            className="w-full border-t border-zinc-200 py-2 md:hidden"
+            className="w-full border-t border-zinc-200 py-2 lg:hidden"
             aria-label="Principal"
           >
             <form onSubmit={submitBusca} className="px-3 pb-2" role="search">

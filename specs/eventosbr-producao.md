@@ -127,7 +127,9 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 
 **Contato:** título «Contato» centralizado; texto intro justificado.
 
-**Marketing:** assets `/public/marketing/*.webp` (script `generate_marketing_png.py`) em `/funcionalidades` e `/produtores`.
+**Marketing:** assets `/public/marketing/*.webp` (script `generate_marketing_png.py`) em `/funcionalidades` e `/produtores` via `MarketingScreenshot` (`<img>` direto, sem `next/image`).
+
+**Navbar:** menu completo só em `lg+`; em tablet (`md`) usa menu hambúrguer — evita «Sobre» sobre «Login».
 
 **Telefone:** componente `TelefoneInput` — máscara BR em campos que faltavam (admin config, PDV, whitelabel).
 
@@ -802,6 +804,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.16 | PDV mensagem compra realizada | **PASS** |
 | §2.16 | Contato: título centralizado + texto justificado | **PASS** |
 | §2.16 | Marketing webp funcionalidades/produtores | **PASS** |
+| §2.16 | Navbar sem overlap Sobre/Login (menu `lg+`) | **PASS** |
 | §7 Qualidade | `pytest` 475 | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.47.4)
@@ -996,7 +999,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.48 | 2026-08-03 | **UX admin + whitelabel + contato.** §2.16: e-mail duplicado; admin config (tamanhos, paleta cores); editar usuário; PDV sucesso; contato layout; marketing webp; `TelefoneInput`. Testes: 474 → 475. |
+| 1.48 | 2026-08-03 | **UX admin + whitelabel + contato.** §2.16: e-mail duplicado; admin config (tamanhos, paleta cores); editar usuário; PDV sucesso; contato layout; marketing webp + `MarketingScreenshot`; navbar `lg+`; `TelefoneInput`. Testes: 474 → 475. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |
 | 1.47.3.1 | 2026-08-03 | **Deploy VPS v1.47 confirmado** — `915d2aa` API/Web; migração `000049`; `verificar-versao-site.sh` OK. §7 e §11 deploy PASS. |
 | 1.47.3 | 2026-08-03 | **Fechamento pendências.** PR #99 MERGED → `main` `915d2aa`. §7/§11 atualizados; Turnstile v1.46 histórico PASS; deploy v1.47.2 e Pixel ops checklist explícitos. pytest 470 no §2.7/§7. |
