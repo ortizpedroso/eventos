@@ -178,21 +178,21 @@ export function Navbar() {
 
   function AuthActions() {
     return (
-      <>
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
         {loggedIn ? (
-          <div className="relative" ref={menuRef}>
+          <div className="relative shrink-0" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+              className="flex max-w-[11rem] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 2xl:max-w-[14rem]"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
-              aria-label="Abrir menu da conta"
+              aria-label={`Conta de ${userNome ?? "usuário"}`}
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
                 <UserIcon className="h-5 w-5" />
               </span>
-              <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
+              <span className="hidden max-w-[6rem] truncate xl:inline 2xl:max-w-[10rem]">{userNome ?? "…"}</span>
             </button>
 
             {menuOpen ? (
@@ -257,7 +257,7 @@ export function Navbar() {
             <span className="hidden sm:inline">Crie um evento</span>
           </Link>
         ) : null}
-      </>
+      </div>
     );
   }
 
@@ -282,30 +282,34 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Desktop largo (xl+): uma linha como antes */}
-        <div className="hidden items-center justify-between gap-4 xl:flex">
-          <div className="flex min-w-0 flex-1 items-center gap-6 2xl:gap-10">
+        {/* Desktop largo (xl+): grid — coluna da conta fixa, menu nunca invade Categorias/Sobre */}
+        <div
+          className="hidden xl:grid xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:items-center xl:gap-x-3 2xl:gap-x-4"
+        >
+          <div className="flex shrink-0 items-center gap-4 2xl:gap-6">
             <EventosBRLogo className="shrink-0" />
-            <SearchForm className="w-48 shrink-0 2xl:w-56" />
-            <PrimaryNav className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-5 2xl:gap-x-6" />
+            <SearchForm className="w-40 shrink-0 2xl:w-48" />
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          <PrimaryNav
+            className="flex min-w-0 flex-nowrap items-center justify-start gap-x-3 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] 2xl:gap-x-5 [&::-webkit-scrollbar]:hidden"
+          />
+          <div className="flex shrink-0 items-center justify-end gap-1.5 bg-white/80 pl-2 sm:gap-3">
             <AuthActions />
           </div>
         </div>
 
-        {/* Tablet (md–lg): duas linhas — evita Sobre sobre Login */}
+        {/* Tablet (md–lg): duas linhas */}
         <div className="hidden flex-col gap-2 md:flex xl:hidden">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center justify-between gap-2">
             <EventosBRLogo className="shrink-0" />
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <div className="flex shrink-0 items-center justify-end gap-1.5 bg-white/80 pl-2 sm:gap-3">
               <AuthActions />
             </div>
           </div>
-          <div className="flex min-w-0 items-center gap-4">
-            <SearchForm className="w-40 shrink-0 sm:w-44" />
+          <div className="flex min-w-0 items-center gap-3">
+            <SearchForm className="w-36 shrink-0 sm:w-40" />
             <PrimaryNav
-              className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-4 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             />
           </div>
         </div>
