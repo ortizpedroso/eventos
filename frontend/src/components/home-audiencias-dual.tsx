@@ -6,7 +6,7 @@ import { HomeHeroExplorar } from "@/components/home-hero-explorar";
 /**
  * Hero de lançamento (v1.50.1): fundo claro + verde da marca + foto de evento.
  * Foto stock (grátis) em `/marketing/hero-evento.webp`:
- * Unsplash — show ao vivo (palco, sóbrio) `photo-1464375117522-1311d6a5b81f`
+ * Unsplash — plateia de show (mãos pra cima) `photo-1501281668745-f7f57925c3b4`
  * https://unsplash.com — trocar pelo arquivo real no mesmo path depois.
  */
 export function HomeAudienciasDual() {
@@ -24,7 +24,7 @@ export function HomeAudienciasDual() {
             <img
               src="/marketing/hero-evento.jpg"
               alt=""
-              className="h-full w-full object-cover object-[center_30%] opacity-90"
+              className="h-full w-full object-cover object-[center_45%] opacity-90"
               width={1920}
               height={1080}
               decoding="async"
