@@ -54,6 +54,7 @@ console.log(JSON.stringify(brandCssProperties('#e11d48', '#be123c')));
     assert props["--brand-primary-dark"] == "#be123c"
     for step in (50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950):
         assert f"--brand-{step}" in props
+        assert props[f"--color-emerald-{step}"] == props[f"--brand-{step}"]
 
 
 def test_evento_response_includes_organizer_brand_fields():

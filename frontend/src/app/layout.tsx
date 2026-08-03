@@ -14,7 +14,7 @@ import { ScrollRevealObserver } from "@/components/scroll-reveal-observer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { SkipToContent } from "@/components/skip-to-content";
-import { brandCssProperties } from "@/lib/brand-css-style";
+import { brandCssProperties, buildBrandRootCss } from "@/lib/brand-css-style";
 import { fetchPlatformSettings } from "@/lib/platform-settings";
 import { buildOrganizationJsonLd } from "@/lib/organization-json-ld";
 import { buildMetadata } from "@/lib/site-metadata";
@@ -36,6 +36,7 @@ export default async function RootLayout({
     platform.primary_color,
     platform.primary_color_dark,
   ) as CSSProperties;
+  const brandCss = buildBrandRootCss(platform.primary_color, platform.primary_color_dark);
 
   return (
     <html
@@ -46,6 +47,12 @@ export default async function RootLayout({
     >
       <head>
         <EarlyScrollReset nonce={nonce} />
+        {/* Escala de marca no <head> (SSR) — não depende só do cliente */}
+        <style
+          id="eventosbr-platform-theme-ssr"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: brandCss }}
+        />
         {platform.favicon_url ? <link rel="icon" href={platform.favicon_url} /> : null}
         <script
           type="application/ld+json"

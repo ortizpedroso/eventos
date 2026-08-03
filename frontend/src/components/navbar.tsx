@@ -257,7 +257,11 @@ export function Navbar() {
     );
   }
 
-  /** md–lg: scroll só nos links iniciais; Eventos+Categorias+Sobre sempre juntos e visíveis. */
+  /**
+   * Links em sequência contínua (sem buraco).
+   * Só o bloco esquerdo rola se faltar espaço; Eventos+Categorias+Sobre ficam fora do overflow
+   * (dropdown Categorias não é cortado). O flex-1 vazio fica DEPOIS do Sobre.
+   */
   function PrimaryNavSplit({ className = "" }: { className?: string }) {
     return (
       <nav
@@ -265,7 +269,7 @@ export function Navbar() {
         aria-label="Principal (ambiente de trabalho)"
       >
         <div
-          className={`flex min-w-0 flex-1 flex-nowrap items-center gap-x-3 overflow-x-auto lg:gap-x-4 ${navScrollClass}`}
+          className={`min-w-0 flex-nowrap overflow-x-auto ${navScrollClass}`}
         >
           <PrimaryNavCoreLinks />
         </div>
@@ -278,6 +282,7 @@ export function Navbar() {
             Sobre
           </Link>
         </div>
+        <div className="min-w-0 flex-1" aria-hidden />
       </nav>
     );
   }

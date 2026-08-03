@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 import { applyBrandThemeToDocument } from "@/lib/apply-brand-theme";
-import { buildBrandCssBlock } from "@/lib/brand-color-palette";
+import { buildBrandRootCss } from "@/lib/brand-css-style";
 
 type OrganizerBrand = {
   brand_primary_color?: string | null;
@@ -16,13 +16,13 @@ export function OrganizerBrandTheme({ brand }: { brand: OrganizerBrand }) {
   const dark = brand.brand_primary_color_dark?.trim() || "";
   const hasBrand = Boolean(primary || dark);
   const primaryHex = primary || "#10b981";
-  const css = hasBrand
-    ? buildBrandCssBlock(":root", primaryHex, dark || undefined)
-    : "";
+  const css = hasBrand ? buildBrandRootCss(primaryHex, dark || undefined) : "";
 
   useEffect(() => {
     if (!hasBrand) return;
-    applyBrandThemeToDocument(primaryHex, dark || undefined);
+    applyBrandThemeToDocument(primaryHex, dark || undefined, document.documentElement, {
+      broadcast: false,
+    });
   }, [hasBrand, primaryHex, dark]);
 
   if (!hasBrand) return null;
