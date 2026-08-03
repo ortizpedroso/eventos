@@ -770,14 +770,14 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.47.3** | `915d2aa` / **470** | APROVADA — fechamento spec/PR #99 |
 | v1.47.3.1 | `915d2aa` / **470** | APROVADA — deploy VPS v1.47 confirmado |
 | **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` (PR #100) |
-| **v1.47.4.1 (este)** | `5fc3aa3` / **474** | **APROVADA** — E2E seeds organizador + cookie patamar |
+| **v1.47.4.1 (este)** | `1df774a` / **474** | **APROVADA** — CI verde (E2E + api) |
 
 ### 11.1 Requisitos recentes — resultado (v1.47.4.1)
 
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
 | §7 Qualidade | E2E organizador confirma e-mail nos seeds (`registrarOrganizadorE2e`) | **PASS** |
-| §7 Qualidade | Patamar cookie sessão expirada usa `baseURL` do Playwright | **PASS** |
+| §7 Qualidade | CI PR #101 — api, web, e2e, e2e-compra, e2e-asaas | **PASS** |
 | §3.2.1 | Sessão expirada (baseline v1.47.4) | **PASS** |
 | §7 Ops | Deploy VPS v1.47.4 | **PENDENTE** (ops) |
 
