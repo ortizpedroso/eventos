@@ -2,19 +2,19 @@ import Link from "next/link";
 
 const itens = [
   {
-    titulo: "Compra rápida",
-    descricao: "Finalize em minutos, sem cadastro completo obrigatório.",
-    href: "/funcionalidades#compra-rapida",
+    titulo: "Compra em minutos",
+    descricao: "PIX ou cartão no celular, sem cadastro completo obrigatório.",
+    href: "/ajuda/como-comprar",
   },
   {
-    titulo: "Reembolso automático",
-    descricao: "Cancelamento dentro do prazo legal direto em Minha conta.",
+    titulo: "Reembolso claro",
+    descricao: "Pedido dentro do prazo legal direto em Minha conta.",
     href: "/ajuda/reembolsos",
   },
   {
-    titulo: "Repasse oficial",
-    descricao: "Transfira seu ingresso de forma segura para outra pessoa.",
-    href: "/funcionalidades#repasse",
+    titulo: "QR na entrada",
+    descricao: "Ingresso no e-mail e check-in rápido na portaria.",
+    href: "/funcionalidades",
   },
 ] as const;
 
