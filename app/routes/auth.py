@@ -155,7 +155,10 @@ async def registrar(
     ).first()
 
     if usuario_existente:
-        raise HTTPException(status_code=400, detail="Email já cadastrado")
+        raise HTTPException(
+            status_code=400,
+            detail="Email já cadastrado, faça login ou recupere sua senha",
+        )
 
     asaas_customer_id: str | None = None
     asaas_wallet_id: str | None = None

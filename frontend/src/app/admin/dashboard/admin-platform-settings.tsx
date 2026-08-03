@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
+import { BrandColorPicker } from "@/components/brand-color-picker";
 import { ImagemAssetField } from "@/components/imagem-asset-field";
+import { TelefoneInput } from "@/components/telefone-input";
 import { UPLOAD_IMAGEM_ACCEPT } from "@/lib/upload-imagem-tipos";
 import { adminFetch } from "@/lib/admin-api";
 
@@ -241,12 +243,9 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
         </label>
         <label className="grid gap-1.5 text-sm sm:col-span-2">
           <span className="font-medium text-zinc-800">Telefone</span>
-          <input
-            type="tel"
-            className="input"
-            value={form.contact_phone}
-            onChange={(e) => setField("contact_phone", e.target.value)}
-            placeholder="(11) 99999-9999"
+          <TelefoneInput
+            value={form.contact_phone.replace(/\D/g, "")}
+            onChange={(digits) => setField("contact_phone", digits)}
           />
         </label>
       </Section>
@@ -283,38 +282,14 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
           alturaAlvo={256}
           compact
         />
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium text-zinc-800">Cor principal</span>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={form.primary_color}
-              onChange={(e) => setField("primary_color", e.target.value)}
-              className="h-10 w-12 shrink-0 cursor-pointer rounded border border-zinc-300 bg-white p-0.5"
-            />
-            <input
-              className="input font-mono"
-              value={form.primary_color}
-              onChange={(e) => setField("primary_color", e.target.value)}
-            />
-          </div>
-        </label>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium text-zinc-800">Cor escura (hover)</span>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={form.primary_color_dark}
-              onChange={(e) => setField("primary_color_dark", e.target.value)}
-              className="h-10 w-12 shrink-0 cursor-pointer rounded border border-zinc-300 bg-white p-0.5"
-            />
-            <input
-              className="input font-mono"
-              value={form.primary_color_dark}
-              onChange={(e) => setField("primary_color_dark", e.target.value)}
-            />
-          </div>
-        </label>
+        <BrandColorPicker
+          primary={form.primary_color}
+          primaryDark={form.primary_color_dark}
+          onChange={(primary, dark) => {
+            setField("primary_color", primary);
+            setField("primary_color_dark", dark);
+          }}
+        />
       </Section>
 
       <Section title="Redes sociais" hint="Instagram e WhatsApp aparecem no rodapé.">
@@ -329,11 +304,11 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
         </label>
         <label className="grid gap-1.5 text-sm">
           <span className="font-medium text-zinc-800">WhatsApp</span>
-          <input
+          <TelefoneInput
+            value={form.social_whatsapp_url.replace(/\D/g, "")}
+            onChange={(digits) => setField("social_whatsapp_url", digits)}
+            placeholder="(11) 99999-9999"
             className="input"
-            value={form.social_whatsapp_url}
-            onChange={(e) => setField("social_whatsapp_url", e.target.value)}
-            placeholder="11999999999"
           />
         </label>
         {(

@@ -44,6 +44,12 @@ class UsuarioAdminUpdate(BaseModel):
     is_platform_admin: bool
 
 
+class UsuarioPlataformaUpdate(BaseModel):
+    nome: str | None = Field(None, min_length=1, max_length=200)
+    email: EmailStr | None = None
+    telefone: str | None = Field(None, max_length=20)
+
+
 class AssinaturaAdminUpdate(BaseModel):
     plano_tarifa: Literal["padrao", "assinatura"] = "assinatura"
     meses: int = Field(default=1, ge=1, le=24)
@@ -244,6 +250,46 @@ async def listar_usuarios_plataforma(
             }
             for u in rows
         ],
+    }
+
+
+@router.patch("/usuarios/{usuario_id}")
+async def atualizar_usuario_plataforma(
+    usuario_id: str,
+    body: UsuarioPlataformaUpdate,
+    db: Session = Depends(get_db),
+):
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    if body.nome is not None:
+        usuario.nome = body.nome.strip()
+    if body.email is not None:
+        email = str(body.email).strip().lower()
+        dup = (
+            db.query(Usuario)
+            .filter(func.lower(Usuario.email) == email, Usuario.id != usuario_id)
+            .first()
+        )
+        if dup:
+            raise HTTPException(
+                status_code=400,
+                detail="Email já cadastrado, faça login ou recupere sua senha",
+            )
+        usuario.email = email
+    if body.telefone is not None:
+        usuario.telefone = body.telefone.strip() or None
+    db.commit()
+    db.refresh(usuario)
+    logger.info("admin_action=editar_usuario usuario_id=%s", usuario_id)
+    return {
+        "id": usuario.id,
+        "email": usuario.email,
+        "nome": usuario.nome,
+        "telefone": usuario.telefone,
+        "tipo": usuario.tipo,
+        "ativo": bool(usuario.ativo),
+        "is_platform_admin": bool(usuario.is_platform_admin),
     }
 
 

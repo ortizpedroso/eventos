@@ -122,3 +122,24 @@ def test_desativar_usuario_impede_login(monkeypatch):
 
     login = client.post("/api/auth/login", json={"email": email, "senha": "senha12345"})
     assert login.status_code == 403
+
+
+def test_admin_editar_usuario(monkeypatch):
+    monkeypatch.setattr(settings, "PLATFORM_ADMIN_API_KEY", "chave-admin-teste")
+    email = f"edit_{uuid.uuid4().hex[:8]}@test.com"
+    reg = client.post(
+        "/api/auth/registrar",
+        json={"email": email, "nome": "Antes", "senha": "senha12345", "tipo": "cliente"},
+    )
+    assert reg.status_code == 200
+    uid = reg.json()["usuario"]["id"]
+    novo_email = f"edit2_{uuid.uuid4().hex[:8]}@test.com"
+    r = client.patch(
+        f"/api/admin/usuarios/{uid}",
+        headers=ADMIN_HEADERS,
+        json={"nome": "Depois", "email": novo_email, "telefone": "11987654321"},
+    )
+    assert r.status_code == 200
+    assert r.json()["nome"] == "Depois"
+    assert r.json()["email"] == novo_email
+    assert r.json()["telefone"] == "11987654321"

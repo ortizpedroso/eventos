@@ -136,7 +136,7 @@ class TestAuth:
             }
         )
         assert response.status_code == 400
-        assert "Email já cadastrado" in response.json()["detail"]
+        assert "Email já cadastrado, faça login ou recupere sua senha" in response.json()["detail"]
 
     def test_registrar_senha_curta_rejeitada(self):
         response = client.post(
