@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import type { PlatformSettings } from "@/lib/platform-settings";
+import { DEFAULT_PLATFORM_SETTINGS } from "@/lib/platform-settings";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://eventosbr.app.br";
 
@@ -56,21 +57,4 @@ export const homeMetadata: Metadata = {
 };
 
 /** @deprecated use buildMetadata(platform) no layout raiz */
-export const defaultMetadata: Metadata = buildMetadata({
-  site_name: "EventosBR",
-  site_tagline: null,
-  footer_description: null,
-  contact_email: null,
-  contact_phone: null,
-  support_email: null,
-  logo_url: null,
-  logo_light_url: null,
-  favicon_url: null,
-  primary_color: "#10b981",
-  primary_color_dark: "#047857",
-  social_instagram_url: null,
-  social_whatsapp_url: null,
-  social_linkedin_url: null,
-  social_x_url: null,
-  social_youtube_url: null,
-});
+export const defaultMetadata: Metadata = buildMetadata(DEFAULT_PLATFORM_SETTINGS);
