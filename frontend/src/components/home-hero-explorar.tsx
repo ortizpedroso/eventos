@@ -9,10 +9,12 @@ import {
 
 export function HomeHeroExplorar() {
   return (
-    <div className="mx-auto mt-10 w-full max-w-2xl">
-      <p className="text-center text-sm font-medium text-zinc-600">O que você procura?</p>
+    <div className="w-full max-w-2xl lg:ml-auto">
+      <p className="text-center text-sm font-medium text-zinc-600 lg:text-left">
+        O que você procura?
+      </p>
       <div
-        className="mt-3 flex flex-wrap justify-center gap-2"
+        className="mt-3 flex flex-wrap justify-center gap-2 lg:justify-start"
         aria-label="Explorar eventos por categoria"
       >
         {EVENTO_CATEGORIAS_DESTAQUE.map((cat) => {
@@ -29,7 +31,7 @@ export function HomeHeroExplorar() {
           );
         })}
       </div>
-      <p className="mt-4 text-center text-sm text-zinc-500">
+      <p className="mt-4 text-center text-sm text-zinc-500 lg:text-left">
         <Link
           href="/eventos"
           className="font-medium text-emerald-700 underline-offset-2 hover:underline"

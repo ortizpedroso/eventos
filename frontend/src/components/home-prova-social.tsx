@@ -6,6 +6,10 @@ type Stats = {
   ingressos_confirmados: number;
 };
 
+/** Só exibe números quando há volume real — evita sinal de plataforma vazia no lançamento. */
+const MIN_EVENTOS = 8;
+const MIN_INGRESSOS = 50;
+
 export async function HomeProvaSocial() {
   let stats: Stats | null = null;
   try {
@@ -14,9 +18,11 @@ export async function HomeProvaSocial() {
     stats = null;
   }
 
-  if (!stats || (stats.eventos_publicados < 1 && stats.ingressos_confirmados < 1)) {
-    return null;
-  }
+  if (!stats) return null;
+
+  const temVolume =
+    stats.eventos_publicados >= MIN_EVENTOS || stats.ingressos_confirmados >= MIN_INGRESSOS;
+  if (!temVolume) return null;
 
   return (
     <div className="mx-auto mt-10 max-w-2xl">

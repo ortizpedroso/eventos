@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.49.1
+**Versão:** 1.50
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip produto **`361eff7`** / v1.49.1 na `main` (PRs #107+#108). pytest **480**. Disco VPS limpo 03/08 (build cache Docker ~66 GB → ~1 GB; uso disco 68 GB → 5,8 GB).
+> **Produção (VPS):** tip produto **`f14d887`** / v1.49.1 na `main`; v1.50 home lançamento nesta revisão. pytest **485**. Disco VPS limpo 03/08 (build cache Docker ~66 GB → ~1 GB).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -89,9 +89,25 @@ Testes: `test_evento_ficha_tecnica.py`, `test_contato_whatsapp_cta.py`, `test_ev
 
 Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/workspace`); subprocess herda CWD da raiz do repo (fix `f3f2e8b`).
 
+### 2.18 Home de lançamento — copy e prova social (v1.50)
+
+**Hero (ICP organizador):** marca EventosBR em destaque; uma headline («Venda ingresso hoje. Receba no painel. Opere o dia sem planilha.»); uma frase de apoio; CTAs «Começar meu evento grátis» + «Explorar eventos»; link «Ver página para produtores».
+
+**Comprador (secundário):** bloco abaixo do hero — «Do PIX ao QR Code na entrada»; categorias + Como comprar.
+
+**Features:** linguagem humana (sem «Whitelabel»/«Split»); «Sua marca» aponta à página `/produtor`.
+
+**Prova social numérica:** `HomeProvaSocial` só renderiza com volume mínimo (`MIN_EVENTOS=8` **ou** `MIN_INGRESSOS=50`) — evita sinal de plataforma vazia.
+
+**Cenários:** `HomeDepoimentos` vira casos de uso (shows, esportes, comprador) — sem depoimentos fictícios «quem usa recomenda».
+
+**Preços:** «Comece grátis. Pague só quando vender.»
+
+**FAQ:** marca na página pública do produtor (alinhado a §2.17).
+
 ### 2.13 Lançamento comercial — home dual, Ads e SEO (v1.47)
 
-**Home — separação comprador × organizador:** `HomeAudienciasDual` — duas colunas (mobile: empilhadas): participante («Encontre o evento…», CTA «Explorar eventos») e organizador («Crie seu evento…», CTAs «Começar meu evento grátis» + «Sou produtor»). `HomeProdutorFeatures` (grid ingressos, check-in, financeiro, repasse, whitelabel, relatórios). `HomeFaq` (FAQ + link `/contato`). Mantém vitrine de eventos e diferenciais do comprador.
+**Home (histórico v1.47; substituído em parte por §2.18):** separação comprador × organizador. `HomeProdutorFeatures`, `HomeFaq`, vitrine e diferenciais do comprador.
 
 **Cards vitrine:** cidade no meta; CTA explícito «Comprar ingresso» / «Ver evento».
 
@@ -705,7 +721,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (**480** testes)
+- [x] `pytest` verde (**485** testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -816,7 +832,23 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.48 (este)** | `84c4cba` / **475** | **APROVADA** — UX admin, whitelabel, contato |
 | **v1.48.1** | branch `cursor/fix-navbar-final-c0b1` / **475** | **APROVADA** — regressão navbar (dropdowns portal, Sobre visível, menu conta) |
 | **v1.49** | `9142f97` / **479** | **APROVADA** — tema de marca proporcional (§2.17) |
-| **v1.49.1 (este)** | `361eff7` / **480** | **APROVADA** — navbar estável + busca + whitelabel só `/produtor` + ops disco |
+| **v1.49.1** | `f14d887` / **480** | **APROVADA** — navbar + whitelabel escopo + ops disco |
+| **v1.50 (este)** | branch `cursor/home-lancamento-copy-c0b1` / **485** | **APROVADA** — home lançamento (§2.18) |
+
+### 11.1 Requisitos recentes — resultado (v1.50)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.18 | Hero marca + promessa organizador + CTAs | **PASS** |
+| §2.18 | Bloco comprador secundário (PIX→QR) | **PASS** |
+| §2.18 | Features sem jargão Whitelabel/Split | **PASS** |
+| §2.18 | Prova social só com volume mínimo | **PASS** |
+| §2.18 | Cenários (não depoimentos fictícios) | **PASS** |
+| §2.18 | FAQ marca em `/produtor` | **PASS** |
+| §2.18 | Copy preços «Pague só quando vender» | **PASS** |
+| §7 Qualidade | `pytest` 485 | **PASS** |
+| §7 Qualidade | Playwright home h1 + navegação | **PASS** |
+| §7 Qualidade | `next build` | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.49.1)
 
@@ -1065,6 +1097,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50 | 2026-08-03 | **Home de lançamento.** §2.18: hero organizador; comprador secundário; features sem jargão; prova social com limiar; cenários no lugar de depoimentos fictícios; FAQ `/produtor`; preços. Testes: 480 → 485. `/review` v1.50 APROVADA. |
 | 1.49.1 | 2026-08-03 | **Navbar + whitelabel escopo + ops disco.** §2.17: whitelabel só `/produtor`; busca sem travar; links contínuos. §7: tip `361eff7`; limpeza `docker builder prune` (68→5,8 GB). Testes: 479 → 480. `/review` v1.49.1 APROVADA. |
 | 1.49 | 2026-08-03 | **Tema de marca proporcional.** §2.17: escala `--brand-50`…`950` no `<html>`; remapeamento `emerald-*`; apply imediato; logo 180×44. Testes: 475 → 479. `/review` v1.49 APROVADA. |
 | 1.48.1 | 2026-08-03 | **Hotfix navbar.** §2.16: regressão após layout 2 linhas — dropdowns via portal (`z-80`); Sobre/Categorias fora de `overflow-x-auto`; menu conta único portal; E2E patamar navbar. `/review` v1.48.1 APROVADA. |

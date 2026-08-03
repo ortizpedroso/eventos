@@ -5,26 +5,26 @@ import { CriarEventoLink } from "@/components/criar-evento-link";
 const features = [
   {
     titulo: "Venda de ingressos",
-    descricao: "Página pública, lotes e checkout PIX ou cartão.",
+    descricao: "Página pública, lotes e checkout com PIX ou cartão.",
   },
   {
-    titulo: "Check-in QR Code",
+    titulo: "Check-in com QR Code",
     descricao: "Entrada rápida na portaria, sem fila de planilha.",
   },
   {
-    titulo: "Financeiro",
-    descricao: "Extrato, saldo e solicitação de saque na plataforma.",
+    titulo: "Dinheiro no painel",
+    descricao: "Extrato, saldo e pedido de saque no mesmo lugar.",
   },
   {
-    titulo: "Repasse automático",
-    descricao: "Split na venda — você recebe o líquido combinado.",
+    titulo: "Você recebe na venda",
+    descricao: "O líquido combinado cai na sua conta de recebimento.",
   },
   {
-    titulo: "Whitelabel",
-    descricao: "Sua marca na página do evento e nos e-mails.",
+    titulo: "Sua marca",
+    descricao: "Logo e cores na sua página pública de produtor.",
   },
   {
-    titulo: "Relatórios",
+    titulo: "Relatórios claros",
     descricao: "Vendas, conversão e lista de participantes.",
   },
 ] as const;
@@ -43,19 +43,16 @@ export function HomeProdutorFeatures() {
           id="home-produtor-features-titulo"
           className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl"
         >
-          Crie, venda e gerencie sem planilhas
+          Publique hoje. Venda. Opere o dia do evento.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-base text-zinc-600">
-          Tudo que você precisa para publicar o evento, receber pagamentos e operar o dia — em um só
-          painel.
+          Tudo para receber pagamentos e controlar a portaria — sem planilha e sem ferramentas
+          espalhadas.
         </p>
       </div>
       <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {features.map((f) => (
-          <div
-            key={f.titulo}
-            className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
-          >
+          <div key={f.titulo} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
             <h3 className="font-semibold text-zinc-900">{f.titulo}</h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-600">{f.descricao}</p>
           </div>

@@ -3,23 +3,23 @@ import Link from "next/link";
 const perguntas = [
   {
     q: "Preciso pagar para criar um evento?",
-    a: "Você pode começar grátis. A taxa EventosBR é aplicada por ingresso vendido — veja os simuladores em Planos.",
+    a: "Não. Você começa grátis. A taxa EventosBR só entra por ingresso vendido — veja os valores em Planos.",
   },
   {
     q: "Como recebo o dinheiro das vendas?",
-    a: "O repasse vai para sua conta de recebimento configurada no Financeiro. PIX e cartão são processados com segurança; o extrato fica no painel.",
+    a: "O valor líquido vai para a conta de recebimento no painel Financeiro. PIX e cartão ficam no extrato.",
   },
   {
     q: "O comprador precisa criar conta?",
-    a: "Não obrigatoriamente. A compra pode ser rápida com e-mail e CPF; depois o ingresso aparece em Minha conta.",
+    a: "Não é obrigatório. Dá para comprar rápido com e-mail e CPF; depois o ingresso aparece em Minha conta.",
   },
   {
     q: "É seguro comprar ingresso aqui?",
-    a: "Sim. Pagamentos via PIX e cartão, ingresso com QR Code único e política de reembolso dentro do prazo legal.",
+    a: "Sim. Pagamentos via PIX e cartão, ingresso com QR Code único e reembolso dentro do prazo legal.",
   },
   {
-    q: "Posso usar minha marca no evento?",
-    a: "Sim. Whitelabel com logo, cores e domínio personalizado na página pública do evento.",
+    q: "Posso usar minha marca?",
+    a: "Sim. Na página pública do produtor (/produtor/seu-slug) você define logo e cores da marca.",
   },
 ] as const;
 
