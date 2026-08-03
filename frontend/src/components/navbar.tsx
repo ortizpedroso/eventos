@@ -233,7 +233,7 @@ export function Navbar() {
     );
   }
 
-  /** Links iniciais (podem rolar em md–lg). */
+  /** Links iniciais (podem rolar em md–lg). Eventos fica fora — junto de Categorias. */
   function PrimaryNavCoreLinks() {
     return (
       <div className="inline-flex items-center gap-x-3 lg:gap-x-4">
@@ -246,9 +246,6 @@ export function Navbar() {
         <Link href="/planos" className={navLinkClass("/planos")}>
           Planos
         </Link>
-        <Link href="/eventos" className={navLinkClass("/eventos")}>
-          Eventos
-        </Link>
       </div>
     );
   }
@@ -260,7 +257,11 @@ export function Navbar() {
     );
   }
 
-  /** md–lg: scroll só nos links iniciais; Categorias e Sobre sempre visíveis. */
+  /**
+   * Links em sequência contínua (sem buraco).
+   * Só o bloco esquerdo rola se faltar espaço; Eventos+Categorias+Sobre ficam fora do overflow
+   * (dropdown Categorias não é cortado). O flex-1 vazio fica DEPOIS do Sobre.
+   */
   function PrimaryNavSplit({ className = "" }: { className?: string }) {
     return (
       <nav
@@ -268,14 +269,20 @@ export function Navbar() {
         aria-label="Principal (ambiente de trabalho)"
       >
         <div
-          className={`flex min-w-0 flex-1 flex-nowrap items-center gap-x-3 overflow-x-auto lg:gap-x-4 ${navScrollClass}`}
+          className={`min-w-0 flex-nowrap overflow-x-auto ${navScrollClass}`}
         >
           <PrimaryNavCoreLinks />
         </div>
-        <NavbarCategoriasMenu compact />
-        <Link href="/sobre" className={navLinkClass("/sobre")}>
-          Sobre
-        </Link>
+        <div className="inline-flex shrink-0 items-center gap-x-3 lg:gap-x-4">
+          <Link href="/eventos" className={navLinkClass("/eventos")}>
+            Eventos
+          </Link>
+          <NavbarCategoriasMenu compact />
+          <Link href="/sobre" className={navLinkClass("/sobre")}>
+            Sobre
+          </Link>
+        </div>
+        <div className="min-w-0 flex-1" aria-hidden />
       </nav>
     );
   }

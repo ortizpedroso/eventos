@@ -1,17 +1,37 @@
 "use client";
 
+import { useEffect } from "react";
+
 import type { PlatformSettings } from "@/lib/platform-settings";
+import { applyBrandThemeToDocument } from "@/lib/apply-brand-theme";
+import { BRAND_THEME_CHANNEL, buildBrandRootCss, type BrandThemeMessage } from "@/lib/brand-css-style";
 
 type Props = {
   settings: PlatformSettings;
 };
 
-/** Injeta cores da marca (white-label) em CSS variables. */
+/** Injeta escala tonal no `:root`/`html` e escuta mudanças de outras abas. */
 export function PlatformTheme({ settings }: Props) {
-  const css = `:root {
-  --brand-primary: ${settings.primary_color};
-  --brand-primary-dark: ${settings.primary_color_dark};
-}`;
+  const css = buildBrandRootCss(settings.primary_color, settings.primary_color_dark);
+
+  useEffect(() => {
+    applyBrandThemeToDocument(settings.primary_color, settings.primary_color_dark, document.documentElement, {
+      broadcast: false,
+    });
+  }, [settings.primary_color, settings.primary_color_dark]);
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const bc = new BroadcastChannel(BRAND_THEME_CHANNEL);
+    bc.onmessage = (ev: MessageEvent<BrandThemeMessage>) => {
+      const data = ev.data;
+      if (!data?.primary) return;
+      applyBrandThemeToDocument(data.primary, data.dark, document.documentElement, {
+        broadcast: false,
+      });
+    };
+    return () => bc.close();
+  }, []);
 
   return <style id="eventosbr-platform-theme">{css}</style>;
 }

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { BrandColorPicker } from "@/components/brand-color-picker";
 import { ImagemAssetField } from "@/components/imagem-asset-field";
 import { TelefoneInput } from "@/components/telefone-input";
+import { usePlatformSettingsMutator } from "@/components/platform-settings-provider";
 import { UPLOAD_IMAGEM_ACCEPT } from "@/lib/upload-imagem-tipos";
 import { adminFetch } from "@/lib/admin-api";
 
@@ -123,6 +124,7 @@ function Section({
 }
 
 export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
+  const { replaceSettings, patchSettings } = usePlatformSettingsMutator();
   const [form, setForm] = useState<PlatformSettingsForm>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -167,12 +169,32 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
         body: JSON.stringify(payloadFromForm(form)),
       });
       setForm(toForm(data));
+      replaceSettings({
+        site_name: data.site_name,
+        site_tagline: data.site_tagline,
+        footer_description: data.footer_description,
+        contact_email: data.contact_email,
+        contact_phone: data.contact_phone,
+        support_email: data.support_email,
+        logo_url: data.logo_url,
+        logo_light_url: data.logo_light_url,
+        favicon_url: data.favicon_url,
+        primary_color: data.primary_color,
+        primary_color_dark: data.primary_color_dark,
+        social_instagram_url: data.social_instagram_url,
+        social_whatsapp_url: data.social_whatsapp_url,
+        social_linkedin_url: data.social_linkedin_url,
+        social_x_url: data.social_x_url,
+        social_youtube_url: data.social_youtube_url,
+        meta_pixel_id: data.meta_pixel_id,
+        gtm_id: data.gtm_id,
+      });
       try {
         await fetch("/api/admin/revalidate-platform", { method: "POST", credentials: "include" });
       } catch {
         /* cache do Next pode demorar um pouco a limpar */
       }
-      const ok = "Configurações salvas. Atualize o site público para ver as mudanças.";
+      const ok = "Configurações salvas. As cores da marca já estão aplicadas nesta sessão.";
       onMsg(ok);
       setLocalMsg(ok);
     } catch (e) {
@@ -286,8 +308,13 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
           primary={form.primary_color}
           primaryDark={form.primary_color_dark}
           onChange={(primary, dark) => {
-            setField("primary_color", primary);
-            setField("primary_color_dark", dark);
+            setForm((prev) => ({
+              ...prev,
+              primary_color: primary,
+              primary_color_dark: dark,
+            }));
+            setLocalMsg(null);
+            patchSettings({ primary_color: primary, primary_color_dark: dark });
           }}
         />
       </Section>

@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
+import type { CSSProperties } from "react";
 
 import { BackToTopButton } from "@/components/back-to-top-button";
 import { BuildMarker } from "@/components/build-marker";
@@ -8,11 +9,12 @@ import { EarlyScrollReset } from "@/components/early-scroll-reset";
 import { MarketingAnalytics } from "@/components/marketing-analytics";
 import { Navbar } from "@/components/navbar";
 import { PlatformSettingsProvider } from "@/components/platform-settings-provider";
-import { PlatformTheme } from "@/components/platform-theme";
+import { PlatformThemeLive } from "@/components/platform-theme-live";
 import { ScrollRevealObserver } from "@/components/scroll-reveal-observer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { SkipToContent } from "@/components/skip-to-content";
+import { brandCssProperties, buildBrandRootCss } from "@/lib/brand-css-style";
 import { fetchPlatformSettings } from "@/lib/platform-settings";
 import { buildOrganizationJsonLd } from "@/lib/organization-json-ld";
 import { buildMetadata } from "@/lib/site-metadata";
@@ -30,15 +32,27 @@ export default async function RootLayout({
 }>) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   const platform = await fetchPlatformSettings();
+  const brandStyle = brandCssProperties(
+    platform.primary_color,
+    platform.primary_color_dark,
+  ) as CSSProperties;
+  const brandCss = buildBrandRootCss(platform.primary_color, platform.primary_color_dark);
 
   return (
     <html
       lang="pt-BR"
       className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+      style={brandStyle}
       suppressHydrationWarning
     >
       <head>
         <EarlyScrollReset nonce={nonce} />
+        {/* Escala de marca no <head> (SSR) — não depende só do cliente */}
+        <style
+          id="eventosbr-platform-theme-ssr"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: brandCss }}
+        />
         {platform.favicon_url ? <link rel="icon" href={platform.favicon_url} /> : null}
         <script
           type="application/ld+json"
@@ -52,8 +66,8 @@ export default async function RootLayout({
         suppressHydrationWarning
         nonce={nonce}
       >
-        <PlatformTheme settings={platform} />
         <PlatformSettingsProvider settings={platform}>
+          <PlatformThemeLive />
           <MarketingAnalytics />
           <SkipToContent />
           <BuildMarker />

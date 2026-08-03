@@ -15,6 +15,7 @@ import { EventoPoliticaReembolso } from "@/components/evento-politica-reembolso"
 import { EventoRelacionados } from "@/components/evento-relacionados";
 import { ListaEsperaForm } from "@/components/lista-espera-form";
 import { ListaInteresseForm } from "@/components/lista-interesse-form";
+import { OrganizerBrandTheme } from "@/components/organizer-brand-theme";
 import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
@@ -261,7 +262,14 @@ export function EventoPublicClient({
     compraDisponivel && janelaEsperaExclusiva && tokenEsperaValido !== true;
 
   return (
-    <div className={`space-y-6${evento.publicado ? " pb-24 lg:pb-0" : ""}`}>
+    <>
+      <OrganizerBrandTheme
+        brand={{
+          brand_primary_color: evento.organizador_brand_primary_color,
+          brand_primary_color_dark: evento.organizador_brand_primary_color_dark,
+        }}
+      />
+      <div className={`space-y-6${evento.publicado ? " pb-24 lg:pb-0" : ""}`}>
       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
         <Link href="/" className="hover:text-zinc-800 hover:underline">
           Início
@@ -519,6 +527,7 @@ export function EventoPublicClient({
           </button>
         </div>
       ) : null}
-    </div>
+      </div>
+    </>
   );
 }

@@ -53,6 +53,8 @@ export type Evento = {
   /** Dono do evento (para exibir ação de editar) */
   organizador_id: string;
   organizador_nome?: string | null;
+  organizador_brand_primary_color?: string | null;
+  organizador_brand_primary_color_dark?: string | null;
   urgencia_modo?: string;
   urgencia_badge?: string | null;
   urgencia_ativo?: boolean;

@@ -67,6 +67,24 @@ test.describe("Patamar UX — vitrine e navbar", () => {
     await expect(page).toHaveURL(/\/sobre/);
   });
 
+  test("Eventos e Categorias ficam adjacentes no desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    const banner = page.getByRole("banner");
+    const eventos = banner.getByRole("link", { name: /^Eventos$/ });
+    const categorias = banner.getByRole("button", { name: /Categorias/i });
+    await expect(eventos).toBeVisible();
+    await expect(categorias).toBeVisible();
+    const eBox = await eventos.boundingBox();
+    const cBox = await categorias.boundingBox();
+    expect(eBox).toBeTruthy();
+    expect(cBox).toBeTruthy();
+    // Mesma linha e gap pequeno (sem “buraco” do flex-1 entre eles)
+    expect(Math.abs((eBox!.y + eBox!.height / 2) - (cBox!.y + cBox!.height / 2))).toBeLessThan(12);
+    expect(cBox!.x - (eBox!.x + eBox!.width)).toBeGreaterThanOrEqual(0);
+    expect(cBox!.x - (eBox!.x + eBox!.width)).toBeLessThan(48);
+  });
+
   test("dropdown Categorias abre no desktop", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/", { waitUntil: "domcontentloaded" });
