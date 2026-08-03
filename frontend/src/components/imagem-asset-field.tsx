@@ -24,6 +24,8 @@ type Props = {
   /** Dimensão recomendada/alvo (px) — usada tanto na dica visual quanto para comprimir antes do upload. */
   larguraAlvo?: number;
   alturaAlvo?: number;
+  /** Admin: omite dicas longas de dimensão e upload. */
+  compact?: boolean;
 };
 
 export function ImagemAssetField({
@@ -37,6 +39,7 @@ export function ImagemAssetField({
   accept = UPLOAD_IMAGEM_ACCEPT,
   larguraAlvo = 512,
   alturaAlvo = 512,
+  compact = false,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -101,10 +104,12 @@ export function ImagemAssetField({
         {label}
       </label>
       {hint ? <p className="text-xs text-zinc-500">{hint}</p> : null}
-      <p className="text-xs text-zinc-400">
-        Tamanho recomendado: {larguraAlvo}×{alturaAlvo}px. Enviamos maior? Redimensionamos e comprimimos
-        automaticamente antes de salvar.
-      </p>
+      {!compact ? (
+        <p className="text-xs text-zinc-400">
+          Tamanho recomendado: {larguraAlvo}×{alturaAlvo}px. Enviamos maior? Redimensionamos e comprimimos
+          automaticamente antes de salvar.
+        </p>
+      ) : null}
       {urlModo ? (
         <input
           id={id}

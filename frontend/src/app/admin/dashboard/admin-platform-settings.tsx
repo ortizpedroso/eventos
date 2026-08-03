@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { ImagemAssetField } from "@/components/imagem-asset-field";
 import { UPLOAD_IMAGEM_ACCEPT } from "@/lib/upload-imagem-tipos";
@@ -100,6 +100,26 @@ type Props = {
   onError: (err: string | null) => void;
 };
 
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-zinc-200 bg-white p-5">
+      <div className="mb-4 border-b border-zinc-100 pb-3">
+        <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
+        {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
 export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
   const [form, setForm] = useState<PlatformSettingsForm>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -150,16 +170,7 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
       } catch {
         /* cache do Next pode demorar um pouco a limpar */
       }
-      const ig = data.social_instagram_url?.trim();
-      const wa = data.social_whatsapp_url?.trim();
-      const redes =
-        ig || wa
-          ? ` Instagram: ${ig || "—"}. WhatsApp: ${wa || "—"}.`
-          : " (nenhuma rede preenchida.)";
-      const ok =
-        "Configurações salvas." +
-        redes +
-        " Abra o site (ou atualize a página) para ver o rodapé.";
+      const ok = "Configurações salvas. Atualize o site público para ver as mudanças.";
       onMsg(ok);
       setLocalMsg(ok);
     } catch (e) {
@@ -176,33 +187,21 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-zinc-900">Configurações da plataforma</h2>
-        <p className="mt-1 max-w-2xl text-sm text-zinc-600">
-          Personalize a marca do site (white-label): envie logo e favicon, ajuste cores, e-mail de contato e redes
-          sociais. As alterações aparecem na navbar, rodapé, e-mails e botões principais.
-        </p>
-        <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-950">
-          <strong>Onde usar:</strong> em cada campo de imagem, clique em <strong>Enviar arquivo</strong> ou cole uma
-          URL <code className="rounded bg-white px-1">https://</code>. Salve ao final da página.
+        <p className="mt-1 text-sm text-zinc-600">
+          Marca, contato, redes e anúncios. Salve ao final da página.
         </p>
       </div>
 
-      <section className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 sm:grid-cols-2">
-        <h3 className="sm:col-span-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Identidade
-        </h3>
-        <label className="grid gap-1 text-sm">
+      <Section title="Identidade">
+        <label className="grid gap-1.5 text-sm sm:col-span-1">
           <span className="font-medium text-zinc-800">Nome do site</span>
-          <input
-            className="input"
-            value={form.site_name}
-            onChange={(e) => setField("site_name", e.target.value)}
-          />
+          <input className="input" value={form.site_name} onChange={(e) => setField("site_name", e.target.value)} />
         </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">Tagline (logo)</span>
+        <label className="grid gap-1.5 text-sm sm:col-span-1">
+          <span className="font-medium text-zinc-800">Tagline</span>
           <input
             className="input"
             value={form.site_tagline}
@@ -210,21 +209,18 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             placeholder="INGRESSOS · SHOWS · TRANSPARÊNCIA"
           />
         </label>
-        <label className="sm:col-span-2 grid gap-1 text-sm">
+        <label className="grid gap-1.5 text-sm sm:col-span-2">
           <span className="font-medium text-zinc-800">Texto do rodapé</span>
           <textarea
-            className="input min-h-[80px]"
+            className="input min-h-[72px]"
             value={form.footer_description}
             onChange={(e) => setField("footer_description", e.target.value)}
           />
         </label>
-      </section>
+      </Section>
 
-      <section className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 sm:grid-cols-2">
-        <h3 className="sm:col-span-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Contato
-        </h3>
-        <label className="grid gap-1 text-sm">
+      <Section title="Contato">
+        <label className="grid gap-1.5 text-sm">
           <span className="font-medium text-zinc-800">E-mail de contato</span>
           <input
             type="email"
@@ -234,8 +230,8 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             placeholder="contato@seudominio.com.br"
           />
         </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">E-mail de denúncias / suporte</span>
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium text-zinc-800">E-mail denúncias / suporte</span>
           <input
             type="email"
             className="input"
@@ -243,8 +239,8 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             onChange={(e) => setField("support_email", e.target.value)}
           />
         </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">Telefone de contato</span>
+        <label className="grid gap-1.5 text-sm sm:col-span-2">
+          <span className="font-medium text-zinc-800">Telefone</span>
           <input
             type="tel"
             className="input"
@@ -253,51 +249,48 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             placeholder="(11) 99999-9999"
           />
         </label>
-      </section>
+      </Section>
 
-      <section className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 sm:grid-cols-2">
-        <h3 className="sm:col-span-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Visual (logo, favicon, cores)
-        </h3>
+      <Section title="Marca visual" hint="URL ou envio de arquivo. Logo clara é opcional (rodapé escuro).">
         <ImagemAssetField
           id="logo_url"
-          label="Logo (navbar)"
-          hint="Formato retangular (ideal: fundo transparente, PNG/WebP/SVG). URL https:// ou envie um arquivo."
+          label="Logo (menu)"
           value={form.logo_url}
           onChange={(v) => setField("logo_url", v)}
           uploadUrl="/api/admin/proxy/assets/upload"
           larguraAlvo={480}
           alturaAlvo={120}
+          compact
         />
         <ImagemAssetField
           id="logo_light_url"
-          label="Logo clara (rodapé escuro)"
-          hint="Mesma logo, mas em versão clara — usada sobre fundo escuro (rodapé)."
+          label="Logo clara (opcional)"
           value={form.logo_light_url}
           onChange={(v) => setField("logo_light_url", v)}
           uploadUrl="/api/admin/proxy/assets/upload"
           larguraAlvo={480}
           alturaAlvo={120}
+          compact
         />
         <ImagemAssetField
           id="favicon_url"
           label="Favicon"
-          hint="Quadrado (ideal: fundo transparente). Aparece na aba do navegador."
           value={form.favicon_url}
           onChange={(v) => setField("favicon_url", v)}
           uploadUrl="/api/admin/proxy/assets/upload"
           accept={UPLOAD_IMAGEM_ACCEPT}
           larguraAlvo={256}
           alturaAlvo={256}
+          compact
         />
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1.5 text-sm">
           <span className="font-medium text-zinc-800">Cor principal</span>
           <div className="flex items-center gap-2">
             <input
               type="color"
               value={form.primary_color}
               onChange={(e) => setField("primary_color", e.target.value)}
-              className="h-10 w-14 cursor-pointer rounded border border-zinc-300"
+              className="h-10 w-12 shrink-0 cursor-pointer rounded border border-zinc-300 bg-white p-0.5"
             />
             <input
               className="input font-mono"
@@ -306,14 +299,14 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             />
           </div>
         </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium text-zinc-800">Cor principal (hover / escuro)</span>
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium text-zinc-800">Cor escura (hover)</span>
           <div className="flex items-center gap-2">
             <input
               type="color"
               value={form.primary_color_dark}
               onChange={(e) => setField("primary_color_dark", e.target.value)}
-              className="h-10 w-14 cursor-pointer rounded border border-zinc-300"
+              className="h-10 w-12 shrink-0 cursor-pointer rounded border border-zinc-300 bg-white p-0.5"
             />
             <input
               className="input font-mono"
@@ -322,70 +315,46 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             />
           </div>
         </label>
-        <div className="sm:col-span-2 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4">
-          <span className="text-sm text-zinc-600">Pré-visualização do botão:</span>
-          <button type="button" className="btn-success px-4 py-2 text-sm" style={{ pointerEvents: "none" }}>
-            Botão principal
-          </button>
-        </div>
-      </section>
+      </Section>
 
-      <section className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 sm:grid-cols-2">
-        <h3 className="sm:col-span-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Redes sociais
-        </h3>
-        <p className="sm:col-span-2 text-xs text-zinc-500">
-          Instagram: @usuario ou link. WhatsApp: número com DDD (ex.: 11999999999) ou link wa.me. Aparecem no
-          rodapé do site.
-        </p>
-        <label className="grid gap-1 text-sm">
+      <Section title="Redes sociais" hint="Instagram e WhatsApp aparecem no rodapé.">
+        <label className="grid gap-1.5 text-sm">
           <span className="font-medium text-zinc-800">Instagram</span>
           <input
             className="input"
             value={form.social_instagram_url}
             onChange={(e) => setField("social_instagram_url", e.target.value)}
-            placeholder="@seuperfil ou https://instagram.com/..."
+            placeholder="@perfil ou link"
           />
         </label>
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1.5 text-sm">
           <span className="font-medium text-zinc-800">WhatsApp</span>
           <input
             className="input"
             value={form.social_whatsapp_url}
             onChange={(e) => setField("social_whatsapp_url", e.target.value)}
-            placeholder="11999999999 ou https://wa.me/5511..."
+            placeholder="11999999999"
           />
         </label>
         {(
           [
-            ["social_linkedin_url", "LinkedIn", "https://linkedin.com/company/..."],
-            ["social_x_url", "X (Twitter)", "https://x.com/..."],
-            ["social_youtube_url", "YouTube", "https://youtube.com/@..."],
+            ["social_linkedin_url", "LinkedIn"],
+            ["social_x_url", "X"],
+            ["social_youtube_url", "YouTube"],
           ] as const
-        ).map(([key, label, placeholder]) => (
-          <label key={key} className="grid gap-1 text-sm">
+        ).map(([key, label]) => (
+          <label key={key} className="grid gap-1.5 text-sm">
             <span className="font-medium text-zinc-800">{label}</span>
-            <input
-              className="input"
-              value={form[key]}
-              onChange={(e) => setField(key, e.target.value)}
-              placeholder={placeholder}
-            />
+            <input className="input" value={form[key]} onChange={(e) => setField(key, e.target.value)} placeholder="https://…" />
           </label>
         ))}
-      </section>
+      </Section>
 
-      <section className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 sm:grid-cols-2">
-        <h3 className="sm:col-span-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Marketing / anúncios
-        </h3>
-        <p className="sm:col-span-2 text-xs text-zinc-500">
-          Cole o ID do Meta Pixel (Facebook/Instagram Ads) e do Google Tag Manager. Os scripts só rodam em
-          produção. Se vazio aqui, o sistema usa{" "}
-          <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_META_PIXEL_ID</code> /{" "}
-          <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_GTM_ID</code> do servidor, se configurados.
-        </p>
-        <label className="grid gap-1 text-sm">
+      <Section
+        title="Marketing / anúncios"
+        hint="Scripts só em produção. Se vazio, usa variáveis do servidor (.env)."
+      >
+        <label className="grid gap-1.5 text-sm">
           <span className="font-medium text-zinc-800">Meta Pixel ID</span>
           <input
             className="input font-mono"
@@ -394,7 +363,7 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             placeholder="123456789012345"
           />
         </label>
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1.5 text-sm">
           <span className="font-medium text-zinc-800">Google Tag Manager</span>
           <input
             className="input font-mono"
@@ -403,7 +372,7 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
             placeholder="GTM-XXXXXXX"
           />
         </label>
-      </section>
+      </Section>
 
       {localError ? (
         <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
@@ -411,17 +380,27 @@ export function AdminPlatformSettingsPanel({ onMsg, onError }: Props) {
         </p>
       ) : null}
       {localMsg ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status">
+        <p
+          className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+          role="status"
+        >
           {localMsg}
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-success px-5 py-2.5 text-sm" disabled={saving} onClick={() => void salvar()}>
+      <div className="flex flex-wrap items-center gap-3 border-t border-zinc-200 pt-4">
+        <button
+          type="button"
+          className="btn-success px-5 py-2.5 text-sm"
+          disabled={saving}
+          onClick={() => void salvar()}
+        >
           {saving ? "Salvando…" : "Salvar configurações"}
         </button>
         {form.updated_at ? (
-          <p className="text-xs text-zinc-500">Última alteração: {new Date(form.updated_at).toLocaleString("pt-BR")}</p>
+          <p className="text-xs text-zinc-500">
+            Última alteração: {new Date(form.updated_at).toLocaleString("pt-BR")}
+          </p>
         ) : null}
       </div>
     </div>

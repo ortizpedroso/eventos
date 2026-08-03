@@ -25,6 +25,13 @@ def test_admin_platform_settings_marketing_fields():
     admin = (ROOT / "frontend/src/app/admin/dashboard/admin-platform-settings.tsx").read_text(encoding="utf-8")
     assert "meta_pixel_id" in admin
     assert "Marketing / anúncios" in admin
+    assert "Marca visual" in admin
+
+
+def test_globals_input_class_bordas():
+    css = (ROOT / "frontend/src/app/globals.css").read_text(encoding="utf-8")
+    assert ".input" in css
+    assert "border-zinc-300" in css
 
 
 def test_platform_settings_tipo_marketing():
