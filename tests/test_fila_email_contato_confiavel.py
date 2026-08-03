@@ -187,7 +187,7 @@ class TestFilaConfiavelContato:
             assert thread is not None and thread.is_alive(), "worker de contato não iniciou"
 
             # Worker usa blmove(timeout=2) — sob carga do suite completa em CI pode demorar.
-            deadline = time.monotonic() + 90.0
+            deadline = time.monotonic() + 45.0
             enviado = False
             while time.monotonic() < deadline:
                 db = TestingSessionLocal()

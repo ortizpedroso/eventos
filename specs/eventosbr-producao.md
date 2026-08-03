@@ -677,6 +677,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 - [x] tip de produto — **`5dcbad8`** / v1.47.4 na `main` (PR #100 mergeado 03/08/2026)
 - [x] v1.47.4 sessão expirada → `/auth` — código mergeado (PR #100)
+- [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
 - [ ] Deploy VPS v1.47.4 — sessão expirada → `/auth` (`bash scripts/atualizar-vps-agora.sh`)
 - [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
 - [x] Migração `20260802_000049` (Pixel/GTM em `platform_settings`) — aplicada (`alembic upgrade head`)
@@ -777,6 +778,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
 | §7 Qualidade | E2E organizador confirma e-mail nos seeds (`registrarOrganizadorE2e`) | **PASS** |
+| §7 Qualidade | Patamar cookie sessão expirada usa `baseURL` do Playwright | **PASS** |
 | §7 Qualidade | CI PR #101 — api, web, e2e, e2e-compra, e2e-asaas | **PASS** |
 | §3.2.1 | Sessão expirada (baseline v1.47.4) | **PASS** |
 | §7 Ops | Deploy VPS v1.47.4 | **PENDENTE** (ops) |
@@ -973,7 +975,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.47.4.1 | 2026-08-03 | **CI E2E após v1.47.4.** Seeds: `registrarOrganizadorE2e`, `contato_telefone/email` em criar evento; patamar cookie com `baseURL`; worker contato 90s. PR #100 mergeado; deploy VPS pendente. |
+| 1.47.4.1 | 2026-08-03 | **CI E2E após v1.47.4.** Seeds: `registrarOrganizadorE2e`, `contato_telefone/email` em criar evento; patamar cookie com `baseURL`. PR #100 mergeado; deploy VPS pendente. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |
 | 1.47.3.1 | 2026-08-03 | **Deploy VPS v1.47 confirmado** — `915d2aa` API/Web; migração `000049`; `verificar-versao-site.sh` OK. §7 e §11 deploy PASS. |
 | 1.47.3 | 2026-08-03 | **Fechamento pendências.** PR #99 MERGED → `main` `915d2aa`. §7/§11 atualizados; Turnstile v1.46 histórico PASS; deploy v1.47.2 e Pixel ops checklist explícitos. pytest 470 no §2.7/§7. |
