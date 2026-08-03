@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** branch **`cursor/lancamento-ux-ads-v147-c0b1`** (`d17c528`+). **v1.47.2** — admin config UX + `.input` CSS. pytest **471** (CI). PR #99.
+> **Produção (VPS):** branch **`cursor/lancamento-ux-ads-v147-c0b1`** (`d17c528`+). **v1.47.2** — admin config UX + `.input` CSS. pytest **470** (CI). PR #99.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -886,7 +886,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.47.2 | 2026-08-03 | **Admin config UX.** §2.15: classe `.input` global com bordas; painel configurações reorganizado; `ImagemAssetField` `compact`; fix `site-metadata` DEFAULT_PLATFORM_SETTINGS. Testes: 469 → 471. |
+| 1.47.2 | 2026-08-03 | **Admin config UX.** §2.15: classe `.input` global com bordas; painel configurações reorganizado; `ImagemAssetField` `compact`; fix `site-metadata` DEFAULT_PLATFORM_SETTINGS. Testes: 469 → 470. |
 | 1.47.1 | 2026-08-02 | **Pixel/GTM no admin.** §2.14: `meta_pixel_id` + `gtm_id` em `platform_settings`; UI Admin → Marketing/anúncios; runtime IDs no frontend (`setMarketingRuntimeIds`); fallback env. Migração `20260802_000049`. Testes: 460 → 469. |
 | 1.47 | 2026-08-02 | **Lançamento comercial — home dual + Ads/SEO.** §2.13: `HomeAudienciasDual`, `HomeProdutorFeatures`, FAQ; cards vitrine; wizard etapas; copy funcionalidades/sobre; Organization JSON-LD; og-image + marketing webp; noindex conta/organizador; Meta Pixel + GTM + eventos conversão. Testes: 452 → 460. |
 | 1.46.1 | 2026-08-02 | **Deploy VPS v1.46 confirmado** pelo usuário — `d608169` em produção; Turnstile operacional (Managed). §7 e cabeçalho atualizados; PR #97 fechado (superseded). Teste CI: timeout worker contato mais robusto (45s). |
