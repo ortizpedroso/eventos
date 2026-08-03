@@ -1,6 +1,6 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.48
+**Versão:** 1.48.1
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
@@ -129,7 +129,7 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 
 **Marketing:** assets `/public/marketing/*.webp` (script `generate_marketing_png.py`) em `/funcionalidades` e `/produtores` via `MarketingScreenshot` (`<img>` direto, sem `next/image`).
 
-**Navbar:** `xl+` menu em uma linha (logo, busca, links, login); `md–lg` duas linhas (logo+conta / busca+links) sem overlap; celular usa menu ☰.
+**Navbar:** `xl+` menu em uma linha (logo, busca, links, login); `md–lg` duas linhas (logo+conta / busca+links) sem overlap; celular usa menu ☰. Dropdowns **Categorias** e **conta** via `createPortal` (`z-80`, `position: fixed`) — nunca dentro de `overflow-x-auto` (evita clip e cliques perdidos). Em `md–lg`, **Sobre** e **Categorias** ficam fora da área rolável; só Funcionalidades–Eventos rolam. Menu da conta: um portal único (três breakpoints compartilham estado, um dropdown). `aria-label="Abrir menu da conta"` para E2E.
 
 **Telefone:** componente `TelefoneInput` — máscara BR em campos que faltavam (admin config, PDV, whitelabel).
 
@@ -791,6 +791,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.47.3.1 | `915d2aa` / **470** | APROVADA — deploy VPS v1.47 confirmado |
 | **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` |
 | **v1.48 (este)** | `84c4cba` / **475** | **APROVADA** — UX admin, whitelabel, contato |
+| **v1.48.1** | branch `cursor/fix-navbar-final-c0b1` / **475** | **APROVADA** — regressão navbar (dropdowns portal, Sobre visível, menu conta) |
+
+### 11.1 Requisitos recentes — resultado (v1.48.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.16 | Navbar xl 1 linha; md–lg 2 linhas sem overlap | **PASS** |
+| §2.16 | Dropdown Categorias lista itens e navega | **PASS** |
+| §2.16 | Logado: Sobre visível em md–lg | **PASS** |
+| §2.16 | Menu conta: Painel/Admin/Perfil/Sair clicáveis | **PASS** |
+| §2.16 | Portal único menu conta (sem duplicar DOM) | **PASS** |
+| §7 Qualidade | `pytest` 475 | **PASS** |
+| §7 Qualidade | Playwright navbar (patamar) | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.48)
 
@@ -999,6 +1012,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.48.1 | 2026-08-03 | **Hotfix navbar.** §2.16: regressão após layout 2 linhas — dropdowns via portal (`z-80`); Sobre/Categorias fora de `overflow-x-auto`; menu conta único portal; E2E patamar navbar. `/review` v1.48.1 APROVADA. |
 | 1.48 | 2026-08-03 | **UX admin + whitelabel + contato.** §2.16: e-mail duplicado; admin config (tamanhos, paleta cores); editar usuário; PDV sucesso; contato layout; marketing webp + `MarketingScreenshot`; navbar `lg+`; `TelefoneInput`. Testes: 474 → 475. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |
 | 1.47.3.1 | 2026-08-03 | **Deploy VPS v1.47 confirmado** — `915d2aa` API/Web; migração `000049`; `verificar-versao-site.sh` OK. §7 e §11 deploy PASS. |

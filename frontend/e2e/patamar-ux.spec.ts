@@ -55,6 +55,92 @@ test.describe("Patamar UX — vitrine e navbar", () => {
     }
   });
 
+  test("menu principal desktop: links Sobre e Funcionalidades navegam", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const nav = page.getByRole("navigation", { name: "Principal (ambiente de trabalho)" });
+    await expect(nav).toBeVisible();
+    await nav.getByRole("link", { name: "Funcionalidades" }).click();
+    await expect(page).toHaveURL(/\/funcionalidades/);
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await nav.getByRole("link", { name: "Sobre" }).click();
+    await expect(page).toHaveURL(/\/sobre/);
+  });
+
+  test("dropdown Categorias abre no desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const nav = page.getByRole("navigation", { name: "Principal (ambiente de trabalho)" });
+    await nav.getByRole("button", { name: "Abrir menu de categorias de eventos" }).click();
+    await expect(page.getByRole("menu").filter({ hasText: "Ver todos" })).toBeVisible();
+  });
+
+  test("menu da conta abre ao clicar (sessão mockada)", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.route(/\/api\/auth\/me$/, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "e2e-navbar-user",
+          nome: "Usuario Navbar E2E",
+          email: "navbar-e2e@test.com",
+          tipo: "cliente",
+          data_criacao: "2026-01-01T00:00:00Z",
+          is_platform_admin: false,
+          totp_ativado: false,
+        }),
+      });
+    });
+    const sessionReady = page.waitForResponse(/\/api\/auth\/me$/);
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await sessionReady;
+    const contaBtn = page.getByRole("button", { name: "Abrir menu da conta" });
+    await expect(contaBtn).toBeVisible();
+    await contaBtn.click();
+    await expect(page.getByRole("menuitem", { name: "Perfil", exact: true })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Sair" })).toBeVisible();
+  });
+
+  test("logado: link Sobre permanece visível (md–lg)", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.route(/\/api\/auth\/me$/, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "e2e-navbar-org",
+          nome: "Organizador Navbar",
+          email: "org-navbar@test.com",
+          tipo: "organizador",
+          data_criacao: "2026-01-01T00:00:00Z",
+          is_platform_admin: false,
+          totp_ativado: false,
+        }),
+      });
+    });
+    const sessionReady = page.waitForResponse(/\/api\/auth\/me$/);
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await sessionReady;
+    const sobre = page.getByRole("navigation", { name: "Principal (ambiente de trabalho)" }).getByRole("link", {
+      name: "Sobre",
+    });
+    await expect(sobre).toBeVisible();
+    await sobre.click();
+    await expect(page).toHaveURL(/\/sobre/);
+  });
+
+  test("dropdown Categorias lista itens clicáveis", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const nav = page.getByRole("navigation", { name: "Principal (ambiente de trabalho)" });
+    await nav.getByRole("button", { name: "Abrir menu de categorias de eventos" }).click();
+    const musica = page.getByRole("menuitem", { name: "Música" });
+    await expect(musica).toBeVisible();
+    await musica.click();
+    await expect(page).toHaveURL(/categoria=M/);
+  });
+
   test("filtro Este fim de semana na vitrine", async ({ page }) => {
     await page.goto("/eventos", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Este fim de semana" }).click();

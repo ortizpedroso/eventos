@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { NavbarCategoriasMenu } from "@/components/navbar-categorias-menu";
 import { EventosBRLogo } from "@/components/eventosbr-logo";
@@ -45,6 +46,9 @@ function IconMenu({ open }: { open: boolean }) {
   );
 }
 
+const navScrollClass =
+  "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,9 +58,16 @@ export function Navbar() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [totpAtivado, setTotpAtivado] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountMenuPos, setAccountMenuPos] = useState({ top: 0, right: 0 });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [buscaNav, setBuscaNav] = useState("");
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [portalReady, setPortalReady] = useState(false);
+  const accountWrapRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   useEffect(() => {
     async function syncSession() {
@@ -94,9 +105,14 @@ export function Navbar() {
   useEffect(() => {
     if (!menuOpen) return;
     function onPointerDown(e: PointerEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
+      const target = e.target as Node;
+      if (
+        accountMenuRef.current?.contains(target) ||
+        (target instanceof Element && target.closest("[data-navbar-account]"))
+      ) {
+        return;
       }
+      setMenuOpen(false);
     }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -134,12 +150,76 @@ export function Navbar() {
     setMobileNavOpen(false);
   }
 
-  function SearchForm({ className = "" }: { className?: string }) {
+  function toggleAccountMenu(e: React.MouseEvent<HTMLButtonElement>) {
+    if (menuOpen) {
+      setMenuOpen(false);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setAccountMenuPos({
+      top: rect.bottom + 8,
+      right: window.innerWidth - rect.right,
+    });
+    setMenuOpen(true);
+  }
+
+  function AccountMenuPortal() {
+    if (!menuOpen || !portalReady || !loggedIn) return null;
+    return createPortal(
+      <div
+        ref={accountMenuRef}
+        role="menu"
+        className="fixed z-[80] min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+        style={{ top: accountMenuPos.top, right: accountMenuPos.right }}
+      >
+        {isOrganizador ? (
+          <Link
+            href="/organizador/eventos"
+            role="menuitem"
+            className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+            onClick={() => setMenuOpen(false)}
+          >
+            Painel
+          </Link>
+        ) : null}
+        {isPlatformAdmin ? (
+          <Link
+            href={hrefAdmin}
+            role="menuitem"
+            className="block px-4 py-2.5 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
+            onClick={() => setMenuOpen(false)}
+          >
+            Administração
+          </Link>
+        ) : null}
+        <Link
+          href={isOrganizador ? "/organizador/perfil" : "/conta/perfil"}
+          role="menuitem"
+          className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+          onClick={() => setMenuOpen(false)}
+        >
+          Perfil
+        </Link>
+        <div className="my-1 border-t border-zinc-100" aria-hidden />
+        <button
+          type="button"
+          role="menuitem"
+          className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+          onClick={logout}
+        >
+          Sair
+        </button>
+      </div>,
+      document.body,
+    );
+  }
+
+  function SearchForm({ className = "", inputId = "nav-busca" }: { className?: string; inputId?: string }) {
     return (
       <form onSubmit={submitBusca} className={className} role="search">
-        <label htmlFor="nav-busca" className="sr-only">Buscar eventos</label>
+        <label htmlFor={inputId} className="sr-only">Buscar eventos</label>
         <input
-          id="nav-busca"
+          id={inputId}
           type="search"
           placeholder="Buscar eventos…"
           value={buscaNav}
@@ -150,12 +230,10 @@ export function Navbar() {
     );
   }
 
-  function PrimaryNav({ className = "" }: { className?: string }) {
+  /** Links iniciais (podem rolar em md–lg). */
+  function PrimaryNavCoreLinks() {
     return (
-      <nav
-        className={`text-sm font-medium text-zinc-600 ${className}`}
-        aria-label="Principal (ambiente de trabalho)"
-      >
+      <>
         <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
           Funcionalidades
         </Link>
@@ -168,6 +246,38 @@ export function Navbar() {
         <Link href="/eventos" className={navLinkClass("/eventos")}>
           Eventos
         </Link>
+      </>
+    );
+  }
+
+  /** xl+: todos os links na mesma linha (sem overflow que clipa dropdowns). */
+  function PrimaryNavInline({ className = "" }: { className?: string }) {
+    return (
+      <nav
+        className={`text-sm font-medium text-zinc-600 ${className}`}
+        aria-label="Principal (ambiente de trabalho)"
+      >
+        <PrimaryNavCoreLinks />
+        <NavbarCategoriasMenu compact />
+        <Link href="/sobre" className={navLinkClass("/sobre")}>
+          Sobre
+        </Link>
+      </nav>
+    );
+  }
+
+  /** md–lg: scroll só nos links iniciais; Categorias e Sobre sempre visíveis. */
+  function PrimaryNavSplit({ className = "" }: { className?: string }) {
+    return (
+      <nav
+        className={`flex min-w-0 flex-1 items-center gap-x-3 text-sm font-medium text-zinc-600 lg:gap-x-4 ${className}`}
+        aria-label="Principal (ambiente de trabalho)"
+      >
+        <div
+          className={`flex min-w-0 flex-1 flex-nowrap items-center gap-x-3 overflow-x-auto lg:gap-x-4 ${navScrollClass}`}
+        >
+          <PrimaryNavCoreLinks />
+        </div>
         <NavbarCategoriasMenu compact />
         <Link href="/sobre" className={navLinkClass("/sobre")}>
           Sobre
@@ -178,67 +288,23 @@ export function Navbar() {
 
   function AuthActions() {
     return (
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+      <>
         {loggedIn ? (
-          <div className="relative shrink-0" ref={menuRef}>
+          <div className="relative shrink-0" ref={accountWrapRef}>
             <button
               type="button"
-              onClick={() => setMenuOpen((o) => !o)}
-              className="flex max-w-[11rem] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 2xl:max-w-[14rem]"
+              data-navbar-account
+              onClick={toggleAccountMenu}
+              className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
-              aria-label={`Conta de ${userNome ?? "usuário"}`}
+              aria-label="Abrir menu da conta"
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
                 <UserIcon className="h-5 w-5" />
               </span>
-              <span className="hidden max-w-[6rem] truncate xl:inline 2xl:max-w-[10rem]">{userNome ?? "…"}</span>
+              <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
             </button>
-
-            {menuOpen ? (
-              <div
-                role="menu"
-                className="absolute right-0 z-[60] mt-2 min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
-              >
-                {isOrganizador ? (
-                  <Link
-                    href="/organizador/eventos"
-                    role="menuitem"
-                    className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Painel
-                  </Link>
-                ) : null}
-                {isPlatformAdmin ? (
-                  <Link
-                    href={hrefAdmin}
-                    role="menuitem"
-                    className="block px-4 py-2.5 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Administração
-                  </Link>
-                ) : null}
-                <Link
-                  href={isOrganizador ? "/organizador/perfil" : "/conta/perfil"}
-                  role="menuitem"
-                  className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Perfil
-                </Link>
-                <div className="my-1 border-t border-zinc-100" aria-hidden />
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                  onClick={logout}
-                >
-                  Sair
-                </button>
-              </div>
-            ) : null}
           </div>
         ) : (
           <Link
@@ -257,17 +323,18 @@ export function Navbar() {
             <span className="hidden sm:inline">Crie um evento</span>
           </Link>
         ) : null}
-      </div>
+      </>
     );
   }
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
       <div className="mx-auto w-full max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
         {/* Celular */}
         <div className="flex items-center justify-between gap-3 md:hidden">
           <EventosBRLogo className="shrink-0" />
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="relative z-40 flex shrink-0 items-center gap-1.5">
             <button
               type="button"
               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
@@ -282,35 +349,29 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Desktop largo (xl+): grid — coluna da conta fixa, menu nunca invade Categorias/Sobre */}
-        <div
-          className="hidden xl:grid xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:items-center xl:gap-x-3 2xl:gap-x-4"
-        >
-          <div className="flex shrink-0 items-center gap-4 2xl:gap-6">
+        {/* xl+: uma linha (spec §2.16) — conta com z alto; dropdowns fixed z-80 */}
+        <div className="hidden xl:flex xl:items-center xl:justify-between xl:gap-x-3 2xl:gap-x-4">
+          <div className="flex min-w-0 flex-1 items-center gap-4 2xl:gap-6">
             <EventosBRLogo className="shrink-0" />
             <SearchForm className="w-40 shrink-0 2xl:w-48" />
+            <PrimaryNavInline className="relative z-10 flex shrink-0 flex-nowrap items-center gap-x-3 2xl:gap-x-5" />
           </div>
-          <PrimaryNav
-            className="flex min-w-0 flex-nowrap items-center justify-start gap-x-3 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] 2xl:gap-x-5 [&::-webkit-scrollbar]:hidden"
-          />
-          <div className="flex shrink-0 items-center justify-end gap-1.5 bg-white/80 pl-2 sm:gap-3">
+          <div className="relative z-40 flex shrink-0 items-center gap-1.5 sm:gap-3">
             <AuthActions />
           </div>
         </div>
 
-        {/* Tablet (md–lg): duas linhas */}
+        {/* md–lg: duas linhas — linha da conta acima (z-40) para não ser coberta pela linha dos links */}
         <div className="hidden flex-col gap-2 md:flex xl:hidden">
-          <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="relative z-40 flex min-w-0 items-center justify-between gap-3">
             <EventosBRLogo className="shrink-0" />
-            <div className="flex shrink-0 items-center justify-end gap-1.5 bg-white/80 pl-2 sm:gap-3">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
               <AuthActions />
             </div>
           </div>
-          <div className="flex min-w-0 items-center gap-3">
-            <SearchForm className="w-36 shrink-0 sm:w-40" />
-            <PrimaryNav
-              className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            />
+          <div className="relative z-10 flex min-w-0 items-center gap-3">
+            <SearchForm className="w-36 shrink-0 sm:w-44" />
+            <PrimaryNavSplit />
           </div>
         </div>
 
@@ -320,16 +381,7 @@ export function Navbar() {
             className="w-full border-t border-zinc-200 py-2 md:hidden"
             aria-label="Principal"
           >
-            <form onSubmit={submitBusca} className="px-3 pb-2" role="search">
-              <input
-                type="search"
-                placeholder="Buscar eventos…"
-                value={buscaNav}
-                onChange={(e) => setBuscaNav(e.target.value)}
-                className="input w-full text-sm"
-                aria-label="Buscar eventos"
-              />
-            </form>
+            <SearchForm className="px-3 pb-2" inputId="nav-busca-mobile" />
             <div className="flex flex-col gap-0.5">
               <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                 Funcionalidades
@@ -352,5 +404,7 @@ export function Navbar() {
         ) : null}
       </div>
     </header>
+    <AccountMenuPortal />
+    </>
   );
 }
