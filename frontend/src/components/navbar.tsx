@@ -49,6 +49,8 @@ function IconMenu({ open }: { open: boolean }) {
 const navScrollClass =
   "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
+const navItemClass = "inline-flex items-center shrink-0 leading-none";
+
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
@@ -138,9 +140,10 @@ export function Navbar() {
 
   function navLinkClass(href: string) {
     const ativo = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
-    return ativo
-      ? "shrink-0 font-semibold text-emerald-900 underline-offset-2 hover:underline"
-      : "shrink-0 transition-colors hover:text-zinc-900";
+    const tone = ativo
+      ? "font-semibold text-emerald-900 underline-offset-2 hover:underline"
+      : "transition-colors hover:text-zinc-900";
+    return `${navItemClass} ${tone}`;
   }
 
   function submitBusca(e: React.FormEvent) {
@@ -233,7 +236,7 @@ export function Navbar() {
   /** Links iniciais (podem rolar em md–lg). */
   function PrimaryNavCoreLinks() {
     return (
-      <>
+      <div className="inline-flex items-center gap-x-3 lg:gap-x-4">
         <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
           Funcionalidades
         </Link>
@@ -246,23 +249,14 @@ export function Navbar() {
         <Link href="/eventos" className={navLinkClass("/eventos")}>
           Eventos
         </Link>
-      </>
+      </div>
     );
   }
 
-  /** xl+: todos os links na mesma linha (sem overflow que clipa dropdowns). */
+  /** lg+: uma linha com nav que não invade a área da conta. */
   function PrimaryNavInline({ className = "" }: { className?: string }) {
     return (
-      <nav
-        className={`text-sm font-medium text-zinc-600 ${className}`}
-        aria-label="Principal (ambiente de trabalho)"
-      >
-        <PrimaryNavCoreLinks />
-        <NavbarCategoriasMenu compact />
-        <Link href="/sobre" className={navLinkClass("/sobre")}>
-          Sobre
-        </Link>
-      </nav>
+      <PrimaryNavSplit className={`relative z-10 min-w-0 overflow-hidden ${className}`} />
     );
   }
 
@@ -303,7 +297,7 @@ export function Navbar() {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
                 <UserIcon className="h-5 w-5" />
               </span>
-              <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
+              <span className="hidden max-w-[10rem] truncate xl:inline">{userNome ?? "…"}</span>
             </button>
           </div>
         ) : (
@@ -320,7 +314,8 @@ export function Navbar() {
             className="btn-success shrink-0 whitespace-nowrap px-3 py-2 text-xs shadow-sm sm:px-4 sm:text-sm"
           >
             <span className="sm:hidden">Criar</span>
-            <span className="hidden sm:inline">Crie um evento</span>
+            <span className="hidden sm:inline xl:hidden">Criar</span>
+            <span className="hidden xl:inline">Crie um evento</span>
           </Link>
         ) : null}
       </>
@@ -349,20 +344,20 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* xl+: uma linha (spec §2.16) — conta com z alto; dropdowns fixed z-80 */}
-        <div className="hidden xl:flex xl:items-center xl:justify-between xl:gap-x-3 2xl:gap-x-4">
-          <div className="flex min-w-0 flex-1 items-center gap-4 2xl:gap-6">
+        {/* lg+: uma linha — Sobre na mesma linha que logo/conta (não só em xl 1280px) */}
+        <div className="hidden lg:flex lg:items-center lg:justify-between lg:gap-x-2 xl:gap-x-3 2xl:gap-x-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3 lg:gap-4 2xl:gap-6">
             <EventosBRLogo className="shrink-0" />
-            <SearchForm className="w-40 shrink-0 2xl:w-48" />
-            <PrimaryNavInline className="relative z-10 flex shrink-0 flex-nowrap items-center gap-x-3 2xl:gap-x-5" />
+            <SearchForm className="w-36 shrink-0 lg:w-40 xl:w-44 2xl:w-48" />
+            <PrimaryNavInline className="flex min-w-0 flex-1" />
           </div>
           <div className="relative z-40 flex shrink-0 items-center gap-1.5 sm:gap-3">
             <AuthActions />
           </div>
         </div>
 
-        {/* md–lg: duas linhas — linha da conta acima (z-40) para não ser coberta pela linha dos links */}
-        <div className="hidden flex-col gap-2 md:flex xl:hidden">
+        {/* md–lg (768–1023): duas linhas */}
+        <div className="hidden flex-col gap-2 md:flex lg:hidden">
           <div className="relative z-40 flex min-w-0 items-center justify-between gap-3">
             <EventosBRLogo className="shrink-0" />
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">

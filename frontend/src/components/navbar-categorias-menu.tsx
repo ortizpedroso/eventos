@@ -104,7 +104,7 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
   }
 
   return (
-    <div className="relative shrink-0" ref={wrapRef}>
+    <div className="relative inline-flex shrink-0 items-center self-center" ref={wrapRef}>
       <button
         ref={buttonRef}
         type="button"

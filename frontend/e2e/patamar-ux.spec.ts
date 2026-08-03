@@ -102,7 +102,7 @@ test.describe("Patamar UX — vitrine e navbar", () => {
     await expect(page.getByRole("menuitem", { name: "Sair" })).toBeVisible();
   });
 
-  test("logado: link Sobre permanece visível (md–lg)", async ({ page }) => {
+  test("logado: link Sobre na mesma linha (lg 1024px)", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await page.route(/\/api\/auth\/me$/, async (route) => {
       await route.fulfill({

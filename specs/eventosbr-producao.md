@@ -129,7 +129,7 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 
 **Marketing:** assets `/public/marketing/*.webp` (script `generate_marketing_png.py`) em `/funcionalidades` e `/produtores` via `MarketingScreenshot` (`<img>` direto, sem `next/image`).
 
-**Navbar:** `xl+` menu em uma linha (logo, busca, links, login); `md–lg` duas linhas (logo+conta / busca+links) sem overlap; celular usa menu ☰. Dropdowns **Categorias** e **conta** via `createPortal` (`z-80`, `position: fixed`) — nunca dentro de `overflow-x-auto` (evita clip e cliques perdidos). Em `md–lg`, **Sobre** e **Categorias** ficam fora da área rolável; só Funcionalidades–Eventos rolam. Menu da conta: um portal único (três breakpoints compartilham estado, um dropdown). `aria-label="Abrir menu da conta"` para E2E.
+**Navbar:** `lg+` (≥1024px) menu em **uma linha** (logo, busca, links incluindo Sobre, login); `md–lg` (768–1023) duas linhas (logo+conta / busca+links); celular usa menu ☰. Dropdowns **Categorias** e **conta** via `createPortal` (`z-80`, `position: fixed`) — nunca dentro de `overflow-x-auto`. Em `md–lg`, **Sobre** e **Categorias** fora da área rolável. Links do menu com `inline-flex items-center` para alinhamento vertical. Menu da conta: um portal único.
 
 **Telefone:** componente `TelefoneInput` — máscara BR em campos que faltavam (admin config, PDV, whitelabel).
 
