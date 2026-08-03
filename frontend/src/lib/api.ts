@@ -1,5 +1,6 @@
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import { mensagemErroHttp } from "@/lib/api-errors";
+import { markSessionExpiredCookie } from "@/lib/session-expired-cookie";
 import type { Usuario } from "@/lib/types";
 
 /** Cache em memória — evita skeleton ao navegar no painel após /me já ter carregado. */
@@ -123,6 +124,7 @@ export async function apiFetch<T>(
   if (res.status === 401 && typeof window !== "undefined") {
     const pathOnly = path.split("?")[0];
     if (pathOnly !== "/api/auth/me") {
+      clearSessionCache();
       dispatchAuthSync();
       const here = window.location.pathname + window.location.search;
       const pathname = window.location.pathname;
@@ -132,9 +134,11 @@ export async function apiFetch<T>(
         pathname === "/organizador" || pathname.startsWith("/organizador/") ||
         pathname === "/conta" || pathname.startsWith("/conta/");
       if (dentroDeAreaProtegida && !pathname.startsWith("/auth")) {
+        markSessionExpiredCookie();
         const login = new URL("/auth", window.location.origin);
         login.searchParams.set("next", here);
         login.searchParams.set("expirado", "1");
+        login.searchParams.set("login", "1");
         window.location.assign(login.toString());
       }
     }

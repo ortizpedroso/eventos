@@ -59,11 +59,13 @@ export default function AuthClient({
   const mode =
     resetToken
       ? "reset"
-      : modeParam === "forgot"
-        ? "forgot"
-        : modeParam === "register"
-          ? "register"
-          : "login";
+      : sessaoExpirada
+        ? "login"
+        : modeParam === "forgot"
+          ? "forgot"
+          : modeParam === "register"
+            ? "register"
+            : "login";
 
   const defaultTipoRegistro = useMemo(() => {
     if (tipoParam === "organizador") return "organizador";
@@ -135,7 +137,8 @@ export default function AuthClient({
       const u = cached ?? (await fetchSession());
       if (cancelled) return;
       const sp = new URLSearchParams(window.location.search);
-      const forcarLogin = sp.get("login") === "1";
+      const forcarLogin =
+        sp.get("login") === "1" || sp.get("expirado") === "1" || sessaoExpirada;
       if (u && !forcarLogin) {
         setAguardandoRedirect(true);
         redirecionar(destinoPosAuth(u, sp.get("next") || nextParam || null));

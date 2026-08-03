@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { buildContentSecurityPolicy } from "@/lib/csp";
+import { SESSION_EXPIRED_COOKIE } from "@/lib/session-expired-cookie";
 import { fetchMiddlewareSession } from "@/lib/middleware-api";
 import { extractSubdomain, fetchTenantBySubdomain } from "@/lib/organizer-tenant";
 
@@ -14,6 +15,15 @@ const SESSION_CHECK_TTL = 300;
 function clearAuthCookie(response: NextResponse) {
   response.cookies.set(AUTH_COOKIE, "", { path: "/", maxAge: 0 });
   response.cookies.set(SESSION_CHECKED, "", { path: "/", maxAge: 0 });
+  response.cookies.set(SESSION_EXPIRED_COOKIE, "1", {
+    path: "/",
+    maxAge: 300,
+    sameSite: "lax",
+  });
+}
+
+function clearSessionExpiredMarker(response: NextResponse) {
+  response.cookies.set(SESSION_EXPIRED_COOKIE, "", { path: "/", maxAge: 0 });
 }
 
 function sessionCheckedValue(token: string, tipo: string): string {
@@ -53,12 +63,17 @@ function finish(response: NextResponse, nonce: string): NextResponse {
 }
 
 function authLoginRedirect(request: NextRequest, pathname: string, extra?: Record<string, string>) {
-  if (pathname === "/organizador/novo" && !extra?.expirado) {
+  const sessaoExpirada = extra?.expirado === "1";
+  // Visitante novo em «criar evento» → /cadastro; sessão expirada → sempre /auth (login).
+  if (!sessaoExpirada && pathname === "/organizador/novo") {
     return new URL("/cadastro", request.url);
   }
   const login = new URL("/auth", request.url);
   login.searchParams.set("next", pathname);
-  if (pathname.startsWith("/organizador")) {
+  if (sessaoExpirada) {
+    login.searchParams.set("expirado", "1");
+    login.searchParams.set("login", "1");
+  } else if (pathname.startsWith("/organizador")) {
     login.searchParams.set("mode", "register");
     login.searchParams.set("fluxo", "organizador");
   }
@@ -68,6 +83,19 @@ function authLoginRedirect(request: NextRequest, pathname: string, extra?: Recor
     }
   }
   return login;
+}
+
+function redirectLogin(
+  request: NextRequest,
+  pathname: string,
+  nonce: string,
+  extra?: Record<string, string>,
+) {
+  const res = NextResponse.redirect(authLoginRedirect(request, pathname, extra));
+  if (extra?.expirado === "1") {
+    clearSessionExpiredMarker(res);
+  }
+  return finish(res, nonce);
 }
 
 export async function proxy(request: NextRequest) {
@@ -129,7 +157,13 @@ export async function proxy(request: NextRequest) {
 
   const sessionToken = request.cookies.get(AUTH_COOKIE)?.value;
   if (!sessionToken) {
-    return finish(NextResponse.redirect(authLoginRedirect(request, pathname)), nonce);
+    const sessaoExpirada = request.cookies.get(SESSION_EXPIRED_COOKIE)?.value === "1";
+    return redirectLogin(
+      request,
+      pathname,
+      nonce,
+      sessaoExpirada ? { expirado: "1" } : undefined,
+    );
   }
 
   let session: { ok: true; tipo?: string } | null = readCachedSession(
@@ -143,6 +177,7 @@ export async function proxy(request: NextRequest) {
         authLoginRedirect(request, pathname, { expirado: "1" }),
       );
       clearAuthCookie(res);
+      clearSessionExpiredMarker(res);
       return finish(res, nonce);
     }
     session = { ok: true, tipo: fetched.tipo };

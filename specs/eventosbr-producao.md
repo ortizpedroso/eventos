@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.47.3.1
+**Versão:** 1.47.4
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`915d2aa`** — **v1.47.2 em produção** (deploy confirmado 03/08/2026; `verificar-versao-site.sh` OK). PR #99 MERGED. pytest **470** (CI). Pendência ops: colar Pixel/GTM no admin **só ao rodar campanhas Ads**.
+> **Produção (VPS):** **`915d2aa`** — v1.47.2 (deploy 03/08). **v1.47.4** — fix sessão expirada → `/auth` **aguarda deploy**. pytest **474** (CI).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -436,6 +436,19 @@ Procedimentos para marcar os critérios §7 como concluídos **após deploy em p
   em dois lugares (`proxy.ts` middleware e `lib/api.ts` redirecionamento de
   sessão expirada) com checagem de limite de segmento:
   `pathname === "/conta" || pathname.startsWith("/conta/")`.
+
+### 3.2.1 Sessão expirada → login (v1.47.4)
+
+**Bug:** ao expirar a sessão (cookie inválido ou 401 na API), o organizador era redirecionado a `/cadastro` em vez de `/auth` — em especial em `/organizador/novo` ou com `mode=register` na query.
+
+**Correção:**
+
+- Middleware (`proxy.ts`): cookie `eventosbr_session_expired` (300s) ao invalidar sessão; com marcador ou `expirado=1` → **`/auth?login=1&expirado=1&next=…`** (nunca `/cadastro`); visitante novo sem marcador em `/organizador/novo` continua em `/cadastro`.
+- Cliente (`lib/api.ts`): 401 em área protegida limpa cache, marca cookie e redireciona a `/auth` com `login=1`.
+- `auth-client.tsx`: modo **login** forçado quando `expirado=1`; não redireciona com cache stale se sessão expirada.
+
+Testes: `tests/test_sessao_expirada_redirect.py`; E2E patamar «marcador sessão expirada».
+
 - **Destino pós-login**: revertida a prioridade de `/admin/dashboard` para
   contas `is_platform_admin` — volta a ser `/organizador/eventos` (organizador)
   ou `/` (cliente) sempre; o acesso ao admin é via item "Administração" do
@@ -666,6 +679,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 - [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
 - [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
 - [x] Migração `20260802_000049` (Pixel/GTM em `platform_settings`) — aplicada (`alembic upgrade head`)
+- [ ] Deploy VPS v1.47.4 — sessão expirada → `/auth` (após merge)
 - [ ] Meta Pixel / GTM — colar IDs em Admin → Configurações (ou `.env`); só necessário ao rodar campanhas Ads
 - [x] tip de produto — v1.46 mergeado; VPS **`d608169`** (deploy v1.46 confirmado 02/08/2026)
 - [x] **Turnstile em produção** — chaves no `.env` + rebuild `web`/`api` (confirmado 02/08/2026; Managed mode — validação automática para visitantes legítimos)
@@ -706,6 +720,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Financeiro | `financeiro_organizador.py`, `financeiro_conciliacao.py`, `saque_asaas.py` |
 | UI financeiro | `organizador-repasses-painel.tsx` |
 | Conta / perfil | `conta-shell.tsx`, `perfil-tabs.tsx`, `conta/layout.tsx`, `organizador/perfil/layout.tsx` |
+| Sessão expirada → login | `proxy.ts`, `lib/api.ts`, `lib/session-expired-cookie.ts`, `auth-client.tsx` |
 | White-label | `api-errors.ts`, `mensagens_publicas.py`, `documentacao/api/page.tsx`, `export-openapi.py` |
 | 2FA (organizador + admin) | `services/totp.py`, `services/organizador_2fa.py`, `components/seguranca-2fa.tsx`, `lib/admin-totp.ts`, `app/api/admin/session/route.ts` |
 | Admin integrado à conta | `deps/platform_admin.py`, `routes/admin.py` (`/usuarios/{id}/admin`), `scripts/set_platform_admin.py`, `components/tornar-organizador-card.tsx`, `specs/admin-integrado-usuario.md` |
@@ -753,7 +768,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.47.1 | `915d2aa` / **470** | APROVADA — Pixel/GTM no admin |
 | v1.47.2 | `915d2aa` / **470** | APROVADA — admin config UX + `.input` |
 | **v1.47.3** | `915d2aa` / **470** | APROVADA — fechamento spec/PR #99 |
-| **v1.47.3.1 (este)** | `915d2aa` / **470** | **APROVADA** — deploy VPS v1.47 confirmado |
+| v1.47.3.1 | `915d2aa` / **470** | APROVADA — deploy VPS v1.47 confirmado |
+| **v1.47.4 (este)** | pendente / **474** | **APROVADA** — sessão expirada → `/auth` |
+
+### 11.1 Requisitos recentes — resultado (v1.47.4)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §3.2.1 | Sessão expirada redireciona a `/auth` (não `/cadastro`) | **PASS** |
+| §3.2.1 | Cookie `eventosbr_session_expired` no middleware | **PASS** |
+| §3.2.1 | 401 API limpa cache e força login | **PASS** |
+| §3.2.1 | Visitante novo `/organizador/novo` → `/cadastro` (sem marcador) | **PASS** |
+| §7 Qualidade | `pytest` 474 | **PASS** |
+| §7 Ops | Deploy VPS v1.47.4 | **PENDENTE** (ops) |
 
 ### 11.1 Requisitos recentes — resultado (v1.47.3.1)
 
@@ -908,9 +935,15 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.47.3)
+### 11.6 Critério de aprovação — ✅ atingido (v1.47.3.1)
 
-**Aprovado para lançamento comercial.** Código na `main` (`915d2aa`): home dual, SEO, eventos de conversão, Pixel/GTM no admin, UI admin config. PR #99 mergeado. Pendências **somente ops**: deploy VPS v1.47.2 + colar Pixel/GTM antes de campanhas Ads. `pytest` **470** (CI).
+**Em produção.** VPS **`915d2aa`** / v1.47.2 (home dual, Ads/SEO, Pixel admin, admin config UX). Deploy confirmado 03/08/2026. Única pendência ops: colar Pixel/GTM no admin ao iniciar campanhas Facebook/Instagram. `pytest` **470** (CI).
+
+---
+
+### 11.6 histórico (v1.47.3)
+
+**Aprovado para lançamento comercial.** Código na `main`; PR #99 mergeado. Deploy e Pixel/GTM antes de Ads.
 
 ---
 
@@ -930,6 +963,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |
+| 1.47.3.1 | 2026-08-03 | **Deploy VPS v1.47 confirmado** — `915d2aa` API/Web; migração `000049`; `verificar-versao-site.sh` OK. §7 e §11 deploy PASS. |
 | 1.47.3 | 2026-08-03 | **Fechamento pendências.** PR #99 MERGED → `main` `915d2aa`. §7/§11 atualizados; Turnstile v1.46 histórico PASS; deploy v1.47.2 e Pixel ops checklist explícitos. pytest 470 no §2.7/§7. |
 | 1.47.2 | 2026-08-03 | **Admin config UX.** §2.15: classe `.input` global com bordas; painel configurações reorganizado; `ImagemAssetField` `compact`; fix `site-metadata` DEFAULT_PLATFORM_SETTINGS. Testes: 469 → 470. |
 | 1.47.1 | 2026-08-02 | **Pixel/GTM no admin.** §2.14: `meta_pixel_id` + `gtm_id` em `platform_settings`; UI Admin → Marketing/anúncios; runtime IDs no frontend (`setMarketingRuntimeIds`); fallback env. Migração `20260802_000049`. Testes: 460 → 469. |

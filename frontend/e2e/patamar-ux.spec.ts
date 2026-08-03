@@ -105,6 +105,25 @@ test.describe("Checkout — copy de pagamento", () => {
     await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
   });
 
+  test("marcador sessão expirada → /auth login (não /cadastro)", async ({ page, context }) => {
+    const base = new URL(page.context().browser() ? "https://eventosbr.app.br" : "http://127.0.0.1:3000");
+    await context.addCookies([
+      {
+        name: "eventosbr_session_expired",
+        value: "1",
+        path: "/",
+        domain: base.hostname,
+      },
+    ]);
+    await page.goto("/organizador/novo");
+    await expect(page).toHaveURL(/\/auth/);
+    await expect(page.url()).toMatch(/expirado=1/);
+    await expect(page.getByRole("heading", { name: "Acesse sua conta" })).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByRole("heading", { name: "Crie sua conta" })).not.toBeVisible();
+  });
+
   test("auth?next=/organizador/novo redireciona para /cadastro", async ({ page }) => {
     await page.goto("/auth?next=%2Forganizador%2Fnovo", { waitUntil: "networkidle" });
     await expect(page).toHaveURL(/\/cadastro$/);
