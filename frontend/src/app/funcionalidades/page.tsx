@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { CriarEventoLink } from "@/components/criar-evento-link";
+import { MarketingScreenshot } from "@/components/marketing-screenshot";
 
 export const metadata: Metadata = {
   title: "Funcionalidades | EventosBR",
@@ -128,7 +128,6 @@ const icones: Record<string, ReactNode> = {
   ),
 };
 
-// Destaques principais (Zigue-zague com Cards Visuais)
 const destaques = [
   {
     id: "venda",
@@ -139,15 +138,10 @@ const destaques = [
       "URL amigável para compartilhar no Instagram e WhatsApp",
       "Acompanhamento de vendas em tempo real",
     ],
-    visual: (
-      <Image
-        src="/marketing/organizador.webp"
-        alt="Captura de tela do painel Meus eventos do organizador na EventosBR, com lista de eventos e status de publicação"
-        width={800}
-        height={500}
-        className="h-full min-h-[320px] w-full rounded-2xl object-cover ring-1 ring-emerald-700/40 lg:min-h-[400px]"
-      />
-    ),
+    imageSrc: "/marketing/organizador.webp",
+    imageAlt:
+      "Captura de tela do painel Meus eventos do organizador na EventosBR, com lista de eventos e status de publicação",
+    ringClass: "ring-emerald-700/40",
   },
   {
     id: "pagamento",
@@ -158,15 +152,10 @@ const destaques = [
       "Menos estornos e proteção robusta contra fraudes",
       "Recebimento direto na sua conta, sem dor de cabeça",
     ],
-    visual: (
-      <Image
-        src="/marketing/checkout.webp"
-        alt="Captura de tela do checkout EventosBR mostrando pagamento PIX com QR Code e código copia e cola"
-        width={800}
-        height={500}
-        className="h-full min-h-[320px] w-full rounded-2xl object-cover shadow-xl ring-1 ring-emerald-200 lg:min-h-[400px]"
-      />
-    ),
+    imageSrc: "/marketing/checkout.webp",
+    imageAlt:
+      "Captura de tela do checkout EventosBR mostrando pagamento PIX com QR Code e código copia e cola",
+    ringClass: "ring-emerald-200",
   },
   {
     id: "checkin",
@@ -177,15 +166,10 @@ const destaques = [
       "Status instantâneo: válido, já utilizado ou cancelado",
       "Organize múltiplas portarias simultaneamente",
     ],
-    visual: (
-      <Image
-        src="/marketing/portaria.webp"
-        alt="Captura de tela da validação de ingressos na portaria EventosBR com leitura de QR Code"
-        width={800}
-        height={500}
-        className="h-full min-h-[320px] w-full rounded-2xl object-cover ring-1 ring-violet-800/40 lg:min-h-[400px]"
-      />
-    ),
+    imageSrc: "/marketing/portaria.webp",
+    imageAlt:
+      "Captura de tela da validação de ingressos na portaria EventosBR com leitura de QR Code",
+    ringClass: "ring-violet-800/40",
   },
 ];
 
@@ -288,7 +272,11 @@ export default function FuncionalidadesPage() {
 
                   {/* Visual UI Mock */}
                   <div className="flex-1 w-full lg:max-w-none">
-                    {item.visual}
+                    <MarketingScreenshot
+                      src={item.imageSrc}
+                      alt={item.imageAlt}
+                      ringClass={item.ringClass}
+                    />
                   </div>
                 </div>
             );
