@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 
 import { NavbarCategoriasMenu } from "@/components/navbar-categorias-menu";
@@ -49,7 +49,39 @@ function IconMenu({ open }: { open: boolean }) {
 const navScrollClass =
   "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
-const navItemClass = "inline-flex items-center shrink-0 leading-none";
+const navItemClass = "inline-flex items-center shrink-0 leading-none whitespace-nowrap";
+
+/** Fora do Navbar — evita remount / perda de foco a cada render. */
+function NavbarSearchForm({
+  value,
+  onChange,
+  onSubmit,
+  className = "",
+  inputId = "nav-busca",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: (e: FormEvent) => void;
+  className?: string;
+  inputId?: string;
+}) {
+  return (
+    <form onSubmit={onSubmit} className={className} role="search">
+      <label htmlFor={inputId} className="sr-only">
+        Buscar eventos
+      </label>
+      <input
+        id={inputId}
+        type="search"
+        placeholder="Buscar eventos…"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete="off"
+        className="input w-full py-2 text-sm"
+      />
+    </form>
+  );
+}
 
 export function Navbar() {
   const router = useRouter();
@@ -64,7 +96,6 @@ export function Navbar() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [buscaNav, setBuscaNav] = useState("");
   const [portalReady, setPortalReady] = useState(false);
-  const accountWrapRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -146,7 +177,7 @@ export function Navbar() {
     return `${navItemClass} ${tone}`;
   }
 
-  function submitBusca(e: React.FormEvent) {
+  function submitBusca(e: FormEvent) {
     e.preventDefault();
     const q = buscaNav.trim();
     router.push(q ? `/eventos?q=${encodeURIComponent(q)}` : "/eventos");
@@ -217,72 +248,30 @@ export function Navbar() {
     );
   }
 
-  function SearchForm({ className = "", inputId = "nav-busca" }: { className?: string; inputId?: string }) {
+  /** Todos os links numa linha contínua — dropdown Categorias via portal (não corta). */
+  function PrimaryNavLinks() {
     return (
-      <form onSubmit={submitBusca} className={className} role="search">
-        <label htmlFor={inputId} className="sr-only">Buscar eventos</label>
-        <input
-          id={inputId}
-          type="search"
-          placeholder="Buscar eventos…"
-          value={buscaNav}
-          onChange={(e) => setBuscaNav(e.target.value)}
-          className="input w-full py-2 text-sm"
-        />
-      </form>
-    );
-  }
-
-  /** Links iniciais (podem rolar em md–lg). Eventos fica fora — junto de Categorias. */
-  function PrimaryNavCoreLinks() {
-    return (
-      <div className="inline-flex items-center gap-x-3 lg:gap-x-4">
+      <nav
+        className={`flex min-w-0 flex-1 items-center gap-x-2.5 overflow-x-auto text-sm font-medium text-zinc-600 xl:gap-x-3.5 ${navScrollClass}`}
+        aria-label="Principal (ambiente de trabalho)"
+      >
         <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
           Funcionalidades
         </Link>
         <Link href="/produtores" className={navLinkClass("/produtores")}>
-          Para produtores
+          <span className="lg:hidden xl:inline">Para produtores</span>
+          <span className="hidden lg:inline xl:hidden">Produtores</span>
         </Link>
         <Link href="/planos" className={navLinkClass("/planos")}>
           Planos
         </Link>
-      </div>
-    );
-  }
-
-  /** lg+: uma linha com nav que não invade a área da conta. */
-  function PrimaryNavInline({ className = "" }: { className?: string }) {
-    return (
-      <PrimaryNavSplit className={`relative z-10 min-w-0 overflow-hidden ${className}`} />
-    );
-  }
-
-  /**
-   * Links em sequência contínua (sem buraco).
-   * Só o bloco esquerdo rola se faltar espaço; Eventos+Categorias+Sobre ficam fora do overflow
-   * (dropdown Categorias não é cortado). O flex-1 vazio fica DEPOIS do Sobre.
-   */
-  function PrimaryNavSplit({ className = "" }: { className?: string }) {
-    return (
-      <nav
-        className={`flex min-w-0 flex-1 items-center gap-x-3 text-sm font-medium text-zinc-600 lg:gap-x-4 ${className}`}
-        aria-label="Principal (ambiente de trabalho)"
-      >
-        <div
-          className={`min-w-0 flex-nowrap overflow-x-auto ${navScrollClass}`}
-        >
-          <PrimaryNavCoreLinks />
-        </div>
-        <div className="inline-flex shrink-0 items-center gap-x-3 lg:gap-x-4">
-          <Link href="/eventos" className={navLinkClass("/eventos")}>
-            Eventos
-          </Link>
-          <NavbarCategoriasMenu compact />
-          <Link href="/sobre" className={navLinkClass("/sobre")}>
-            Sobre
-          </Link>
-        </div>
-        <div className="min-w-0 flex-1" aria-hidden />
+        <Link href="/eventos" className={navLinkClass("/eventos")}>
+          Eventos
+        </Link>
+        <NavbarCategoriasMenu compact />
+        <Link href="/sobre" className={navLinkClass("/sobre")}>
+          Sobre
+        </Link>
       </nav>
     );
   }
@@ -291,12 +280,12 @@ export function Navbar() {
     return (
       <>
         {loggedIn ? (
-          <div className="relative shrink-0" ref={accountWrapRef}>
+          <div className="relative shrink-0">
             <button
               type="button"
               data-navbar-account
               onClick={toggleAccountMenu}
-              className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+              className="flex max-w-[min(100vw-8rem,12rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-2.5 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 xl:pr-3"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               aria-label="Abrir menu da conta"
@@ -304,13 +293,13 @@ export function Navbar() {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
                 <UserIcon className="h-5 w-5" />
               </span>
-              <span className="hidden max-w-[10rem] truncate xl:inline">{userNome ?? "…"}</span>
+              <span className="hidden max-w-[8rem] truncate xl:inline">{userNome ?? "…"}</span>
             </button>
           </div>
         ) : (
           <Link
             href="/auth"
-            className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+            className="shrink-0 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
           >
             Login
           </Link>
@@ -320,8 +309,7 @@ export function Navbar() {
             href={isOrganizador ? hrefCriarEvento : hrefCadastroOrganizador}
             className="btn-success shrink-0 whitespace-nowrap px-3 py-2 text-xs shadow-sm sm:px-4 sm:text-sm"
           >
-            <span className="sm:hidden">Criar</span>
-            <span className="hidden sm:inline xl:hidden">Criar</span>
+            <span className="xl:hidden">Criar</span>
             <span className="hidden xl:inline">Crie um evento</span>
           </Link>
         ) : null}
@@ -331,82 +319,97 @@ export function Navbar() {
 
   return (
     <>
-    <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto w-full max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-        {/* Celular */}
-        <div className="flex items-center justify-between gap-3 md:hidden">
-          <EventosBRLogo className="shrink-0" />
-          <div className="relative z-40 flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
-              aria-expanded={mobileNavOpen}
-              aria-controls="nav-mobile-menu"
-              aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}
-              onClick={() => setMobileNavOpen((o) => !o)}
-            >
-              <IconMenu open={mobileNavOpen} />
-            </button>
-            <AuthActions />
-          </div>
-        </div>
-
-        {/* lg+: uma linha — Sobre na mesma linha que logo/conta (não só em xl 1280px) */}
-        <div className="hidden lg:flex lg:items-center lg:justify-between lg:gap-x-2 xl:gap-x-3 2xl:gap-x-4">
-          <div className="flex min-w-0 flex-1 items-center gap-3 lg:gap-4 2xl:gap-6">
+      <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto w-full max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+          {/* Celular */}
+          <div className="flex items-center justify-between gap-3 md:hidden">
             <EventosBRLogo className="shrink-0" />
-            <SearchForm className="w-36 shrink-0 lg:w-40 xl:w-44 2xl:w-48" />
-            <PrimaryNavInline className="flex min-w-0 flex-1" />
-          </div>
-          <div className="relative z-40 flex shrink-0 items-center gap-1.5 sm:gap-3">
-            <AuthActions />
-          </div>
-        </div>
-
-        {/* md–lg (768–1023): duas linhas */}
-        <div className="hidden flex-col gap-2 md:flex lg:hidden">
-          <div className="relative z-40 flex min-w-0 items-center justify-between gap-3">
-            <EventosBRLogo className="shrink-0" />
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <div className="relative z-40 flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+                aria-expanded={mobileNavOpen}
+                aria-controls="nav-mobile-menu"
+                aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}
+                onClick={() => setMobileNavOpen((o) => !o)}
+              >
+                <IconMenu open={mobileNavOpen} />
+              </button>
               <AuthActions />
             </div>
           </div>
-          <div className="relative z-10 flex min-w-0 items-center gap-3">
-            <SearchForm className="w-36 shrink-0 sm:w-44" />
-            <PrimaryNavSplit />
-          </div>
-        </div>
 
-        {mobileNavOpen ? (
-          <nav
-            id="nav-mobile-menu"
-            className="w-full border-t border-zinc-200 py-2 md:hidden"
-            aria-label="Principal"
-          >
-            <SearchForm className="px-3 pb-2" inputId="nav-busca-mobile" />
-            <div className="flex flex-col gap-0.5">
-              <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                Funcionalidades
-              </Link>
-              <Link href="/produtores" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                Para produtores
-              </Link>
-              <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                Planos
-              </Link>
-              <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                Eventos
-              </Link>
-              <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
-              <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
-                Sobre
-              </Link>
+          {/* Desktop lg+: uma linha — logo | busca | links | conta (sem overflow-hidden) */}
+          <div className="hidden lg:flex lg:items-center lg:gap-x-3 xl:gap-x-4">
+            <EventosBRLogo className="shrink-0" />
+            <NavbarSearchForm
+              className="w-32 shrink-0 xl:w-40 2xl:w-48"
+              value={buscaNav}
+              onChange={setBuscaNav}
+              onSubmit={submitBusca}
+            />
+            <PrimaryNavLinks />
+            <div className="relative z-40 flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+              <AuthActions />
             </div>
-          </nav>
-        ) : null}
-      </div>
-    </header>
-    <AccountMenuPortal />
+          </div>
+
+          {/* md–lg: duas linhas */}
+          <div className="hidden flex-col gap-2 md:flex lg:hidden">
+            <div className="relative z-40 flex min-w-0 items-center justify-between gap-3">
+              <EventosBRLogo className="shrink-0" />
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+                <AuthActions />
+              </div>
+            </div>
+            <div className="relative z-10 flex min-w-0 items-center gap-3">
+              <NavbarSearchForm
+                className="w-36 shrink-0 sm:w-44"
+                value={buscaNav}
+                onChange={setBuscaNav}
+                onSubmit={submitBusca}
+                inputId="nav-busca-md"
+              />
+              <PrimaryNavLinks />
+            </div>
+          </div>
+
+          {mobileNavOpen ? (
+            <nav
+              id="nav-mobile-menu"
+              className="w-full border-t border-zinc-200 py-2 md:hidden"
+              aria-label="Principal"
+            >
+              <NavbarSearchForm
+                className="px-3 pb-2"
+                value={buscaNav}
+                onChange={setBuscaNav}
+                onSubmit={submitBusca}
+                inputId="nav-busca-mobile"
+              />
+              <div className="flex flex-col gap-0.5">
+                <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Funcionalidades
+                </Link>
+                <Link href="/produtores" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Para produtores
+                </Link>
+                <Link href="/planos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Planos
+                </Link>
+                <Link href="/eventos" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Eventos
+                </Link>
+                <NavbarCategoriasMenu onNavigate={() => setMobileNavOpen(false)} />
+                <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
+                  Sobre
+                </Link>
+              </div>
+            </nav>
+          ) : null}
+        </div>
+      </header>
+      <AccountMenuPortal />
     </>
   );
 }

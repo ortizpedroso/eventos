@@ -43,8 +43,7 @@ export function ProdutorPublicClient({ slug }: { slug: string }) {
   const siteHref = resolveUrlPublicaHref(perfil.social_site);
 
   return (
-    <>
-      <OrganizerBrandTheme brand={perfil} />
+    <OrganizerBrandTheme brand={perfil}>
       <div className="mx-auto max-w-6xl py-12 px-4">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-start">
           {fotoSrc ? (
@@ -62,7 +61,7 @@ export function ProdutorPublicClient({ slug }: { slug: string }) {
           <div>
             <h1 className="text-3xl font-bold text-zinc-900">{perfil.nome}</h1>
             {perfil.bio ? <p className="mt-2 max-w-xl text-zinc-600">{perfil.bio}</p> : null}
-            {(instagramHref || whatsappHref || siteHref) ? (
+            {instagramHref || whatsappHref || siteHref ? (
               <div className="mt-3 flex flex-wrap gap-3 text-sm">
                 {instagramHref ? (
                   <a
@@ -108,6 +107,6 @@ export function ProdutorPublicClient({ slug }: { slug: string }) {
           ))}
         </div>
       </div>
-    </>
+    </OrganizerBrandTheme>
   );
 }
