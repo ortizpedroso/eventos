@@ -40,7 +40,7 @@ export function HomeAudienciasDual() {
           />
         </div>
 
-        <div className="relative mx-auto flex min-h-[min(86vh,42rem)] w-full max-w-7xl flex-col justify-center px-4 py-16 text-left sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+        <div className="relative mx-auto flex min-h-[min(86vh,42rem)] w-full max-w-7xl flex-col items-center justify-center px-4 py-16 text-center sm:items-start sm:px-6 sm:py-20 sm:text-left lg:px-8 lg:py-24">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
             EventosBR
           </p>
@@ -53,7 +53,7 @@ export function HomeAudienciasDual() {
           <p className="mt-5 max-w-xl text-base text-zinc-700 sm:text-lg">
             Comece grátis. PIX, cartão, check-in com QR e extrato — tudo no mesmo lugar.
           </p>
-          <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <div className="mt-8 flex w-full max-w-xl flex-col items-center gap-3 sm:w-auto sm:max-w-none sm:flex-row sm:items-center sm:justify-start">
             <CriarEventoLink className="btn-success px-8 py-3.5 text-base shadow-sm">
               Começar meu evento grátis
             </CriarEventoLink>

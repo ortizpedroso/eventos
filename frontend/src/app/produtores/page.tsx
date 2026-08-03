@@ -71,15 +71,17 @@ export default function ParaProdutoresPage() {
       {/* Hero */}
       <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">Para produtores</p>
-          <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
+          <p className="text-center text-sm font-semibold uppercase tracking-wide text-emerald-700">
+            Para produtores
+          </p>
+          <h1 className="mt-3 text-center text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
             Venda com a sua marca.
             <br />
             Receba o valor combinado.
             <br />
             <span className="text-emerald-700">Taxa clara, sem surpresa.</span>
           </h1>
-          <p className="mt-6 text-lg text-zinc-600">
+          <p className="mt-6 text-justify text-lg leading-relaxed text-zinc-600">
             Não somos mais uma vitrine genérica de eventos. Somos a plataforma completa pra quem quer vender
             ingressos com identidade própria, saber exatamente quanto vai receber, e não perder tempo
             apagando incêndio de check-in ou reembolso na hora do evento.
