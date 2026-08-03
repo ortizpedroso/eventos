@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.1
+**Versão:** 1.50.2
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip produto na `main` até merge desta revisão; v1.50.1 hero claro + foto marketing. pytest **486**. Disco VPS limpo 03/08 (build cache Docker ~66 GB → ~1 GB).
+> **Produção (VPS):** tip produto na `main` até merge desta revisão; v1.50.2 hero full-bleed viewport. pytest **487**. Disco VPS limpo 03/08 (build cache Docker ~66 GB → ~1 GB).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -93,7 +93,7 @@ Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/wor
 
 **Hero (ICP organizador):** marca EventosBR em destaque; uma headline («Venda ingresso hoje. Receba no painel. Opere o dia sem planilha.»); uma frase de apoio; CTAs «Começar meu evento grátis» + «Explorar eventos»; link «Ver página para produtores».
 
-**Visual do hero (v1.50.1):** fundo **claro** (branco + verde da marca), foto full-bleed em `frontend/public/marketing/hero-evento.webp` (+ `.jpg` fallback). Imagem atual é **stock** (Unsplash); substituir pelo arquivo real no **mesmo path** quando houver foto própria — sem alterar o código.
+**Visual do hero (v1.50.1 / 1.50.2):** fundo **claro** (branco + verde da marca), foto em `frontend/public/marketing/hero-evento.webp` (+ `.jpg`). **Full-bleed na viewport** só nesta faixa (`data-home-hero-fullbleed` + CSS `:has` no `main`) — resto da home no container `max-w-7xl`. Sem `w-screen` (evita overflow mobile). Imagem atual é **stock** (Unsplash); substituir no mesmo path.
 
 **Comprador (secundário):** bloco abaixo do hero — «Do PIX ao QR Code na entrada»; categorias + Como comprar.
 
@@ -836,7 +836,17 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.49** | `9142f97` / **479** | **APROVADA** — tema de marca proporcional (§2.17) |
 | **v1.49.1** | `f14d887` / **480** | **APROVADA** — navbar + whitelabel escopo + ops disco |
 | **v1.50** | merge home lançamento / **485** | **APROVADA** — home lançamento (§2.18) |
-| **v1.50.1 (este)** | branch `cursor/home-hero-claro-c0b1` / **486** | **APROVADA** — hero claro + foto marketing |
+| **v1.50.1** | merge PR #111 / **486** | **APROVADA** — hero claro + foto marketing |
+| **v1.50.2 (este)** | branch `cursor/home-hero-fullbleed-c0b1` / **487** | **APROVADA** — hero full-bleed viewport |
+
+### 11.1 Requisitos recentes — resultado (v1.50.2)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.18 | Hero full-bleed viewport (`data-home-hero-fullbleed` + `:has`) | **PASS** |
+| §2.18 | Sem `w-screen` (sem overflow mobile) | **PASS** |
+| §2.18 | Resto da home no container | **PASS** |
+| §7 Qualidade | `pytest` 487 | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.1)
 
@@ -1109,7 +1119,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.1 | 2026-08-03 | **Hero claro + foto marketing.** §2.18: hero branco/verde full-bleed com `hero-evento.webp` (stock Unsplash, trocar arquivo depois); copy v1.50 mantido. Testes: 485 → 486. |
+| 1.50.2 | 2026-08-03 | **Hero full-bleed viewport.** §2.18: só a faixa do hero na largura da tela (`:has` + `data-home-hero-fullbleed`); demais seções no container. Testes: 486 → 487. |
+| 1.50.1 | 2026-08-03 | **Hero claro + foto marketing.** §2.18: hero branco/verde com `hero-evento.webp` (stock Unsplash, trocar arquivo depois); copy v1.50 mantido. Testes: 485 → 486. |
 | 1.50 | 2026-08-03 | **Home de lançamento.** §2.18: hero organizador; comprador secundário; features sem jargão; prova social com limiar; cenários no lugar de depoimentos fictícios; FAQ `/produtor`; preços. Testes: 480 → 485. `/review` v1.50 APROVADA. |
 | 1.49.1 | 2026-08-03 | **Navbar + whitelabel escopo + ops disco.** §2.17: whitelabel só `/produtor`; busca sem travar; links contínuos. §7: tip `361eff7`; limpeza `docker builder prune` (68→5,8 GB). Testes: 479 → 480. `/review` v1.49.1 APROVADA. |
 | 1.49 | 2026-08-03 | **Tema de marca proporcional.** §2.17: escala `--brand-50`…`950` no `<html>`; remapeamento `emerald-*`; apply imediato; logo 180×44. Testes: 475 → 479. `/review` v1.49 APROVADA. |

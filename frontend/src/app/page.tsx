@@ -37,64 +37,67 @@ async function HomeEventosDinamicos() {
 export default function Home() {
   return (
     <div className="pb-16 pt-0 sm:pb-24 lg:pb-32 textos-justificados">
-      {/* Hero sem .reveal: 1ª dobra precisa pintar já (LCP + foto marketing). */}
+      {/* Hero full-bleed (fora do container); LCP sem .reveal */}
       <HomeAudienciasDual />
 
-      <div className="reveal mx-auto mt-10 max-w-3xl">
-        <HomeSelosConfianca />
-      </div>
-
-      <Suspense fallback={null}>
-        <div className="reveal mx-auto max-w-3xl">
-          <HomeProvaSocial />
+      {/* Demais seções: padding do site (main fica full-width só na home) */}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="reveal mx-auto mt-10 max-w-3xl">
+          <HomeSelosConfianca />
         </div>
-      </Suspense>
 
-      <HomeProdutorFeatures />
+        <Suspense fallback={null}>
+          <div className="reveal mx-auto max-w-3xl">
+            <HomeProvaSocial />
+          </div>
+        </Suspense>
 
-      <Suspense fallback={null}>
-        <HomeEventosDinamicos />
-      </Suspense>
+        <HomeProdutorFeatures />
 
-      <HomeDiferenciais />
+        <Suspense fallback={null}>
+          <HomeEventosDinamicos />
+        </Suspense>
 
-      <HomeDepoimentos />
+        <HomeDiferenciais />
 
-      <div className="reveal mx-auto mt-24 max-w-6xl sm:mt-32">
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
-            Comece grátis. Pague só quando vender.
-          </h2>
-          <p className="mt-4 text-lg text-zinc-600">
-            Taxa por ingresso transparente — ou assinatura para reduzir ainda mais o custo.
-          </p>
-          <Link
-            href="/planos"
-            className="mt-4 inline-block text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
-          >
-            Ver detalhes em Planos →
-          </Link>
-        </div>
-        <PlanosPricingCards />
-      </div>
+        <HomeDepoimentos />
 
-      <HomeFaq />
-
-      <div className="reveal mx-auto mt-16 max-w-3xl sm:mt-20">
-        <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
-          <h2 className="text-lg font-semibold text-emerald-700">Transparência e segurança</h2>
-          <p className="mt-3 text-sm leading-6 text-zinc-600">
-            Pagamentos via PIX e cartão com taxas estimadas nos simuladores. Reembolso automático
-            dentro do prazo legal em Minha conta.{" "}
-            <Link href="/termos" className="font-medium text-emerald-700 hover:underline">
-              Termos
-            </Link>{" "}
-            e{" "}
-            <Link href="/privacidade" className="font-medium text-emerald-700 hover:underline">
-              Privacidade
+        <div className="reveal mx-auto mt-24 max-w-6xl sm:mt-32">
+          <div className="text-center">
+            <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+              Comece grátis. Pague só quando vender.
+            </h2>
+            <p className="mt-4 text-lg text-zinc-600">
+              Taxa por ingresso transparente — ou assinatura para reduzir ainda mais o custo.
+            </p>
+            <Link
+              href="/planos"
+              className="mt-4 inline-block text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
+            >
+              Ver detalhes em Planos →
             </Link>
-            .
-          </p>
+          </div>
+          <PlanosPricingCards />
+        </div>
+
+        <HomeFaq />
+
+        <div className="reveal mx-auto mt-16 max-w-3xl sm:mt-20">
+          <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
+            <h2 className="text-lg font-semibold text-emerald-700">Transparência e segurança</h2>
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
+              Pagamentos via PIX e cartão com taxas estimadas nos simuladores. Reembolso automático
+              dentro do prazo legal em Minha conta.{" "}
+              <Link href="/termos" className="font-medium text-emerald-700 hover:underline">
+                Termos
+              </Link>{" "}
+              e{" "}
+              <Link href="/privacidade" className="font-medium text-emerald-700 hover:underline">
+                Privacidade
+              </Link>
+              .
+            </p>
+          </div>
         </div>
       </div>
     </div>

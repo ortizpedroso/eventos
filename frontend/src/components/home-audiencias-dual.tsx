@@ -4,20 +4,21 @@ import { CriarEventoLink } from "@/components/criar-evento-link";
 import { HomeHeroExplorar } from "@/components/home-hero-explorar";
 
 /**
- * Hero de lançamento (v1.50.1): fundo claro + verde da marca + foto de evento.
- * Foto stock (grátis) em `/marketing/hero-evento.webp`:
- * Unsplash — plateia de show (mãos pra cima) `photo-1501281668745-f7f57925c3b4`
- * https://unsplash.com — trocar pelo arquivo real no mesmo path depois.
+ * Hero de lançamento (v1.50.2): full-bleed na viewport (só esta faixa).
+ * `data-home-hero-fullbleed` faz o <main> abrir largura total via CSS :has
+ * (globals.css) — sem w-screen, sem overflow mobile.
+ *
+ * Foto stock: `/marketing/hero-evento.webp`
+ * Unsplash plateia `photo-1501281668745-f7f57925c3b4` — trocar no mesmo path.
  */
 export function HomeAudienciasDual() {
   return (
     <div>
-      {/* Edge-to-edge no <main>: cancela só o padding (sem w-screen → sem overflow mobile) */}
       <section
-        className="relative isolate -mx-4 -mt-6 overflow-hidden border-b border-emerald-100 bg-[#f7faf8] text-zinc-900 sm:-mx-6 lg:-mx-8"
+        data-home-hero-fullbleed
+        className="relative isolate w-full overflow-hidden border-b border-emerald-100 bg-[#f7faf8] text-zinc-900"
         aria-labelledby="home-hero-titulo"
       >
-        {/* Foto full-bleed (stock — substituir no mesmo path) */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <picture>
             <source srcSet="/marketing/hero-evento.webp" type="image/webp" />
@@ -31,7 +32,6 @@ export function HomeAudienciasDual() {
               fetchPriority="high"
             />
           </picture>
-          {/* Wash forte à esquerda: texto escuro legível; foto respira à direita */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#f7faf8] from-0% via-[#f7faf8]/95 via-40% to-transparent to-75%" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#f7faf8] via-transparent to-[#f7faf8]/55" />
           <div
@@ -76,41 +76,44 @@ export function HomeAudienciasDual() {
         </div>
       </section>
 
-      <section
-        className="mt-10 rounded-2xl border border-zinc-200 bg-white px-6 py-8 text-center sm:px-8 sm:text-left"
-        aria-labelledby="home-participante-titulo"
-      >
-        <div className="lg:flex lg:items-start lg:justify-between lg:gap-10">
-          <div className="lg:max-w-md">
-            <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700">
-              Para quem vai ao evento
-            </p>
-            <h2
-              id="home-participante-titulo"
-              className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl"
-            >
-              Do PIX ao QR Code na entrada — sem dor de cabeça.
-            </h2>
-            <p className="mt-3 text-base text-zinc-600">
-              Compre em minutos. Ingresso no e-mail e na sua conta.
-            </p>
-            <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
-              <Link href="/eventos" className="btn-success px-6 py-3 text-sm shadow-sm sm:text-base">
-                Explorar eventos
-              </Link>
-              <Link
-                href="/ajuda/como-comprar"
-                className="btn-outline px-6 py-3 text-sm shadow-sm sm:text-base"
+      {/* Demais blocos voltam ao container do site */}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section
+          className="mt-10 rounded-2xl border border-zinc-200 bg-white px-6 py-8 text-center sm:px-8 sm:text-left"
+          aria-labelledby="home-participante-titulo"
+        >
+          <div className="lg:flex lg:items-start lg:justify-between lg:gap-10">
+            <div className="lg:max-w-md">
+              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700">
+                Para quem vai ao evento
+              </p>
+              <h2
+                id="home-participante-titulo"
+                className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl"
               >
-                Como comprar
-              </Link>
+                Do PIX ao QR Code na entrada — sem dor de cabeça.
+              </h2>
+              <p className="mt-3 text-base text-zinc-600">
+                Compre em minutos. Ingresso no e-mail e na sua conta.
+              </p>
+              <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
+                <Link href="/eventos" className="btn-success px-6 py-3 text-sm shadow-sm sm:text-base">
+                  Explorar eventos
+                </Link>
+                <Link
+                  href="/ajuda/como-comprar"
+                  className="btn-outline px-6 py-3 text-sm shadow-sm sm:text-base"
+                >
+                  Como comprar
+                </Link>
+              </div>
+            </div>
+            <div className="mt-8 lg:mt-0 lg:flex-1">
+              <HomeHeroExplorar />
             </div>
           </div>
-          <div className="mt-8 lg:mt-0 lg:flex-1">
-            <HomeHeroExplorar />
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

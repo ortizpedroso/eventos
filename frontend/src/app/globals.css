@@ -59,6 +59,18 @@ body > main#conteudo-principal {
   min-height: 0;
 }
 
+/*
+ * Home: só o hero pede largura total da viewport.
+ * `data-home-hero-fullbleed` no hero → main sem max-width/padding horizontal.
+ * Restante da home recoloca o container (px + max-w-7xl). Sem w-screen.
+ */
+body:has([data-home-hero-fullbleed]) > main#conteudo-principal {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+}
+
 body > footer {
   align-self: end;
 }
