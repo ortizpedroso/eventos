@@ -43,3 +43,24 @@ def test_evento_response_includes_organizer_brand_fields():
     fields = EventoResponse.model_fields
     assert "organizador_brand_primary_color" in fields
     assert "organizador_brand_primary_color_dark" in fields
+
+
+def test_apply_brand_theme_sets_scale_on_document():
+    script = """
+import { applyBrandThemeToDocument } from './src/lib/apply-brand-theme.ts';
+const props = {};
+const el = { style: { setProperty: (k, v) => { props[k] = v; } } };
+applyBrandThemeToDocument('#e11d48', '#be123c', el);
+console.log(JSON.stringify(props));
+"""
+    result = subprocess.run(
+        ["npx", "--yes", "tsx", "-e", script],
+        cwd=FRONTEND,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    props = json.loads(result.stdout.strip())
+    assert props["--brand-600"] == "#e11d48"
+    assert props["--brand-700"] == "#be123c"
+    assert props["--brand-50"].startswith("#")

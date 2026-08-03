@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+
+import { applyBrandThemeToDocument } from "@/lib/apply-brand-theme";
 import { buildBrandCssBlock } from "@/lib/brand-color-palette";
 
 type OrganizerBrand = {
@@ -13,7 +16,12 @@ export function OrganizerBrandTheme({ brand }: { brand: OrganizerBrand }) {
   const dark = brand.brand_primary_color_dark?.trim();
   if (!primary && !dark) return null;
 
-  const css = buildBrandCssBlock(":root", primary || "#10b981", dark || undefined);
+  const primaryHex = primary || "#10b981";
+  const css = buildBrandCssBlock(":root", primaryHex, dark || undefined);
+
+  useEffect(() => {
+    applyBrandThemeToDocument(primaryHex, dark || undefined);
+  }, [primaryHex, dark]);
 
   return <style id="eventosbr-organizer-brand">{css}</style>;
 }

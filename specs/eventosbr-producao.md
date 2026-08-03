@@ -147,6 +147,8 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 
 **Componentes globais:** `.btn-success`, `.input` (foco), `content-prose` links, `checkout-check-pop`, outline de foco nativo usam variáveis `--brand-*` (não hex fixo).
 
+**Atualização imediata:** `applyBrandThemeToDocument` + `replaceSettings` / `patchSettings` no `PlatformSettingsProvider` — ao salvar (ou ao escolher preset no admin), a escala é aplicada no `document.documentElement` sem reload. Logo padrão (`EventosBRTicketMark` / `EventosBRWordmark`) usa `var(--brand-600)`.
+
 **API evento público:** `organizador_brand_primary_color` e `organizador_brand_primary_color_dark` em `EventoResponse` para tema do organizador na página do evento/checkout.
 
 ### 2.15 Admin — configurações UX (v1.47.2)
@@ -816,7 +818,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 |------|-----------|-----------|
 | §2.17 | Escala `--brand-50`…`950` derivada de primária + escura | **PASS** |
 | §2.17 | `emerald-*` remapeado via `@theme` | **PASS** |
-| §2.17 | Admin: alteração de cor reflete no site (PlatformThemeLive) | **PASS** |
+| §2.17 | Tema admin reativo ao salvar (sem reload) | **PASS** |
+| §2.17 | Logo padrão segue `--brand-600` | **PASS** |
 | §2.17 | Whitelabel organizador: tema em `/produtor` e `/eventos` | **PASS** |
 | §2.17 | globals.css sem hex emerald fixo em componentes globais | **PASS** |
 | §7 Qualidade | `pytest` 477 | **PASS** |

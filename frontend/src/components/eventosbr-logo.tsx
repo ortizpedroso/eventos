@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { EventosBRTicketMark, EventosBRWordmark } from "@/components/eventosbr-logo-mark";
 import { usePlatformSettings } from "@/components/platform-settings-provider";
 
 type Props = {
@@ -21,7 +22,6 @@ export function EventosBRLogo({ className = "", showWordmark = true, variant = "
     variant === "light"
       ? platform.logo_light_url || platform.logo_url || envLogo
       : platform.logo_url || envLogo;
-  const src = custom || (variant === "light" ? "/logo-light.svg" : "/logo.svg");
 
   function onClick(e: React.MouseEvent<HTMLAnchorElement>) {
     if (pathname === "/") {
@@ -38,16 +38,27 @@ export function EventosBRLogo({ className = "", showWordmark = true, variant = "
       aria-label="EventosBR — início"
       className={`inline-flex items-center gap-2 ${className}`}
     >
-      <Image
-        src={src}
-        alt="EventosBR"
-        width={180}
-        height={44}
-        className="h-9 w-auto sm:h-10"
-        priority
-        unoptimized={src.startsWith("http")}
-      />
-      {!showWordmark ? <span className="sr-only">EventosBR — início</span> : null}
+      {custom ? (
+        <Image
+          src={custom}
+          alt="EventosBR"
+          width={180}
+          height={44}
+          className="h-9 w-auto sm:h-10"
+          priority
+          unoptimized={custom.startsWith("http")}
+        />
+      ) : (
+        <>
+          <EventosBRTicketMark />
+          {showWordmark ? (
+            <EventosBRWordmark className="h-7 w-auto sm:h-8" variant={variant} />
+          ) : (
+            <span className="sr-only">EventosBR — início</span>
+          )}
+        </>
+      )}
+      {custom && !showWordmark ? <span className="sr-only">EventosBR — início</span> : null}
     </Link>
   );
 }
