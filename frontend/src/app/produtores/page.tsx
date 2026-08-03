@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
 import { CriarEventoLink } from "@/components/criar-evento-link";
+import { MarketingScreenshot } from "@/components/marketing-screenshot";
 
 export const metadata: Metadata = {
   title: "Para produtores de eventos | EventosBR",
@@ -93,13 +93,10 @@ export default function ParaProdutoresPage() {
             </Link>
           </div>
         </div>
-        <Image
+        <MarketingScreenshot
           src="/marketing/organizador.webp"
           alt="Painel do organizador EventosBR mostrando vendas e configurações do evento"
-          width={800}
-          height={600}
           priority
-          className="h-full min-h-[280px] w-full rounded-2xl object-cover shadow-xl ring-1 ring-emerald-200 lg:min-h-[380px]"
         />
       </div>
 
