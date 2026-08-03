@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.47.4
+**Versão:** 1.47.4.1
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`915d2aa`** — v1.47.2 (deploy 03/08). **v1.47.4** — fix sessão expirada → `/auth` **aguarda deploy**. pytest **474** (CI).
+> **Produção (VPS):** **`915d2aa`** — v1.47.2 (deploy 03/08). **v1.47.4** — fix sessão expirada → `/auth` mergeado (PR #100); **aguarda deploy VPS**. pytest **474** (CI).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -675,11 +675,11 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — **`915d2aa`** / v1.47.2 na `main` (PR #99 mergeado 03/08/2026)
-- [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
+- [x] tip de produto — **`5dcbad8`** / v1.47.4 na `main` (PR #100 mergeado 03/08/2026)
+- [x] v1.47.4 sessão expirada → `/auth` — código mergeado (PR #100)
+- [ ] Deploy VPS v1.47.4 — sessão expirada → `/auth` (`bash scripts/atualizar-vps-agora.sh`)
 - [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
 - [x] Migração `20260802_000049` (Pixel/GTM em `platform_settings`) — aplicada (`alembic upgrade head`)
-- [ ] Deploy VPS v1.47.4 — sessão expirada → `/auth` (após merge)
 - [ ] Meta Pixel / GTM — colar IDs em Admin → Configurações (ou `.env`); só necessário ao rodar campanhas Ads
 - [x] tip de produto — v1.46 mergeado; VPS **`d608169`** (deploy v1.46 confirmado 02/08/2026)
 - [x] **Turnstile em produção** — chaves no `.env` + rebuild `web`/`api` (confirmado 02/08/2026; Managed mode — validação automática para visitantes legítimos)
@@ -769,7 +769,17 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.47.2 | `915d2aa` / **470** | APROVADA — admin config UX + `.input` |
 | **v1.47.3** | `915d2aa` / **470** | APROVADA — fechamento spec/PR #99 |
 | v1.47.3.1 | `915d2aa` / **470** | APROVADA — deploy VPS v1.47 confirmado |
-| **v1.47.4 (este)** | pendente / **474** | **APROVADA** — sessão expirada → `/auth` |
+| **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` (PR #100) |
+| **v1.47.4.1 (este)** | `b1b50cc` / **474** | **APROVADA** — E2E seeds organizador + cookie patamar |
+
+### 11.1 Requisitos recentes — resultado (v1.47.4.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §7 Qualidade | E2E organizador confirma e-mail nos seeds (`registrarOrganizadorE2e`) | **PASS** |
+| §7 Qualidade | Patamar cookie sessão expirada usa `baseURL` do Playwright | **PASS** |
+| §3.2.1 | Sessão expirada (baseline v1.47.4) | **PASS** |
+| §7 Ops | Deploy VPS v1.47.4 | **PENDENTE** (ops) |
 
 ### 11.1 Requisitos recentes — resultado (v1.47.4)
 
@@ -963,6 +973,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.47.4.1 | 2026-08-03 | **CI E2E após v1.47.4.** Seeds Playwright: `registrarOrganizadorE2e` confirma e-mail do organizador (login 403). Patamar: cookie `eventosbr_session_expired` com `domain` do `baseURL` CI. §7/§11 PR #100 mergeado; deploy VPS v1.47.4 pendente. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |
 | 1.47.3.1 | 2026-08-03 | **Deploy VPS v1.47 confirmado** — `915d2aa` API/Web; migração `000049`; `verificar-versao-site.sh` OK. §7 e §11 deploy PASS. |
 | 1.47.3 | 2026-08-03 | **Fechamento pendências.** PR #99 MERGED → `main` `915d2aa`. §7/§11 atualizados; Turnstile v1.46 histórico PASS; deploy v1.47.2 e Pixel ops checklist explícitos. pytest 470 no §2.7/§7. |
