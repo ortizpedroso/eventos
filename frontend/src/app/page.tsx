@@ -36,10 +36,9 @@ async function HomeEventosDinamicos() {
 
 export default function Home() {
   return (
-    <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
-      <div className="reveal">
-        <HomeAudienciasDual />
-      </div>
+    <div className="pb-16 pt-0 sm:pb-24 lg:pb-32 textos-justificados">
+      {/* Hero sem .reveal: 1ª dobra precisa pintar já (LCP + foto marketing). */}
+      <HomeAudienciasDual />
 
       <div className="reveal mx-auto mt-10 max-w-3xl">
         <HomeSelosConfianca />
