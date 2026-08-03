@@ -143,7 +143,11 @@ export function Navbar() {
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-6 lg:gap-10">
             <EventosBRLogo className="shrink-0" />
 
-            <form onSubmit={submitBusca} className="hidden min-w-0 flex-1 max-w-xs lg:max-w-sm md:block" role="search">
+            <form
+              onSubmit={submitBusca}
+              className="hidden shrink-0 md:block md:w-44 lg:w-52 xl:w-60"
+              role="search"
+            >
               <label htmlFor="nav-busca" className="sr-only">Buscar eventos</label>
               <input
                 id="nav-busca"
@@ -156,7 +160,7 @@ export function Navbar() {
             </form>
 
             <nav
-              className="hidden min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-zinc-600 md:flex lg:gap-x-6"
+              className="relative z-10 hidden shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-zinc-600 md:flex lg:gap-x-6"
               aria-label="Principal (ambiente de trabalho)"
             >
               {/* Cliente, organizador ou deslogado: mesmo menu completo — um cliente pode
