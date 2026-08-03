@@ -28,14 +28,24 @@ type Props = {
 export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const emEventos = pathname === "/eventos" || pathname.startsWith("/eventos/");
 
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (
+        ref.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setOpen(false);
     }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -78,9 +88,20 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
     );
   }
 
+  function toggleMenu() {
+    setOpen((wasOpen) => {
+      if (!wasOpen && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setMenuPos({ top: rect.bottom + 8, left: rect.left });
+      }
+      return !wasOpen;
+    });
+  }
+
   return (
     <div className="relative shrink-0" ref={ref}>
       <button
+        ref={buttonRef}
         type="button"
         className={`inline-flex shrink-0 items-center gap-1 transition-colors hover:text-zinc-900 ${
           emEventos ? "font-semibold text-emerald-900" : ""
@@ -88,15 +109,17 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label="Abrir menu de categorias de eventos"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleMenu}
       >
         Categorias
         <IconChevron className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} />
       </button>
       {open ? (
         <div
+          ref={menuRef}
           role="menu"
-          className="absolute left-0 z-[60] mt-2 w-56 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+          className="fixed z-[70] w-56 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+          style={{ top: menuPos.top, left: menuPos.left }}
         >
           {EVENTO_CATEGORIAS_NAV.map((cat) => (
             <Link
