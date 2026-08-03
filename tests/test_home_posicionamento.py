@@ -28,6 +28,18 @@ def test_home_hero_claro_com_foto_marketing():
     assert HERO_JPG.is_file() and HERO_JPG.stat().st_size > 10_000
 
 
+def test_home_hero_fullbleed_viewport():
+    """Só o hero abre a largura da página (data attr + CSS :has) — sem w-screen."""
+    import re
+
+    css = Path("frontend/src/app/globals.css").read_text(encoding="utf-8")
+    assert "data-home-hero-fullbleed" in DUAL
+    class_names = " ".join(re.findall(r'className="([^"]*)"', DUAL))
+    assert "w-screen" not in class_names
+    assert "body:has([data-home-hero-fullbleed])" in css
+    assert "#conteudo-principal" in css
+
+
 def test_home_caminho_comprador_secundario():
     assert "Para quem vai ao evento" in DUAL
     assert "Do PIX ao QR Code" in DUAL
