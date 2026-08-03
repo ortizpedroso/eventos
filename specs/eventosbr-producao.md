@@ -129,7 +129,7 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 
 **Marketing:** assets `/public/marketing/*.webp` (script `generate_marketing_png.py`) em `/funcionalidades` e `/produtores` via `MarketingScreenshot` (`<img>` direto, sem `next/image`).
 
-**Navbar:** menu completo só em `lg+`; em tablet (`md`) usa menu hambúrguer — evita «Sobre» sobre «Login».
+**Navbar:** `xl+` menu em uma linha (logo, busca, links, login); `md–lg` duas linhas (logo+conta / busca+links) sem overlap; celular usa menu ☰.
 
 **Telefone:** componente `TelefoneInput` — máscara BR em campos que faltavam (admin config, PDV, whitelabel).
 
@@ -804,7 +804,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.16 | PDV mensagem compra realizada | **PASS** |
 | §2.16 | Contato: título centralizado + texto justificado | **PASS** |
 | §2.16 | Marketing webp funcionalidades/produtores | **PASS** |
-| §2.16 | Navbar sem overlap Sobre/Login (menu `lg+`) | **PASS** |
+| §2.16 | Navbar layout (xl 1 linha; md–lg 2 linhas) | **PASS** |
 | §7 Qualidade | `pytest` 475 | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.47.4)

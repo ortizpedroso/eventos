@@ -113,8 +113,6 @@ export function Navbar() {
   }, [menuOpen]);
 
   const isOrganizador = loggedIn && userTipo === "organizador";
-  // Spec admin-integrado-usuario.md §3.5: sem 2FA, o item continua visível mas
-  // leva à ativação do 2FA (com explicação) em vez do painel administrativo.
   const hrefAdmin = totpAtivado
     ? "/admin/dashboard"
     : `${isOrganizador ? "/organizador/perfil" : "/conta/perfil"}?ativar_2fa_admin=1`;
@@ -136,59 +134,143 @@ export function Navbar() {
     setMobileNavOpen(false);
   }
 
-  return (
-    <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-7xl flex-col px-4 py-2 sm:px-6 lg:px-8">
-        <div className="flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 sm:gap-4">
-          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-6 lg:gap-10">
-            <EventosBRLogo className="shrink-0" />
+  function SearchForm({ className = "" }: { className?: string }) {
+    return (
+      <form onSubmit={submitBusca} className={className} role="search">
+        <label htmlFor="nav-busca" className="sr-only">Buscar eventos</label>
+        <input
+          id="nav-busca"
+          type="search"
+          placeholder="Buscar eventos…"
+          value={buscaNav}
+          onChange={(e) => setBuscaNav(e.target.value)}
+          className="input w-full py-2 text-sm"
+        />
+      </form>
+    );
+  }
 
-            <form
-              onSubmit={submitBusca}
-              className="hidden shrink-0 lg:block lg:w-52 xl:w-60"
-              role="search"
-            >
-              <label htmlFor="nav-busca" className="sr-only">Buscar eventos</label>
-              <input
-                id="nav-busca"
-                type="search"
-                placeholder="Buscar eventos…"
-                value={buscaNav}
-                onChange={(e) => setBuscaNav(e.target.value)}
-                className="input w-full py-2 text-sm"
-              />
-            </form>
+  function PrimaryNav({ className = "" }: { className?: string }) {
+    return (
+      <nav
+        className={`text-sm font-medium text-zinc-600 ${className}`}
+        aria-label="Principal (ambiente de trabalho)"
+      >
+        <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
+          Funcionalidades
+        </Link>
+        <Link href="/produtores" className={navLinkClass("/produtores")}>
+          Para produtores
+        </Link>
+        <Link href="/planos" className={navLinkClass("/planos")}>
+          Planos
+        </Link>
+        <Link href="/eventos" className={navLinkClass("/eventos")}>
+          Eventos
+        </Link>
+        <NavbarCategoriasMenu compact />
+        <Link href="/sobre" className={navLinkClass("/sobre")}>
+          Sobre
+        </Link>
+      </nav>
+    );
+  }
 
-            <nav
-              className="relative z-10 hidden shrink-0 items-center gap-x-5 text-sm font-medium text-zinc-600 lg:flex lg:gap-x-6"
-              aria-label="Principal (ambiente de trabalho)"
-            >
-              {/* Cliente, organizador ou deslogado: mesmo menu completo — um cliente pode
-                  querer se tornar organizador um dia, então Funcionalidades/Planos/Sobre
-                  ficam sempre visíveis, não só antes de logar. */}
-              <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
-                Funcionalidades
-              </Link>
-              <Link href="/produtores" className={navLinkClass("/produtores")}>
-                Para produtores
-              </Link>
-              <Link href="/planos" className={navLinkClass("/planos")}>
-                Planos
-              </Link>
-              <Link href="/eventos" className={navLinkClass("/eventos")}>
-                Eventos
-              </Link>
-              <NavbarCategoriasMenu compact />
-              <Link href="/sobre" className={navLinkClass("/sobre")}>
-                Sobre
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+  function AuthActions() {
+    return (
+      <>
+        {loggedIn ? (
+          <div className="relative" ref={menuRef}>
             <button
               type="button"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 lg:hidden"
+              onClick={() => setMenuOpen((o) => !o)}
+              className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              aria-label="Abrir menu da conta"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+                <UserIcon className="h-5 w-5" />
+              </span>
+              <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
+            </button>
+
+            {menuOpen ? (
+              <div
+                role="menu"
+                className="absolute right-0 z-[60] mt-2 min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+              >
+                {isOrganizador ? (
+                  <Link
+                    href="/organizador/eventos"
+                    role="menuitem"
+                    className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Painel
+                  </Link>
+                ) : null}
+                {isPlatformAdmin ? (
+                  <Link
+                    href={hrefAdmin}
+                    role="menuitem"
+                    className="block px-4 py-2.5 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Administração
+                  </Link>
+                ) : null}
+                <Link
+                  href={isOrganizador ? "/organizador/perfil" : "/conta/perfil"}
+                  role="menuitem"
+                  className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Perfil
+                </Link>
+                <div className="my-1 border-t border-zinc-100" aria-hidden />
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                  onClick={logout}
+                >
+                  Sair
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <Link
+            href="/auth"
+            className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+          >
+            Login
+          </Link>
+        )}
+        {!loggedIn || userTipo !== "cliente" ? (
+          <Link
+            href={isOrganizador ? hrefCriarEvento : hrefCadastroOrganizador}
+            className="btn-success shrink-0 whitespace-nowrap px-3 py-2 text-xs shadow-sm sm:px-4 sm:text-sm"
+          >
+            <span className="sm:hidden">Criar</span>
+            <span className="hidden sm:inline">Crie um evento</span>
+          </Link>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
+      <div className="mx-auto w-full max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+        {/* Celular */}
+        <div className="flex items-center justify-between gap-3 md:hidden">
+          <EventosBRLogo className="shrink-0" />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
               aria-expanded={mobileNavOpen}
               aria-controls="nav-mobile-menu"
               aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}
@@ -196,91 +278,42 @@ export function Navbar() {
             >
               <IconMenu open={mobileNavOpen} />
             </button>
-            {loggedIn ? (
-              <div className="relative" ref={menuRef}>
-                <button
-                  type="button"
-                  onClick={() => setMenuOpen((o) => !o)}
-                  className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
-                  aria-expanded={menuOpen}
-                  aria-haspopup="menu"
-                  aria-label="Abrir menu da conta"
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
-                    <UserIcon className="h-5 w-5" />
-                  </span>
-                  <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
-                </button>
+            <AuthActions />
+          </div>
+        </div>
 
-                {menuOpen ? (
-                  <div
-                    role="menu"
-                    className="absolute right-0 z-[60] mt-2 min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
-                  >
-                    {isOrganizador ? (
-                      <Link
-                        href="/organizador/eventos"
-                        role="menuitem"
-                        className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        Painel
-                      </Link>
-                    ) : null}
-                    {isPlatformAdmin ? (
-                      <Link
-                        href={hrefAdmin}
-                        role="menuitem"
-                        className="block px-4 py-2.5 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        Administração
-                      </Link>
-                    ) : null}
-                    <Link
-                      href={isOrganizador ? "/organizador/perfil" : "/conta/perfil"}
-                      role="menuitem"
-                      className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Perfil
-                    </Link>
-                    <div className="my-1 border-t border-zinc-100" aria-hidden />
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                      onClick={logout}
-                    >
-                      Sair
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <Link
-                href="/auth"
-                className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
-              >
-                Login
-              </Link>
-            )}
-            {!loggedIn || userTipo !== "cliente" ? (
-              <Link
-                href={isOrganizador ? hrefCriarEvento : hrefCadastroOrganizador}
-                className="btn-success shrink-0 whitespace-nowrap px-3 py-2 text-xs shadow-sm sm:px-4 sm:text-sm"
-              >
-                <span className="sm:hidden">Criar</span>
-                <span className="hidden sm:inline">Crie um evento</span>
-              </Link>
-            ) : null}
+        {/* Desktop largo (xl+): uma linha como antes */}
+        <div className="hidden items-center justify-between gap-4 xl:flex">
+          <div className="flex min-w-0 flex-1 items-center gap-6 2xl:gap-10">
+            <EventosBRLogo className="shrink-0" />
+            <SearchForm className="w-48 shrink-0 2xl:w-56" />
+            <PrimaryNav className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-5 2xl:gap-x-6" />
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <AuthActions />
+          </div>
+        </div>
+
+        {/* Tablet (md–lg): duas linhas — evita Sobre sobre Login */}
+        <div className="hidden flex-col gap-2 md:flex xl:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <EventosBRLogo className="shrink-0" />
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+              <AuthActions />
+            </div>
+          </div>
+          <div className="flex min-w-0 items-center gap-4">
+            <SearchForm className="w-40 shrink-0 sm:w-44" />
+            <PrimaryNav
+              className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-4 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            />
           </div>
         </div>
 
         {mobileNavOpen ? (
           <nav
             id="nav-mobile-menu"
-            className="w-full border-t border-zinc-200 py-2 lg:hidden"
+            className="w-full border-t border-zinc-200 py-2 md:hidden"
             aria-label="Principal"
           >
             <form onSubmit={submitBusca} className="px-3 pb-2" role="search">
