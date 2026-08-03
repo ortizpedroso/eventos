@@ -4,7 +4,7 @@
   /* Paleta "Conversão & Confiança" */
   --background: #fafafa; /* zinc-50 */
   --foreground: #18181b; /* zinc-900 */
-  /* Escala de marca padrão (verde emerald) — sobrescrita por PlatformTheme / OrganizerBrandTheme */
+  /* Escala de marca padrão (plataforma) — sobrescrita por PlatformTheme; whitelabel organizador usa escopo local */
   --brand-primary: #10b981;
   --brand-primary-dark: #047857;
   --brand-50: #f4fbf9;

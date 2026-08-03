@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.49
+**Versão:** 1.49.1
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`915d2aa`** — v1.47.2 (deploy 03/08). pytest **475** (CI).
+> **Produção (VPS):** tip produto **`361eff7`** / v1.49.1 na `main` (PRs #107+#108). pytest **480**. Disco VPS limpo 03/08 (build cache Docker ~66 GB → ~1 GB; uso disco 68 GB → 5,8 GB).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -133,21 +133,27 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 
 **Telefone:** componente `TelefoneInput` — máscara BR em campos que faltavam (admin config, PDV, whitelabel).
 
-### 2.17 Tema de marca proporcional (v1.49)
+### 2.17 Tema de marca proporcional + navbar (v1.49 → v1.49.1)
 
-**Objetivo:** a paleta escolhida no **Admin → Configurações** ou no **whitelabel do organizador** deve aplicar-se **em todo o sistema** com tonalidades proporcionais (50–950), não só em `--brand-primary` / `--brand-primary-dark`.
+**Dois escopos distintos:**
 
-**Derivação:** `frontend/src/lib/brand-color-palette.ts` — `generateBrandScale(primary, dark)` gera `--brand-50` … `--brand-950` (600 = primária, 700 = escura; restante por curva HSL alinhada à escala Tailwind).
+| Origem | Onde aplica | Como |
+|--------|-------------|------|
+| **Admin → Configurações** (plataforma) | Site inteiro | Escala `--brand-50`…`950` em `:root` / `<html>` (`PlatformTheme` + `PlatformThemeLive` + SSR no `layout.tsx`) |
+| **Whitelabel organizador** (`/organizador/whitelabel`) | **Somente** `/produtor/[slug]` | Escopo CSS `.eventosbr-organizer-scope` — **não** altera home, admin nem página do evento |
 
-**Injeção CSS:**
-- `PlatformTheme` / `PlatformThemeLive` — escala da **plataforma** (Admin → Configurações) em `:root` / `<html>`.
-- `OrganizerBrandTheme` — whitelabel do organizador **somente** em `/produtor/[slug]`, com escopo CSS (`.eventosbr-organizer-scope`), **sem** alterar `:root` nem a home/admin/evento.
+**Derivação:** `brand-color-palette.ts` — `generateBrandScale(primary, dark)` (600 = primária, 700 = escura; restante HSL).
 
-**Remapeamento global:** em `globals.css` `@theme inline`, `--color-emerald-*` → `var(--brand-*)` (cores da plataforma).
+**Remapeamento:** `globals.css` `@theme` — `--color-emerald-*` → `var(--brand-*)` (paleta da plataforma).
 
-**Navbar:** links numa única sequência contínua (sem `overflow-hidden` que some itens); busca extraída para componente estável (não remonta / não trava o foco ao digitar).
+**Atualização ao vivo (plataforma):** `applyBrandThemeToDocument` + `replaceSettings`/`patchSettings` + `BroadcastChannel` — ao salvar/preset no admin, sem reload; outras abas sincronizam.
 
-**API evento público:** campos `organizador_brand_*` permanecem no payload (metadados); **não** aplicam tema global na página do evento.
+**Navbar (v1.49.1):**
+- Links numa sequência contínua (`PrimaryNavLinks`) — sem `overflow-hidden` que escondia itens.
+- Dropdown Categorias / menu conta via `createPortal` (`z-80`).
+- Busca: `NavbarSearchForm` **fora** do corpo do `Navbar` (evita remount e perda de foco ao digitar).
+
+**API:** `organizador_brand_*` no `EventoResponse` (metadados); página `/eventos/[slug]` **não** injeta tema do organizador.
 
 ### 2.15 Admin — configurações UX (v1.47.2)
 
@@ -699,7 +705,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (**470** testes)
+- [x] `pytest` verde (**480** testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -711,11 +717,12 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — **`915d2aa`** / v1.47.2 na `main` (PR #99 mergeado 03/08/2026)
+- [x] tip de produto — **`361eff7`** / v1.49.1 na `main` (PRs #107 tema + #108 navbar/whitelabel-scope mergeados 03/08/2026)
 - [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
 - [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
 - [x] Migração `20260802_000049` (Pixel/GTM em `platform_settings`) — aplicada (`alembic upgrade head`)
-- [ ] Deploy VPS v1.47.4 — sessão expirada → `/auth` (após merge)
+- [x] Disco VPS — limpeza build cache Docker 03/08/2026 (`docker builder prune -af`; 68 GB → 5,8 GB usados; stack healthy). **Nunca** `docker system prune --volumes` em produção.
+- [ ] Confirmar tip VPS ≥ `361eff7` após `atualizar-vps-agora.sh` (tema + navbar + whitelabel escopo)
 - [ ] Meta Pixel / GTM — colar IDs em Admin → Configurações (ou `.env`); só necessário ao rodar campanhas Ads
 - [x] tip de produto — v1.46 mergeado; VPS **`d608169`** (deploy v1.46 confirmado 02/08/2026)
 - [x] **Turnstile em produção** — chaves no `.env` + rebuild `web`/`api` (confirmado 02/08/2026; Managed mode — validação automática para visitantes legítimos)
@@ -808,7 +815,23 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` |
 | **v1.48 (este)** | `84c4cba` / **475** | **APROVADA** — UX admin, whitelabel, contato |
 | **v1.48.1** | branch `cursor/fix-navbar-final-c0b1` / **475** | **APROVADA** — regressão navbar (dropdowns portal, Sobre visível, menu conta) |
-| **v1.49 (este)** | branch `cursor/brand-theme-system-c0b1` / **479** | **APROVADA** — tema de marca proporcional (§2.17) |
+| **v1.49** | `9142f97` / **479** | **APROVADA** — tema de marca proporcional (§2.17) |
+| **v1.49.1 (este)** | `361eff7` / **480** | **APROVADA** — navbar estável + busca + whitelabel só `/produtor` + ops disco |
+
+### 11.1 Requisitos recentes — resultado (v1.49.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.17 | Plataforma: escala `--brand-50`…`950` + `@theme` emerald | **PASS** |
+| §2.17 | Plataforma: apply ao salvar / SSR no `<html>` | **PASS** |
+| §2.17 | Whitelabel organizador: só `/produtor/[slug]` (escopo local) | **PASS** |
+| §2.17 | Página evento **não** aplica tema do organizador em `:root` | **PASS** |
+| §2.17 | Navbar: links contínuos; Sobre/Categorias/Eventos visíveis | **PASS** |
+| §2.17 | Busca navbar: digita sem perder foco | **PASS** |
+| §7 Ops | Disco VPS: build cache limpo; volumes críticos intactos | **PASS** |
+| §7 Qualidade | `pytest` 480 | **PASS** |
+| §7 Qualidade | Playwright navbar + busca | **PASS** |
+| §7 Qualidade | `next build` frontend | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.49)
 
@@ -820,11 +843,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.17 | Escala no `<html style>` (SSR) + `emerald-*` → `--brand-*` | **PASS** |
 | §2.17 | Logo padrão 180×44 com `--brand-600` (sem alargar navbar) | **PASS** |
 | §2.17 | Navbar: Eventos adjacente a Categorias (sem overlap) | **PASS** |
-| §2.17 | Whitelabel organizador: só `/produtor/[slug]` (escopo local) | **PASS** |
-| §2.17 | Navbar: links contínuos; busca sem perder foco | **PASS** |
-| §2.17 | globals.css sem hex emerald fixo em componentes globais | **PASS** |
 | §7 Qualidade | `pytest` 479 | **PASS** |
-| §7 Qualidade | Playwright navbar Eventos↔Categorias | **PASS** |
 | §7 Qualidade | `next build` frontend | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.48.1)
@@ -1046,7 +1065,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.49 | 2026-08-03 | **Tema de marca proporcional.** §2.17: escala `--brand-50`…`950` no `<html>`; remapeamento `emerald-*`; apply imediato; logo 180×44; Eventos+Categorias adjacentes; whitelabel evento. Testes: 475 → 479. `/review` v1.49 APROVADA. |
+| 1.49.1 | 2026-08-03 | **Navbar + whitelabel escopo + ops disco.** §2.17: whitelabel só `/produtor`; busca sem travar; links contínuos. §7: tip `361eff7`; limpeza `docker builder prune` (68→5,8 GB). Testes: 479 → 480. `/review` v1.49.1 APROVADA. |
+| 1.49 | 2026-08-03 | **Tema de marca proporcional.** §2.17: escala `--brand-50`…`950` no `<html>`; remapeamento `emerald-*`; apply imediato; logo 180×44. Testes: 475 → 479. `/review` v1.49 APROVADA. |
 | 1.48.1 | 2026-08-03 | **Hotfix navbar.** §2.16: regressão após layout 2 linhas — dropdowns via portal (`z-80`); Sobre/Categorias fora de `overflow-x-auto`; menu conta único portal; E2E patamar navbar. `/review` v1.48.1 APROVADA. |
 | 1.48 | 2026-08-03 | **UX admin + whitelabel + contato.** §2.16: e-mail duplicado; admin config (tamanhos, paleta cores); editar usuário; PDV sucesso; contato layout; marketing webp + `MarketingScreenshot`; navbar `lg+`; `TelefoneInput`. Testes: 474 → 475. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |
