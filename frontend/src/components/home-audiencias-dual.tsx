@@ -5,8 +5,8 @@ import { HomeHeroExplorar } from "@/components/home-hero-explorar";
 
 /**
  * Hero de lançamento (v1.50.1): fundo claro + verde da marca + foto de evento.
- * Imagem stock em `/marketing/hero-evento.webp` — trocar pelo arquivo real no
- * mesmo path quando houver foto própria (sem mudar o código).
+ * Imagem stock em `/marketing/hero-evento.webp` (Unsplash festival; antes: show).
+ * Trocar pelo arquivo real no mesmo path quando houver foto própria.
  */
 export function HomeAudienciasDual() {
   return (
