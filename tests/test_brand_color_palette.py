@@ -57,6 +57,24 @@ console.log(JSON.stringify(brandCssProperties('#e11d48', '#be123c')));
         assert props[f"--color-emerald-{step}"] == props[f"--brand-{step}"]
 
 
+def test_organizer_brand_css_is_scoped_not_root():
+    script = """
+import { buildScopedBrandCss } from './src/lib/brand-css-style.ts';
+console.log(buildScopedBrandCss('.eventosbr-organizer-scope', '#e11d48', '#be123c'));
+"""
+    result = subprocess.run(
+        ["npx", "--yes", "tsx", "-e", script],
+        cwd=FRONTEND,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    css = result.stdout
+    assert ".eventosbr-organizer-scope" in css
+    assert ":root" not in css
+    assert "--brand-600: #e11d48" in css
+
+
 def test_evento_response_includes_organizer_brand_fields():
     from app.schemas.evento import EventoResponse
 

@@ -73,8 +73,10 @@ test.describe("Patamar UX — vitrine e navbar", () => {
     const banner = page.getByRole("banner");
     const eventos = banner.getByRole("link", { name: /^Eventos$/ });
     const categorias = banner.getByRole("button", { name: /Categorias/i });
+    const sobre = banner.getByRole("link", { name: /^Sobre$/ });
     await expect(eventos).toBeVisible();
     await expect(categorias).toBeVisible();
+    await expect(sobre).toBeVisible();
     const eBox = await eventos.boundingBox();
     const cBox = await categorias.boundingBox();
     expect(eBox).toBeTruthy();
@@ -83,6 +85,19 @@ test.describe("Patamar UX — vitrine e navbar", () => {
     expect(Math.abs((eBox!.y + eBox!.height / 2) - (cBox!.y + cBox!.height / 2))).toBeLessThan(12);
     expect(cBox!.x - (eBox!.x + eBox!.width)).toBeGreaterThanOrEqual(0);
     expect(cBox!.x - (eBox!.x + eBox!.width)).toBeLessThan(48);
+  });
+
+  test("busca na navbar aceita digitação sem travar", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    const input = page.getByRole("banner").getByRole("searchbox", { name: /Buscar eventos/i });
+    await expect(input).toBeVisible();
+    await input.click();
+    await input.fill("show");
+    await expect(input).toHaveValue("show");
+    await expect(input).toBeFocused();
+    await input.press("a");
+    await expect(input).toHaveValue("showa");
   });
 
   test("dropdown Categorias abre no desktop", async ({ page }) => {

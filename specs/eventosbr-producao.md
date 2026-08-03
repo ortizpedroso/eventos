@@ -140,16 +140,14 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 **Derivação:** `frontend/src/lib/brand-color-palette.ts` — `generateBrandScale(primary, dark)` gera `--brand-50` … `--brand-950` (600 = primária, 700 = escura; restante por curva HSL alinhada à escala Tailwind).
 
 **Injeção CSS:**
-- `PlatformTheme` / `PlatformThemeLive` — escala da plataforma em `:root` (reativo após refresh client-side de `/api/public/platform`).
-- `OrganizerBrandTheme` — escala do organizador em `:root` nas páginas públicas (`/produtor/[slug]`, `/eventos/[slug]` quando o organizador definiu cores).
+- `PlatformTheme` / `PlatformThemeLive` — escala da **plataforma** (Admin → Configurações) em `:root` / `<html>`.
+- `OrganizerBrandTheme` — whitelabel do organizador **somente** em `/produtor/[slug]`, com escopo CSS (`.eventosbr-organizer-scope`), **sem** alterar `:root` nem a home/admin/evento.
 
-**Remapeamento global:** em `globals.css` `@theme inline`, `--color-emerald-*` → `var(--brand-*)`. Todas as classes Tailwind `emerald-*` (~400+ usos) seguem a paleta ativa sem refatorar componentes.
+**Remapeamento global:** em `globals.css` `@theme inline`, `--color-emerald-*` → `var(--brand-*)` (cores da plataforma).
 
-**Componentes globais:** `.btn-success`, `.input` (foco), `content-prose` links, `checkout-check-pop`, outline de foco nativo usam variáveis `--brand-*` (não hex fixo).
+**Navbar:** links numa única sequência contínua (sem `overflow-hidden` que some itens); busca extraída para componente estável (não remonta / não trava o foco ao digitar).
 
-**Atualização imediata:** `applyBrandThemeToDocument` + `replaceSettings` / `patchSettings` no `PlatformSettingsProvider` — ao salvar (ou ao escolher preset no admin), a escala é aplicada no `document.documentElement` sem reload. Logo padrão (`EventosBRTicketMark` / `EventosBRWordmark`) usa `var(--brand-600)`.
-
-**API evento público:** `organizador_brand_primary_color` e `organizador_brand_primary_color_dark` em `EventoResponse` para tema do organizador na página do evento/checkout.
+**API evento público:** campos `organizador_brand_*` permanecem no payload (metadados); **não** aplicam tema global na página do evento.
 
 ### 2.15 Admin — configurações UX (v1.47.2)
 
@@ -822,7 +820,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.17 | Escala no `<html style>` (SSR) + `emerald-*` → `--brand-*` | **PASS** |
 | §2.17 | Logo padrão 180×44 com `--brand-600` (sem alargar navbar) | **PASS** |
 | §2.17 | Navbar: Eventos adjacente a Categorias (sem overlap) | **PASS** |
-| §2.17 | Whitelabel organizador: tema em `/produtor` e `/eventos` | **PASS** |
+| §2.17 | Whitelabel organizador: só `/produtor/[slug]` (escopo local) | **PASS** |
+| §2.17 | Navbar: links contínuos; busca sem perder foco | **PASS** |
 | §2.17 | globals.css sem hex emerald fixo em componentes globais | **PASS** |
 | §7 Qualidade | `pytest` 479 | **PASS** |
 | §7 Qualidade | Playwright navbar Eventos↔Categorias | **PASS** |
