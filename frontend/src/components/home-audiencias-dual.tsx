@@ -11,34 +11,35 @@ import { HomeHeroExplorar } from "@/components/home-hero-explorar";
 export function HomeAudienciasDual() {
   return (
     <div>
+      {/* Full-bleed: sai do max-w-7xl + padding do <main> */}
       <section
-        className="relative isolate min-h-[min(88vh,44rem)] overflow-hidden border-b border-emerald-100/80 bg-white text-zinc-900"
+        className="relative left-1/2 isolate w-screen max-w-[100vw] -translate-x-1/2 overflow-hidden border-b border-emerald-100 bg-[#f7faf8] text-zinc-900 -mt-6"
         aria-labelledby="home-hero-titulo"
       >
-        {/* Foto full-bleed (stock Unsplash — substituir no mesmo path) */}
+        {/* Foto full-bleed (stock — substituir no mesmo path) */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <picture>
             <source srcSet="/marketing/hero-evento.webp" type="image/webp" />
             <img
               src="/marketing/hero-evento.jpg"
               alt=""
-              className="h-full w-full object-cover object-[center_35%]"
+              className="h-full w-full object-cover object-[center_30%] opacity-90"
               width={1920}
               height={1080}
               decoding="async"
               fetchPriority="high"
             />
           </picture>
-          {/* Wash claro: texto escuro legível sem hero preto */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/50 sm:to-white/35" />
-          <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-white/45" />
+          {/* Wash forte à esquerda: texto escuro legível; foto respira à direita */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#f7faf8] from-0% via-[#f7faf8]/95 via-40% to-transparent to-75%" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#f7faf8] via-transparent to-[#f7faf8]/55" />
           <div
-            className="absolute -right-24 top-1/4 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl"
+            className="absolute -left-16 top-1/3 h-80 w-80 rounded-full bg-emerald-300/25 blur-3xl"
             aria-hidden
           />
         </div>
 
-        <div className="relative mx-auto flex min-h-[min(88vh,44rem)] max-w-6xl flex-col justify-center px-4 py-14 text-left sm:px-6 sm:py-16 lg:py-20">
+        <div className="relative mx-auto flex min-h-[min(86vh,42rem)] w-full max-w-7xl flex-col justify-center px-4 py-16 text-left sm:px-6 sm:py-20 lg:px-8 lg:py-24">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
             EventosBR
           </p>
@@ -57,7 +58,7 @@ export function HomeAudienciasDual() {
             </CriarEventoLink>
             <Link
               href="/eventos"
-              className="inline-flex items-center justify-center rounded-md border border-emerald-800/20 bg-white/80 px-8 py-3.5 text-base font-medium text-emerald-950 backdrop-blur-sm transition hover:border-emerald-800/35 hover:bg-white"
+              className="inline-flex items-center justify-center rounded-md border border-emerald-800/25 bg-white/90 px-8 py-3.5 text-base font-medium text-emerald-950 shadow-sm transition hover:border-emerald-800/40 hover:bg-white"
             >
               Explorar eventos
             </Link>
@@ -75,7 +76,7 @@ export function HomeAudienciasDual() {
       </section>
 
       <section
-        className="mx-auto mt-10 max-w-6xl rounded-2xl border border-zinc-200 bg-white px-6 py-8 text-center sm:px-8 sm:text-left"
+        className="mt-10 rounded-2xl border border-zinc-200 bg-white px-6 py-8 text-center sm:px-8 sm:text-left"
         aria-labelledby="home-participante-titulo"
       >
         <div className="lg:flex lg:items-start lg:justify-between lg:gap-10">
