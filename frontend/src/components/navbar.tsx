@@ -134,12 +134,12 @@ export function Navbar() {
     setMobileNavOpen(false);
   }
 
-  function SearchForm({ className = "" }: { className?: string }) {
+  function SearchForm({ className = "", inputId = "nav-busca" }: { className?: string; inputId?: string }) {
     return (
       <form onSubmit={submitBusca} className={className} role="search">
-        <label htmlFor="nav-busca" className="sr-only">Buscar eventos</label>
+        <label htmlFor={inputId} className="sr-only">Buscar eventos</label>
         <input
-          id="nav-busca"
+          id={inputId}
           type="search"
           placeholder="Buscar eventos…"
           value={buscaNav}
@@ -178,27 +178,27 @@ export function Navbar() {
 
   function AuthActions() {
     return (
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+      <>
         {loggedIn ? (
           <div className="relative shrink-0" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="flex max-w-[11rem] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 2xl:max-w-[14rem]"
+              className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
-              aria-label={`Conta de ${userNome ?? "usuário"}`}
+              aria-label="Abrir menu da conta"
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
                 <UserIcon className="h-5 w-5" />
               </span>
-              <span className="hidden max-w-[6rem] truncate xl:inline 2xl:max-w-[10rem]">{userNome ?? "…"}</span>
+              <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
             </button>
 
             {menuOpen ? (
               <div
                 role="menu"
-                className="absolute right-0 z-[60] mt-2 min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+                className="absolute right-0 z-[70] mt-2 min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
               >
                 {isOrganizador ? (
                   <Link
@@ -257,7 +257,7 @@ export function Navbar() {
             <span className="hidden sm:inline">Crie um evento</span>
           </Link>
         ) : null}
-      </div>
+      </>
     );
   }
 
@@ -267,7 +267,7 @@ export function Navbar() {
         {/* Celular */}
         <div className="flex items-center justify-between gap-3 md:hidden">
           <EventosBRLogo className="shrink-0" />
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="relative z-30 flex shrink-0 items-center gap-1.5">
             <button
               type="button"
               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
@@ -282,35 +282,21 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Desktop largo (xl+): grid — coluna da conta fixa, menu nunca invade Categorias/Sobre */}
-        <div
-          className="hidden xl:grid xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:items-center xl:gap-x-3 2xl:gap-x-4"
-        >
-          <div className="flex shrink-0 items-center gap-4 2xl:gap-6">
+        {/* Tablet e desktop: logo+conta na 1ª linha; busca+links na 2ª (sem overlap) */}
+        <div className="hidden flex-col gap-2 md:flex">
+          <div className="flex min-w-0 items-center justify-between gap-3">
             <EventosBRLogo className="shrink-0" />
-            <SearchForm className="w-40 shrink-0 2xl:w-48" />
-          </div>
-          <PrimaryNav
-            className="flex min-w-0 flex-nowrap items-center justify-start gap-x-3 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] 2xl:gap-x-5 [&::-webkit-scrollbar]:hidden"
-          />
-          <div className="flex shrink-0 items-center justify-end gap-1.5 bg-white/80 pl-2 sm:gap-3">
-            <AuthActions />
-          </div>
-        </div>
-
-        {/* Tablet (md–lg): duas linhas */}
-        <div className="hidden flex-col gap-2 md:flex xl:hidden">
-          <div className="flex min-w-0 items-center justify-between gap-2">
-            <EventosBRLogo className="shrink-0" />
-            <div className="flex shrink-0 items-center justify-end gap-1.5 bg-white/80 pl-2 sm:gap-3">
+            <div className="relative z-30 flex shrink-0 items-center gap-1.5 sm:gap-3">
               <AuthActions />
             </div>
           </div>
-          <div className="flex min-w-0 items-center gap-3">
-            <SearchForm className="w-36 shrink-0 sm:w-40" />
-            <PrimaryNav
-              className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            />
+          <div className="flex min-w-0 items-center gap-3 lg:gap-4">
+            <SearchForm className="w-36 shrink-0 sm:w-44 lg:w-52" />
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <PrimaryNav
+                className="flex flex-nowrap items-center gap-x-3 overflow-x-auto lg:gap-x-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              />
+            </div>
           </div>
         </div>
 
@@ -320,16 +306,7 @@ export function Navbar() {
             className="w-full border-t border-zinc-200 py-2 md:hidden"
             aria-label="Principal"
           >
-            <form onSubmit={submitBusca} className="px-3 pb-2" role="search">
-              <input
-                type="search"
-                placeholder="Buscar eventos…"
-                value={buscaNav}
-                onChange={(e) => setBuscaNav(e.target.value)}
-                className="input w-full text-sm"
-                aria-label="Buscar eventos"
-              />
-            </form>
+            <SearchForm className="px-3 pb-2" inputId="nav-busca-mobile" />
             <div className="flex flex-col gap-0.5">
               <Link href="/funcionalidades" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                 Funcionalidades
