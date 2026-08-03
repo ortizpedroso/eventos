@@ -788,7 +788,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.47.3** | `915d2aa` / **470** | APROVADA — fechamento spec/PR #99 |
 | v1.47.3.1 | `915d2aa` / **470** | APROVADA — deploy VPS v1.47 confirmado |
 | **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` |
-| **v1.48 (este)** | pendente / **475** | **APROVADA** — UX admin, whitelabel, contato |
+| **v1.48 (este)** | `5c00d90` / **475** | **APROVADA** — UX admin, whitelabel, contato |
 
 ### 11.1 Requisitos recentes — resultado (v1.48)
 
