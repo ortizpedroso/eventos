@@ -367,6 +367,7 @@ export async function seedParcelamentoEvent(): Promise<SeededEvent> {
     "PATCH",
     `/api/eventos/id/${ev.id}`,
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Parcelado ${suf}`,
       descricao: "Evento com parcelamento",
       data_inicio: "2026-12-20T19:00:00",
@@ -423,6 +424,7 @@ export async function seedParcelamentoEventAsaas(): Promise<SeededEvent> {
     "PATCH",
     `/api/eventos/id/${ev.id}`,
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Parcelado Asaas ${suf}`,
       descricao: "Parcelamento E2E",
       data_inicio: "2026-12-20T19:00:00",
