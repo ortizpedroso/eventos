@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { adminFetch, adminSessionInfo, clearAdminSession, validateAdminKey } from "@/lib/admin-api";
 import { fetchSession } from "@/lib/api";
+import { AdminEditUsuarioModal } from "./admin-edit-usuario-modal";
 import { AdminPlatformSettingsPanel } from "./admin-platform-settings";
 
 type Contato = {
@@ -117,6 +118,7 @@ export function AdminDashboardClient() {
   const [setupUnavailable, setSetupUnavailable] = useState(false);
   const [checandoSessao, setChecandoSessao] = useState(true);
   const [meuUsuarioId, setMeuUsuarioId] = useState<string | null>(null);
+  const [usuarioEditando, setUsuarioEditando] = useState<UsuarioAdmin | null>(null);
 
   useEffect(() => {
     void adminSessionInfo()
@@ -707,7 +709,15 @@ export function AdminDashboardClient() {
                     <td className="py-2">
                       <button
                         type="button"
-                        className={u.ativo ? "text-red-700 underline" : "text-emerald-700 underline"}
+                        className="text-zinc-700 underline"
+                        disabled={busy}
+                        onClick={() => setUsuarioEditando(u)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className={`ml-3 ${u.ativo ? "text-red-700 underline" : "text-emerald-700 underline"}`}
                         disabled={busy}
                         onClick={() => void alternarUsuarioAtivo(u)}
                       >
@@ -895,6 +905,12 @@ export function AdminDashboardClient() {
       {tab === "configuracoes" ? (
         <AdminPlatformSettingsPanel onMsg={setMsg} onError={setError} />
       ) : null}
+
+      <AdminEditUsuarioModal
+        usuario={usuarioEditando}
+        onClose={() => setUsuarioEditando(null)}
+        onSaved={() => void carregarUsuarios()}
+      />
     </div>
   );
 }

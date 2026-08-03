@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.47.4
+**Versão:** 1.48
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** **`915d2aa`** — v1.47.2 (deploy 03/08). **v1.47.4** — fix sessão expirada → `/auth` **aguarda deploy**. pytest **474** (CI).
+> **Produção (VPS):** **`915d2aa`** — v1.47.2 (deploy 03/08). pytest **475** (CI).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -112,6 +112,26 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 **Backend:** colunas `meta_pixel_id`, `gtm_id` em `platform_settings`; validação `normalizar_meta_pixel_id` / `normalizar_gtm_id`; exposto em `/api/public/platform` e PATCH `/api/admin/settings`.
 
 **Frontend:** seção «Marketing / anúncios» em `admin-platform-settings.tsx`; `MarketingAnalytics` + `trackAnalyticsEvent` leem IDs via `usePlatformSettings()` (DB > env).
+
+### 2.16 UX admin, whitelabel e contato (v1.48)
+
+**Cadastro:** e-mail duplicado → `400` com «Email já cadastrado, faça login ou recupere sua senha»; UI com links para login e recuperação.
+
+**Admin → Configurações:** tamanho recomendado em cada imagem (`ImagemAssetField`); paleta de cores preset + cor escura automática (`BrandColorPicker`); telefone com máscara BR.
+
+**Whitelabel organizador:** mesma paleta de cores em `perfil-publico-organizador.tsx` (página `/organizador/whitelabel`).
+
+**Admin → Usuários:** editar nome, e-mail e telefone (`PATCH /api/admin/usuarios/{id}` + modal).
+
+**PDV:** mensagem de sucesso «Compra realizada! Ingresso enviado…»; telefone com máscara.
+
+**Contato:** título «Contato» centralizado; texto intro justificado.
+
+**Marketing:** assets `/public/marketing/*.webp` (script `generate_marketing_png.py`) em `/funcionalidades` e `/produtores` via `MarketingScreenshot` (`<img>` direto, sem `next/image`).
+
+**Navbar:** menu completo só em `lg+`; em tablet (`md`) usa menu hambúrguer — evita «Sobre» sobre «Login».
+
+**Telefone:** componente `TelefoneInput` — máscara BR em campos que faltavam (admin config, PDV, whitelabel).
 
 ### 2.15 Admin — configurações UX (v1.47.2)
 
@@ -769,7 +789,23 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.47.2 | `915d2aa` / **470** | APROVADA — admin config UX + `.input` |
 | **v1.47.3** | `915d2aa` / **470** | APROVADA — fechamento spec/PR #99 |
 | v1.47.3.1 | `915d2aa` / **470** | APROVADA — deploy VPS v1.47 confirmado |
-| **v1.47.4 (este)** | pendente / **474** | **APROVADA** — sessão expirada → `/auth` |
+| **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` |
+| **v1.48 (este)** | `84c4cba` / **475** | **APROVADA** — UX admin, whitelabel, contato |
+
+### 11.1 Requisitos recentes — resultado (v1.48)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.16 | E-mail duplicado → mensagem + login/recuperar | **PASS** |
+| §2.16 | Admin config: tamanhos imagem + paleta cores | **PASS** |
+| §2.16 | Whitelabel: paleta cores organizador | **PASS** |
+| §2.16 | Máscara telefone (`TelefoneInput`) | **PASS** |
+| §2.16 | Admin editar usuário | **PASS** |
+| §2.16 | PDV mensagem compra realizada | **PASS** |
+| §2.16 | Contato: título centralizado + texto justificado | **PASS** |
+| §2.16 | Marketing webp funcionalidades/produtores | **PASS** |
+| §2.16 | Navbar sem overlap Sobre/Login (menu `lg+`) | **PASS** |
+| §7 Qualidade | `pytest` 475 | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.47.4)
 
@@ -963,6 +999,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.48 | 2026-08-03 | **UX admin + whitelabel + contato.** §2.16: e-mail duplicado; admin config (tamanhos, paleta cores); editar usuário; PDV sucesso; contato layout; marketing webp + `MarketingScreenshot`; navbar `lg+`; `TelefoneInput`. Testes: 474 → 475. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |
 | 1.47.3.1 | 2026-08-03 | **Deploy VPS v1.47 confirmado** — `915d2aa` API/Web; migração `000049`; `verificar-versao-site.sh` OK. §7 e §11 deploy PASS. |
 | 1.47.3 | 2026-08-03 | **Fechamento pendências.** PR #99 MERGED → `main` `915d2aa`. §7/§11 atualizados; Turnstile v1.46 histórico PASS; deploy v1.47.2 e Pixel ops checklist explícitos. pytest 470 no §2.7/§7. |

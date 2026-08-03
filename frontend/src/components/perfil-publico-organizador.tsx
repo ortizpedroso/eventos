@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { BrandColorPicker } from "@/components/brand-color-picker";
 import { ImagemAssetField } from "@/components/imagem-asset-field";
+import { TelefoneInput } from "@/components/telefone-input";
 import { apiFetch } from "@/lib/api";
 
 type PerfilPublico = {
@@ -190,46 +192,16 @@ export function PerfilPublicoOrganizador() {
                 uploadUrl="/api/organizador/assets/upload"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-800" htmlFor="brand_color">
-                Cor principal
-              </label>
-              <div className="mt-1 flex items-center gap-2">
-                <input
-                  id="brand_color"
-                  type="color"
-                  value={brandColor || "#10b981"}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  className="h-10 w-14 cursor-pointer rounded border border-zinc-300"
-                />
-                <input
-                  value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  placeholder="#10b981"
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-mono"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-800" htmlFor="brand_color_dark">
-                Cor escura (links)
-              </label>
-              <div className="mt-1 flex items-center gap-2">
-                <input
-                  id="brand_color_dark"
-                  type="color"
-                  value={brandColorDark || "#047857"}
-                  onChange={(e) => setBrandColorDark(e.target.value)}
-                  className="h-10 w-14 cursor-pointer rounded border border-zinc-300"
-                />
-                <input
-                  value={brandColorDark}
-                  onChange={(e) => setBrandColorDark(e.target.value)}
-                  placeholder="#047857"
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-mono"
-                />
-              </div>
-            </div>
+            <BrandColorPicker
+              primary={brandColor || "#10b981"}
+              primaryDark={brandColorDark || "#047857"}
+              primaryLabel="Cor principal"
+              darkLabel="Cor escura (links)"
+              onChange={(primary, dark) => {
+                setBrandColor(primary);
+                setBrandColorDark(dark);
+              }}
+            />
             <div className="sm:col-span-2">
               <label className="text-sm font-medium text-zinc-800" htmlFor="brand_subdomain">
                 Subdomínio
@@ -264,18 +236,20 @@ export function PerfilPublicoOrganizador() {
               placeholder="@seuperfil ou https://instagram.com/..."
             />
           </div>
-          <div>
-            <label className="text-sm font-medium text-zinc-800" htmlFor="social_whatsapp">
-              WhatsApp
-            </label>
-            <input
-              id="social_whatsapp"
-              value={whatsapp}
-              onChange={(e) => setWhatsapp(e.target.value)}
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-              placeholder="11999999999 ou https://wa.me/55..."
-            />
-          </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-800" htmlFor="social_whatsapp">
+                WhatsApp
+              </label>
+              <div className="mt-1">
+                <TelefoneInput
+                  id="social_whatsapp"
+                  value={whatsapp.replace(/\D/g, "")}
+                  onChange={setWhatsapp}
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                  placeholder="(11) 99999-9999"
+                />
+              </div>
+            </div>
         </div>
         <div>
           <label className="text-sm font-medium text-zinc-800" htmlFor="social_site">

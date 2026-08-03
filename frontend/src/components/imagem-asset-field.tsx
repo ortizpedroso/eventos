@@ -109,7 +109,9 @@ export function ImagemAssetField({
           Tamanho recomendado: {larguraAlvo}×{alturaAlvo}px. Enviamos maior? Redimensionamos e comprimimos
           automaticamente antes de salvar.
         </p>
-      ) : null}
+      ) : (
+        <p className="text-xs text-zinc-500">Tamanho recomendado: {larguraAlvo}×{alturaAlvo}px</p>
+      )}
       {urlModo ? (
         <input
           id={id}

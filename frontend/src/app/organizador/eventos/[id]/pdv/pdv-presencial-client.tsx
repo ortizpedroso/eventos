@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { TelefoneInput } from "@/components/telefone-input";
 import { apiFetch } from "@/lib/api";
 import type { Evento, IngressoLote } from "@/lib/types";
 
@@ -217,11 +218,8 @@ export function PdvPresencialClient({ eventoId }: Props) {
       });
       const dest = res.participante_email || email.trim();
       setUltimoEmailDestino(dest);
-      const envio = res.email_enviado_sync
-        ? `Ingresso enviado para ${dest}. Peça o comprador conferir agora (incluindo spam).`
-        : `Ingresso enfileirado para ${dest} — deve chegar em instantes. Peça o comprador conferir agora.`;
       setOkMsg(
-        `Venda registrada (${res.status}${res.assento ? ` · assento ${res.assento}` : ""}). ${envio}`,
+        `Compra realizada! Ingresso enviado para ${dest}. ${res.email_enviado_sync ? "Peça o comprador conferir agora (incluindo spam)." : "Deve chegar em instantes — peça o comprador conferir agora."}`,
       );
       setUltimoQrUrl(res.qr_url || `/ingresso/qr?c=${res.codigo_checkin}`);
       setNome("");
@@ -344,11 +342,10 @@ export function PdvPresencialClient({ eventoId }: Props) {
         </label>
         <label className="grid gap-1 text-sm font-medium text-zinc-800">
           Telefone (opcional)
-          <input
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
+          <TelefoneInput
             value={telefone}
-            onChange={(e) => setTelefone(e.target.value)}
-            maxLength={20}
+            onChange={setTelefone}
+            className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
           />
         </label>
         <label className="grid gap-1 text-sm font-medium text-zinc-800">
@@ -468,11 +465,10 @@ export function PdvPresencialClient({ eventoId }: Props) {
             </label>
             <label className="grid gap-1 text-sm font-medium text-zinc-800">
               Telefone
-              <input
-                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
+              <TelefoneInput
                 value={editTelefone}
-                onChange={(e) => setEditTelefone(e.target.value)}
-                maxLength={20}
+                onChange={setEditTelefone}
+                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
               />
             </label>
             <div className="flex flex-wrap gap-2 pt-1">

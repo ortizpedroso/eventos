@@ -553,7 +553,37 @@ export default function AuthClient({
 
           {error ? (
             <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 whitespace-pre-line">
-              {error}
+              {error.toLowerCase().includes("já cadastrado") ? (
+                <>
+                  <p>Email já cadastrado, faça login ou recupere sua senha.</p>
+                  <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                    <button
+                      type="button"
+                      className="font-semibold text-red-900 underline"
+                      onClick={() => {
+                        setError(null);
+                        setAuthMode("login");
+                      }}
+                    >
+                      Fazer login
+                    </button>
+                    <button
+                      type="button"
+                      className="font-semibold text-red-900 underline"
+                      onClick={() => {
+                        setError(null);
+                        const p = new URLSearchParams(window.location.search);
+                        p.set("mode", "forgot");
+                        router.replace(`/auth?${p.toString()}`);
+                      }}
+                    >
+                      Recuperar senha
+                    </button>
+                  </p>
+                </>
+              ) : (
+                error
+              )}
             </div>
           ) : null}
 
