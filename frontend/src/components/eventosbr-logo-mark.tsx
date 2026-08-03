@@ -1,18 +1,28 @@
 type Props = {
   className?: string;
+  /** Fundo escuro — wordmark clara. */
+  variant?: "default" | "light";
 };
 
-/** Ícone ticket EBR — cores via variáveis de marca (whitelabel). */
-export function EventosBRTicketMark({ className = "h-9 w-9 sm:h-10 sm:w-10" }: Props) {
+/**
+ * Logo padrão EventosBR (viewBox 180×44 — mesma proporção de `/logo.svg`).
+ * Cores via `--brand-600` (whitelabel).
+ */
+export function EventosBRDefaultLogo({
+  className = "h-9 w-auto sm:h-10",
+  variant = "default",
+}: Props) {
+  const eventosFill = variant === "light" ? "#f4f4f5" : "#1c2a33";
   return (
     <svg
-      className={className}
-      viewBox="0 0 40 40"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 180 44"
       fill="none"
+      className={className}
       role="img"
-      aria-hidden
+      aria-label="EventosBR"
     >
-      <rect width="40" height="40" rx="8" fill="var(--brand-600)" />
+      <rect width="40" height="40" x="0" y="2" rx="8" fill="var(--brand-600)" />
       <line
         x1="11"
         y1="10"
@@ -37,30 +47,9 @@ export function EventosBRTicketMark({ className = "h-9 w-9 sm:h-10 sm:w-10" }: P
       >
         EBR
       </text>
-    </svg>
-  );
-}
-
-type WordmarkProps = {
-  className?: string;
-  /** Fundo escuro — wordmark claro. */
-  variant?: "default" | "light";
-};
-
-/** Wordmark EventosBR com «BR» na cor da marca. */
-export function EventosBRWordmark({ className = "", variant = "default" }: WordmarkProps) {
-  const eventosFill = variant === "light" ? "#f4f4f5" : "#1c2a33";
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 132 28"
-      fill="none"
-      role="img"
-      aria-label="EventosBR"
-    >
       <text
-        x="0"
-        y="22"
+        x="48"
+        y="28"
         fontFamily="system-ui,-apple-system,BlinkMacSystemFont,sans-serif"
         fontSize="20"
         fontWeight="700"

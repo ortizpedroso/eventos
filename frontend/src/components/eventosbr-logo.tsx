@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { EventosBRTicketMark, EventosBRWordmark } from "@/components/eventosbr-logo-mark";
+import { EventosBRDefaultLogo } from "@/components/eventosbr-logo-mark";
 import { usePlatformSettings } from "@/components/platform-settings-provider";
 
 type Props = {
@@ -49,16 +49,9 @@ export function EventosBRLogo({ className = "", showWordmark = true, variant = "
           unoptimized={custom.startsWith("http")}
         />
       ) : (
-        <>
-          <EventosBRTicketMark />
-          {showWordmark ? (
-            <EventosBRWordmark className="h-7 w-auto sm:h-8" variant={variant} />
-          ) : (
-            <span className="sr-only">EventosBR — início</span>
-          )}
-        </>
+        <EventosBRDefaultLogo variant={variant} />
       )}
-      {custom && !showWordmark ? <span className="sr-only">EventosBR — início</span> : null}
+      {!showWordmark ? <span className="sr-only">EventosBR — início</span> : null}
     </Link>
   );
 }

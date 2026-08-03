@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
+import type { CSSProperties } from "react";
 
 import { BackToTopButton } from "@/components/back-to-top-button";
 import { BuildMarker } from "@/components/build-marker";
@@ -13,6 +14,7 @@ import { ScrollRevealObserver } from "@/components/scroll-reveal-observer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { SkipToContent } from "@/components/skip-to-content";
+import { brandCssProperties } from "@/lib/brand-css-style";
 import { fetchPlatformSettings } from "@/lib/platform-settings";
 import { buildOrganizationJsonLd } from "@/lib/organization-json-ld";
 import { buildMetadata } from "@/lib/site-metadata";
@@ -30,11 +32,16 @@ export default async function RootLayout({
 }>) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   const platform = await fetchPlatformSettings();
+  const brandStyle = brandCssProperties(
+    platform.primary_color,
+    platform.primary_color_dark,
+  ) as CSSProperties;
 
   return (
     <html
       lang="pt-BR"
       className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+      style={brandStyle}
       suppressHydrationWarning
     >
       <head>

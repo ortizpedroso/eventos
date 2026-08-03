@@ -12,16 +12,20 @@ type OrganizerBrand = {
 
 /** Cores da marca do organizador (white-label na página pública). */
 export function OrganizerBrandTheme({ brand }: { brand: OrganizerBrand }) {
-  const primary = brand.brand_primary_color?.trim();
-  const dark = brand.brand_primary_color_dark?.trim();
-  if (!primary && !dark) return null;
-
+  const primary = brand.brand_primary_color?.trim() || "";
+  const dark = brand.brand_primary_color_dark?.trim() || "";
+  const hasBrand = Boolean(primary || dark);
   const primaryHex = primary || "#10b981";
-  const css = buildBrandCssBlock(":root", primaryHex, dark || undefined);
+  const css = hasBrand
+    ? buildBrandCssBlock(":root", primaryHex, dark || undefined)
+    : "";
 
   useEffect(() => {
+    if (!hasBrand) return;
     applyBrandThemeToDocument(primaryHex, dark || undefined);
-  }, [primaryHex, dark]);
+  }, [hasBrand, primaryHex, dark]);
+
+  if (!hasBrand) return null;
 
   return <style id="eventosbr-organizer-brand">{css}</style>;
 }

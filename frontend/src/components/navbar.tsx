@@ -233,7 +233,7 @@ export function Navbar() {
     );
   }
 
-  /** Links iniciais (podem rolar em md–lg). */
+  /** Links iniciais (podem rolar em md–lg). Eventos fica fora — junto de Categorias. */
   function PrimaryNavCoreLinks() {
     return (
       <div className="inline-flex items-center gap-x-3 lg:gap-x-4">
@@ -246,9 +246,6 @@ export function Navbar() {
         <Link href="/planos" className={navLinkClass("/planos")}>
           Planos
         </Link>
-        <Link href="/eventos" className={navLinkClass("/eventos")}>
-          Eventos
-        </Link>
       </div>
     );
   }
@@ -260,7 +257,7 @@ export function Navbar() {
     );
   }
 
-  /** md–lg: scroll só nos links iniciais; Categorias e Sobre sempre visíveis. */
+  /** md–lg: scroll só nos links iniciais; Eventos+Categorias+Sobre sempre juntos e visíveis. */
   function PrimaryNavSplit({ className = "" }: { className?: string }) {
     return (
       <nav
@@ -272,10 +269,15 @@ export function Navbar() {
         >
           <PrimaryNavCoreLinks />
         </div>
-        <NavbarCategoriasMenu compact />
-        <Link href="/sobre" className={navLinkClass("/sobre")}>
-          Sobre
-        </Link>
+        <div className="inline-flex shrink-0 items-center gap-x-3 lg:gap-x-4">
+          <Link href="/eventos" className={navLinkClass("/eventos")}>
+            Eventos
+          </Link>
+          <NavbarCategoriasMenu compact />
+          <Link href="/sobre" className={navLinkClass("/sobre")}>
+            Sobre
+          </Link>
+        </div>
       </nav>
     );
   }

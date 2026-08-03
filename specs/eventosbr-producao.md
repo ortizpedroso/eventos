@@ -810,7 +810,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` |
 | **v1.48 (este)** | `84c4cba` / **475** | **APROVADA** — UX admin, whitelabel, contato |
 | **v1.48.1** | branch `cursor/fix-navbar-final-c0b1` / **475** | **APROVADA** — regressão navbar (dropdowns portal, Sobre visível, menu conta) |
-| **v1.49 (este)** | branch `cursor/brand-theme-system-c0b1` / **477** | **APROVADA** — tema de marca proporcional (§2.17) |
+| **v1.49 (este)** | branch `cursor/brand-theme-system-c0b1` / **478** | **APROVADA** — tema de marca proporcional (§2.17) |
 
 ### 11.1 Requisitos recentes — resultado (v1.49)
 
@@ -819,10 +819,13 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.17 | Escala `--brand-50`…`950` derivada de primária + escura | **PASS** |
 | §2.17 | `emerald-*` remapeado via `@theme` | **PASS** |
 | §2.17 | Tema admin reativo ao salvar (sem reload) | **PASS** |
-| §2.17 | Logo padrão segue `--brand-600` | **PASS** |
+| §2.17 | Escala no `<html style>` (SSR) + `emerald-*` → `--brand-*` | **PASS** |
+| §2.17 | Logo padrão 180×44 com `--brand-600` (sem alargar navbar) | **PASS** |
+| §2.17 | Navbar: Eventos adjacente a Categorias (sem overlap) | **PASS** |
 | §2.17 | Whitelabel organizador: tema em `/produtor` e `/eventos` | **PASS** |
 | §2.17 | globals.css sem hex emerald fixo em componentes globais | **PASS** |
-| §7 Qualidade | `pytest` 477 | **PASS** |
+| §7 Qualidade | `pytest` 479 | **PASS** |
+| §7 Qualidade | Playwright navbar Eventos↔Categorias | **PASS** |
 | §7 Qualidade | `next build` frontend | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.48.1)
@@ -1044,7 +1047,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.49 | 2026-08-03 | **Tema de marca proporcional.** §2.17: escala `--brand-50`…`950`; remapeamento `emerald-*`; `PlatformThemeLive`; whitelabel em evento público; API `organizador_brand_*`. Testes: 475 → 477. `/review` v1.49 APROVADA. |
+| 1.49 | 2026-08-03 | **Tema de marca proporcional.** §2.17: escala `--brand-50`…`950`; remapeamento `emerald-*`; `PlatformThemeLive`; apply imediato ao salvar; logo dinâmico; whitelabel em evento público. Testes: 475 → 478. `/review` v1.49 APROVADA. |
 | 1.48.1 | 2026-08-03 | **Hotfix navbar.** §2.16: regressão após layout 2 linhas — dropdowns via portal (`z-80`); Sobre/Categorias fora de `overflow-x-auto`; menu conta único portal; E2E patamar navbar. `/review` v1.48.1 APROVADA. |
 | 1.48 | 2026-08-03 | **UX admin + whitelabel + contato.** §2.16: e-mail duplicado; admin config (tamanhos, paleta cores); editar usuário; PDV sucesso; contato layout; marketing webp + `MarketingScreenshot`; navbar `lg+`; `TelefoneInput`. Testes: 474 → 475. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |

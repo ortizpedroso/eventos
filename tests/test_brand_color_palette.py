@@ -37,6 +37,25 @@ def test_brand_scale_default_emerald():
     assert scale["950"].startswith("#")
 
 
+def test_brand_css_properties_include_full_scale():
+    script = """
+import { brandCssProperties } from './src/lib/brand-css-style.ts';
+console.log(JSON.stringify(brandCssProperties('#e11d48', '#be123c')));
+"""
+    result = subprocess.run(
+        ["npx", "--yes", "tsx", "-e", script],
+        cwd=FRONTEND,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    props = json.loads(result.stdout.strip())
+    assert props["--brand-primary"] == "#e11d48"
+    assert props["--brand-primary-dark"] == "#be123c"
+    for step in (50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950):
+        assert f"--brand-{step}" in props
+
+
 def test_evento_response_includes_organizer_brand_fields():
     from app.schemas.evento import EventoResponse
 
@@ -48,10 +67,12 @@ def test_evento_response_includes_organizer_brand_fields():
 def test_apply_brand_theme_sets_scale_on_document():
     script = """
 import { applyBrandThemeToDocument } from './src/lib/apply-brand-theme.ts';
+import { brandCssProperties } from './src/lib/brand-css-style.ts';
 const props = {};
 const el = { style: { setProperty: (k, v) => { props[k] = v; } } };
 applyBrandThemeToDocument('#e11d48', '#be123c', el);
-console.log(JSON.stringify(props));
+const expected = brandCssProperties('#e11d48', '#be123c');
+console.log(JSON.stringify({ props, expected }));
 """
     result = subprocess.run(
         ["npx", "--yes", "tsx", "-e", script],
@@ -60,7 +81,8 @@ console.log(JSON.stringify(props));
         text=True,
         check=True,
     )
-    props = json.loads(result.stdout.strip())
-    assert props["--brand-600"] == "#e11d48"
-    assert props["--brand-700"] == "#be123c"
-    assert props["--brand-50"].startswith("#")
+    data = json.loads(result.stdout.strip())
+    assert data["props"]["--brand-600"] == "#e11d48"
+    assert data["props"]["--brand-700"] == "#be123c"
+    assert data["props"] == data["expected"]
+    assert data["expected"]["--brand-50"].startswith("#")
