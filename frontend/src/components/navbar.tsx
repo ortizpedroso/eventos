@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { NavbarCategoriasMenu } from "@/components/navbar-categorias-menu";
 import { EventosBRLogo } from "@/components/eventosbr-logo";
@@ -45,6 +46,9 @@ function IconMenu({ open }: { open: boolean }) {
   );
 }
 
+const navScrollClass =
+  "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,9 +58,16 @@ export function Navbar() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [totpAtivado, setTotpAtivado] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountMenuPos, setAccountMenuPos] = useState({ top: 0, right: 0 });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [buscaNav, setBuscaNav] = useState("");
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [portalReady, setPortalReady] = useState(false);
+  const accountWrapRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   useEffect(() => {
     async function syncSession() {
@@ -94,9 +105,14 @@ export function Navbar() {
   useEffect(() => {
     if (!menuOpen) return;
     function onPointerDown(e: PointerEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
+      const target = e.target as Node;
+      if (
+        accountMenuRef.current?.contains(target) ||
+        (target instanceof Element && target.closest("[data-navbar-account]"))
+      ) {
+        return;
       }
+      setMenuOpen(false);
     }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -134,6 +150,70 @@ export function Navbar() {
     setMobileNavOpen(false);
   }
 
+  function toggleAccountMenu(e: React.MouseEvent<HTMLButtonElement>) {
+    if (menuOpen) {
+      setMenuOpen(false);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setAccountMenuPos({
+      top: rect.bottom + 8,
+      right: window.innerWidth - rect.right,
+    });
+    setMenuOpen(true);
+  }
+
+  function AccountMenuPortal() {
+    if (!menuOpen || !portalReady || !loggedIn) return null;
+    return createPortal(
+      <div
+        ref={accountMenuRef}
+        role="menu"
+        className="fixed z-[80] min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+        style={{ top: accountMenuPos.top, right: accountMenuPos.right }}
+      >
+        {isOrganizador ? (
+          <Link
+            href="/organizador/eventos"
+            role="menuitem"
+            className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+            onClick={() => setMenuOpen(false)}
+          >
+            Painel
+          </Link>
+        ) : null}
+        {isPlatformAdmin ? (
+          <Link
+            href={hrefAdmin}
+            role="menuitem"
+            className="block px-4 py-2.5 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
+            onClick={() => setMenuOpen(false)}
+          >
+            Administração
+          </Link>
+        ) : null}
+        <Link
+          href={isOrganizador ? "/organizador/perfil" : "/conta/perfil"}
+          role="menuitem"
+          className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+          onClick={() => setMenuOpen(false)}
+        >
+          Perfil
+        </Link>
+        <div className="my-1 border-t border-zinc-100" aria-hidden />
+        <button
+          type="button"
+          role="menuitem"
+          className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+          onClick={logout}
+        >
+          Sair
+        </button>
+      </div>,
+      document.body,
+    );
+  }
+
   function SearchForm({ className = "", inputId = "nav-busca" }: { className?: string; inputId?: string }) {
     return (
       <form onSubmit={submitBusca} className={className} role="search">
@@ -150,12 +230,10 @@ export function Navbar() {
     );
   }
 
-  function PrimaryNav({ className = "" }: { className?: string }) {
+  /** Links iniciais (podem rolar em md–lg). */
+  function PrimaryNavCoreLinks() {
     return (
-      <nav
-        className={`text-sm font-medium text-zinc-600 ${className}`}
-        aria-label="Principal (ambiente de trabalho)"
-      >
+      <>
         <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
           Funcionalidades
         </Link>
@@ -168,6 +246,38 @@ export function Navbar() {
         <Link href="/eventos" className={navLinkClass("/eventos")}>
           Eventos
         </Link>
+      </>
+    );
+  }
+
+  /** xl+: todos os links na mesma linha (sem overflow que clipa dropdowns). */
+  function PrimaryNavInline({ className = "" }: { className?: string }) {
+    return (
+      <nav
+        className={`text-sm font-medium text-zinc-600 ${className}`}
+        aria-label="Principal (ambiente de trabalho)"
+      >
+        <PrimaryNavCoreLinks />
+        <NavbarCategoriasMenu compact />
+        <Link href="/sobre" className={navLinkClass("/sobre")}>
+          Sobre
+        </Link>
+      </nav>
+    );
+  }
+
+  /** md–lg: scroll só nos links iniciais; Categorias e Sobre sempre visíveis. */
+  function PrimaryNavSplit({ className = "" }: { className?: string }) {
+    return (
+      <nav
+        className={`flex min-w-0 flex-1 items-center gap-x-3 text-sm font-medium text-zinc-600 lg:gap-x-4 ${className}`}
+        aria-label="Principal (ambiente de trabalho)"
+      >
+        <div
+          className={`flex min-w-0 flex-1 flex-nowrap items-center gap-x-3 overflow-x-auto lg:gap-x-4 ${navScrollClass}`}
+        >
+          <PrimaryNavCoreLinks />
+        </div>
         <NavbarCategoriasMenu compact />
         <Link href="/sobre" className={navLinkClass("/sobre")}>
           Sobre
@@ -180,10 +290,11 @@ export function Navbar() {
     return (
       <>
         {loggedIn ? (
-          <div className="relative shrink-0" ref={menuRef}>
+          <div className="relative shrink-0" ref={accountWrapRef}>
             <button
               type="button"
-              onClick={() => setMenuOpen((o) => !o)}
+              data-navbar-account
+              onClick={toggleAccountMenu}
               className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
@@ -194,51 +305,6 @@ export function Navbar() {
               </span>
               <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
             </button>
-
-            {menuOpen ? (
-              <div
-                role="menu"
-                className="absolute right-0 z-[70] mt-2 min-w-[11rem] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
-              >
-                {isOrganizador ? (
-                  <Link
-                    href="/organizador/eventos"
-                    role="menuitem"
-                    className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Painel
-                  </Link>
-                ) : null}
-                {isPlatformAdmin ? (
-                  <Link
-                    href={hrefAdmin}
-                    role="menuitem"
-                    className="block px-4 py-2.5 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Administração
-                  </Link>
-                ) : null}
-                <Link
-                  href={isOrganizador ? "/organizador/perfil" : "/conta/perfil"}
-                  role="menuitem"
-                  className="block px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Perfil
-                </Link>
-                <div className="my-1 border-t border-zinc-100" aria-hidden />
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                  onClick={logout}
-                >
-                  Sair
-                </button>
-              </div>
-            ) : null}
           </div>
         ) : (
           <Link
@@ -262,12 +328,13 @@ export function Navbar() {
   }
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
       <div className="mx-auto w-full max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
         {/* Celular */}
         <div className="flex items-center justify-between gap-3 md:hidden">
           <EventosBRLogo className="shrink-0" />
-          <div className="relative z-30 flex shrink-0 items-center gap-1.5">
+          <div className="relative z-40 flex shrink-0 items-center gap-1.5">
             <button
               type="button"
               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
@@ -282,19 +349,29 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Tablet e desktop: logo+conta na 1ª linha; busca+links na 2ª (sem overlap) */}
-        <div className="hidden flex-col gap-2 md:flex">
-          <div className="flex min-w-0 items-center justify-between gap-3">
+        {/* xl+: uma linha (spec §2.16) — conta com z alto; dropdowns fixed z-80 */}
+        <div className="hidden xl:flex xl:items-center xl:justify-between xl:gap-x-3 2xl:gap-x-4">
+          <div className="flex min-w-0 flex-1 items-center gap-4 2xl:gap-6">
             <EventosBRLogo className="shrink-0" />
-            <div className="relative z-30 flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <SearchForm className="w-40 shrink-0 2xl:w-48" />
+            <PrimaryNavInline className="relative z-10 flex shrink-0 flex-nowrap items-center gap-x-3 2xl:gap-x-5" />
+          </div>
+          <div className="relative z-40 flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <AuthActions />
+          </div>
+        </div>
+
+        {/* md–lg: duas linhas — linha da conta acima (z-40) para não ser coberta pela linha dos links */}
+        <div className="hidden flex-col gap-2 md:flex xl:hidden">
+          <div className="relative z-40 flex min-w-0 items-center justify-between gap-3">
+            <EventosBRLogo className="shrink-0" />
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
               <AuthActions />
             </div>
           </div>
-          <div className="flex min-w-0 items-center gap-3 lg:gap-4">
-            <SearchForm className="w-36 shrink-0 sm:w-44 lg:w-52" />
-            <PrimaryNav
-              className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-3 overflow-x-auto lg:gap-x-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            />
+          <div className="relative z-10 flex min-w-0 items-center gap-3">
+            <SearchForm className="w-36 shrink-0 sm:w-44" />
+            <PrimaryNavSplit />
           </div>
         </div>
 
@@ -327,5 +404,7 @@ export function Navbar() {
         ) : null}
       </div>
     </header>
+    <AccountMenuPortal />
+    </>
   );
 }

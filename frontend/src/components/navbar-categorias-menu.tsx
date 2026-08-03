@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { EventoCategoriaIcon } from "@/components/evento-categoria-icon";
 import {
@@ -29,20 +30,34 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
-  const ref = useRef<HTMLDivElement>(null);
+  const [portalReady, setPortalReady] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const emEventos = pathname === "/eventos" || pathname.startsWith("/eventos/");
 
   useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !compact) return;
+    function syncPosition() {
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 8, left: rect.left });
+    }
+    syncPosition();
+    window.addEventListener("resize", syncPosition);
+    return () => window.removeEventListener("resize", syncPosition);
+  }, [open, compact]);
+
+  useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
       const target = e.target as Node;
-      if (
-        ref.current?.contains(target) ||
-        menuRef.current?.contains(target)
-      ) {
+      if (wrapRef.current?.contains(target) || menuRef.current?.contains(target)) {
         return;
       }
       setOpen(false);
@@ -88,18 +103,8 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
     );
   }
 
-  function toggleMenu() {
-    setOpen((wasOpen) => {
-      if (!wasOpen && buttonRef.current) {
-        const rect = buttonRef.current.getBoundingClientRect();
-        setMenuPos({ top: rect.bottom + 8, left: rect.left });
-      }
-      return !wasOpen;
-    });
-  }
-
   return (
-    <div className="relative shrink-0" ref={ref}>
+    <div className="relative shrink-0" ref={wrapRef}>
       <button
         ref={buttonRef}
         type="button"
@@ -109,47 +114,60 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label="Abrir menu de categorias de eventos"
-        onClick={toggleMenu}
+        onClick={() => {
+          if (open) {
+            setOpen(false);
+            return;
+          }
+          if (buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            setMenuPos({ top: rect.bottom + 8, left: rect.left });
+          }
+          setOpen(true);
+        }}
       >
         Categorias
         <IconChevron className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} />
       </button>
-      {open ? (
-        <div
-          ref={menuRef}
-          role="menu"
-          className="fixed z-[70] w-56 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
-          style={{ top: menuPos.top, left: menuPos.left }}
-        >
-          {EVENTO_CATEGORIAS_NAV.map((cat) => (
-            <Link
-              key={cat}
-              href={urlEventosPorCategoria(cat)}
-              role="menuitem"
-              className="flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-              onClick={() => {
-                setOpen(false);
-                onNavigate?.();
-              }}
+      {open && portalReady
+        ? createPortal(
+            <div
+              ref={menuRef}
+              role="menu"
+              className="fixed z-[80] w-56 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+              style={{ top: menuPos.top, left: menuPos.left }}
             >
-              <EventoCategoriaIcon categoria={cat} className="h-4 w-4 text-zinc-500" />
-              {cat}
-            </Link>
-          ))}
-          <div className="my-1 border-t border-zinc-100" aria-hidden />
-          <Link
-            href="/eventos"
-            role="menuitem"
-            className="block px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
-            onClick={() => {
-              setOpen(false);
-              onNavigate?.();
-            }}
-          >
-            Ver todos →
-          </Link>
-        </div>
-      ) : null}
+              {EVENTO_CATEGORIAS_NAV.map((cat) => (
+                <Link
+                  key={cat}
+                  href={urlEventosPorCategoria(cat)}
+                  role="menuitem"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                  onClick={() => {
+                    setOpen(false);
+                    onNavigate?.();
+                  }}
+                >
+                  <EventoCategoriaIcon categoria={cat} className="h-4 w-4 text-zinc-500" />
+                  {cat}
+                </Link>
+              ))}
+              <div className="my-1 border-t border-zinc-100" aria-hidden />
+              <Link
+                href="/eventos"
+                role="menuitem"
+                className="block px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
+                onClick={() => {
+                  setOpen(false);
+                  onNavigate?.();
+                }}
+              >
+                Ver todos →
+              </Link>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
