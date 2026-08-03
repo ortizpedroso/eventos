@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.47.2
+**Versão:** 1.47.3
 **Data:** 2026-08-03
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** branch **`cursor/lancamento-ux-ads-v147-c0b1`** (`d17c528`+). **v1.47.2** — admin config UX + `.input` CSS. pytest **470** (CI). PR #99.
+> **Produção (VPS):** **`main`** tip **`915d2aa`** (v1.47.2). PR **#99 MERGED**. Deploy v1.47.2 na VPS **aguarda confirmação** (`atualizar-vps-agora.sh`). pytest **470** (CI). `/review` v1.47.3 **APROVADA** — fechamento pendências spec/ops código.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -346,7 +346,7 @@ Valida: compra PIX mock → webhook → ingresso pago → split só no wallet do
 
 | Job | O que valida |
 |-----|----------------|
-| `api` | `pytest` (442 testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
+| `api` | `pytest` (**470** testes) — job roda com serviço Redis (`redis:7-alpine`) desde v1.16, senão os testes de fila confiável (`test_fila_email_*_confiavel.py`) falham por falta de Redis |
 | `web` | `npm run build` |
 | `e2e` | Playwright smoke + patamar **sem API** (`PLAYWRIGHT_SKIP_API_CHECK=1`) |
 | `e2e-compra` | Stack Docker + compra mock + patamar com API (lista interesse, espera, produtor, perfil organizador) |
@@ -650,7 +650,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (**460** testes)
+- [x] `pytest` verde (**470** testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -662,6 +662,10 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
+- [x] tip de produto — **`915d2aa`** / v1.47.2 na `main` (PR #99 mergeado 03/08/2026)
+- [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
+- [ ] Deploy VPS v1.47.2 — **`915d2aa`** — aguarda confirmação (`bash scripts/atualizar-vps-agora.sh` + `alembic upgrade head`)
+- [ ] Meta Pixel / GTM — colar IDs em Admin → Configurações (ou `.env`); só necessário ao rodar campanhas Ads
 - [x] tip de produto — v1.46 mergeado; VPS **`d608169`** (deploy v1.46 confirmado 02/08/2026)
 - [x] **Turnstile em produção** — chaves no `.env` + rebuild `web`/`api` (confirmado 02/08/2026; Managed mode — validação automática para visitantes legítimos)
 - [x] Conta mãe Asaas em **CNPJ** — **fechado por decisão** (adiado até PJ no Asaas); não bloqueia `linked` (02/08/2026)
@@ -744,8 +748,30 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | v1.45 | `9c6044a` / **449** | APROVADA — e-mail organizador + imagens + Turnstile build |
 | v1.46 | `d608169` / **452** | APROVADA — UX cadastro organizador + Turnstile ops |
 | v1.46.1 | `d608169` / **452** | APROVADA — deploy VPS v1.46 confirmado |
-| **v1.47.1 (este)** | pendente / **469** | **APROVADA** — Pixel/GTM no admin |
-| v1.47 | pendente / **460** | **APROVADA** — home dual + Ads/SEO lançamento |
+| v1.47 | `915d2aa` / **470** | APROVADA — home dual + Ads/SEO |
+| v1.47.1 | `915d2aa` / **470** | APROVADA — Pixel/GTM no admin |
+| v1.47.2 | `915d2aa` / **470** | APROVADA — admin config UX + `.input` |
+| **v1.47.3 (este)** | `915d2aa` / **470** | **APROVADA** — fechamento spec/PR #99 |
+
+### 11.1 Requisitos recentes — resultado (v1.47.3)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §11 / PR | PR #99 mergeado na `main` | **PASS** |
+| §7 | Spec §2.7/§7 contagens pytest 470 | **PASS** |
+| §7 Ops | Deploy VPS `915d2aa` | **PENDENTE** (ops — `atualizar-vps-agora.sh`) |
+| §7 Ops | Pixel/GTM no admin (campanhas) | **PENDENTE** (ops — colar ID no painel) |
+| §2.13–§2.15 | Baseline v1.47.2 sem regressão | **PASS** |
+| §7 Qualidade | `pytest` 470 | **PASS** |
+
+### 11.1 Requisitos recentes — resultado (v1.47.2)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.15 | Classe `.input` com bordas visíveis | **PASS** |
+| §2.15 | Painel admin objetivo (Marca visual compact) | **PASS** |
+| §2.14 / §2.13 | Sem regressão Pixel/home/analytics | **PASS** |
+| §7 Qualidade | `pytest` 470 | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.47.1)
 
@@ -756,8 +782,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.14 | Frontend injeta scripts com IDs do painel | **PASS** |
 | §2.14 | Migração `20260802_000049` | **PASS** |
 | §2.13 / baseline | Sem regressão v1.47 | **PASS** |
-| §7 Qualidade | `pytest` 469 | **PASS** |
-| §7 Ops | `alembic upgrade head` na VPS após deploy | **PENDENTE** (ops) |
+| §7 Qualidade | `pytest` 470 | **PASS** |
+| §7 Ops | `alembic upgrade head` na VPS após deploy | **PENDENTE** (ops — junto com deploy v1.47.2) |
 
 ### 11.1 Requisitos recentes — resultado (v1.47)
 
@@ -771,8 +797,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.13 | noindex organizador/conta layouts | **PASS** |
 | §2.13 | Pixel/GTM + eventos ViewContent/Lead/Register/Checkout/Purchase | **PASS** (admin ou `.env`) |
 | §2.9–§2.12 / §3.3 | Baseline v1.46 sem regressão | **PASS** |
-| §7 Qualidade | `pytest` 460 | **PASS** |
-| §7 Ops | Pixel/GTM no admin ou `.env` no VPS | **PENDENTE** (ops — campanhas Ads) |
+| §7 Qualidade | `pytest` 470 | **PASS** |
+| §7 Ops | Pixel/GTM (campanhas Ads) | **PENDENTE** (ops — admin ou `.env`) |
 
 ### 11.1 Requisitos recentes — resultado (v1.46)
 
@@ -784,7 +810,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §5.3 | Frontend bloqueia submit sem token quando site key no build | **PASS** |
 | §3.3 / §5.3 / §2.9–§2.12 | Baseline v1.45 sem regressão | **PASS** |
 | §7 Qualidade | `pytest` 449 (CI) | **PASS** |
-| §7 Ops | Turnstile no VPS | **PENDENTE** (ops — usuário configura chaves Cloudflare) |
+| §7 Ops | Turnstile no VPS | **PASS** (v1.46.1 — confirmado 02/08/2026) |
 
 ### 11.1 Requisitos recentes — resultado (v1.45)
 
@@ -870,9 +896,15 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 - **L4:** grep por “legado / fora do escopo / linked só-dev” nos trechos normativos §2.2–§2.4/§4 — limpo; §2.2 rotulada como modelo `baas` (alvo) com nota de lançamento `linked`.
 - **L5:** `app/routes/eventos.py` filtro `("pendente", "pago", "usado")` + docstring alinhada; teste `test_deletar_evento_com_ingresso_usado_bloqueado` presente.
 
-### 11.6 Critério de aprovação — ✅ atingido (v1.47)
+### 11.6 Critério de aprovação — ✅ atingido (v1.47.3)
 
-**Aprovado para lançamento comercial com campanhas Ads.** Código Pixel/GTM e eventos de conversão prontos; configurar IDs no `.env` do `web` antes de rodar anúncios. Home com separação explícita comprador × organizador. `pytest` **460** (CI).
+**Aprovado para lançamento comercial.** Código na `main` (`915d2aa`): home dual, SEO, eventos de conversão, Pixel/GTM no admin, UI admin config. PR #99 mergeado. Pendências **somente ops**: deploy VPS v1.47.2 + colar Pixel/GTM antes de campanhas Ads. `pytest` **470** (CI).
+
+---
+
+### 11.6 histórico (v1.47)
+
+**Aprovado para lançamento comercial com campanhas Ads.** Código Pixel/GTM e eventos de conversão prontos; configurar IDs no admin ou `.env` antes de rodar anúncios. Home com separação explícita comprador × organizador.
 
 ---
 
@@ -886,6 +918,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.47.3 | 2026-08-03 | **Fechamento pendências.** PR #99 MERGED → `main` `915d2aa`. §7/§11 atualizados; Turnstile v1.46 histórico PASS; deploy v1.47.2 e Pixel ops checklist explícitos. pytest 470 no §2.7/§7. |
 | 1.47.2 | 2026-08-03 | **Admin config UX.** §2.15: classe `.input` global com bordas; painel configurações reorganizado; `ImagemAssetField` `compact`; fix `site-metadata` DEFAULT_PLATFORM_SETTINGS. Testes: 469 → 470. |
 | 1.47.1 | 2026-08-02 | **Pixel/GTM no admin.** §2.14: `meta_pixel_id` + `gtm_id` em `platform_settings`; UI Admin → Marketing/anúncios; runtime IDs no frontend (`setMarketingRuntimeIds`); fallback env. Migração `20260802_000049`. Testes: 460 → 469. |
 | 1.47 | 2026-08-02 | **Lançamento comercial — home dual + Ads/SEO.** §2.13: `HomeAudienciasDual`, `HomeProdutorFeatures`, FAQ; cards vitrine; wizard etapas; copy funcionalidades/sobre; Organization JSON-LD; og-image + marketing webp; noindex conta/organizador; Meta Pixel + GTM + eventos conversão. Testes: 452 → 460. |
