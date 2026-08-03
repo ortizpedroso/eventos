@@ -4,6 +4,12 @@
 
 const API = (process.env.PLAYWRIGHT_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 
+/** Campos de contato obrigatórios em POST /api/eventos/criar (v1.45+). */
+const E2E_EVENTO_CONTATO = {
+  contato_telefone: "11987654321",
+  contato_email: "contato@e2e.test.com",
+};
+
 async function api<T>(
   method: string,
   path: string,
@@ -87,6 +93,7 @@ export async function seedPublishedEventMeiaEntrada(): Promise<SeededEvent> {
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Meia-entrada ${suf}`,
       descricao: "Evento para teste Playwright de meia-entrada",
       data_inicio: "2026-12-20T19:00:00",
@@ -125,6 +132,7 @@ export async function seedPublishedEventAsaas(): Promise<SeededEvent> {
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Asaas ${suf}`,
       descricao: "Evento para teste Playwright Asaas",
       data_inicio: "2026-12-20T19:00:00",
@@ -156,6 +164,7 @@ export async function seedPublishedEvent(): Promise<SeededEvent> {
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Checkout ${suf}`,
       descricao: "Evento para teste Playwright",
       data_inicio: "2026-12-20T19:00:00",
@@ -191,6 +200,7 @@ export async function seedPreVendaEvent(): Promise<SeededEvent> {
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Pré-venda ${suf}`,
       descricao: "Evento para teste lista de interesse",
       data_inicio: "2026-12-20T19:00:00",
@@ -233,6 +243,7 @@ export async function seedSoldOutWaitlistEvent(): Promise<SeededEvent> {
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Esgotado ${suf}`,
       descricao: "Evento esgotado para lista de espera",
       data_inicio: "2026-12-20T19:00:00",
@@ -307,6 +318,7 @@ export async function seedPublicProducer(): Promise<{ slug: string; nome: string
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `Show Público ${suf}`,
       descricao: "Evento visível no perfil",
       data_inicio: "2026-12-20T19:00:00",
@@ -335,6 +347,7 @@ export async function seedParcelamentoEvent(): Promise<SeededEvent> {
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Parcelado ${suf}`,
       descricao: "Evento com parcelamento",
       data_inicio: "2026-12-20T19:00:00",
@@ -390,6 +403,7 @@ export async function seedParcelamentoEventAsaas(): Promise<SeededEvent> {
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Parcelado Asaas ${suf}`,
       descricao: "Parcelamento E2E",
       data_inicio: "2026-12-20T19:00:00",
