@@ -79,7 +79,7 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative shrink-0" ref={ref}>
       <button
         type="button"
         className={`inline-flex shrink-0 items-center gap-1 transition-colors hover:text-zinc-900 ${
