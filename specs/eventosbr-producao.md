@@ -770,7 +770,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.47.3** | `915d2aa` / **470** | APROVADA — fechamento spec/PR #99 |
 | v1.47.3.1 | `915d2aa` / **470** | APROVADA — deploy VPS v1.47 confirmado |
 | **v1.47.4** | `5dcbad8` / **474** | APROVADA — sessão expirada → `/auth` (PR #100) |
-| **v1.47.4.1 (este)** | `1df774a` / **474** | **APROVADA** — CI verde (E2E + api) |
+| **v1.47.4.1 (este)** | `8a34c4f` / **474** | **APROVADA** — CI verde (E2E + api) |
 
 ### 11.1 Requisitos recentes — resultado (v1.47.4.1)
 
