@@ -973,7 +973,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.47.4.1 | 2026-08-03 | **CI E2E após v1.47.4.** Seeds Playwright: `registrarOrganizadorE2e` confirma e-mail do organizador (login 403). Patamar: cookie `eventosbr_session_expired` com `domain` do `baseURL` CI. §7/§11 PR #100 mergeado; deploy VPS v1.47.4 pendente. |
+| 1.47.4.1 | 2026-08-03 | **CI E2E após v1.47.4.** Seeds Playwright: `registrarOrganizadorE2e` confirma e-mail do organizador (login 403). Patamar: cookie `eventosbr_session_expired` com `domain` do `baseURL` CI. Teste contato: deadline worker 90s. §7/§11 PR #100 mergeado; deploy VPS v1.47.4 pendente. |
 | 1.47.4 | 2026-08-03 | **Sessão expirada → `/auth`.** §3.2.1: cookie `eventosbr_session_expired`, middleware e `api.ts` redirecionam login; `auth-client` força modo login. Testes: 470 → 474. |
 | 1.47.3.1 | 2026-08-03 | **Deploy VPS v1.47 confirmado** — `915d2aa` API/Web; migração `000049`; `verificar-versao-site.sh` OK. §7 e §11 deploy PASS. |
 | 1.47.3 | 2026-08-03 | **Fechamento pendências.** PR #99 MERGED → `main` `915d2aa`. §7/§11 atualizados; Turnstile v1.46 histórico PASS; deploy v1.47.2 e Pixel ops checklist explícitos. pytest 470 no §2.7/§7. |
