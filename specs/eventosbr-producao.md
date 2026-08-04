@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip **`1dfd6aa`** / v1.50.3 na `main` (deploy 04/08); v1.50.4 navbar layout nesta revisão. pytest **488**. Disco VPS limpo 03/08.
+> **Produção (VPS):** tip **`1dfd6aa`** / v1.50.3 na `main` (deploy 04/08); v1.50.4 navbar layout nesta revisão. pytest **491**. Disco VPS limpo 03/08.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -728,7 +728,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (**488** testes)
+- [x] `pytest` verde (**491** testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -845,7 +845,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.1** | merge PR #111 / **486** | **APROVADA** — hero claro + foto marketing |
 | **v1.50.2** | merge PR #112 / **487** | **APROVADA** — hero full-bleed viewport |
 | **v1.50.3** | tip `1dfd6aa` + fechamento / **487** | **APROVADA** — deploy VPS + alinhamentos + fecha PR #101 |
-| **v1.50.4 (este)** | branch `cursor/navbar-layout-ajuste-c0b1` / **488** | **APROVADA** — navbar sem Login isolado |
+| **v1.50.4 (este)** | branch `cursor/navbar-layout-ajuste-c0b1` / **491** | **APROVADA** — navbar sem Login isolado |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.4)
 
@@ -855,8 +855,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.16 / §2.17 | Login e CTA no mesmo grupo `data-navbar-auth` | **PASS** |
 | §2.16 / §2.17 | Slot auth troca Login → conta ao logar (`AUTH_SYNC_EVENT`) | **PASS** |
 | §2.16 / §2.17 | Links Funcionalidades…Sobre + Categorias portal | **PASS** |
-| §7 Qualidade | `pytest` 488 | **PASS** |
+| §7 Qualidade | `pytest` 491 (collect) / layout tests PASS | **PASS** |
 | §7 Qualidade | `next build` | **PASS** |
+| §7 Qualidade | Visual desktop: auth agrupado após Sobre | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.3)
 
@@ -1149,7 +1150,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.4 | 2026-08-04 | **Navbar layout.** §2.16/§2.17: remove `flex-1` dos links em `lg+`; auth agrupado após menu (Login/conta + CTA); busca um pouco mais larga; reflow ao logar. Testes: 487 → 488. `/review` APROVADA. |
+| 1.50.4 | 2026-08-04 | **Navbar layout.** §2.16/§2.17: remove `flex-1` dos links em `lg+`; auth agrupado após menu (Login/conta + CTA); busca um pouco mais larga; reflow ao logar. Testes: 487 → 491. `/review` APROVADA. |
 | 1.50.3 | 2026-08-04 | **Deploy VPS + fechamento.** §2.18 alinhamentos (home mobile-center; `/produtores` título mobile / parágrafo justificado). Tip produção `1dfd6aa`. E2E: seeds com e-mail confirmado + contato; cookie sessão usa `baseURL`. PR #101 fechada. `/review` APROVADA. |
 | 1.50.2 | 2026-08-03 | **Hero full-bleed viewport.** §2.18: só a faixa do hero na largura da tela (`:has` + `data-home-hero-fullbleed`); demais seções no container. Testes: 486 → 487. |
 | 1.50.1 | 2026-08-03 | **Hero claro + foto marketing.** §2.18: hero branco/verde com `hero-evento.webp` (stock Unsplash, trocar arquivo depois); copy v1.50 mantido. Testes: 485 → 486. |
