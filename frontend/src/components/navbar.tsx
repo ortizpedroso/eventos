@@ -249,39 +249,22 @@ export function Navbar() {
   }
 
   /**
-   * Links contínuos. Com sessão, densidade maior (gaps/rótulos) para caber Sobre + conta.
-   * Sem overflow-x escondendo o último item em lg+.
+   * Links contínuos — shrink-0 em lg+ para Sobre não sumir no overflow.
+   * Rótulos/CTA/conta inalterados (não compactar o que já funciona).
    */
   function PrimaryNavLinks({ className = "" }: { className?: string }) {
-    const dense = loggedIn;
     return (
       <nav
-        className={`flex shrink-0 items-center text-sm font-medium text-zinc-600 ${
-          dense ? "gap-x-2 xl:gap-x-3" : "gap-x-3 xl:gap-x-4"
-        } ${className}`}
+        className={`flex shrink-0 items-center gap-x-3.5 text-sm font-medium text-zinc-600 xl:gap-x-5 ${className}`}
         aria-label="Principal (ambiente de trabalho)"
         data-navbar-primary
-        data-navbar-dense={dense ? "1" : "0"}
       >
         <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
-          {dense ? (
-            <>
-              <span className="xl:hidden">Recursos</span>
-              <span className="hidden xl:inline">Funcionalidades</span>
-            </>
-          ) : (
-            "Funcionalidades"
-          )}
+          Funcionalidades
         </Link>
         <Link href="/produtores" className={navLinkClass("/produtores")}>
-          {dense ? (
-            "Produtores"
-          ) : (
-            <>
-              <span className="lg:hidden xl:inline">Para produtores</span>
-              <span className="hidden lg:inline xl:hidden">Produtores</span>
-            </>
-          )}
+          <span className="lg:hidden xl:inline">Para produtores</span>
+          <span className="hidden lg:inline xl:hidden">Produtores</span>
         </Link>
         <Link href="/planos" className={navLinkClass("/planos")}>
           Planos
@@ -297,20 +280,17 @@ export function Navbar() {
     );
   }
 
-  /** Login / conta + CTA — compacta ao logar para não empurrar Sobre para fora. */
+  /** Login / conta + CTA — igual à v1.50.4 (nome + «Crie um evento» intactos). */
   function AuthActions() {
     return (
-      <div
-        className={`flex shrink-0 items-center ${loggedIn ? "gap-1.5 sm:gap-2" : "gap-2.5 sm:gap-3"}`}
-        data-navbar-auth
-      >
+      <div className="flex shrink-0 items-center gap-2.5 sm:gap-3" data-navbar-auth>
         {loggedIn ? (
           <div className="relative shrink-0">
             <button
               type="button"
               data-navbar-account
               onClick={toggleAccountMenu}
-              className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1 pl-1 pr-1.5 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 2xl:gap-2 2xl:pr-3"
+              className="flex max-w-[min(100vw-8rem,12rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-2.5 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 xl:pr-3"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               aria-label="Abrir menu da conta"
@@ -318,7 +298,7 @@ export function Navbar() {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
                 <UserIcon className="h-5 w-5" />
               </span>
-              <span className="hidden max-w-[7rem] truncate 2xl:inline">{userNome ?? "…"}</span>
+              <span className="hidden max-w-[8rem] truncate sm:inline">{userNome ?? "…"}</span>
             </button>
           </div>
         ) : (
@@ -332,21 +312,10 @@ export function Navbar() {
         {!loggedIn || userTipo !== "cliente" ? (
           <Link
             href={isOrganizador ? hrefCriarEvento : hrefCadastroOrganizador}
-            className={`btn-success shrink-0 whitespace-nowrap shadow-sm ${
-              loggedIn ? "px-2.5 py-1.5 text-xs xl:px-3 xl:text-sm" : "px-3.5 py-2 text-sm sm:px-4"
-            }`}
+            className="btn-success shrink-0 whitespace-nowrap px-3.5 py-2 text-sm shadow-sm sm:px-4"
           >
-            {loggedIn ? (
-              <>
-                <span className="2xl:hidden">Criar</span>
-                <span className="hidden 2xl:inline">Crie um evento</span>
-              </>
-            ) : (
-              <>
-                <span className="lg:hidden xl:inline">Crie um evento</span>
-                <span className="hidden lg:inline xl:hidden">Criar</span>
-              </>
-            )}
+            <span className="lg:hidden xl:inline">Crie um evento</span>
+            <span className="hidden lg:inline xl:hidden">Criar</span>
           </Link>
         ) : null}
       </div>
@@ -375,36 +344,25 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* Desktop lg+: logo | busca (encolhe se logado) | links (shrink-0, todos visíveis) | auth */}
+          {/* Desktop lg+: busca pode encolher; links+auth não (Sobre + nome + CTA intactos) */}
           <div
-            className={`hidden lg:flex lg:items-center ${
-              loggedIn ? "lg:gap-x-2.5 xl:gap-x-3.5" : "lg:gap-x-4 xl:gap-x-5"
-            }`}
+            className="hidden lg:flex lg:items-center lg:gap-x-4 xl:gap-x-5"
             data-navbar-desktop
-            data-navbar-logged={loggedIn ? "1" : "0"}
           >
             <EventosBRLogo className="shrink-0" />
             <NavbarSearchForm
-              className={
-                loggedIn
-                  ? "w-28 min-w-0 shrink xl:w-36 2xl:w-44"
-                  : "w-40 shrink-0 xl:w-52 2xl:w-56"
-              }
+              className="w-40 min-w-[6.5rem] shrink xl:w-52 2xl:w-56"
               value={buscaNav}
               onChange={setBuscaNav}
               onSubmit={submitBusca}
             />
             <PrimaryNavLinks />
-            <div
-              className={`relative z-40 flex shrink-0 items-center border-l border-zinc-200 ${
-                loggedIn ? "ml-0.5 pl-2.5 xl:pl-3.5" : "ml-1 pl-4 xl:ml-2 xl:pl-5"
-              }`}
-            >
+            <div className="relative z-40 ml-1 flex shrink-0 items-center border-l border-zinc-200 pl-4 xl:ml-2 xl:pl-5">
               <AuthActions />
             </div>
           </div>
 
-          {/* md–lg: duas linhas — links na 2ª com scroll só se necessário */}
+          {/* md–lg: duas linhas */}
           <div className="hidden flex-col gap-2.5 md:flex lg:hidden" data-navbar-mid>
             <div className="relative z-40 flex min-w-0 items-center gap-3">
               <EventosBRLogo className="shrink-0" />
@@ -413,7 +371,7 @@ export function Navbar() {
             </div>
             <div className="relative z-10 flex min-w-0 items-center gap-3">
               <NavbarSearchForm
-                className="w-36 shrink-0 sm:w-44"
+                className="w-40 shrink-0 sm:w-48"
                 value={buscaNav}
                 onChange={setBuscaNav}
                 onSubmit={submitBusca}

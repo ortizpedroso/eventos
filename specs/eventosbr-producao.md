@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.5
+**Versão:** 1.50.6
 **Data:** 2026-08-04
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip até merge desta revisão; v1.50.5 navbar densidade ao logar. pytest **492**. Disco VPS limpo 03/08.
+> **Produção (VPS):** tip até merge desta revisão; v1.50.6 navbar — Sobre visível sem alterar CTA/nome. pytest **492**. Disco VPS limpo 03/08.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -151,7 +151,7 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 
 **Navbar:** `lg+` (≥1024px) menu em **uma linha** (logo, busca, links incluindo Sobre, login/conta); `md–lg` (768–1023) duas linhas (logo+conta / busca+links); celular usa menu ☰. Dropdowns **Categorias** e **conta** via `createPortal` (`z-80`, `position: fixed`) — nunca dentro de `overflow-x-auto`. Links com `inline-flex items-center`. Menu da conta: um portal único.
 
-**Navbar layout (v1.50.4 / 1.50.5):** em `lg+`, links **sem** `flex-1` (evita Login isolado). Sequência: logo → busca → links (`shrink-0`) → separador → auth. Ao logar (`AUTH_SYNC_EVENT`): densidade proporcional — busca menor, gaps menores, «Funcionalidades»→«Recursos» até `xl`, «Produtores», CTA «Criar» até `2xl`, nome da conta só em `2xl` — para **Sobre** permanecer visível (sem sumir no `overflow-x`).
+**Navbar layout (v1.50.4 / 1.50.6):** em `lg+`, links **sem** `flex-1` e **`shrink-0`** (Sobre não some no overflow). Sequência: logo → busca (pode encolher) → links → separador → auth. CTA «Crie um evento» e **nome do usuário** no chip da conta permanecem como na v1.50.4 — **não** compactar ao logar.
 
 **Telefone:** componente `TelefoneInput` — máscara BR em campos que faltavam (admin config, PDV, whitelabel).
 
@@ -846,16 +846,17 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.2** | merge PR #112 / **487** | **APROVADA** — hero full-bleed viewport |
 | **v1.50.3** | tip `1dfd6aa` + fechamento / **487** | **APROVADA** — deploy VPS + alinhamentos + fecha PR #101 |
 | **v1.50.4** | merge PR #116 / **491** | **APROVADA** — navbar sem Login isolado |
-| **v1.50.5 (este)** | branch `cursor/navbar-sobre-login-c0b1` / **492** | **APROVADA** — Sobre visível com sessão |
+| **v1.50.5** | merge PR #117 / **492** | supersedida — densidade indesejada no CTA/nome |
+| **v1.50.6 (este)** | branch `cursor/navbar-reverter-densidade-c0b1` / **492** | **APROVADA** — Sobre ok; CTA/nome restaurados |
 
-### 11.1 Requisitos recentes — resultado (v1.50.5)
+### 11.1 Requisitos recentes — resultado (v1.50.6)
 
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
-| §2.16 / §2.17 | Com sessão: densidade (`data-navbar-dense`) — Sobre permanece | **PASS** |
-| §2.16 / §2.17 | Links `shrink-0` em `lg+` (sem overflow escondendo Sobre) | **PASS** |
-| §2.16 / §2.17 | Auth compacto (nome 2xl; CTA «Criar») ao logar | **PASS** |
-| §7 Qualidade | `test_navbar_layout` densidade + layout | **PASS** |
+| §2.16 / §2.17 | Sobre visível (`shrink-0` nos links; sem overflow escondendo) | **PASS** |
+| §2.16 / §2.17 | Chip da conta com **nome** (`sm:inline`) | **PASS** |
+| §2.16 / §2.17 | CTA «Crie um evento» tamanho v1.50.4 (não encolher ao logar) | **PASS** |
+| §7 Qualidade | `test_navbar_layout` | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.4)
 
@@ -1160,7 +1161,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.5 | 2026-08-04 | **Navbar com sessão.** Densidade proporcional ao logar (busca/gaps/rótulos/CTA) para Sobre não sumir; links `shrink-0` em `lg+`. Testes: 491 → 492. `/review` APROVADA. |
+| 1.50.6 | 2026-08-04 | **Navbar correção.** Mantém Sobre visível (`shrink-0`); restaura CTA «Crie um evento» e nome no chip (reverte compactação da v1.50.5). `/review` APROVADA. |
+| 1.50.5 | 2026-08-04 | Navbar densidade ao logar (parcialmente revertida na 1.50.6 — CTA/nome). |
 | 1.50.4 | 2026-08-04 | **Navbar layout.** §2.16/§2.17: remove `flex-1` dos links em `lg+`; auth agrupado após menu (Login/conta + CTA); busca um pouco mais larga; reflow ao logar. Testes: 487 → 491. `/review` APROVADA. |
 | 1.50.3 | 2026-08-04 | **Deploy VPS + fechamento.** §2.18 alinhamentos (home mobile-center; `/produtores` título mobile / parágrafo justificado). Tip produção `1dfd6aa`. E2E: seeds com e-mail confirmado + contato; cookie sessão usa `baseURL`. PR #101 fechada. `/review` APROVADA. |
 | 1.50.2 | 2026-08-03 | **Hero full-bleed viewport.** §2.18: só a faixa do hero na largura da tela (`:has` + `data-home-hero-fullbleed`); demais seções no container. Testes: 486 → 487. |
