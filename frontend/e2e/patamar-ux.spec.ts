@@ -224,8 +224,8 @@ test.describe("Checkout — copy de pagamento", () => {
     await expect(page.getByRole("heading", { name: "Acesse sua conta" })).not.toBeVisible();
   });
 
-  test("marcador sessão expirada → /auth login (não /cadastro)", async ({ page, context }) => {
-    const base = new URL(page.context().browser() ? "https://eventosbr.app.br" : "http://127.0.0.1:3000");
+  test("marcador sessão expirada → /auth login (não /cadastro)", async ({ page, context, baseURL }) => {
+    const base = new URL(baseURL ?? process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000");
     await context.addCookies([
       {
         name: "eventosbr_session_expired",

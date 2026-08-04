@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.2
-**Data:** 2026-08-03
+**Versão:** 1.50.3
+**Data:** 2026-08-04
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip produto na `main` até merge desta revisão; v1.50.2 hero full-bleed viewport. pytest **487**. Disco VPS limpo 03/08 (build cache Docker ~66 GB → ~1 GB).
+> **Produção (VPS):** tip **`1dfd6aa`** / v1.50.3 na `main` — deploy confirmado 04/08/2026 (hero claro full-bleed + alinhamentos home/produtores). pytest **487**. Disco VPS limpo 03/08 (build cache Docker ~66 GB → ~1 GB).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -89,11 +89,13 @@ Testes: `test_evento_ficha_tecnica.py`, `test_contato_whatsapp_cta.py`, `test_ev
 
 Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/workspace`); subprocess herda CWD da raiz do repo (fix `f3f2e8b`).
 
-### 2.18 Home de lançamento — copy e prova social (v1.50 / 1.50.1)
+### 2.18 Home de lançamento — copy e prova social (v1.50–1.50.3)
 
 **Hero (ICP organizador):** marca EventosBR em destaque; uma headline («Venda ingresso hoje. Receba no painel. Opere o dia sem planilha.»); uma frase de apoio; CTAs «Começar meu evento grátis» + «Explorar eventos»; link «Ver página para produtores».
 
-**Visual do hero (v1.50.1 / 1.50.2):** fundo **claro** (branco + verde da marca), foto em `frontend/public/marketing/hero-evento.webp` (+ `.jpg`). **Full-bleed na viewport** só nesta faixa (`data-home-hero-fullbleed` + CSS `:has` no `main`) — resto da home no container `max-w-7xl`. Sem `w-screen` (evita overflow mobile). Imagem atual é **stock** (Unsplash); substituir no mesmo path.
+**Visual do hero (v1.50.1 / 1.50.2):** fundo **claro** (branco + verde da marca), foto em `frontend/public/marketing/hero-evento.webp` (+ `.jpg`). **Full-bleed na viewport** só nesta faixa (`data-home-hero-fullbleed` + CSS `:has` no `main`) — resto da home no container `max-w-7xl`. Sem `w-screen` (evita overflow mobile). Imagem atual é **stock** (Unsplash plateia `photo-1501281668745`); substituir no mesmo path.
+
+**Alinhamento (v1.50.3):** hero da home **centralizado no mobile**, à esquerda no `sm+`. Em `/produtores`: título «Venda com a sua marca…» centralizado só no mobile (`sm:text-left`); parágrafo de apoio **justificado**.
 
 **Comprador (secundário):** bloco abaixo do hero — «Do PIX ao QR Code na entrada»; categorias + Como comprar.
 
@@ -723,7 +725,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (**485** testes)
+- [x] `pytest` verde (**487** testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -735,14 +737,15 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — **`361eff7`** / v1.49.1 na `main` (PRs #107 tema + #108 navbar/whitelabel-scope mergeados 03/08/2026)
+- [x] tip de produto — **`1dfd6aa`** / v1.50.3 na `main` (home hero claro/full-bleed + alinhamentos; PRs #111–#114)
+- [x] Deploy VPS v1.50.x — confirmado 04/08/2026 (`atualizar-vps-agora.sh`; produção serve `/marketing/hero-evento.webp`, `data-home-hero-fullbleed`, `/ready` OK)
 - [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
 - [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
 - [x] Migração `20260802_000049` (Pixel/GTM em `platform_settings`) — aplicada (`alembic upgrade head`)
 - [x] Disco VPS — limpeza build cache Docker 03/08/2026 (`docker builder prune -af`; 68 GB → 5,8 GB usados; stack healthy). **Nunca** `docker system prune --volumes` em produção.
-- [ ] Confirmar tip VPS ≥ `361eff7` após `atualizar-vps-agora.sh` (tema + navbar + whitelabel escopo)
 - [ ] Meta Pixel / GTM — colar IDs em Admin → Configurações (ou `.env`); só necessário ao rodar campanhas Ads
 - [x] tip de produto — v1.46 mergeado; VPS **`d608169`** (deploy v1.46 confirmado 02/08/2026)
+- [x] E2E seeds — `registrarOrganizadorE2e` + contato obrigatório nos seeds; cookie sessão expirada usa `baseURL` do Playwright (fecha PR #101)
 - [x] **Turnstile em produção** — chaves no `.env` + rebuild `web`/`api` (confirmado 02/08/2026; Managed mode — validação automática para visitantes legítimos)
 - [x] Conta mãe Asaas em **CNPJ** — **fechado por decisão** (adiado até PJ no Asaas); não bloqueia `linked` (02/08/2026)
 - [x] Deploy VPS — **`d2c9e4b`** / v1.43 — confirmado 02/08/2026 (`verificar-versao-site.sh`)
@@ -837,7 +840,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.49.1** | `f14d887` / **480** | **APROVADA** — navbar + whitelabel escopo + ops disco |
 | **v1.50** | merge home lançamento / **485** | **APROVADA** — home lançamento (§2.18) |
 | **v1.50.1** | merge PR #111 / **486** | **APROVADA** — hero claro + foto marketing |
-| **v1.50.2 (este)** | branch `cursor/home-hero-fullbleed-c0b1` / **487** | **APROVADA** — hero full-bleed viewport |
+| **v1.50.2** | merge PR #112 / **487** | **APROVADA** — hero full-bleed viewport |
+| **v1.50.3 (este)** | tip `1dfd6aa` + fechamento / **487** | **APROVADA** — deploy VPS + alinhamentos + fecha PR #101 |
+
+### 11.1 Requisitos recentes — resultado (v1.50.3)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.18 | Deploy VPS tip ≥ `1dfd6aa` (hero claro/full-bleed em produção) | **PASS** |
+| §2.18 | Home hero centralizado no mobile; `/produtores` título mobile-center + parágrafo justificado | **PASS** |
+| §7 Ops | `/ready` OK; `/marketing/hero-evento.webp` 200 | **PASS** |
+| §7 Qualidade | E2E seeds organizador + cookie `baseURL` (absorve PR #101) | **PASS** |
+| §7 Qualidade | `pytest` 487 | **PASS** |
+| GitHub | PR #101 fechada (conteúdo útil incorporado; branch obsoleta vs `main`) | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.2)
 
@@ -1119,6 +1134,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50.3 | 2026-08-04 | **Deploy VPS + fechamento.** §2.18 alinhamentos (home mobile-center; `/produtores` título mobile / parágrafo justificado). Tip produção `1dfd6aa`. E2E: seeds com e-mail confirmado + contato; cookie sessão usa `baseURL`. PR #101 fechada. `/review` APROVADA. |
 | 1.50.2 | 2026-08-03 | **Hero full-bleed viewport.** §2.18: só a faixa do hero na largura da tela (`:has` + `data-home-hero-fullbleed`); demais seções no container. Testes: 486 → 487. |
 | 1.50.1 | 2026-08-03 | **Hero claro + foto marketing.** §2.18: hero branco/verde com `hero-evento.webp` (stock Unsplash, trocar arquivo depois); copy v1.50 mantido. Testes: 485 → 486. |
 | 1.50 | 2026-08-03 | **Home de lançamento.** §2.18: hero organizador; comprador secundário; features sem jargão; prova social com limiar; cenários no lugar de depoimentos fictícios; FAQ `/produtor`; preços. Testes: 480 → 485. `/review` v1.50 APROVADA. |
