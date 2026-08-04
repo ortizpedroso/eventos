@@ -248,12 +248,16 @@ export function Navbar() {
     );
   }
 
-  /** Todos os links numa linha contínua — dropdown Categorias via portal (não corta). */
-  function PrimaryNavLinks() {
+  /**
+   * Links contínuos — sem flex-1 (evita “encolher” o menu e isolar Login à direita).
+   * Dropdown Categorias via portal (não corta).
+   */
+  function PrimaryNavLinks({ className = "" }: { className?: string }) {
     return (
       <nav
-        className={`flex min-w-0 flex-1 items-center gap-x-2.5 overflow-x-auto text-sm font-medium text-zinc-600 xl:gap-x-3.5 ${navScrollClass}`}
+        className={`flex min-w-0 items-center gap-x-3.5 overflow-x-auto text-sm font-medium text-zinc-600 xl:gap-x-5 ${navScrollClass} ${className}`}
         aria-label="Principal (ambiente de trabalho)"
+        data-navbar-primary
       >
         <Link href="/funcionalidades" className={navLinkClass("/funcionalidades")}>
           Funcionalidades
@@ -276,9 +280,10 @@ export function Navbar() {
     );
   }
 
+  /** Login / conta + CTA — mesma faixa dos links; troca automática ao logar (AUTH_SYNC). */
   function AuthActions() {
     return (
-      <>
+      <div className="flex shrink-0 items-center gap-2.5 sm:gap-3" data-navbar-auth>
         {loggedIn ? (
           <div className="relative shrink-0">
             <button
@@ -293,13 +298,13 @@ export function Navbar() {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
                 <UserIcon className="h-5 w-5" />
               </span>
-              <span className="hidden max-w-[8rem] truncate xl:inline">{userNome ?? "…"}</span>
+              <span className="hidden max-w-[8rem] truncate sm:inline">{userNome ?? "…"}</span>
             </button>
           </div>
         ) : (
           <Link
             href="/auth"
-            className="shrink-0 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+            className={`${navItemClass} text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900`}
           >
             Login
           </Link>
@@ -307,13 +312,13 @@ export function Navbar() {
         {!loggedIn || userTipo !== "cliente" ? (
           <Link
             href={isOrganizador ? hrefCriarEvento : hrefCadastroOrganizador}
-            className="btn-success shrink-0 whitespace-nowrap px-3 py-2 text-xs shadow-sm sm:px-4 sm:text-sm"
+            className="btn-success shrink-0 whitespace-nowrap px-3.5 py-2 text-sm shadow-sm sm:px-4"
           >
-            <span className="xl:hidden">Criar</span>
-            <span className="hidden xl:inline">Crie um evento</span>
+            <span className="lg:hidden xl:inline">Crie um evento</span>
+            <span className="hidden lg:inline xl:hidden">Criar</span>
           </Link>
         ) : null}
-      </>
+      </div>
     );
   }
 
@@ -339,38 +344,40 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* Desktop lg+: uma linha — logo | busca | links | conta (sem overflow-hidden) */}
-          <div className="hidden lg:flex lg:items-center lg:gap-x-3 xl:gap-x-4">
+          {/* Desktop lg+: uma linha contínua — logo | busca | links | auth (sem flex-1 nos links) */}
+          <div
+            className="hidden lg:flex lg:items-center lg:gap-x-4 xl:gap-x-5"
+            data-navbar-desktop
+          >
             <EventosBRLogo className="shrink-0" />
             <NavbarSearchForm
-              className="w-32 shrink-0 xl:w-40 2xl:w-48"
+              className="w-40 shrink-0 xl:w-52 2xl:w-56"
               value={buscaNav}
               onChange={setBuscaNav}
               onSubmit={submitBusca}
             />
-            <PrimaryNavLinks />
-            <div className="relative z-40 flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+            <PrimaryNavLinks className="min-w-0" />
+            <div className="relative z-40 ml-1 flex shrink-0 items-center border-l border-zinc-200 pl-4 xl:ml-2 xl:pl-5">
               <AuthActions />
             </div>
           </div>
 
-          {/* md–lg: duas linhas */}
-          <div className="hidden flex-col gap-2 md:flex lg:hidden">
-            <div className="relative z-40 flex min-w-0 items-center justify-between gap-3">
+          {/* md–lg: duas linhas — auth na 1ª; busca+links na 2ª (sem isolar login) */}
+          <div className="hidden flex-col gap-2.5 md:flex lg:hidden" data-navbar-mid>
+            <div className="relative z-40 flex min-w-0 items-center gap-3">
               <EventosBRLogo className="shrink-0" />
-              <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-                <AuthActions />
-              </div>
+              <div className="min-w-0 flex-1" aria-hidden />
+              <AuthActions />
             </div>
             <div className="relative z-10 flex min-w-0 items-center gap-3">
               <NavbarSearchForm
-                className="w-36 shrink-0 sm:w-44"
+                className="w-40 shrink-0 sm:w-48"
                 value={buscaNav}
                 onChange={setBuscaNav}
                 onSubmit={submitBusca}
                 inputId="nav-busca-md"
               />
-              <PrimaryNavLinks />
+              <PrimaryNavLinks className="min-w-0 flex-1" />
             </div>
           </div>
 

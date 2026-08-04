@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.3
+**Versão:** 1.50.4
 **Data:** 2026-08-04
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip **`1dfd6aa`** / v1.50.3 na `main` — deploy confirmado 04/08/2026 (hero claro full-bleed + alinhamentos home/produtores). pytest **487**. Disco VPS limpo 03/08 (build cache Docker ~66 GB → ~1 GB).
+> **Produção (VPS):** tip **`1dfd6aa`** / v1.50.3 na `main` (deploy 04/08); v1.50.4 navbar layout nesta revisão. pytest **491**. Disco VPS limpo 03/08.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -149,7 +149,9 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 
 **Marketing:** assets `/public/marketing/*.webp` (script `generate_marketing_png.py`) em `/funcionalidades` e `/produtores` via `MarketingScreenshot` (`<img>` direto, sem `next/image`).
 
-**Navbar:** `lg+` (≥1024px) menu em **uma linha** (logo, busca, links incluindo Sobre, login); `md–lg` (768–1023) duas linhas (logo+conta / busca+links); celular usa menu ☰. Dropdowns **Categorias** e **conta** via `createPortal` (`z-80`, `position: fixed`) — nunca dentro de `overflow-x-auto`. Em `md–lg`, **Sobre** e **Categorias** fora da área rolável. Links do menu com `inline-flex items-center` para alinhamento vertical. Menu da conta: um portal único.
+**Navbar:** `lg+` (≥1024px) menu em **uma linha** (logo, busca, links incluindo Sobre, login/conta); `md–lg` (768–1023) duas linhas (logo+conta / busca+links); celular usa menu ☰. Dropdowns **Categorias** e **conta** via `createPortal` (`z-80`, `position: fixed`) — nunca dentro de `overflow-x-auto`. Links com `inline-flex items-center`. Menu da conta: um portal único.
+
+**Navbar layout (v1.50.4):** em `lg+`, links **sem** `flex-1` (evita menu “encolhido” e Login isolado à direita). Sequência contínua: logo → busca → links → separador → auth (`data-navbar-auth`). Espaçamento dos links `gap-x-3.5` / `xl:gap-x-5`. Ao logar, o mesmo slot troca Login pelo chip da conta (via `AUTH_SYNC_EVENT` / `fetchSession`) sem reflow quebrado.
 
 **Telefone:** componente `TelefoneInput` — máscara BR em campos que faltavam (admin config, PDV, whitelabel).
 
@@ -168,8 +170,9 @@ Testes: `tests/test_marketing_lancamento.py`, `tests/test_home_posicionamento.py
 
 **Atualização ao vivo (plataforma):** `applyBrandThemeToDocument` + `replaceSettings`/`patchSettings` + `BroadcastChannel` — ao salvar/preset no admin, sem reload; outras abas sincronizam.
 
-**Navbar (v1.49.1):**
+**Navbar (v1.49.1 / v1.50.4):**
 - Links numa sequência contínua (`PrimaryNavLinks`) — sem `overflow-hidden` que escondia itens.
+- v1.50.4: sem `flex-1` nos links em `lg+`; auth agrupado após os links (não flutuando só na borda direita).
 - Dropdown Categorias / menu conta via `createPortal` (`z-80`).
 - Busca: `NavbarSearchForm` **fora** do corpo do `Navbar` (evita remount e perda de foco ao digitar).
 
@@ -725,7 +728,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (**487** testes)
+- [x] `pytest` verde (**491** testes)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -841,7 +844,20 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50** | merge home lançamento / **485** | **APROVADA** — home lançamento (§2.18) |
 | **v1.50.1** | merge PR #111 / **486** | **APROVADA** — hero claro + foto marketing |
 | **v1.50.2** | merge PR #112 / **487** | **APROVADA** — hero full-bleed viewport |
-| **v1.50.3 (este)** | tip `1dfd6aa` + fechamento / **487** | **APROVADA** — deploy VPS + alinhamentos + fecha PR #101 |
+| **v1.50.3** | tip `1dfd6aa` + fechamento / **487** | **APROVADA** — deploy VPS + alinhamentos + fecha PR #101 |
+| **v1.50.4 (este)** | branch `cursor/navbar-layout-ajuste-c0b1` / **491** | **APROVADA** — navbar sem Login isolado |
+
+### 11.1 Requisitos recentes — resultado (v1.50.4)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.16 / §2.17 | `lg+`: links sem `flex-1`; auth após links com separador | **PASS** |
+| §2.16 / §2.17 | Login e CTA no mesmo grupo `data-navbar-auth` | **PASS** |
+| §2.16 / §2.17 | Slot auth troca Login → conta ao logar (`AUTH_SYNC_EVENT`) | **PASS** |
+| §2.16 / §2.17 | Links Funcionalidades…Sobre + Categorias portal | **PASS** |
+| §7 Qualidade | `pytest` 491 (collect) / layout tests PASS | **PASS** |
+| §7 Qualidade | `next build` | **PASS** |
+| §7 Qualidade | Visual desktop: auth agrupado após Sobre | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.3)
 
@@ -1134,6 +1150,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50.4 | 2026-08-04 | **Navbar layout.** §2.16/§2.17: remove `flex-1` dos links em `lg+`; auth agrupado após menu (Login/conta + CTA); busca um pouco mais larga; reflow ao logar. Testes: 487 → 491. `/review` APROVADA. |
 | 1.50.3 | 2026-08-04 | **Deploy VPS + fechamento.** §2.18 alinhamentos (home mobile-center; `/produtores` título mobile / parágrafo justificado). Tip produção `1dfd6aa`. E2E: seeds com e-mail confirmado + contato; cookie sessão usa `baseURL`. PR #101 fechada. `/review` APROVADA. |
 | 1.50.2 | 2026-08-03 | **Hero full-bleed viewport.** §2.18: só a faixa do hero na largura da tela (`:has` + `data-home-hero-fullbleed`); demais seções no container. Testes: 486 → 487. |
 | 1.50.1 | 2026-08-03 | **Hero claro + foto marketing.** §2.18: hero branco/verde com `hero-evento.webp` (stock Unsplash, trocar arquivo depois); copy v1.50 mantido. Testes: 485 → 486. |
