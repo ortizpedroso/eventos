@@ -38,7 +38,7 @@ Use este documento para saber o que **já está no código** e o que **ainda dep
 - [x] P4 — Planos + simuladores organizador (wizard/checkout)
 - [x] P5 — Parcelamento 2/3/6/12x; lista interesse e espera
 - [x] P6 — Página `/produtor/{slug}`
-- [x] P7 — `/ajuda`, blog, `/documentacao/api`
+- [x] P7 — `/ajuda`, blog (docs técnicas **não** públicas — ver spec §2.20)
 - [x] P8 — Wizard 3 passos (criar), checklist publicação, tour
 - [x] P9 — Portaria QR local, som/vibração, rate limit
 - [x] P10 — `sitemap.ts`, `robots.ts`, metadata por página

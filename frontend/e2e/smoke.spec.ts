@@ -12,9 +12,11 @@ test.describe("Smoke — páginas públicas", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("documentação técnica resumida", async ({ page }) => {
-    await page.goto("/documentacao", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(/documenta/i);
+  test("documentação técnica não é pública", async ({ page }) => {
+    const res = await page.goto("/documentacao", { waitUntil: "domcontentloaded" });
+    expect(res?.status()).toBe(404);
+    const resApi = await page.goto("/documentacao/api", { waitUntil: "domcontentloaded" });
+    expect(resApi?.status()).toBe(404);
   });
 
   test("alias /evento redireciona para /eventos", async ({ page }) => {

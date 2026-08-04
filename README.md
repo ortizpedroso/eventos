@@ -4,22 +4,17 @@ Plataforma de eventos com reembolsos automáticos usando FastAPI, SQLAlchemy e *
 
 ## 📖 Documentação do sistema (técnica)
 
-Descrição da arquitetura, módulos backend, modelos de dados, frontend Next.js, pagamentos/lotes/webhooks Asaas e operação (env, Docker, Alembic):
+Documentação **interna** (apenas no repositório — não há páginas públicas de docs no site):
 
-- **→ [docs/00-sistema-completo.md](docs/00-sistema-completo.md)** — documento consolidado (produto, funcionalidades, tecnologias e tabelas do banco)
-- **→ [docs/README.md](docs/README.md)** — índice completo em Markdown no repositório
+- **→ [docs/00-sistema-completo.md](docs/00-sistema-completo.md)** — documento consolidado
+- **→ [docs/README.md](docs/README.md)** — índice completo
+- **→ [specs/eventosbr-producao.md](specs/eventosbr-producao.md)** — spec viva de produção
 
-No site (Next.js), a mesma informação está resumida na página pública **`/documentacao`**.
+Swagger `/docs` e OpenAPI da API ficam **desligados em produção**. Schema exportado (uso interno): `python3 scripts/export-openapi.py` → `docs/openapi.generated.json`.
 
-## 🖥️ VPS em produção (`eventosbr.app.br`)
+## 🖥️ VPS em produção
 
-Código oficial: branch **`main`** (Asaas — sem Stripe). Um único comando no servidor:
-
-```bash
-cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh
-```
-
-O script atualiza o Git, preenche o `.env` automaticamente, sincroniza a senha do Postgres e sobe API + web + Caddy. Não é preciso colar senhas manualmente.
+Código oficial: branch **`main`**. Deploy: script `scripts/atualizar-vps-agora.sh` no servidor (ver `docs/08-deploy-hostinger.md` e a spec).
 
 ## 🚀 Características
 

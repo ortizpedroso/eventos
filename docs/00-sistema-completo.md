@@ -20,7 +20,7 @@ A **EventosBR** é uma plataforma brasileira de venda de ingressos para eventos.
 - Painel **admin** da plataforma (moderação, campanhas de marketing)
 - **Perfil público do produtor** (`/produtor/{slug}`)
 
-No site Next.js há também páginas institucionais: `/documentacao`, `/funcionalidades`, `/planos`, `/ajuda/*`, `/blog`, `/termos`, `/privacidade`, `/sobre`.
+No site Next.js há também páginas institucionais: `/funcionalidades`, `/planos`, `/ajuda/*`, `/blog`, `/termos`, `/privacidade`, `/sobre`. Documentação técnica fica só no repositório (`docs/`, `specs/`) — não há `/documentacao` público.
 
 ---
 
@@ -209,8 +209,6 @@ Documentação interativa (apenas `ENVIRONMENT=development`): Swagger `/docs`, R
 | `/organizador/*` | Organizador | Painel completo |
 | `/portaria/{eventoId}/{token}` | Token | Check-in colaborador |
 | `/admin/*` | Admin | Moderação e marketing |
-| `/documentacao` | Sim | Resumo técnico no site |
-| `/documentacao/api` | Sim | Referência de rotas gerada a partir do `openapi.json` estático (produção não expõe `/docs` do FastAPI) |
 | `/funcionalidades`, `/planos`, `/ajuda/*`, `/blog` | Sim | Conteúdo institucional |
 | `/termos`, `/privacidade`, `/sobre` | Sim | Legal |
 
@@ -222,7 +220,7 @@ Componentes-chave: `comprar-ingresso.tsx`, `checkout-asaas-painel.tsx`, `evento-
 - **Filtro de eventos de teste**: `lib/eventos-vitrine.ts` (frontend) e `app/services/evento_vitrine.py` (API) escondem eventos com nomes/locais de teste (`Cortesia Grátis`, `Rua Teste`, `E2E`, `QA`) da vitrine pública — evita que dados de QA apareçam para visitantes.
 - **Prova social**: `home-prova-social.tsx` (números reais via `/api/eventos/stats-publicas`), `home-depoimentos.tsx` e `home-selos-confianca.tsx` na home.
 - **Acessibilidade**: skip-link (`skip-to-content.tsx`), `focus-visible` global em `globals.css`, `alt` descritivo em imagens de evento e no logo (`eventosbr-logo.tsx`); imagens de marketing em WebP (menor peso, melhora LCP).
-- **API documentada**: `scripts/export-openapi.py` gera `frontend/public/openapi.json` a partir do schema real do FastAPI; regenerar sempre que rotas mudarem.
+- **OpenAPI interno**: `scripts/export-openapi.py` gera `docs/openapi.generated.json` (não servido no site; API em produção não expõe `/docs`).
 - **Lighthouse (build de produção local, jul/2026)**: `/` — performance 97, acessibilidade 100, boas práticas 96, SEO 100; `/eventos` — performance 96, acessibilidade 100, SEO 100; `/funcionalidades` — performance 92, acessibilidade 96, SEO 100.
 
 ---

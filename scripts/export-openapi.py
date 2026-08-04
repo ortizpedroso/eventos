@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-Exporta o esquema OpenAPI da API para um arquivo estático, servido pelo
-frontend em produção (onde /docs e /openapi.json ficam desligados por
-segurança — ver `_docs_on` em app/main.py).
+Exporta o esquema OpenAPI da API para arquivo interno do repositório.
+
+Em produção a API não expõe `/docs` nem `/openapi.json` (`_docs_on` em
+`app/main.py`). O site público também **não** serve o schema — a saída
+fica em `docs/` (uso interno / desenvolvimento), nunca em `frontend/public/`.
 
 Regenerar sempre que rotas/schemas mudarem:
   python3 scripts/export-openapi.py
 
-Saída: frontend/public/openapi.json (textos e paths white-label, sem subconta)
+Saída: docs/openapi.generated.json (textos e paths white-label, sem subconta)
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-OUT_PATH = ROOT / "frontend" / "public" / "openapi.json"
+OUT_PATH = ROOT / "docs" / "openapi.generated.json"
 
 # Fronteira de palavra tolerante a camelCase/snake_case: "asaas" conta como
 # token isolado tanto em "Asaas Iniciar Cobranca" (espaço) quanto em

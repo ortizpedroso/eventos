@@ -1,6 +1,8 @@
 # Documentação técnica — EventosBR
 
-Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + pagamentos integrados). Use em conjunto com o [README da raiz](../README.md) para instalação rápida. No site público (Next.js) há uma página resumida em **`/documentacao`**.
+Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + pagamentos integrados). Use em conjunto com o [README da raiz](../README.md) para instalação rápida.
+
+**Importante:** esta documentação é **interna ao repositório**. O site público **não** expõe `/documentacao` nem `/openapi.json`.
 
 ## Documento consolidado
 
@@ -35,11 +37,9 @@ Em **desenvolvimento local**, com a API em execução:
 - **Swagger**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
 
-Em **produção**, `/docs`/`/redoc` ficam desligados por segurança. Use a referência estática gerada a partir do schema real:
+Em **produção**, `/docs`/`/redoc`/`/openapi.json` da API ficam desligados por segurança. Para referência interna:
 
-- Site: **`/documentacao/api`**
-- Esquema bruto: **`/openapi.json`**
-- Regenerar após mudar rotas: `python3 scripts/export-openapi.py`
+- Regenerar schema: `python3 scripts/export-openapi.py` → `docs/openapi.generated.json` (não servido pelo site)
 
 ## Convenções desta pasta
 
