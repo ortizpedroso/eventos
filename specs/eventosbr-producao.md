@@ -1,12 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.6.1
+**Versão:** 1.50.7
 **Data:** 2026-08-04
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
 > **Produção (VPS):** tip **`46b470a`** / v1.50.6.1 na `main` — navbar Sobre + CTA/nome; home hero claro full-bleed. pytest **492**. Disco VPS limpo 03/08. `/review` **APROVADA**.
+>
+> **Spec / docs (esta versão):** v1.50.7 — Playbook Oficial de Marketing em `docs/14-playbook-marketing-eventosbr.md` (§2.19). Sem mudança de código de produto.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -108,6 +110,29 @@ Testes: `tests/test_seo_cidade_typical_age.py` — **sem** `cwd` absoluto (`/wor
 **Preços:** «Comece grátis. Pague só quando vender.»
 
 **FAQ:** marca na página pública do produtor (alinhado a §2.17).
+
+### 2.19 Playbook Oficial de Marketing (v1.50.7)
+
+Documento de referência para a equipe produzir conteúdo, anúncios e comunicações com padrão único:
+
+**Arquivo:** `docs/14-playbook-marketing-eventosbr.md` (índice em `docs/README.md`).
+
+| Bloco | Conteúdo |
+|-------|----------|
+| Posicionamento | Proposta de valor: *A EventosBR simplifica a organização de eventos, da criação da página à venda de ingressos.* Promessa: **Organize melhor. Venda mais.** Frase: *A plataforma para quem organiza eventos.* Marca gramatical: **a EventosBR**. |
+| Público | Organizadores (produtores, congressos, workshops, cultura, esportes, empresas, festas/shows, ensino, associações) — não agenda de rolê |
+| Tom | Claro, objetivo, profissional, acolhedor; sem exageros sem prova |
+| Visual | Logo + assinatura + `eventosbr.app.br` + prints reais + um CTA; cores do produto (`--brand-primary` `#10b981`) |
+| Pilares | Organizar · Vender · Profissionalizar · Ensinar |
+| Ciclo 1 | Calendário 15 dias (descoberta → consideração → conversão); 7 Reels; carrosséis; Stories; Meta Ads A/B/C |
+| CTAs por funil | Topo: Conheça / Descubra / Comece gratuitamente · Meio: Crie / Organize / Publique · Fundo: Criar minha conta / Publicar / Começar agora |
+| Canais | Meta Ads, e-mail (3 mensagens), WhatsApp (base própria), SEO/LP de organizador |
+| KPIs | Alcance, engajamento, cliques, contas criadas, eventos publicados, custo por cadastro |
+| Evolução | Ciclo 2 (performance do organizador) · Ciclo 3 (cases, FAQ, produto) |
+
+**Ops Ads:** IDs Meta Pixel/GTM ainda pendentes de colar no Admin (§7) antes de ligar campanhas.
+
+**Sem mudança de código** nesta versão — apenas documentação de marketing operacional.
 
 ### 2.13 Lançamento comercial — home dual, Ads e SEO (v1.47)
 
@@ -741,6 +766,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 **Estado do repositório:**
 
 - [x] tip de produto — **`46b470a`** / v1.50.6.1 na `main` (home hero + navbar PRs #111–#118)
+- [x] Playbook Oficial de Marketing — `docs/14-playbook-marketing-eventosbr.md` (§2.19 / v1.50.7)
 - [x] Deploy VPS v1.50.x — confirmado 04/08/2026 (`atualizar-vps-agora.sh`; produção: `/marketing/hero-evento.webp`, `data-home-hero-fullbleed`, `data-navbar-desktop`/`sobre`/`auth`, `/ready` OK)
 - [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
 - [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
@@ -800,6 +826,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Verificação deploy | `verificar-versao-site.sh`, `verify-production.sh` |
 | Config / checks | `config/settings.py`, `production_checks.py`, `.env.production.example` |
 | Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh`, `configure-turnstile-env.sh`, `setup-turnstile-e2e.sh`, `turnstile-spin/` |
+| Marketing (playbook) | `docs/14-playbook-marketing-eventosbr.md`, `docs/README.md` |
 | Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py`, `test_pdv_correcao_email.py` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
@@ -848,7 +875,18 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.4** | merge PR #116 / **491** | **APROVADA** — navbar sem Login isolado |
 | **v1.50.5** | merge PR #117 / **492** | supersedida — densidade indesejada no CTA/nome |
 | **v1.50.6** | merge PR #118 / **492** | **APROVADA** — Sobre ok; CTA/nome restaurados |
-| **v1.50.6.1 (este)** | tip `46b470a` + `/review` / **492** | **APROVADA** — fechamento spec/build/review |
+| **v1.50.6.1** | tip `46b470a` + `/review` / **492** | **APROVADA** — fechamento spec/build/review |
+| **v1.50.7 (este)** | branch `cursor/playbook-marketing-c0b1` / **492** | docs — Playbook Oficial de Marketing (§2.19) |
+
+### 11.1 Requisitos recentes — resultado (v1.50.7)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.19 | Playbook em `docs/14-playbook-marketing-eventosbr.md` | **PASS** |
+| §2.19 | Índice em `docs/README.md` aponta o playbook | **PASS** |
+| §2.19 | Proposta de valor + promessa + pilares + Ciclo 1 documentados | **PASS** |
+| §8 | Referência de arquivos inclui playbook | **PASS** |
+| §7 Qualidade | Sem mudança de código de produto (docs only) | **PASS** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.6.1)
 
@@ -1176,6 +1214,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50.7 | 2026-08-04 | **Playbook Oficial de Marketing.** §2.19: `docs/14-playbook-marketing-eventosbr.md` — posicionamento (a EventosBR), proposta de valor, promessa *Organize melhor. Venda mais.*, pilares, Ciclo 1 (15 dias), Reels, Ads, e-mail, WhatsApp, KPIs e ciclos 2/3. Índice em `docs/README.md`. Sem mudança de código. |
 | 1.50.6.1 | 2026-08-04 | **Fechamento /review.** Tip `46b470a`; §7/§11 atualizados; checklist home+navbar × produção **APROVADA**. `/build` sem lacuna (já na `main`). |
 | 1.50.6 | 2026-08-04 | **Navbar correção.** Mantém Sobre visível (`shrink-0`); restaura CTA «Crie um evento» e nome no chip (reverte compactação da v1.50.5). `/review` APROVADA. |
 | 1.50.5 | 2026-08-04 | Navbar densidade ao logar (parcialmente revertida na 1.50.6 — CTA/nome). |
