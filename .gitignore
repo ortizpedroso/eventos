@@ -82,6 +82,9 @@ docker-compose.override.yml
 # Stripe CLI (binário baixado localmente)
 tools/stripe-cli/
 
+# OpenAPI gerado (uso interno — não servir no site)
+docs/openapi.generated.json
+
 # Node (frontend)
 node_modules/
 frontend/dist/
