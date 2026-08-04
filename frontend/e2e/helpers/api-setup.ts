@@ -4,6 +4,12 @@
 
 const API = (process.env.PLAYWRIGHT_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 
+/** Campos de contato obrigatórios em POST /api/eventos/criar (v1.45+). */
+const E2E_EVENTO_CONTATO = {
+  contato_telefone: "11987654321",
+  contato_email: "contato@e2e.test.com",
+};
+
 async function api<T>(
   method: string,
   path: string,
@@ -23,6 +29,37 @@ async function api<T>(
     throw new Error(`${method} ${path} → ${res.status}: ${text}`);
   }
   return text ? (JSON.parse(text) as T) : ({} as T);
+}
+
+type RegisterOrganizadorResponse = {
+  access_token?: string | null;
+  pending_email_verification?: boolean;
+  message?: string;
+};
+
+/** Registra organizador e confirma e-mail (dev retorna link com token na message). */
+async function registrarOrganizadorE2e(
+  email: string,
+  nome: string,
+  senha = "senha12345",
+): Promise<string> {
+  const reg = await api<RegisterOrganizadorResponse>("POST", "/api/auth/registrar", {
+    email,
+    nome,
+    senha,
+    tipo: "organizador",
+  });
+  if (reg.access_token) return reg.access_token;
+  const tokenFromMsg = reg.message?.match(/token=([A-Za-z0-9_-]+)/)?.[1];
+  if (tokenFromMsg) {
+    const verified = await api<{ access_token: string }>("POST", "/api/auth/verificar-email", {
+      token: tokenFromMsg,
+    });
+    return verified.access_token;
+  }
+  throw new Error(
+    `Cadastro organizador E2E sem token (use ENVIRONMENT=development no stack E2E): ${reg.message ?? ""}`,
+  );
 }
 
 export type SeededEvent = {
@@ -50,22 +87,13 @@ export async function seedPublishedEventMeiaEntrada(): Promise<SeededEvent> {
   const senha = "senha12345";
   const orgEmail = `e2e_meia_org_${suf}@test.com`;
 
-  await api("POST", "/api/auth/registrar", {
-    email: orgEmail,
-    nome: "Org Meia E2E",
-    senha,
-    tipo: "organizador",
-  });
-
-  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
-    email: orgEmail,
-    senha,
-  });
+  const orgToken = await registrarOrganizadorE2e(orgEmail, "Org Meia E2E", senha);
 
   const ev = await api<{ id: string; slug: string; preco_compra?: number; preco_ingresso: number }>(
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Meia-entrada ${suf}`,
       descricao: "Evento para teste Playwright de meia-entrada",
       data_inicio: "2026-12-20T19:00:00",
@@ -91,17 +119,7 @@ export async function seedPublishedEventAsaas(): Promise<SeededEvent> {
   const senha = "senha12345";
   const orgEmail = `e2e_asaas_org_${suf}@test.com`;
 
-  await api("POST", "/api/auth/registrar", {
-    email: orgEmail,
-    nome: "Org Asaas E2E",
-    senha,
-    tipo: "organizador",
-  });
-
-  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
-    email: orgEmail,
-    senha,
-  });
+  const orgToken = await registrarOrganizadorE2e(orgEmail, "Org Asaas E2E", senha);
 
   await api(
     "PUT",
@@ -114,6 +132,7 @@ export async function seedPublishedEventAsaas(): Promise<SeededEvent> {
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Asaas ${suf}`,
       descricao: "Evento para teste Playwright Asaas",
       data_inicio: "2026-12-20T19:00:00",
@@ -139,22 +158,13 @@ export async function seedPublishedEvent(): Promise<SeededEvent> {
   const senha = "senha12345";
   const orgEmail = `e2e_org_${suf}@test.com`;
 
-  await api("POST", "/api/auth/registrar", {
-    email: orgEmail,
-    nome: "Org E2E",
-    senha,
-    tipo: "organizador",
-  });
-
-  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
-    email: orgEmail,
-    senha,
-  });
+  const orgToken = await registrarOrganizadorE2e(orgEmail, "Org E2E", senha);
 
   const ev = await api<{ id: string; slug: string; preco_compra?: number; preco_ingresso: number }>(
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Checkout ${suf}`,
       descricao: "Evento para teste Playwright",
       data_inicio: "2026-12-20T19:00:00",
@@ -184,22 +194,13 @@ export async function seedPreVendaEvent(): Promise<SeededEvent> {
     .toISOString()
     .slice(0, 19);
 
-  await api("POST", "/api/auth/registrar", {
-    email: orgEmail,
-    nome: "Org Pré-venda E2E",
-    senha,
-    tipo: "organizador",
-  });
-
-  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
-    email: orgEmail,
-    senha,
-  });
+  const orgToken = await registrarOrganizadorE2e(orgEmail, "Org Pré-venda E2E", senha);
 
   const ev = await api<{ id: string; slug: string; preco_compra?: number; preco_ingresso: number }>(
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Pré-venda ${suf}`,
       descricao: "Evento para teste lista de interesse",
       data_inicio: "2026-12-20T19:00:00",
@@ -236,22 +237,13 @@ export async function seedSoldOutWaitlistEvent(): Promise<SeededEvent> {
   const orgEmail = `e2e_espera_org_${suf}@test.com`;
   const cliEmail = `e2e_espera_cli_${suf}@test.com`;
 
-  await api("POST", "/api/auth/registrar", {
-    email: orgEmail,
-    nome: "Org Espera E2E",
-    senha,
-    tipo: "organizador",
-  });
-
-  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
-    email: orgEmail,
-    senha,
-  });
+  const orgToken = await registrarOrganizadorE2e(orgEmail, "Org Espera E2E", senha);
 
   const ev = await api<{ id: string; slug: string; preco_compra?: number; preco_ingresso: number }>(
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Esgotado ${suf}`,
       descricao: "Evento esgotado para lista de espera",
       data_inicio: "2026-12-20T19:00:00",
@@ -309,17 +301,7 @@ export async function seedPublicProducer(): Promise<{ slug: string; nome: string
   const orgEmail = `e2e_produtor_${suf}@test.com`;
   const nome = `Produtor E2E ${suf}`;
 
-  await api("POST", "/api/auth/registrar", {
-    email: orgEmail,
-    nome,
-    senha,
-    tipo: "organizador",
-  });
-
-  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
-    email: orgEmail,
-    senha,
-  });
+  const orgToken = await registrarOrganizadorE2e(orgEmail, nome, senha);
 
   // PATCH /meu-perfil não devolve "nome" no corpo (só slug_publico) — usar o valor do cadastro.
   const perfil = await api<{ slug_publico: string }>(
@@ -336,6 +318,7 @@ export async function seedPublicProducer(): Promise<{ slug: string; nome: string
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `Show Público ${suf}`,
       descricao: "Evento visível no perfil",
       data_inicio: "2026-12-20T19:00:00",
@@ -358,22 +341,13 @@ export async function seedParcelamentoEvent(): Promise<SeededEvent> {
   const senha = "senha12345";
   const orgEmail = `e2e_parc_org_${suf}@test.com`;
 
-  await api("POST", "/api/auth/registrar", {
-    email: orgEmail,
-    nome: "Org Parcelamento",
-    senha,
-    tipo: "organizador",
-  });
-
-  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
-    email: orgEmail,
-    senha,
-  });
+  const orgToken = await registrarOrganizadorE2e(orgEmail, "Org Parcelamento", senha);
 
   const ev = await api<{ id: string; slug: string }>(
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Parcelado ${suf}`,
       descricao: "Evento com parcelamento",
       data_inicio: "2026-12-20T19:00:00",
@@ -393,6 +367,7 @@ export async function seedParcelamentoEvent(): Promise<SeededEvent> {
     "PATCH",
     `/api/eventos/id/${ev.id}`,
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Parcelado ${suf}`,
       descricao: "Evento com parcelamento",
       data_inicio: "2026-12-20T19:00:00",
@@ -416,17 +391,7 @@ export async function seedParcelamentoEventAsaas(): Promise<SeededEvent> {
   const senha = "senha12345";
   const orgEmail = `e2e_parc_asaas_org_${suf}@test.com`;
 
-  await api("POST", "/api/auth/registrar", {
-    email: orgEmail,
-    nome: "Org Parcelamento Asaas",
-    senha,
-    tipo: "organizador",
-  });
-
-  const { access_token: orgToken } = await api<{ access_token: string }>("POST", "/api/auth/login", {
-    email: orgEmail,
-    senha,
-  });
+  const orgToken = await registrarOrganizadorE2e(orgEmail, "Org Parcelamento Asaas", senha);
 
   await api(
     "PUT",
@@ -439,6 +404,7 @@ export async function seedParcelamentoEventAsaas(): Promise<SeededEvent> {
     "POST",
     "/api/eventos/criar",
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Parcelado Asaas ${suf}`,
       descricao: "Parcelamento E2E",
       data_inicio: "2026-12-20T19:00:00",
@@ -458,6 +424,7 @@ export async function seedParcelamentoEventAsaas(): Promise<SeededEvent> {
     "PATCH",
     `/api/eventos/id/${ev.id}`,
     {
+      ...E2E_EVENTO_CONTATO,
       nome: `E2E Parcelado Asaas ${suf}`,
       descricao: "Parcelamento E2E",
       data_inicio: "2026-12-20T19:00:00",
@@ -489,14 +456,7 @@ export async function seedOrganizerSession(): Promise<{ email: string; senha: st
   const senha = "senha12345";
   const email = `e2e_perfil_org_${suf}@test.com`;
 
-  await api("POST", "/api/auth/registrar", {
-    email,
-    nome: "Org Perfil E2E",
-    senha,
-    tipo: "organizador",
-  });
-
-  const token = await apiLogin(email, senha);
+  const token = await registrarOrganizadorE2e(email, "Org Perfil E2E", senha);
   return { email, senha, token };
 }
 
