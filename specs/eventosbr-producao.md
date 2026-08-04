@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.8
+**Versão:** 1.50.8.1
 **Data:** 2026-08-04
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip **`3306f62`** / v1.50.7 na `main` (playbook). Deploy desta versão (v1.50.8 — docs fora do site) pendente após merge.
+> **Código (`main`):** tip **`dfabe91`** / v1.50.8 — docs técnicas fora do site (§2.20). pytest **496**. Repo GitHub **privado**. `/review` código×spec **APROVADA**.
 >
-> **Spec (esta versão):** v1.50.8 — documentação técnica **não pública** no site (§2.20). Repo GitHub privado.
+> **Produção (VPS):** ainda no tip anterior até deploy — `/documentacao` e `/openapi.json` **ainda respondem 200** no ar. Rodar `atualizar-vps-agora.sh` para aplicar v1.50.8.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -783,11 +783,11 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — **`46b470a`** / v1.50.6.1 na `main` (home hero + navbar PRs #111–#118)
+- [x] tip de produto — **`dfabe91`** / v1.50.8 na `main` (merge PR #121 — docs fora do site)
 - [x] Playbook Oficial de Marketing — `docs/14-playbook-marketing-eventosbr.md` (§2.19 / v1.50.7)
-- [x] Docs técnicas fora do site — §2.20 / v1.50.8 (404 `/documentacao*`; sem `openapi.json` público)
-- [ ] Deploy VPS v1.50.8 — após merge (`atualizar-vps-agora.sh`) para refletir remoção no ar
-- [x] Deploy VPS v1.50.x — confirmado 04/08/2026 (`atualizar-vps-agora.sh`; produção: `/marketing/hero-evento.webp`, `data-home-hero-fullbleed`, `data-navbar-desktop`/`sobre`/`auth`, `/ready` OK)
+- [x] Docs técnicas fora do site — §2.20 / v1.50.8 (código na `main`: 404 `/documentacao*`; sem `openapi.json` público)
+- [ ] Deploy VPS v1.50.8 — **pendente** (`atualizar-vps-agora.sh`); no ar ainda: `/documentacao` e `/openapi.json` → 200 (checado 04/08/2026)
+- [x] Deploy VPS v1.50.x (hero/navbar) — confirmado 04/08/2026 (`atualizar-vps-agora.sh`; `/ready` OK)
 - [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
 - [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
 - [x] Migração `20260802_000049` (Pixel/GTM em `platform_settings`) — aplicada (`alembic upgrade head`)
@@ -898,7 +898,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.6** | merge PR #118 / **492** | **APROVADA** — Sobre ok; CTA/nome restaurados |
 | **v1.50.6.1** | tip `46b470a` + `/review` / **492** | **APROVADA** — fechamento spec/build/review |
 | **v1.50.7** | tip `3306f62` / **492** | docs — Playbook Oficial de Marketing (§2.19) |
-| **v1.50.8 (este)** | branch `cursor/docs-privadas-c0b1` | **segurança** — docs técnicas fora do site (§2.20) |
+| **v1.50.8** | tip `dfabe91` (PR #121) / **496** | **APROVADA** (código) — docs fora do site (§2.20) |
+| **v1.50.8.1 (este)** | tip `dfabe91` + `/review` / **496** | **APROVADA** — fechamento spec; **deploy VPS pendente** |
+
+### 11.1 Requisitos recentes — resultado (v1.50.8.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.20 | Código `main` `dfabe91`: páginas docs removidas | **PASS** |
+| §2.20 | Sem `frontend/public/openapi.json` no tip | **PASS** |
+| §2.20 | Export → `docs/openapi.generated.json`; footer/sitemap/robots | **PASS** |
+| §2.20 | `tests/test_docs_nao_publicas.py` (collect **496**) | **PASS** |
+| §7 Ops | Deploy VPS aplica 404 no ar (`/documentacao`, `/openapi.json`) | **PENDENTE** |
+| `/review` | Checklist código × spec | **APROVADA** (ops: só falta deploy) |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.8)
 
@@ -1246,7 +1258,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.8 | 2026-08-04 | **Docs técnicas fora do site.** §2.20: remove `/documentacao*`, `openapi.json` público e link do rodapé; export OpenAPI só em `docs/openapi.generated.json`; sitemap/robots; teste `test_docs_nao_publicas.py`. Repo privado. |
+| 1.50.8.1 | 2026-08-04 | **Fechamento /review v1.50.8.** Tip `main` **`dfabe91`** (PR #121). §7/§11: código×spec **APROVADA**; deploy VPS ainda pendente (site continua 200 em `/documentacao` e `/openapi.json` até `atualizar-vps-agora.sh`). |
+| 1.50.8 | 2026-08-04 | **Docs técnicas fora do site.** §2.20: remove `/documentacao*`, `openapi.json` público e link do rodapé; export OpenAPI só em `docs/openapi.generated.json`; sitemap/robots; teste `test_docs_nao_publicas.py`. Repo privado. Merge PR #121 → `dfabe91`. |
 | 1.50.7 | 2026-08-04 | **Playbook Oficial de Marketing.** §2.19: `docs/14-playbook-marketing-eventosbr.md` — posicionamento (a EventosBR), proposta de valor, promessa *Organize melhor. Venda mais.*, pilares, Ciclo 1 (15 dias), Reels, Ads, e-mail, WhatsApp, KPIs e ciclos 2/3. Índice em `docs/README.md`. Sem mudança de código. |
 | 1.50.6.1 | 2026-08-04 | **Fechamento /review.** Tip `46b470a`; §7/§11 atualizados; checklist home+navbar × produção **APROVADA**. `/build` sem lacuna (já na `main`). |
 | 1.50.6 | 2026-08-04 | **Navbar correção.** Mantém Sobre visível (`shrink-0`); restaura CTA «Crie um evento» e nome no chip (reverte compactação da v1.50.5). `/review` APROVADA. |
