@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.6
+**Versão:** 1.50.6.1
 **Data:** 2026-08-04
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip até merge desta revisão; v1.50.6 navbar — Sobre visível sem alterar CTA/nome. pytest **492**. Disco VPS limpo 03/08.
+> **Produção (VPS):** tip **`46b470a`** / v1.50.6.1 na `main` — navbar Sobre + CTA/nome; home hero claro full-bleed. pytest **492**. Disco VPS limpo 03/08. `/review` **APROVADA**.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -740,8 +740,8 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — **`1dfd6aa`** / v1.50.3 na `main` (home hero claro/full-bleed + alinhamentos; PRs #111–#114)
-- [x] Deploy VPS v1.50.x — confirmado 04/08/2026 (`atualizar-vps-agora.sh`; produção serve `/marketing/hero-evento.webp`, `data-home-hero-fullbleed`, `/ready` OK)
+- [x] tip de produto — **`46b470a`** / v1.50.6.1 na `main` (home hero + navbar PRs #111–#118)
+- [x] Deploy VPS v1.50.x — confirmado 04/08/2026 (`atualizar-vps-agora.sh`; produção: `/marketing/hero-evento.webp`, `data-home-hero-fullbleed`, `data-navbar-desktop`/`sobre`/`auth`, `/ready` OK)
 - [x] v1.47 lançamento UX/Ads — home dual, Pixel/GTM admin, migração `20260802_000049` (código)
 - [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
 - [x] Migração `20260802_000049` (Pixel/GTM em `platform_settings`) — aplicada (`alembic upgrade head`)
@@ -847,7 +847,22 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.3** | tip `1dfd6aa` + fechamento / **487** | **APROVADA** — deploy VPS + alinhamentos + fecha PR #101 |
 | **v1.50.4** | merge PR #116 / **491** | **APROVADA** — navbar sem Login isolado |
 | **v1.50.5** | merge PR #117 / **492** | supersedida — densidade indesejada no CTA/nome |
-| **v1.50.6 (este)** | branch `cursor/navbar-reverter-densidade-c0b1` / **492** | **APROVADA** — Sobre ok; CTA/nome restaurados |
+| **v1.50.6** | merge PR #118 / **492** | **APROVADA** — Sobre ok; CTA/nome restaurados |
+| **v1.50.6.1 (este)** | tip `46b470a` + `/review` / **492** | **APROVADA** — fechamento spec/build/review |
+
+### 11.1 Requisitos recentes — resultado (v1.50.6.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.18 | Hero claro + full-bleed + foto `/marketing/hero-evento` | **PASS** |
+| §2.18 | Home mobile-center; `/produtores` título mobile + parágrafo justificado | **PASS** |
+| §2.16 / §2.17 | Navbar: links `shrink-0`; Sobre visível; auth agrupado | **PASS** |
+| §2.16 / §2.17 | CTA «Crie um evento» + nome no chip (sem compactar) | **PASS** |
+| §2.16 / §2.17 | `AUTH_SYNC_EVENT` + portal conta/Categorias | **PASS** |
+| §7 Ops | Produção: hero + navbar attrs; `/ready` OK | **PASS** |
+| §7 Qualidade | `pytest` home + navbar layout; collect **492** | **PASS** |
+| §7 Qualidade | `/build`: implementação já na `main` (sem lacuna de código) | **PASS** |
+| `/review` | Checklist código × spec | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.6)
 
@@ -1161,6 +1176,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50.6.1 | 2026-08-04 | **Fechamento /review.** Tip `46b470a`; §7/§11 atualizados; checklist home+navbar × produção **APROVADA**. `/build` sem lacuna (já na `main`). |
 | 1.50.6 | 2026-08-04 | **Navbar correção.** Mantém Sobre visível (`shrink-0`); restaura CTA «Crie um evento» e nome no chip (reverte compactação da v1.50.5). `/review` APROVADA. |
 | 1.50.5 | 2026-08-04 | Navbar densidade ao logar (parcialmente revertida na 1.50.6 — CTA/nome). |
 | 1.50.4 | 2026-08-04 | **Navbar layout.** §2.16/§2.17: remove `flex-1` dos links em `lg+`; auth agrupado após menu (Login/conta + CTA); busca um pouco mais larga; reflow ao logar. Testes: 487 → 491. `/review` APROVADA. |
