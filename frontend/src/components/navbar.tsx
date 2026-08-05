@@ -290,7 +290,7 @@ export function Navbar() {
               type="button"
               data-navbar-account
               onClick={toggleAccountMenu}
-              className="flex max-w-[min(100%-2rem,12rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-2.5 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 xl:pr-3"
+              className="flex max-w-[min(100vw-8rem,14rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               aria-label="Abrir menu da conta"
@@ -298,7 +298,7 @@ export function Navbar() {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
                 <UserIcon className="h-5 w-5" />
               </span>
-              <span className="hidden max-w-[8rem] truncate sm:inline">{userNome ?? "…"}</span>
+              <span className="hidden max-w-[10rem] truncate sm:inline">{userNome ?? "…"}</span>
             </button>
           </div>
         ) : (
