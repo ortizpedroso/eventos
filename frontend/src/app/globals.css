@@ -40,11 +40,19 @@
 }
 
 html {
-  scrollbar-gutter: stable;
+  /* gutter só em telas largas — em mobile reserva largura e empurra o layout */
+  scrollbar-gutter: auto;
   /* Navbar sticky — evita título cortado ao rolar para âncoras */
   scroll-padding-top: 4.5rem;
   /* Evita overflow horizontal de blur/100vw em mobile (E2E patamar). */
   overflow-x: clip;
+  max-width: 100%;
+}
+
+@media (min-width: 768px) {
+  html {
+    scrollbar-gutter: stable;
+  }
 }
 
 body {
@@ -54,6 +62,8 @@ body {
   display: grid;
   grid-template-rows: auto 1fr auto;
   min-height: 100dvh;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 /* Grid 1fr mantém o main alto durante trocas de página — rodapé fixo na 3ª linha. */

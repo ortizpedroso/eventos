@@ -20,4 +20,4 @@ O **EventosBR** é a plataforma para organizadores publicarem eventos e para o p
 - Transparência nas taxas de processamento
 - Cancelamento dentro do prazo legal em Minha conta
 
-Explore os [eventos publicados](/eventos) ou [crie o seu](/auth?mode=register).
+Explore os [eventos publicados](/eventos) ou [crie o seu](/cadastro).

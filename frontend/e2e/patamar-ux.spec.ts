@@ -387,6 +387,38 @@ test.describe("Mobile — smoke viewport", () => {
     const vitrineOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(vitrineOverflow).toBe(false);
   });
+
+  test("produtores e auth cabem na viewport (sem scroll horizontal)", async ({ page }) => {
+    for (const path of ["/produtores", "/auth", "/cadastro", "/sobre"]) {
+      await page.goto(path);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth + 2,
+      );
+      expect(overflow, `${path} overflow horizontal`).toBe(false);
+    }
+  });
+});
+
+test.describe("Cadastro — URL amigável", () => {
+  test("Cadastre-se no login vai para /cadastro", async ({ page }) => {
+    await page.goto("/auth");
+    await page.getByRole("link", { name: "Cadastre-se" }).click();
+    await expect(page).toHaveURL(/\/cadastro$/);
+    await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test("auth?mode=register redireciona para /cadastro", async ({ page }) => {
+    await page.goto("/auth?mode=register", { waitUntil: "networkidle" });
+    await expect(page).toHaveURL(/\/cadastro$/);
+  });
+
+  test("CTA final de /sobre vai para /cadastro", async ({ page }) => {
+    await page.goto("/sobre");
+    await page.getByRole("link", { name: "Criar conta" }).click();
+    await expect(page).toHaveURL(/\/cadastro$/);
+  });
 });
 
 test.describe("Navegação — renderização imediata", () => {

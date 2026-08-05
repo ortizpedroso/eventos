@@ -9,7 +9,7 @@ type Props = {
  * Cores via `--brand-600` (whitelabel).
  */
 export function EventosBRDefaultLogo({
-  className = "h-9 w-auto sm:h-10",
+  className = "h-9 w-auto max-w-full sm:h-10",
   variant = "default",
 }: Props) {
   const eventosFill = variant === "light" ? "#f4f4f5" : "#1c2a33";

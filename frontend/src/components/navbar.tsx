@@ -280,10 +280,10 @@ export function Navbar() {
     );
   }
 
-  /** Login / conta + CTA — igual à v1.50.4 (nome + «Crie um evento» intactos). */
+  /** Login / conta + CTA — mobile usa rótulo curto («Criar») para caber na viewport. */
   function AuthActions() {
     return (
-      <div className="flex shrink-0 items-center gap-2.5 sm:gap-3" data-navbar-auth>
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3" data-navbar-auth>
         {loggedIn ? (
           <div className="relative shrink-0">
             <button
@@ -312,9 +312,11 @@ export function Navbar() {
         {!loggedIn || userTipo !== "cliente" ? (
           <Link
             href={isOrganizador ? hrefCriarEvento : hrefCadastroOrganizador}
-            className="btn-success shrink-0 whitespace-nowrap px-3.5 py-2 text-sm shadow-sm sm:px-4"
+            className="btn-success shrink-0 whitespace-nowrap px-2.5 py-2 text-sm shadow-sm sm:px-4"
+            aria-label="Crie um evento"
           >
-            <span className="lg:hidden xl:inline">Crie um evento</span>
+            <span className="md:hidden">Criar</span>
+            <span className="hidden md:inline lg:hidden xl:inline">Crie um evento</span>
             <span className="hidden lg:inline xl:hidden">Criar</span>
           </Link>
         ) : null}
@@ -326,10 +328,10 @@ export function Navbar() {
     <>
       <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
         <div className="mx-auto w-full max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-          {/* Celular */}
-          <div className="flex items-center justify-between gap-3 md:hidden">
-            <EventosBRLogo className="shrink-0" />
-            <div className="relative z-40 flex shrink-0 items-center gap-1.5">
+          {/* Celular — logo pode encolher; CTA curto evita overflow horizontal */}
+          <div className="flex min-w-0 items-center justify-between gap-2 md:hidden">
+            <EventosBRLogo className="min-w-0 max-w-[9.5rem] shrink" />
+            <div className="relative z-40 flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"

@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.16.1
+**Versão:** 1.50.17
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.16.1):** Fechamento — logo whitelabel (§2.26) na `main`; tip produção **`00dc2d0`** (v1.50.16) confirmado; PR #136 fechada. **Redeploy VPS** necessário para a logo ir ao ar. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
+> **Esta versão (v1.50.17):** Mobile sem overflow horizontal; «Cadastre-se» e CTAs finais → **`/cadastro`** (não `/auth?mode=register`). Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
 >
-> **Produção (VPS):** tip **`00dc2d0`** / v1.50.16 (logo §2.26 ainda pendente de redeploy). Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip **`1ff4ef7`** / v1.50.16.1 (pré-1.50.17). Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -266,6 +266,20 @@ Testes: `tests/test_seo_json_ld_publico_v1512.py`.
    ```
 
 Auth: `app/services/auth.py` — `import jwt` / `PyJWTError` (API compatível HS256). Tokens já emitidos com HS256 continuam válidos.
+
+### 2.28 Mobile viewport + URL `/cadastro` (v1.50.17)
+
+**Problema:** no celular a página não “encaixava” na tela (scroll horizontal ~10–90px) — navbar com logo + Login + «Crie um evento» estourava a largura; `scrollbar-gutter: stable` no `html` agravava em viewports estreitas. «Cadastre-se» e CTA de `/sobre` abriam `/auth?mode=register` em vez da URL amigável `/cadastro`.
+
+**Correção:**
+- Navbar mobile: logo com `max-w-[9.5rem]` + `min-w-0`; CTA rótulo curto **«Criar»** abaixo de `md` (`aria-label="Crie um evento"`); gaps menores.
+- `globals.css`: `overflow-x: clip` + `max-width: 100%` em `html`/`body`; `scrollbar-gutter: auto` no mobile, `stable` só em `md+`.
+- Auth: link «Cadastre-se» → `/cadastro`; SSR ` /auth?mode=register` (sem next de compra) → redirect `/cadastro`; CTA final `/sobre` e blog → `/cadastro`.
+- CTAs de fim de seção (home, produtores, planos, funcionalidades) já usam `CriarEventoLink` / `hrefCadastroOrganizador` → `/cadastro` — mantidos.
+
+**Exceção:** `/auth?mode=register&next=/eventos/...` (cadastro de cliente no fluxo de compra) permanece em `/auth`.
+
+Testes: `tests/test_cadastro_url_mobile_v1517.py`; E2E patamar (mobile overflow + Cadastre-se → `/cadastro`).
 
 ### 2.27 Lançamento — opt-in gratuito, cursor, Asaas/BC, verdade (v1.50.16)
 
@@ -1088,7 +1102,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.14.4** | tip `4bba850` | **APROVADA** — nome completo + CTA brand-600 |
 | **v1.50.15** | logo whitelabel | **APROVADA** — mergeada na v1.50.16.1 (PR #136) |
 | **v1.50.16** | tip `00dc2d0` | **APROVADA** — lançamento opt-in/Asaas/cursor em produção |
-| **v1.50.16.1 (este)** | tip `8123c2a` | **APROVADA** — logo na `main`; redeploy VPS pendente |
+| **v1.50.16.1** | tip `8123c2a` / VPS `1ff4ef7` | **APROVADA** — logo na `main` + tip VPS |
+| **v1.50.17 (este)** | mobile + `/cadastro` | **APROVADA** |
+
+### 11.1 Requisitos recentes — resultado (v1.50.17)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.28 | Sem overflow horizontal no mobile (home, produtores, auth, sobre) | **PASS** |
+| §2.28 | «Cadastre-se» → `/cadastro` (não `/auth?mode=register`) | **PASS** |
+| §2.28 | `/auth?mode=register` (público) redirect `/cadastro` | **PASS** |
+| §2.28 | CTA final `/sobre` → `/cadastro` | **PASS** |
+| §2.28 | Fim de seção (home/produtores/planos) → `/cadastro` | **PASS** |
+| `/review` | Código × spec §2.28 | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.16.1)
 
@@ -1610,7 +1636,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
-| 1.50.16.1 | 2026-08-05 | **Fechamento.** Tip produção **`00dc2d0`**; logo whitelabel (§2.26 / PR #136) na `main`; GitHub limpo; **redeploy VPS** p/ logo ao ar. |
+| 1.50.17 | 2026-08-05 | **Mobile + `/cadastro`.** §2.28: navbar mobile sem overflow; scrollbar-gutter só md+; Cadastre-se e CTAs → `/cadastro`; redirect `/auth?mode=register`. |
+| 1.50.16.1 | 2026-08-05 | **Fechamento.** Tip produção **`1ff4ef7`**; logo whitelabel (§2.26 / PR #136) na `main`; GitHub limpo. |
 | 1.50.16 | 2026-08-05 | **Lançamento.** §2.27: opt-in e-mail/WhatsApp pré-marcado em cortesia; cursor pointer; Asaas citável + autorização BC; copy verdadeiro (sem hipérboles). Tip produção **`00dc2d0`**. |
 | 1.50.15 | 2026-08-05 | **Hotfix logo whitelabel.** §2.26: alvo 480×120 (não 512×512); upload endurecido (MIME/charset, I/O→503); logo 454×116 aceita. Testes `test_upload_logo_whitelabel.py`. Mergeada na 1.50.16.1. |
 | 1.50.14.4 | 2026-08-05 | **Restaura navbar.** Nome do usuário completo (sem truncate/max-w); `.btn-success` de volta a `--brand-600` (pedido do produto). Merge → `4bba850`. |

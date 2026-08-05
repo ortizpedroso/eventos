@@ -148,7 +148,7 @@ export default function SobrePage() {
       <div className="mx-auto mt-24 max-w-3xl px-4 text-center sm:mt-32 sm:px-6">
         <p className="text-sm text-zinc-600">Quer experimentar ou ver preços?</p>
         <div className="mt-4 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
-          <Link href="/auth?mode=register" className="btn-success px-6 py-3 text-base shadow-sm">
+          <Link href="/cadastro" className="btn-success px-6 py-3 text-base shadow-sm">
             Criar conta
           </Link>
           <Link href="/funcionalidades" className="btn-outline px-6 py-3 text-base shadow-sm">

@@ -155,14 +155,30 @@ export default function AuthClient({
   }, []);
 
   function setAuthMode(next: "login" | "register") {
-    const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
     if (next === "register") {
+      // URL pública de cadastro: /cadastro (nunca /auth?mode=register).
+      // Mantém /auth?mode=register só quando há next de compra (cliente).
+      const nextPath =
+        nextParam ||
+        (typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("next")
+          : null);
+      const nextCliente =
+        Boolean(nextPath) &&
+        isSafeInternalNext(nextPath) &&
+        !nextRequerContaOrganizador(nextPath) &&
+        !fluxoOrganizador;
+      if (!nextCliente) {
+        router.replace("/cadastro");
+        return;
+      }
+      const p = new URLSearchParams();
       p.set("mode", "register");
-    } else {
-      p.delete("mode");
+      p.set("next", nextPath!);
+      router.replace(`/auth?${p.toString()}`);
+      return;
     }
-    const qs = p.toString();
-    router.replace(qs ? `/auth?${qs}` : "/auth");
+    router.replace("/auth");
   }
 
   function finishAuth(data: TokenResponse) {
@@ -754,13 +770,19 @@ export default function AuthClient({
           ) : (
             <>
               {mode === "login" ? "Não tem uma conta?" : "Já possui conta?"}{" "}
-              <button
-                type="button"
-                className="font-semibold text-zinc-900 hover:underline"
-                onClick={() => setAuthMode(mode === "login" ? "register" : "login")}
-              >
-                {mode === "login" ? "Cadastre-se" : "Faça login"}
-              </button>
+              {mode === "login" && !fluxoOrganizador && !nextParam ? (
+                <Link href="/cadastro" className="font-semibold text-zinc-900 hover:underline">
+                  Cadastre-se
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="cursor-pointer font-semibold text-zinc-900 hover:underline"
+                  onClick={() => setAuthMode(mode === "login" ? "register" : "login")}
+                >
+                  {mode === "login" ? "Cadastre-se" : "Faça login"}
+                </button>
+              )}
             </>
           )}
         </div>

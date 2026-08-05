@@ -38,15 +38,21 @@ export default async function AuthPage({
     modeParam = "register";
   }
 
+  // Cadastro público → /cadastro. Mantém /auth?mode=register só para
+  // cliente com next de compra/conta, ou fluxo «precisa=organizador».
   if (
     !forcarLogin &&
     !q(sp, "reset") &&
     modeParam === "register" &&
-    fluxoOrganizador &&
-    nextParam === CRIAR_EVENTO_DESTINO &&
     q(sp, "precisa") !== "organizador"
   ) {
-    redirect("/cadastro");
+    const nextCliente =
+      Boolean(nextParam) &&
+      !nextRequerContaOrganizador(nextParam!) &&
+      nextParam !== CRIAR_EVENTO_DESTINO;
+    if (!nextCliente) {
+      redirect("/cadastro");
+    }
   }
 
   return (
