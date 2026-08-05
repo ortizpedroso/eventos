@@ -19,8 +19,7 @@ export function EventosBRDefaultLogo({
       viewBox="0 0 180 44"
       fill="none"
       className={className}
-      role="img"
-      aria-label="EventosBR"
+      aria-hidden="true"
     >
       <rect width="40" height="40" x="0" y="2" rx="8" fill="var(--brand-600)" />
       <line
