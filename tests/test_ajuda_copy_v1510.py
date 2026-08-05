@@ -1,4 +1,4 @@
-"""Regressões v1.50.10 — Ajuda nav uniforme + copy verdadeiro (§2.22)."""
+"""Regressões Ajuda — formatação Índice + copy verdadeiro (§2.22 / v1.50.11)."""
 
 from __future__ import annotations
 
@@ -16,22 +16,28 @@ def test_ajuda_nav_mesmo_estilo_indice():
     assert "ajuda-nav-link" in nav
     assert "navLinkClass" in nav
     assert 'label: "Índice"' in nav
-    # Um único helper de classe para todos os botões
+    # Formatação do Índice: text-sm + font-medium (não font-normal)
+    assert "text-sm font-medium" in nav
+    assert "font-normal" not in nav
     assert nav.count("navLinkClass(") >= 1
-    assert "font-semibold" not in nav
 
 
-def test_ajuda_indice_cards_mesmo_padrao_tipografico():
+def test_ajuda_indice_cards_formato_anterior():
+    """Cards do índice restaurados: título text-base font-semibold emerald."""
     page = _read("frontend/src/app/ajuda/page.tsx")
-    assert "ajuda-nav-link" in page
-    assert "text-sm font-normal" in page
+    assert "text-base font-semibold text-emerald-700" in page
+    assert "rounded-xl border border-zinc-200 bg-white p-4 shadow-sm" in page
     assert "pagamentos-e-seguranca" in page
+    # Não reintroduzir pills no lugar dos cards
+    assert "flex flex-col gap-1 rounded-full" not in page
 
 
-def test_prose_nao_sobrescreve_ajuda_nav():
+def test_prose_nav_preserva_peso_indice():
     css = _read("frontend/src/app/globals.css")
-    assert ".ajuda-nav" in css
-    assert "ajuda-nav-link" in css
+    assert ".ajuda-nav a.ajuda-nav-link" in css
+    assert "font-weight: 500" in css
+    # Não forçar peso 400 nos pills (erro da v1.50.10)
+    assert "font-weight: 400" not in css.split("Central de Ajuda")[1].split(".content-prose strong")[0]
 
 
 def test_sem_claims_100_porcento_seguro():

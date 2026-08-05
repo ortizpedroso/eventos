@@ -44,16 +44,16 @@ export default function AjudaPage() {
           Encontre respostas rápidas sobre compra de ingressos, criação de eventos, reembolsos,
           taxas e como funcionam pagamentos e segurança na plataforma.
         </p>
-        <ul className="mt-8 list-none space-y-3 !ml-0">
+        <ul className="mt-8 space-y-4">
           {topicos.map((t) => (
-            <li key={t.href} className="!mt-0 !text-left">
+            <li key={t.href} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
               <Link
                 href={t.href}
-                className="ajuda-nav-link flex flex-col gap-1 rounded-full border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-normal text-zinc-700 no-underline hover:bg-zinc-200 sm:flex-row sm:items-baseline sm:gap-3"
+                className="ajuda-nav-link text-base font-semibold text-emerald-700 no-underline hover:underline"
               >
-                <span className="shrink-0">{t.titulo}</span>
-                <span className="text-sm font-normal text-zinc-500">{t.descricao}</span>
+                {t.titulo}
               </Link>
+              <p className="mt-1 text-sm">{t.descricao}</p>
             </li>
           ))}
         </ul>

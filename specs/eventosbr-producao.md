@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.10.1
+**Versão:** 1.50.11
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.10.1):** Fechamento /review da v1.50.10 — tip `main` **`5c1e140`** (PR #126). Código×spec **APROVADA**; deploy VPS pendente.
+> **Esta versão (v1.50.11):** Correção formatação Central de Ajuda (§2.22) — restaura tipografia do Índice; mesma formatação em todos os botões da nav; cards do índice no layout anterior. Copy verdadeiro da v1.50.10 mantido.
 >
-> **Produção (VPS):** tip anterior (**`96b9c62`** / v1.50.9) até `atualizar-vps-agora.sh`. Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip anterior até `atualizar-vps-agora.sh`. Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -173,13 +173,14 @@ Escopo: itens **necessários/pertinentes** (não o backlog completo de polish UI
 
 Testes: `tests/test_imagem_processamento.py`, `tests/test_secret_storage.py`, `tests/test_auditoria_lancamento_v1509.py`, E2E smoke (404 docs mantido).
 
-### 2.22 Ajuda + copy verdadeiro (pagamento, segurança, capacidade) (v1.50.10)
+### 2.22 Ajuda + copy verdadeiro (pagamento, segurança, capacidade) (v1.50.10 → v1.50.11)
 
-**Central de Ajuda — UI**
+**Central de Ajuda — UI (corrigido na v1.50.11)**
 
-- Todos os botões/links da nav (`AjudaNav`: Índice + tópicos) compartilham a **mesma formatação de texto** (tamanho, peso, cores ativo/inativo).
-- `.content-prose a` **não** sobrescreve a nav (classe `ajuda-nav` isola estilos).
-- Cards de tópico no índice usam o mesmo padrão tipográfico da nav (`text-sm`, sem `font-semibold` divergente).
+- **Formatação do Índice (canônica):** pills `rounded-full px-3 py-1 text-sm font-medium` + fundo ativo/inativo (`bg-emerald-100 text-emerald-900` / `bg-zinc-100 text-zinc-700`).
+- Todos os botões da nav (`AjudaNav`) usam **exatamente** essa formatação (helper único `navLinkClass`).
+- Prose **não** altera peso/tamanho/cor dos pills (isola `.ajuda-nav a.ajuda-nav-link` com `font-weight: 500` — **não** forçar `400`/`font-normal`).
+- **Cards do índice:** layout anterior restaurado — `rounded-xl` + título `text-base font-semibold text-emerald-700` + descrição `text-sm`. Não substituir cards por pills.
 
 **Copy — regras de verdade**
 
@@ -819,7 +820,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (collect **511** na v1.50.10; `tests/test_ajuda_copy_v1510.py`)
+- [x] `pytest` verde (`tests/test_ajuda_copy_v1510.py` — formatação Índice v1.50.11)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -831,8 +832,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [ ] Deploy VPS v1.50.10 — após este fechamento (`cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`)
-- [x] tip `main` — **`5c1e140`** / v1.50.10 (merge PR #126) — código×spec fechado; VPS ainda no tip anterior até deploy
+- [ ] Deploy VPS v1.50.11 — após merge (`cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`)
+- [x] tip `main` (pré-v1.50.11) — **`6a8c0cf`** / v1.50.10.1 (PR #127) — VPS ainda no tip anterior até deploy
+- [x] tip `main` (v1.50.10) — **`5c1e140`** (PR #126)
 - [x] tip `main` (pré-v1.50.10) — **`96b9c62`** / v1.50.9 (PR #125)
 - [x] Playbook Oficial de Marketing — `docs/14-playbook-marketing-eventosbr.md` (§2.19 / v1.50.7)
 - [x] Docs técnicas fora do site — §2.20 / v1.50.8 (código + **produção**: 404 `/documentacao*`, `/openapi.json`)
@@ -956,7 +958,18 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.8.3** | tip `266cb34` + rechecagem produção / **496** | **APROVADA** — fechamento /review pós-deploy |
 | **v1.50.9** | tip `96b9c62` (PR #125) / **505** | **APROVADA** — auditoria pertinente (§2.21) |
 | **v1.50.10** | tip `5c1e140` (PR #126) / **511** | **APROVADA** — Ajuda + copy verdadeiro (§2.22) |
-| **v1.50.10.1 (este)** | tip `5c1e140` + fechamento / **511** | **APROVADA** — fechamento spec; deploy VPS pendente |
+| **v1.50.10.1** | tip `6a8c0cf` (PR #127) / **511** | **APROVADA** — fechamento spec; deploy VPS pendente |
+| **v1.50.11 (este)** | branch `cursor/ajuda-formatacao-restore-c0b1` | **APROVADA** — corrige formatação Ajuda (§2.22) |
+
+### 11.1 Requisitos recentes — resultado (v1.50.11)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.22 | Nav: todos os botões = formatação do Índice (`text-sm font-medium`) | **PASS** |
+| §2.22 | Sem `font-normal` / `font-weight: 400` nos pills | **PASS** |
+| §2.22 | Cards do índice restaurados (`text-base font-semibold` + card) | **PASS** |
+| §2.22 | Copy verdadeiro (PAN / processador / sem 100%) mantido | **PASS** |
+| `/review` | Checklist código × spec | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.10.1)
 
@@ -971,7 +984,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
-| §2.22 | Nav Ajuda: mesmo estilo do Índice em todos os botões | **PASS** |
+| §2.22 | Nav Ajuda: mesmo estilo do Índice em todos os botões | **PASS** (supersedido pela correção v1.50.11) |
 | §2.22 | Prose não sobrescreve `ajuda-nav-link` | **PASS** |
 | §2.22 | Sem “100% seguro” / “500 req/s” / “padrão ouro” no site | **PASS** |
 | §2.22 | Copy: processador certificado + não armazena PAN | **PASS** |
@@ -1373,6 +1386,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50.11 | 2026-08-05 | **Correção formatação Ajuda.** §2.22: restaura tipografia do Índice (`text-sm font-medium`); mesma formatação em todos os pills da nav; cards do índice de volta ao layout anterior (`text-base font-semibold` + card). Remove forçar `font-normal`/peso 400. Copy v1.50.10 mantido. |
 | 1.50.10.1 | 2026-08-05 | **Fechamento /review v1.50.10.** Tip `main` **`5c1e140`** (PR #126). §7/§11: código×spec **APROVADA**; deploy VPS pendente. |
 | 1.50.10 | 2026-08-05 | **Ajuda + copy verdadeiro.** §2.22: nav/cards da Central de Ajuda com tipografia unificada; remove claims 100%/500 req/s; pagamento via processador certificado (sem PAN na EventosBR); artigo Pagamentos e segurança; sobre/funcionalidades/FAQ/selos/checkout. Merge PR #126 → `5c1e140`. |
 | 1.50.9 | 2026-08-05 | **Auditoria pertinente.** §2.21: erro API produção; upload fail-closed; not-found/error; sitemap paginado; SSR/metadata produtor; twitter evento; robots; migrate_encryption CPF/TOTP; Next 16.3.0; gitignore graphify. Docs `15-auditoria-…`. |
