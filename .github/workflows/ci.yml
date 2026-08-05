@@ -118,8 +118,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: pip-audit (relatório — não bloqueia até bumps Pillow/FastAPI)
-        continue-on-error: true
+      - name: pip-audit (bloqueante)
         run: |
           python -m pip install --upgrade pip pip-audit
           pip-audit -r requirements.txt

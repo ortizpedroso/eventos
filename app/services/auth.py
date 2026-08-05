@@ -1,6 +1,9 @@
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
-from jose import JWTError, jwt
+
+import jwt
+from jwt.exceptions import PyJWTError
+
 from config.settings import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -29,7 +32,7 @@ def decode_token_payload(token: str) -> dict | None:
     """Decodifica JWT e devolve o payload ou None."""
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    except JWTError:
+    except PyJWTError:
         return None
 
 
