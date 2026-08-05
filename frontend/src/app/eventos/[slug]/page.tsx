@@ -17,16 +17,24 @@ export async function generateMetadata({
     const desc = evento.descricao.trim().slice(0, 160);
     const img = resolveEventoImagemSrc(evento.imagem_url);
     const base = (process.env.NEXT_PUBLIC_LAN_ORIGIN || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
+    const imageUrl = img ? (img.startsWith("http") ? img : `${base}${img}`) : undefined;
+    const description = desc || `Ingressos para ${evento.nome}`;
     return {
       title: `${evento.nome} | EventosBR`,
-      description: desc || `Ingressos para ${evento.nome}`,
+      description,
       alternates: { canonical: `/eventos/${evento.slug}` },
       openGraph: {
         title: evento.nome,
         description: desc || undefined,
         type: "website",
         url: `${base}/eventos/${evento.slug}`,
-        ...(img ? { images: [{ url: img.startsWith("http") ? img : `${base}${img}` }] } : {}),
+        ...(imageUrl ? { images: [{ url: imageUrl }] } : {}),
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: evento.nome,
+        description,
+        ...(imageUrl ? { images: [imageUrl] } : {}),
       },
     };
   } catch {

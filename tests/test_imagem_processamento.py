@@ -51,8 +51,10 @@ class TestRedimensionarImagem:
         img = Image.open(io.BytesIO(novo_conteudo))
         assert img.mode in ("RGBA", "RGB")
 
-    def test_arquivo_invalido_devolve_original(self):
+    def test_arquivo_invalido_rejeita(self):
         lixo = b"isso nao e uma imagem valida"
-        conteudo, tipo = redimensionar_imagem(lixo, "image/png", max_width=100, max_height=100)
-        assert conteudo == lixo
-        assert tipo == "image/png"
+        try:
+            redimensionar_imagem(lixo, "image/png", max_width=100, max_height=100)
+            raise AssertionError("esperava ValueError para bytes inválidos")
+        except ValueError as e:
+            assert "inválido" in str(e).lower() or "corrompido" in str(e).lower()

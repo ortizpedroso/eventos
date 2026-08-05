@@ -5,15 +5,38 @@ import type { Evento } from "@/lib/types";
 
 export async function fetchEventosPublicos(
   limit = 50,
-  opts?: { q?: string; categoria?: string; cidade?: string; de?: string; ate?: string },
+  opts?: {
+    q?: string;
+    categoria?: string;
+    cidade?: string;
+    de?: string;
+    ate?: string;
+    skip?: number;
+  },
 ): Promise<Evento[]> {
   const params = new URLSearchParams({ limit: String(limit) });
+  if (opts?.skip != null && opts.skip > 0) params.set("skip", String(opts.skip));
   if (opts?.q) params.set("q", opts.q);
   if (opts?.categoria) params.set("categoria", opts.categoria);
   if (opts?.cidade) params.set("cidade", opts.cidade);
   if (opts?.de) params.set("de", opts.de);
   if (opts?.ate) params.set("ate", opts.ate);
   return apiFetch<Evento[]>(`/api/eventos?${params.toString()}`, { cache: "no-store" });
+}
+
+/** Todas as páginas públicas (API limita a 100 por request). */
+export async function fetchTodosEventosPublicos(): Promise<Evento[]> {
+  const pageSize = 100;
+  const todos: Evento[] = [];
+  let skip = 0;
+  for (;;) {
+    const page = await fetchEventosPublicos(pageSize, { skip });
+    todos.push(...page);
+    if (page.length < pageSize) break;
+    skip += pageSize;
+    if (skip > 10_000) break; // trava de segurança
+  }
+  return todos;
 }
 
 /** Até 6 eventos para a homepage — prioriza os com vendas abertas. */

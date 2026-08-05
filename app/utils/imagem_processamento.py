@@ -13,6 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def redimensionar_imagem(
     content: bytes,
     content_type: str,
@@ -23,9 +24,9 @@ def redimensionar_imagem(
 ) -> tuple[bytes, str]:
     """Redimensiona (só encolhe) e recodifica em WebP. Nunca aumenta a imagem.
 
-    Se o Pillow não conseguir abrir o arquivo, ou o resultado processado ficar maior
-    que o original, devolve o conteúdo original sem alterações — nunca bloqueia o
-    upload por causa de uma falha aqui.
+    Bytes que não forem imagem válida → ``ValueError`` (fail-closed).
+    Se Pillow não estiver instalado, devolve o original (ambiente degradado).
+    Se a recodificação WebP falhar ou não reduzir, devolve o original **já validado**.
     """
     try:
         from PIL import Image
@@ -37,8 +38,8 @@ def redimensionar_imagem(
         img = Image.open(io.BytesIO(content))
         img.load()
     except Exception as e:
-        logger.info("Não foi possível abrir imagem para redimensionar (%s) — mantendo original.", e)
-        return content, content_type
+        logger.info("Arquivo de imagem inválido (%s) — rejeitando upload.", e)
+        raise ValueError("Arquivo de imagem inválido ou corrompido.") from e
 
     largura, altura = img.size
     escala = min(1.0, max_width / largura, max_height / altura)
@@ -56,7 +57,7 @@ def redimensionar_imagem(
     try:
         img.save(buffer, format="WEBP", quality=qualidade, method=6)
     except Exception as e:
-        logger.info("Falha ao recodificar em WebP (%s) — mantendo original.", e)
+        logger.info("Falha ao recodificar em WebP (%s) — mantendo original validado.", e)
         return content, content_type
 
     novo_conteudo = buffer.getvalue()
