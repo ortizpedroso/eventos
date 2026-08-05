@@ -31,6 +31,9 @@ def test_csp_localhost_somente_dev():
 def test_footer_links_contraste_aa():
     src = (FRONTEND / "src/components/site-footer.tsx").read_text(encoding="utf-8")
     assert "text-zinc-300" in src
-    assert "underline-offset-2" in src
-    # Nav links não devem ficar só em zinc-400 sem underline (falha AA).
+    # Contraste AA via zinc-300; sem sublinhado nos links de nav (pedido do produto).
+    assert 'className="text-zinc-300 hover:text-emerald-300"' in src
     assert 'className="text-zinc-400 hover:text-emerald-300"' not in src
+    nav = src.split("Contato")[0]
+    assert "hover:underline" not in nav
+    assert "underline-offset-2" not in nav

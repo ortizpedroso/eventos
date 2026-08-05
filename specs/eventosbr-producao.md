@@ -295,7 +295,7 @@ Auditoria de técnicas atuais vs. boas práticas de mercado (código `main` + pr
 | Blog post SEO | só `title`; OG herdava da home | `description` + canonical + OG + Twitter |
 | Sitemap | só estáticas + eventos | + posts `/blog/[slug]` |
 | CSP `connect-src` | `localhost:8000` sempre | localhost **só** se `dev` |
-| Rodapé links | `text-zinc-400` sem underline (risco AA) | `text-zinc-300` + underline-offset |
+| Rodapé links | `text-zinc-400` (risco AA) | `text-zinc-300` sem sublinhado (links clicáveis; hover só cor) |
 
 #### Backlog consciente (não bloqueia lançamento)
 
@@ -1168,7 +1168,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.29 | Blog post: canonical + OG + Twitter + description | **PASS** |
 | §2.29 | Sitemap inclui `/blog/[slug]` | **PASS** |
 | §2.29 | CSP sem localhost em produção (`dev=false`) | **PASS** |
-| §2.29 | Rodapé links `zinc-300` + underline-offset (AA) | **PASS** |
+| §2.29 | Rodapé links `zinc-300` sem sublinhado (AA + pedido produto) | **PASS** |
 | §2.29 | Sem crítico aberto; pronto para lançamento | **PASS** |
 | `/review` | Código × spec §2.29 | **APROVADA** |
 
