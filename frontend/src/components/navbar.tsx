@@ -290,7 +290,7 @@ export function Navbar() {
               type="button"
               data-navbar-account
               onClick={toggleAccountMenu}
-              className="flex max-w-[min(100vw-8rem,12rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-2.5 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 xl:pr-3"
+              className="flex max-w-[min(100%-2rem,12rem)] items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-2.5 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 xl:pr-3"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               aria-label="Abrir menu da conta"

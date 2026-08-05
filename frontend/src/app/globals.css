@@ -43,6 +43,8 @@ html {
   scrollbar-gutter: stable;
   /* Navbar sticky — evita título cortado ao rolar para âncoras */
   scroll-padding-top: 4.5rem;
+  /* Evita overflow horizontal de blur/100vw em mobile (E2E patamar). */
+  overflow-x: clip;
 }
 
 body {
