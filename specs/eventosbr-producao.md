@@ -1425,7 +1425,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.12 | 2026-08-05 | **Achados pertinentes.** §2.23: `npm audit fix` (0 vulns); JSON-LD em `/produtor`, `/blog`, `/eventos`; CI `deps-audit`; bumps `requests`/`python-multipart`/`python-dotenv`. Fora: CSP style, PWA, Lighthouse, títulos auth, Pillow/FastAPI. |
+| 1.50.12 | 2026-08-05 | **Achados pertinentes.** §2.23: `npm audit fix` (0 vulns); JSON-LD em `/produtor`, `/blog`, `/eventos`; CI `deps-audit`; bumps `requests`/`python-multipart`/`python-dotenv`. Fora: CSP style, PWA, Lighthouse, títulos auth, Pillow/FastAPI. Hotfix E2E: asserção `/produtor` não usa logo SVG «Eventos» (tspan hidden). |
 | 1.50.11 | 2026-08-05 | **Correção formatação Ajuda.** §2.22: restaura tipografia do Índice (`text-sm font-medium`); mesma formatação em todos os pills da nav; cards do índice de volta ao layout anterior (`text-base font-semibold` + card). Remove forçar `font-normal`/peso 400. Copy v1.50.10 mantido. |
 | 1.50.10.1 | 2026-08-05 | **Fechamento /review v1.50.10.** Tip `main` **`5c1e140`** (PR #126). §7/§11: código×spec **APROVADA**; deploy VPS pendente. |
 | 1.50.10 | 2026-08-05 | **Ajuda + copy verdadeiro.** §2.22: nav/cards da Central de Ajuda com tipografia unificada; remove claims 100%/500 req/s; pagamento via processador certificado (sem PAN na EventosBR); artigo Pagamentos e segurança; sobre/funcionalidades/FAQ/selos/checkout. Merge PR #126 → `5c1e140`. |
