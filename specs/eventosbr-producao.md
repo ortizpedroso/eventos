@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.18
+**Versão:** 1.50.18.1
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.18):** Diagnóstico final UI/UX/SEO/segurança (§2.29) + correções pertinentes (blog SEO, sitemap posts, CSP sem localhost em prod, contraste rodapé). Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
+> **Esta versão (v1.50.18.1):** Rodapé sem sublinhado (`zinc-300`, hover só cor; links clicáveis). Tip `main` **`6cfb9ef`**. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
 >
 > **Produção (VPS):** tip **`2fc5927`** / v1.50.17 (pré-1.50.18). Repo **privado** + Deploy Key SSH.
 >
@@ -1158,7 +1158,16 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.16.1** | tip `8123c2a` / VPS `1ff4ef7` | **APROVADA** — logo na `main` + tip VPS |
 | **v1.50.17** | tip `a4d0e4c` / VPS `2fc5927` | **APROVADA** — mobile + `/cadastro` em produção |
 | **v1.50.17.1** | tip `2fc5927` | **APROVADA** — deploy VPS confirmado |
-| **v1.50.18 (este)** | tip `9b11bef` | **APROVADA** — diagnóstico + fixes; deploy VPS pendente |
+| **v1.50.18** | tip `9b11bef` | **APROVADA** — diagnóstico + fixes |
+| **v1.50.18.1 (este)** | tip `6cfb9ef` | **APROVADA** — rodapé sem sublinhado |
+
+### 11.1 Requisitos recentes — resultado (v1.50.18.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.29 | Rodapé nav: `zinc-300`, **sem** sublinhado; hover só cor | **PASS** |
+| §2.29 | Links do rodapé continuam clicáveis | **PASS** |
+| `/review` | Código × spec | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.18)
 
@@ -1717,6 +1726,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
+| 1.50.18.1 | 2026-08-05 | **Rodapé sem sublinhado.** Mantém contraste `zinc-300`; hover só cor; links clicáveis. Tip `main` **`6cfb9ef`**. |
 | 1.50.18 | 2026-08-05 | **Diagnóstico UI/UX/SEO/segurança.** §2.29: scorecard + veredito pronto p/ lançamento; blog SEO; sitemap posts; CSP localhost só dev; contraste rodapé. |
 | 1.50.17.1 | 2026-08-05 | **Deploy VPS v1.50.17 confirmado.** Tip produção **`2fc5927`**. `/ready` OK; Cadastre-se→`/cadastro`; mobile sem overflow no ar. `/review` APROVADA. |
 | 1.50.17 | 2026-08-05 | **Mobile + `/cadastro`.** §2.28: navbar mobile sem overflow; scrollbar-gutter só md+; Cadastre-se e CTAs → `/cadastro`; redirect `/auth?mode=register`. |
