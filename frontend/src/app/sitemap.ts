@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { listBlogPosts } from "@/lib/blog";
 import { fetchTodosEventosPublicos } from "@/lib/eventos-publicos";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://eventosbr.app.br";
@@ -27,6 +28,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === "" ? 1 : path === "/eventos" ? 0.9 : 0.7,
   }));
 
+  const blogEntries: MetadataRoute.Sitemap = listBlogPosts().map((post) => ({
+    url: `${SITE_URL}/blog/${post.slug}`,
+    lastModified: post.date ? new Date(post.date) : now,
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
   let eventosEntries: MetadataRoute.Sitemap = [];
   try {
     // Pagina a API (limit máx. 100) até esgotar — não trava em 100 eventos.
@@ -44,5 +52,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     eventosEntries = [];
   }
 
-  return [...rotasEstaticasEntries, ...eventosEntries];
+  return [...rotasEstaticasEntries, ...blogEntries, ...eventosEntries];
 }

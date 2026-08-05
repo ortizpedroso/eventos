@@ -9,8 +9,6 @@
 export function buildContentSecurityPolicy(nonce: string, dev: boolean): string {
   const connect = new Set([
     "'self'",
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
     "https://accounts.google.com",
     "https://oauth2.googleapis.com",
     "https://www.googleapis.com",
@@ -18,6 +16,13 @@ export function buildContentSecurityPolicy(nonce: string, dev: boolean): string 
     "https://viacep.com.br",
     "https://challenges.cloudflare.com",
   ]);
+  // Localhost só em desenvolvimento — evita superfície desnecessária no CSP de produção.
+  if (dev) {
+    connect.add("http://127.0.0.1:8000");
+    connect.add("http://localhost:8000");
+    connect.add("ws:");
+    connect.add("wss:");
+  }
   const api = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (api && /^https?:\/\//i.test(api)) {
     try {
@@ -25,10 +30,6 @@ export function buildContentSecurityPolicy(nonce: string, dev: boolean): string 
     } catch {
       /* ignore */
     }
-  }
-  if (dev) {
-    connect.add("ws:");
-    connect.add("wss:");
   }
 
   const scriptHosts = [

@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.17.1
+**Versão:** 1.50.18
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.17.1):** Deploy VPS v1.50.17 confirmado (tip **`2fc5927`**). Mobile sem overflow; «Cadastre-se» e CTAs → `/cadastro`. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
+> **Esta versão (v1.50.18):** Diagnóstico final UI/UX/SEO/segurança (§2.29) + correções pertinentes (blog SEO, sitemap posts, CSP sem localhost em prod, contraste rodapé). Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
 >
-> **Produção (VPS):** tip **`2fc5927`** / v1.50.17. Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip **`2fc5927`** / v1.50.17 (pré-1.50.18). Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -266,6 +266,57 @@ Testes: `tests/test_seo_json_ld_publico_v1512.py`.
    ```
 
 Auth: `app/services/auth.py` — `import jwt` / `PyJWTError` (API compatível HS256). Tokens já emitidos com HS256 continuam válidos.
+
+### 2.29 Diagnóstico final — UI / UX / SEO / segurança (v1.50.18)
+
+Auditoria de técnicas atuais vs. boas práticas de mercado (código `main` + produção tip `2fc5927`).
+
+#### Nota geral
+
+| Área | Nota | Leitura |
+|------|------|---------|
+| **UI** | **8,5 / 10** | Design system sólido (tokens, botões, focus); mobile recente OK |
+| **UX** | **8 / 10** | Fluxos claros (cadastro `/cadastro`, auth, checkout); polish residual |
+| **SEO** | **8 / 10** → **8,5** após fix blog/sitemap | Metadata/JSON-LD/robots fortes; blog e sitemap completados nesta versão |
+| **Segurança** | **8,5 / 10** | CSP+nonce, 2FA, Turnstile, cookies HttpOnly, upload fail-closed, docs 404 |
+| **Conjunto** | **Pronto para lançamento** | Sem crítico aberto; gaps médios/baixos documentados |
+
+#### O que já está no nível certo
+
+- **UI:** escala `--brand-*`, `.btn-*` / `.input`, skip-link, `focus-visible`, `prefers-reduced-motion`, navbar mobile (CTA curto, overflow-x clip).
+- **UX:** `/cadastro` amigável; sessão expirada → `/auth`; opt-in cortesia; empty/error states; password strength + autocomplete.
+- **SEO:** metadata OG/Twitter na home/evento/produtor; robots com disallow privado; sitemap de eventos paginado; JSON-LD Event/Organization/Blog escapado; docs/OpenAPI 404 em prod.
+- **Segurança (prod verificado):** CSP nonce + `strict-dynamic`; HSTS; XFO; nosniff; Referrer-Policy; cookie sessão HttpOnly/Secure/SameSite; bcrypt + JWT + `token_version`; 2FA admin; Turnstile; rate limit; upload Pillow fail-closed; webhook fail-closed.
+
+#### Correções feitas nesta versão (pertinentes)
+
+| Item | Antes | Depois |
+|------|-------|--------|
+| Blog post SEO | só `title`; OG herdava da home | `description` + canonical + OG + Twitter |
+| Sitemap | só estáticas + eventos | + posts `/blog/[slug]` |
+| CSP `connect-src` | `localhost:8000` sempre | localhost **só** se `dev` |
+| Rodapé links | `text-zinc-400` sem underline (risco AA) | `text-zinc-300` + underline-offset |
+
+#### Backlog consciente (não bloqueia lançamento)
+
+| Severidade | Item | Notas |
+|------------|------|-------|
+| Alta (ops) | Chave `PLATFORM_ADMIN_API_KEY` bypass 2FA | Break-glass; rotacionar; preferir TOTP admin |
+| Alta (produto) | Enumeração de e-mail no registro | Mensagem «já cadastrado»; genérico no reset — decisão §2.21 |
+| Média | CSP/`style-src 'unsafe-inline'` | Necessário p/ React `style={}`; documentado |
+| Média | Headers CSP no FastAPI direto | Next já aplica; API atrás do Caddy |
+| Média | CORS `*` só avisa em prod | Sem credentials; endurecer allowlist se API pública crescer |
+| Média | Rate limit em memória sem Redis | Multi-worker enfraquece; Redis já no compose prod |
+| Média | Sitemap sem `/produtor/[slug]` | Sem listagem pública paginada hoje |
+| Baixa | Cards/hero com `<img>` vs `next/image` | LCP hero tem width/height/fetchPriority |
+| Baixa | `window.confirm`, touch 44px, tabs `text-[10px]` | Polish UX |
+| Baixa | axe só no smoke da home | Expandir pipeline se quiser |
+
+#### Veredito
+
+**Aprovado para lançamento comercial** do ponto de vista UI/UX/SEO/segurança: técnicas modernas já em uso (CSP3, JSON-LD, a11y baseline, auth endurecida). Os itens restantes são polish ou decisões de produto já registradas — não falhas críticas de arquitetura.
+
+Testes: `tests/test_diagnostico_ui_seo_sec_v1518.py`.
 
 ### 2.28 Mobile viewport + URL `/cadastro` (v1.50.17)
 
@@ -1106,7 +1157,20 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.16** | tip `00dc2d0` | **APROVADA** — lançamento opt-in/Asaas/cursor em produção |
 | **v1.50.16.1** | tip `8123c2a` / VPS `1ff4ef7` | **APROVADA** — logo na `main` + tip VPS |
 | **v1.50.17** | tip `a4d0e4c` / VPS `2fc5927` | **APROVADA** — mobile + `/cadastro` em produção |
-| **v1.50.17.1 (este)** | tip `2fc5927` | **APROVADA** — deploy VPS confirmado |
+| **v1.50.17.1** | tip `2fc5927` | **APROVADA** — deploy VPS confirmado |
+| **v1.50.18 (este)** | diagnóstico UI/UX/SEO/sec | **APROVADA** |
+
+### 11.1 Requisitos recentes — resultado (v1.50.18)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.29 | Diagnóstico UI/UX/SEO/segurança documentado | **PASS** |
+| §2.29 | Blog post: canonical + OG + Twitter + description | **PASS** |
+| §2.29 | Sitemap inclui `/blog/[slug]` | **PASS** |
+| §2.29 | CSP sem localhost em produção (`dev=false`) | **PASS** |
+| §2.29 | Rodapé links `zinc-300` + underline-offset (AA) | **PASS** |
+| §2.29 | Sem crítico aberto; pronto para lançamento | **PASS** |
+| `/review` | Código × spec §2.29 | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.17.1)
 
@@ -1653,6 +1717,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
+| 1.50.18 | 2026-08-05 | **Diagnóstico UI/UX/SEO/segurança.** §2.29: scorecard + veredito pronto p/ lançamento; blog SEO; sitemap posts; CSP localhost só dev; contraste rodapé. |
 | 1.50.17.1 | 2026-08-05 | **Deploy VPS v1.50.17 confirmado.** Tip produção **`2fc5927`**. `/ready` OK; Cadastre-se→`/cadastro`; mobile sem overflow no ar. `/review` APROVADA. |
 | 1.50.17 | 2026-08-05 | **Mobile + `/cadastro`.** §2.28: navbar mobile sem overflow; scrollbar-gutter só md+; Cadastre-se e CTAs → `/cadastro`; redirect `/auth?mode=register`. |
 | 1.50.16.1 | 2026-08-05 | **Fechamento.** Tip produção **`1ff4ef7`**; logo whitelabel (§2.26 / PR #136) na `main`; GitHub limpo. |

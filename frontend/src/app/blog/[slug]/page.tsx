@@ -10,7 +10,27 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = getBlogPost(slug);
-  return { title: post ? `${post.meta.title} | Blog EventosBR` : "Blog" };
+  if (!post) return { title: "Blog" };
+  const title = `${post.meta.title} | Blog EventosBR`;
+  const description =
+    post.meta.excerpt ||
+    "Novidades, dicas e conteúdo sobre eventos, ingressos e organização no EventosBR.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `/blog/${post.meta.slug}` },
+    openGraph: {
+      title: post.meta.title,
+      description,
+      url: `/blog/${post.meta.slug}`,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.meta.title,
+      description,
+    },
+  };
 }
 
 export default async function BlogPostPage({ params }: Props) {

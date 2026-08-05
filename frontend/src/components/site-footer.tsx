@@ -58,22 +58,22 @@ export function SiteFooter() {
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-500">Plataforma</h2>
               <ul className="mt-4 space-y-3 text-sm">
-                <li><Link href="/eventos" className="text-zinc-400 hover:text-emerald-300">Explorar eventos</Link></li>
-                <li><Link href="/produtores" className="text-zinc-400 hover:text-emerald-300">Para produtores</Link></li>
-                <li><Link href="/planos" className="text-zinc-400 hover:text-emerald-300">Planos e preços</Link></li>
-                <li><Link href="/funcionalidades" className="text-zinc-400 hover:text-emerald-300">Funcionalidades</Link></li>
-                <li><Link href="/ajuda" className="text-zinc-400 hover:text-emerald-300">Central de ajuda</Link></li>
-                <li><Link href="/contato" className="text-zinc-400 hover:text-emerald-300">Fale conosco</Link></li>
-                <li><Link href="/blog" className="text-zinc-400 hover:text-emerald-300">Blog</Link></li>
-                <li><Link href={hrefCadastroOrganizador} className="text-zinc-400 hover:text-emerald-300">Publicar evento</Link></li>
+                <li><Link href="/eventos" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Explorar eventos</Link></li>
+                <li><Link href="/produtores" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Para produtores</Link></li>
+                <li><Link href="/planos" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Planos e preços</Link></li>
+                <li><Link href="/funcionalidades" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Funcionalidades</Link></li>
+                <li><Link href="/ajuda" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Central de ajuda</Link></li>
+                <li><Link href="/contato" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Fale conosco</Link></li>
+                <li><Link href="/blog" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Blog</Link></li>
+                <li><Link href={hrefCadastroOrganizador} className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Publicar evento</Link></li>
               </ul>
             </div>
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-500">Empresa</h2>
               <ul className="mt-4 space-y-3 text-sm">
-                <li><Link href="/sobre" className="text-zinc-400 hover:text-emerald-300">Sobre nós</Link></li>
-                <li><Link href="/termos" className="text-zinc-400 hover:text-emerald-300">Termos de uso</Link></li>
-                <li><Link href="/privacidade" className="text-zinc-400 hover:text-emerald-300">Privacidade</Link></li>
+                <li><Link href="/sobre" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Sobre nós</Link></li>
+                <li><Link href="/termos" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Termos de uso</Link></li>
+                <li><Link href="/privacidade" className="text-zinc-300 underline-offset-2 hover:text-emerald-300 hover:underline">Privacidade</Link></li>
               </ul>
             </div>
           </div>
