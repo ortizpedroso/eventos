@@ -27,6 +27,11 @@ const topicos = [
     titulo: "Parcelamento e taxas",
     descricao: "Taxa EventosBR fixa, parcelamento e repasse ao organizador.",
   },
+  {
+    href: "/ajuda/pagamentos-e-seguranca",
+    titulo: "Pagamentos e segurança",
+    descricao: "Quem processa o pagamento, o que a EventosBR guarda e o que esperar em picos de venda.",
+  },
 ] as const;
 
 export default function AjudaPage() {
@@ -36,16 +41,19 @@ export default function AjudaPage() {
         <h1>Central de ajuda</h1>
         <AjudaNav current="/ajuda" />
         <p>
-          Encontre respostas rápidas sobre compra de ingressos, criação de eventos, reembolsos e
-          taxas da plataforma.
+          Encontre respostas rápidas sobre compra de ingressos, criação de eventos, reembolsos,
+          taxas e como funcionam pagamentos e segurança na plataforma.
         </p>
-        <ul className="mt-8 space-y-4">
+        <ul className="mt-8 list-none space-y-3 !ml-0">
           {topicos.map((t) => (
-            <li key={t.href} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <Link href={t.href} className="text-base font-semibold text-emerald-700 no-underline hover:underline">
-                {t.titulo}
+            <li key={t.href} className="!mt-0 !text-left">
+              <Link
+                href={t.href}
+                className="ajuda-nav-link flex flex-col gap-1 rounded-full border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-normal text-zinc-700 no-underline hover:bg-zinc-200 sm:flex-row sm:items-baseline sm:gap-3"
+              >
+                <span className="shrink-0">{t.titulo}</span>
+                <span className="text-sm font-normal text-zinc-500">{t.descricao}</span>
               </Link>
-              <p className="mt-1 text-sm">{t.descricao}</p>
             </li>
           ))}
         </ul>

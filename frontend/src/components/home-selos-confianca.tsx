@@ -1,6 +1,9 @@
 const selos = [
-  { label: "Pagamentos 100% seguros", desc: "PIX e cartão com antifraude" },
-  { label: "HTTPS em todo o site", desc: "Conexão sempre criptografada" },
+  {
+    label: "Pagamento com processador certificado",
+    desc: "A EventosBR não armazena o número completo do cartão",
+  },
+  { label: "HTTPS em todo o site", desc: "Conexão criptografada no navegador" },
   { label: "QR Code na entrada", desc: "Check-in rápido na portaria" },
 ] as const;
 

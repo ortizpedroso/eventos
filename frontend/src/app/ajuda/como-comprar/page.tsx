@@ -11,7 +11,10 @@ export default function AjudaComoComprarPage() {
           Explore eventos em <strong>/eventos</strong> ou use a busca na navbar.
         </li>
         <li>Na página do evento, preencha nome, e-mail e CPF do participante.</li>
-        <li>Escolha PIX ou cartão (pagamento seguro online).</li>
+        <li>
+          Escolha PIX ou cartão (processados por um processador certificado — a EventosBR não
+          armazena o número completo do cartão).
+        </li>
         <li>Após confirmação, o ingresso com QR Code fica em Minha conta → Ingressos.</li>
       </ol>
     </AjudaArticle>
