@@ -32,6 +32,7 @@ const nextConfig: NextConfig = {
       ? __dirname
       : path.join(__dirname, ".."),
   output: "standalone",
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       {
