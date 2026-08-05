@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.10
+**Versão:** 1.50.10.1
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.10):** Central de Ajuda (nav uniforme) + copy verdadeiro sobre pagamento/segurança/capacidade (§2.22). Sem claims “100% seguro” / “500 req/s”.
+> **Esta versão (v1.50.10.1):** Fechamento /review da v1.50.10 — tip `main` **`5c1e140`** (PR #126). Código×spec **APROVADA**; deploy VPS pendente.
 >
-> **Produção (VPS):** tip **`96b9c62`** / v1.50.9 até deploy desta versão. Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip anterior (**`96b9c62`** / v1.50.9) até `atualizar-vps-agora.sh`. Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -819,7 +819,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (collect atualizado na v1.50.10)
+- [x] `pytest` verde (collect **511** na v1.50.10; `tests/test_ajuda_copy_v1510.py`)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -831,9 +831,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [ ] Deploy VPS v1.50.10 — após merge (`atualizar-vps-agora.sh`)
-- [x] tip de produto (VPS) — até deploy: tip anterior na VPS; `main` com v1.50.9+
-- [x] tip `main` (pré-esta versão) — **`96b9c62`** / v1.50.9 (PR #125)
+- [ ] Deploy VPS v1.50.10 — após este fechamento (`cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`)
+- [x] tip `main` — **`5c1e140`** / v1.50.10 (merge PR #126) — código×spec fechado; VPS ainda no tip anterior até deploy
+- [x] tip `main` (pré-v1.50.10) — **`96b9c62`** / v1.50.9 (PR #125)
 - [x] Playbook Oficial de Marketing — `docs/14-playbook-marketing-eventosbr.md` (§2.19 / v1.50.7)
 - [x] Docs técnicas fora do site — §2.20 / v1.50.8 (código + **produção**: 404 `/documentacao*`, `/openapi.json`)
 - [x] Deploy VPS v1.50.8 — confirmado 05/08/2026 (`atualizar-vps-agora.sh`; API/Web `e370a63`; `/ready` OK; Deploy Key SSH após repo privado)
@@ -899,6 +899,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Marketing (playbook) | `docs/14-playbook-marketing-eventosbr.md`, `docs/README.md` |
 | Docs não públicas | `scripts/export-openapi.py` → `docs/openapi.generated.json`; `tests/test_docs_nao_publicas.py` |
 | Auditoria v1.50.9 | `docs/15-auditoria-lancamento-2026-08.md`, `tests/test_auditoria_lancamento_v1509.py`, `frontend/src/app/not-found.tsx`, `frontend/src/app/error.tsx`, `frontend/src/lib/produtor-publico.ts` |
+| Ajuda + copy v1.50.10 | `components/ajuda-nav.tsx`, `app/ajuda/**`, `app/ajuda/pagamentos-e-seguranca/page.tsx`, `home-selos-confianca.tsx`, `home-faq.tsx`, `lib/payment-provider.ts`, `tests/test_ajuda_copy_v1510.py` |
 | Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py`, `test_pdv_correcao_email.py` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
@@ -954,7 +955,17 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.8.2** | VPS `e370a63` + PR #123 / **496** | **APROVADA** — deploy VPS confirmado; docs 404 no ar |
 | **v1.50.8.3** | tip `266cb34` + rechecagem produção / **496** | **APROVADA** — fechamento /review pós-deploy |
 | **v1.50.9** | tip `96b9c62` (PR #125) / **505** | **APROVADA** — auditoria pertinente (§2.21) |
-| **v1.50.10 (este)** | branch `cursor/ajuda-copy-seguranca-c0b1` / **511** | **APROVADA** — Ajuda + copy verdadeiro (§2.22) |
+| **v1.50.10** | tip `5c1e140` (PR #126) / **511** | **APROVADA** — Ajuda + copy verdadeiro (§2.22) |
+| **v1.50.10.1 (este)** | tip `5c1e140` + fechamento / **511** | **APROVADA** — fechamento spec; deploy VPS pendente |
+
+### 11.1 Requisitos recentes — resultado (v1.50.10.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.22 | Merge PR #126 → `main` `5c1e140` | **PASS** |
+| §2.22 | Código×spec (nav Ajuda + copy verdadeiro) | **PASS** (herdado v1.50.10) |
+| §7 | Deploy VPS v1.50.10 | **pendente** (`atualizar-vps-agora.sh`) |
+| `/review` | Checklist código × spec | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.10)
 
@@ -1362,7 +1373,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.10 | 2026-08-05 | **Ajuda + copy verdadeiro.** §2.22: nav/cards da Central de Ajuda com tipografia unificada; remove claims 100%/500 req/s; pagamento via processador certificado (sem PAN na EventosBR); artigo Pagamentos e segurança; sobre/funcionalidades/FAQ/selos/checkout. |
+| 1.50.10.1 | 2026-08-05 | **Fechamento /review v1.50.10.** Tip `main` **`5c1e140`** (PR #126). §7/§11: código×spec **APROVADA**; deploy VPS pendente. |
+| 1.50.10 | 2026-08-05 | **Ajuda + copy verdadeiro.** §2.22: nav/cards da Central de Ajuda com tipografia unificada; remove claims 100%/500 req/s; pagamento via processador certificado (sem PAN na EventosBR); artigo Pagamentos e segurança; sobre/funcionalidades/FAQ/selos/checkout. Merge PR #126 → `5c1e140`. |
 | 1.50.9 | 2026-08-05 | **Auditoria pertinente.** §2.21: erro API produção; upload fail-closed; not-found/error; sitemap paginado; SSR/metadata produtor; twitter evento; robots; migrate_encryption CPF/TOTP; Next 16.3.0; gitignore graphify. Docs `15-auditoria-…`. |
 | 1.50.8.3 | 2026-08-05 | **Fechamento /review.** Tip `main` **`266cb34`**; VPS **`e370a63`**. Rechecagem: docs 404 + `/ready` OK. Checklist §2.20/§7 **APROVADA**. |
 | 1.50.8.2 | 2026-08-05 | **Deploy VPS v1.50.8 confirmado.** Tip produção **`e370a63`**. `/documentacao*`, `/openapi.json` → 404 no ar. Deploy Key SSH após repo privado. `/review` APROVADA. Merge PR #123 → `9db907d`. |
