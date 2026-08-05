@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.11
+**Versão:** 1.50.12
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.11):** Correção formatação Central de Ajuda (§2.22) — restaura tipografia do Índice; mesma formatação em todos os botões da nav; cards do índice no layout anterior. Copy verdadeiro da v1.50.10 mantido.
+> **Esta versão (v1.50.12):** Achados pertinentes — `npm audit` zerado + JSON-LD em produtor/blog/`/eventos` + job `deps-audit` no CI (§2.23). Fora de escopo: CSP `style-src`, PWA, Lighthouse/axe, títulos auth.
 >
 > **Produção (VPS):** tip anterior até `atualizar-vps-agora.sh`. Repo **privado** + Deploy Key SSH.
 >
@@ -200,6 +200,30 @@ Testes: `tests/test_imagem_processamento.py`, `tests/test_secret_storage.py`, `t
 **Páginas/copy tocadas:** `ajuda/*`, `ajuda-nav`, `globals.css`, `home-selos-confianca`, `home-faq`, `funcionalidades`, `sobre`, `checkout-asaas-painel`, `payment-provider`, artigo ajuda “Pagamentos e segurança”.
 
 Testes: `tests/test_ajuda_copy_v1510.py`.
+
+### 2.23 Achados pertinentes — deps + JSON-LD público (v1.50.12)
+
+**Implementado**
+
+| Item | Ação |
+|------|------|
+| `npm audit` (postcss / brace-expansion) | `npm audit fix` + override `postcss ^8.5.25` → **0 vulnerabilidades** |
+| JSON-LD produtor | `ProfilePage` + `Person` via `buildProdutorJsonLd` em `/produtor/[slug]` |
+| JSON-LD blog | `BlogPosting` no post; `CollectionPage`/`ItemList` no índice `/blog` |
+| JSON-LD listagem | `CollectionPage`/`ItemList` em `/eventos` |
+| CI scanners | job `deps-audit`: `npm audit --audit-level=moderate` (bloqueante); `pip-audit` (relatório, `continue-on-error` até bumps Pillow/FastAPI/starlette) |
+| Python deps leves | `requests==2.32.5`, `python-multipart==0.0.31`, `python-dotenv==1.2.2` |
+
+**Fora de escopo desta versão (não pertinentes ao lançamento / residual)**
+
+- CSP `style-src 'unsafe-inline'` (script-src já nonce+strict-dynamic)
+- Metadata por página em `/conta` e `/organizador` (já `noindex`)
+- PWA `manifest.json`
+- Lighthouse CI / axe no pipeline
+- Bumps coordenados Pillow 12.x + FastAPI/Starlette (pip-audit ainda reporta — backlog)
+
+Helpers: `frontend/src/lib/public-json-ld.ts` (sempre via `serializeJsonLdForScript`).
+Testes: `tests/test_seo_json_ld_publico_v1512.py`.
 
 ### 2.13 Lançamento comercial — home dual, Ads e SEO (v1.47)
 
@@ -820,9 +844,10 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (`tests/test_ajuda_copy_v1510.py` — formatação Índice v1.50.11)
+- [x] `pytest` verde (`tests/test_ajuda_copy_v1510.py`, `tests/test_seo_json_ld_publico_v1512.py`)
 - [x] `npm run build` verde
-- [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
+- [x] `npm audit` — 0 vulnerabilidades (v1.50.12)
+- [x] CI `api`, `web`, `deps-audit`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
 - [x] OpenAPI exportado sem paths `subconta` (`export-openapi.py` white-label)
 - [x] API status usa só `tem_conta_recebimento` / `permite_conta_recebimento` (sem aliases legados)
@@ -832,8 +857,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [ ] Deploy VPS v1.50.11 — após merge (`cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`)
-- [x] tip `main` (pré-v1.50.11) — **`6a8c0cf`** / v1.50.10.1 (PR #127) — VPS ainda no tip anterior até deploy
+- [ ] Deploy VPS v1.50.12 — após merge (`cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`)
+- [x] tip `main` (pré-v1.50.12) — **`aba91a8`** / v1.50.11 (PR #128) — VPS ainda no tip anterior até deploy
+- [x] tip `main` (v1.50.10.1) — **`6a8c0cf`** (PR #127)
 - [x] tip `main` (v1.50.10) — **`5c1e140`** (PR #126)
 - [x] tip `main` (pré-v1.50.10) — **`96b9c62`** / v1.50.9 (PR #125)
 - [x] Playbook Oficial de Marketing — `docs/14-playbook-marketing-eventosbr.md` (§2.19 / v1.50.7)
@@ -902,6 +928,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Docs não públicas | `scripts/export-openapi.py` → `docs/openapi.generated.json`; `tests/test_docs_nao_publicas.py` |
 | Auditoria v1.50.9 | `docs/15-auditoria-lancamento-2026-08.md`, `tests/test_auditoria_lancamento_v1509.py`, `frontend/src/app/not-found.tsx`, `frontend/src/app/error.tsx`, `frontend/src/lib/produtor-publico.ts` |
 | Ajuda + copy v1.50.10 | `components/ajuda-nav.tsx`, `app/ajuda/**`, `app/ajuda/pagamentos-e-seguranca/page.tsx`, `home-selos-confianca.tsx`, `home-faq.tsx`, `lib/payment-provider.ts`, `tests/test_ajuda_copy_v1510.py` |
+| SEO JSON-LD v1.50.12 | `lib/public-json-ld.ts`, `app/produtor/[slug]/page.tsx`, `app/blog/**`, `app/eventos/page.tsx`, `tests/test_seo_json_ld_publico_v1512.py` |
 | Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py`, `test_pdv_correcao_email.py` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
@@ -959,7 +986,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.9** | tip `96b9c62` (PR #125) / **505** | **APROVADA** — auditoria pertinente (§2.21) |
 | **v1.50.10** | tip `5c1e140` (PR #126) / **511** | **APROVADA** — Ajuda + copy verdadeiro (§2.22) |
 | **v1.50.10.1** | tip `6a8c0cf` (PR #127) / **511** | **APROVADA** — fechamento spec; deploy VPS pendente |
-| **v1.50.11 (este)** | branch `cursor/ajuda-formatacao-restore-c0b1` | **APROVADA** — corrige formatação Ajuda (§2.22) |
+| **v1.50.11** | tip `aba91a8` (PR #128) | **APROVADA** — corrige formatação Ajuda (§2.22) |
+| **v1.50.12 (este)** | branch `cursor/auditoria-pertinente-v1512-c0b1` | **APROVADA** — deps + JSON-LD (§2.23) |
+
+### 11.1 Requisitos recentes — resultado (v1.50.12)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.23 | `npm audit` = 0 vulnerabilidades | **PASS** |
+| §2.23 | JSON-LD produtor / blog / listagem `/eventos` | **PASS** |
+| §2.23 | Helpers usam `serializeJsonLdForScript` | **PASS** |
+| §2.23 | CI job `deps-audit` (npm bloqueante + pip relatório) | **PASS** |
+| §2.23 | Bumps leves requests/multipart/dotenv | **PASS** |
+| `/review` | Checklist código × spec | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.11)
 
@@ -1386,6 +1425,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50.12 | 2026-08-05 | **Achados pertinentes.** §2.23: `npm audit fix` (0 vulns); JSON-LD em `/produtor`, `/blog`, `/eventos`; CI `deps-audit`; bumps `requests`/`python-multipart`/`python-dotenv`. Fora: CSP style, PWA, Lighthouse, títulos auth, Pillow/FastAPI. |
 | 1.50.11 | 2026-08-05 | **Correção formatação Ajuda.** §2.22: restaura tipografia do Índice (`text-sm font-medium`); mesma formatação em todos os pills da nav; cards do índice de volta ao layout anterior (`text-base font-semibold` + card). Remove forçar `font-normal`/peso 400. Copy v1.50.10 mantido. |
 | 1.50.10.1 | 2026-08-05 | **Fechamento /review v1.50.10.** Tip `main` **`5c1e140`** (PR #126). §7/§11: código×spec **APROVADA**; deploy VPS pendente. |
 | 1.50.10 | 2026-08-05 | **Ajuda + copy verdadeiro.** §2.22: nav/cards da Central de Ajuda com tipografia unificada; remove claims 100%/500 req/s; pagamento via processador certificado (sem PAN na EventosBR); artigo Pagamentos e segurança; sobre/funcionalidades/FAQ/selos/checkout. Merge PR #126 → `5c1e140`. |
