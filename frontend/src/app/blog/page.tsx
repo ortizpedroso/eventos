@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listBlogPosts } from "@/lib/blog";
+import { buildBlogIndexJsonLd } from "@/lib/public-json-ld";
 
 export const metadata: Metadata = { title: "Blog | EventosBR" };
 
@@ -8,6 +9,10 @@ export default function BlogPage() {
   const posts = listBlogPosts();
   return (
     <article className="pb-16 pt-8 sm:pb-24 sm:pt-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: buildBlogIndexJsonLd(posts) }}
+      />
       <div className="content-prose mx-auto max-w-3xl px-4 sm:px-6">
         <h1>Blog EventosBR</h1>
         <p>Novidades, dicas e conteúdo sobre eventos, ingressos e organização.</p>

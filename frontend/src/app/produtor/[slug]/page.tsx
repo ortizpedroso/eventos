@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ProdutorPublicClient } from "./produtor-public-client";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { getProdutorPublicoBySlug } from "@/lib/produtor-publico";
+import { buildProdutorJsonLd } from "@/lib/public-json-ld";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -49,7 +50,15 @@ export default async function ProdutorPage({ params }: Props) {
   const { slug } = await params;
   try {
     const initialPerfil = await getProdutorPublicoBySlug(slug);
-    return <ProdutorPublicClient slug={slug} initialPerfil={initialPerfil} />;
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: buildProdutorJsonLd(initialPerfil) }}
+        />
+        <ProdutorPublicClient slug={slug} initialPerfil={initialPerfil} />
+      </>
+    );
   } catch {
     notFound();
   }

@@ -7,6 +7,7 @@ import { categoriaFromQuery } from "@/lib/evento-categorias";
 import { buildEventosListagemMetadata } from "@/lib/eventos-listagem-metadata";
 import { filtrarEventosVitrine } from "@/lib/eventos-vitrine";
 import { fetchEventosPublicos } from "@/lib/eventos-publicos";
+import { buildEventosListagemJsonLd } from "@/lib/public-json-ld";
 
 import { EventosListaPublica } from "./eventos-lista-publica";
 
@@ -53,6 +54,16 @@ export default async function EventosListPage({ searchParams }: PageProps) {
 
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16 textos-justificados">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: buildEventosListagemJsonLd(eventosIniciais, {
+            q: buscaInicial || undefined,
+            categoria: categoriaInicial || undefined,
+            cidade: cidadeInicial || undefined,
+          }),
+        }}
+      />
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">
           {buscaInicial ? (

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BlogMarkdown } from "@/components/blog-markdown";
 import { getBlogPost } from "@/lib/blog";
+import { buildBlogPostingJsonLd } from "@/lib/public-json-ld";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -19,6 +20,10 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <article className="pb-16 pt-8 sm:pb-24 sm:pt-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: buildBlogPostingJsonLd(post.meta) }}
+      />
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <Link href="/blog" className="text-sm font-medium text-emerald-700 hover:underline">
           ← Blog
