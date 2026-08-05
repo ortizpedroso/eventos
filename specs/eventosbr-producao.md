@@ -6,7 +6,7 @@
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.14.4):** Restaura navbar — nome do usuário (faixa 10rem) e `.btn-success` em `--brand-600` (como antes da v1.50.14). Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
+> **Esta versão (v1.50.14.4):** Restaura navbar — nome do usuário completo (sem truncate) e `.btn-success` em `--brand-600`. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
 >
 > **Produção (VPS):** tip **`49612a6`** / v1.50.14.3. Repo **privado** + Deploy Key SSH.
 >
