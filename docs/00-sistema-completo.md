@@ -84,7 +84,7 @@ flowchart TB
 | BD produção | PostgreSQL | via `psycopg2-binary` |
 | BD dev simples | SQLite | `sqlite:///./eventos.db` |
 | Cache / filas | Redis | rate limit, fila de e-mail |
-| Auth | JWT (python-jose) + bcrypt | cookie HttpOnly `eventosbr_session` |
+| Auth | JWT (PyJWT + cryptography, HS256) + bcrypt | cookie HttpOnly `eventosbr_session` |
 | OAuth | Google Sign-In | `google-auth` |
 | Pagamentos | Asaas REST API | PIX, cartão, boleto; split |
 | QR Code | qrcode + Pillow | ingressos e portaria |
