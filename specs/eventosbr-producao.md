@@ -1563,7 +1563,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
-| 1.50.14.4 | 2026-08-05 | **Restaura navbar.** Nome do usuário `max-w-[10rem]` + chip 14rem; `.btn-success` de volta a `--brand-600` (pedido do produto). |
+| 1.50.14.4 | 2026-08-05 | **Restaura navbar.** Nome do usuário completo (sem truncate/max-w); `.btn-success` de volta a `--brand-600` (pedido do produto). |
 | 1.50.14 | 2026-08-05 | **Hardening UX/a11y/PWA.** §2.25: títulos auth; `manifest.ts`; CSP style residual documentado + nonce themes; axe smoke home; contraste `btn-success` (depois revertido na 1.50.14.4) e links do rodapé. Merge PR #132 → `93c35bd`. |
 | 1.50.13 | 2026-08-05 | **Upgrade seguro deps Python.** §2.24: FastAPI 0.141.1, Pillow 12.3.0, PyJWT (remove ecdsa/python-jose), pytest 9.0.3, requests 2.34.2. `pip-audit` 0; CI pip-audit bloqueante. Backup `cursor/bkp-pre-deps-python-v1513-c0b1` @ `357bc22`. Testes 516→520. |
 | 1.50.12 | 2026-08-05 | **Achados pertinentes.** §2.23: `npm audit fix` (0 vulns); JSON-LD em `/produtor`, `/blog`, `/eventos`; CI `deps-audit`; bumps `requests`/`python-multipart`/`python-dotenv`. Fora: CSP style, PWA, Lighthouse, títulos auth, Pillow/FastAPI. Hotfix E2E: asserção `/produtor` não usa logo SVG «Eventos» (tspan hidden). |

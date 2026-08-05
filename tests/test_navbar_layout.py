@@ -27,11 +27,12 @@ def test_navbar_reage_a_sessao_ao_logar():
 
 
 def test_navbar_sobre_visivel_sem_compactar_conta_nem_cta():
-    """Sobre marcado; nome do usuário e CTA «Crie um evento» sem compactação."""
+    """Sobre marcado; nome do usuário completo e CTA «Crie um evento» sem compactação."""
     assert "data-navbar-sobre" in NAV
-    # Nome: faixa mais larga (10rem), como antes da compactação da navbar.
-    assert 'className="hidden max-w-[10rem] truncate sm:inline"' in NAV
-    assert "max-w-[min(100vw-8rem,14rem)]" in NAV
+    # Nome completo — sem max-w/truncate que cortava o chip da conta.
+    assert 'className="hidden whitespace-nowrap sm:inline"' in NAV
+    assert "max-w-[8rem] truncate" not in NAV
+    assert "max-w-[10rem] truncate" not in NAV
     assert "userNome" in NAV
     # CTA: mesmo padrão (não encolher ao logar)
     assert 'className="btn-success shrink-0 whitespace-nowrap px-3.5 py-2 text-sm shadow-sm sm:px-4"' in NAV
