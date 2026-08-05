@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.14.2
+**Versão:** 1.50.14.3
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.14.2):** Deploy VPS v1.50.14 confirmado — tip produção **`93c35bd`**. Meta Pixel/GTM = só ao lançar Ads. Backups `cursor/bkp-*` **mantidos**.
+> **Esta versão (v1.50.14.3):** Redeploy VPS confirmado — tip produção **`49612a6`** (API+Web). Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
 >
-> **Produção (VPS):** tip **`93c35bd`** / v1.50.14. Repo **privado** + Deploy Key SSH. `main` também tem `1696283` (hotfixes CI/overflow — opcional redeploy).
+> **Produção (VPS):** tip **`49612a6`** / v1.50.14.2. Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -916,10 +916,12 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] Deploy VPS v1.50.14 — confirmado 05/08/2026 (`atualizar-vps-agora.sh`; API `git_commit` **`93c35bd`**; home 200; `/manifest.webmanifest` 200; `/documentacao` 404; CSP nonce+strict-dynamic)
+- [x] Deploy VPS v1.50.14.2 — confirmado 05/08/2026 (`atualizar-vps-agora.sh`; API/Web **`49612a6`**; `/ready` OK; `/manifest.webmanifest` 200; verificação produção sem falhas críticas)
+- [x] Deploy VPS v1.50.14 (primeiro) — tip **`93c35bd`** (antes do tip de fechamento)
 - [x] Backups GitHub **guardados** (não apagar): `cursor/bkp-pre-deps-python-v1513-c0b1` @ **`357bc22`**; `cursor/bkp-main-pos-review-v116-9182`; `cursor/bkp-planb-antes-review-v116-9182`
-- [x] tip produção (VPS) — **`93c35bd`** / v1.50.14
-- [x] tip `main` (v1.50.14.1 fechamento) — **`1696283`** (PR #133; hotfixes CI — redeploy opcional)
+- [x] tip produção (VPS) — **`49612a6`** / v1.50.14.2
+- [x] tip `main` (v1.50.14.2) — **`49612a6`** (PR #134)
+- [x] tip `main` (v1.50.14.1) — **`1696283`** (PR #133)
 - [x] tip `main` (v1.50.14) — **`93c35bd`** (PR #132)
 - [x] tip `main` (pré-v1.50.14) — **`181b3d1`** / v1.50.13
 - [x] tip `main` (pré-v1.50.13) — **`357bc22`** / v1.50.12 + E2E fix
@@ -1058,13 +1060,25 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.13** | tip `181b3d1` (PR #131) / **520** | **APROVADA** — upgrade Python seguro (§2.24) |
 | **v1.50.14** | tip `93c35bd` (PR #132) | **APROVADA** — títulos/PWA/axe/CSP doc (§2.25) |
 | **v1.50.14.1** | tip `1696283` (PR #133) | **APROVADA** — fechamento /review + CI |
-| **v1.50.14.2 (este)** | VPS `93c35bd` + fechamento | **APROVADA** — deploy confirmado; Meta adiados; bkp mantidos |
+| **v1.50.14.2** | VPS `93c35bd` → fechamento | **APROVADA** — 1º deploy; Meta adiados; bkp mantidos |
+| **v1.50.14.3 (este)** | VPS **`49612a6`** | **APROVADA** — redeploy tip final confirmado |
+
+### 11.1 Requisitos recentes — resultado (v1.50.14.3)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §7 | Deploy VPS tip API/Web **`49612a6`** | **PASS** (log VPS + `/api/public/version`) |
+| §7 | `/ready` OK; verificação produção sem falhas críticas | **PASS** |
+| §2.25 | `/manifest.webmanifest` 200 | **PASS** |
+| §7 | Meta Pixel / GTM | **adiado** — quando for lançar Ads |
+| §7 | Branches `cursor/bkp-*` | **mantidas** |
+| `/review` | Checklist código × produção | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.14.2)
 
 | Spec | Requisito | Resultado |
 |------|-----------|-----------|
-| §7 | Deploy VPS tip API **`93c35bd`** | **PASS** (confirmado usuário + `/api/public/version`) |
+| §7 | Deploy VPS tip API **`93c35bd`** | **PASS** (supersedido por `49612a6`) |
 | §2.25 | `/manifest.webmanifest` 200 em produção | **PASS** |
 | §2.20 | `/documentacao` 404 em produção | **PASS** |
 | §2.25 | CSP produção: nonce + `strict-dynamic` | **PASS** |
@@ -1545,7 +1559,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`**. Manifest 200; docs 404; CSP nonce OK. Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
+| 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
+| 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
 | 1.50.14 | 2026-08-05 | **Hardening UX/a11y/PWA.** §2.25: títulos auth; `manifest.ts`; CSP style residual documentado + nonce themes; axe smoke home; contraste `btn-success` (brand-700) e links do rodapé. Merge PR #132 → `93c35bd`. |
 | 1.50.13 | 2026-08-05 | **Upgrade seguro deps Python.** §2.24: FastAPI 0.141.1, Pillow 12.3.0, PyJWT (remove ecdsa/python-jose), pytest 9.0.3, requests 2.34.2. `pip-audit` 0; CI pip-audit bloqueante. Backup `cursor/bkp-pre-deps-python-v1513-c0b1` @ `357bc22`. Testes 516→520. |
