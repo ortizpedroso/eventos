@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import AuthClient from "./auth-client";
 import { redirect } from "next/navigation";
 import {
@@ -7,6 +9,14 @@ import {
 } from "@/lib/criar-evento-routes";
 
 export const dynamic = "force-dynamic";
+
+// title.absolute evita duplicar o sufixo do template do RootLayout
+// ("%s | EventosBR"), que se aplicaria por cima de uma string simples.
+export const metadata: Metadata = {
+  title: { absolute: "Entrar ou criar conta | EventosBR" },
+  description:
+    "Acesse sua conta ou crie um cadastro para comprar ingressos e organizar eventos na EventosBR.",
+};
 
 function q(
   sp: Record<string, string | string[] | undefined>,
