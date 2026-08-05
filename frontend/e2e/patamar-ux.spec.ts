@@ -196,7 +196,8 @@ test.describe("Patamar UX — vitrine e navbar", () => {
 test.describe("Checkout — copy de pagamento", () => {
   test("página de planos menciona taxa EventosBR", async ({ page }) => {
     await page.goto("/planos");
-    await expect(page.getByText(/EventosBR|taxa/i).first()).toBeVisible();
+    // Evita texto do logo SVG (hidden); valida copy visível da página.
+    await expect(page.getByText(/Taxa EventosBR/i)).toBeVisible();
   });
 
   test("planos: cards de preço visíveis ao carregar (sem depender de scroll)", async ({ page }) => {
