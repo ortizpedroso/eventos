@@ -1097,7 +1097,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §7 | Deploy VPS tip **`00dc2d0`** (v1.50.16) | **PASS** (`/api/public/version`) |
 | §2.26 | Logo whitelabel na `main` (PR #136) | **PASS** (código); **redeploy VPS** p/ ir ao ar |
 | §2.27 | Opt-in / cursor / Asaas+BC / copy verdadeiro | **PASS** (já em produção) |
-| GitHub | Sem PRs de produto abertas (`cursor/bkp-*` mantidos) | **PASS** após fechar #136 |
+| GitHub | Sem PRs de produto abertas (`cursor/bkp-*` mantidos) | **PASS** (#136 fechada; #139 merged) |
 | `/review` | Código × spec × produção | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.16)
