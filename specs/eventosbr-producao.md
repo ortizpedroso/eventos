@@ -1088,7 +1088,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.14.4** | tip `4bba850` | **APROVADA** — nome completo + CTA brand-600 |
 | **v1.50.15** | logo whitelabel | **APROVADA** — mergeada na v1.50.16.1 (PR #136) |
 | **v1.50.16** | tip `00dc2d0` | **APROVADA** — lançamento opt-in/Asaas/cursor em produção |
-| **v1.50.16.1 (este)** | fechamento GitHub + logo | **APROVADA** |
+| **v1.50.16.1 (este)** | tip `8123c2a` | **APROVADA** — logo na `main`; redeploy VPS pendente |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.16.1)
 
