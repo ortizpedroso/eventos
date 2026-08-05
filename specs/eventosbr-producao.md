@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.14.1
+**Versão:** 1.50.14.2
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.14.1):** Fechamento /review v1.50.14 — tip produto **`93c35bd`** + hotfixes CI (E2E planos/overflow, fila contato). Código×spec **APROVADA**; deploy VPS pendente.
+> **Esta versão (v1.50.14.2):** Deploy VPS v1.50.14 confirmado — tip produção **`93c35bd`**. Meta Pixel/GTM = só ao lançar Ads. Backups `cursor/bkp-*` **mantidos**.
 >
-> **Produção (VPS):** tip anterior até `atualizar-vps-agora.sh`. Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip **`93c35bd`** / v1.50.14. Repo **privado** + Deploy Key SSH. `main` também tem `1696283` (hotfixes CI/overflow — opcional redeploy).
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -276,7 +276,10 @@ Auth: `app/services/auth.py` — `import jwt` / `PyJWTError` (API compatível HS
 
 **Hotfixes CI (v1.50.14.1):** E2E planos não usa logo SVG; `overflow-x: clip` + navbar sem `100vw`; fila contato worker até 90s com re-start se morrer.
 
-**Ainda ops (não código):** Meta Pixel / GTM IDs no Admin. Backup Python `cursor/bkp-pre-deps-python-v1513-c0b1` manter até VPS estável. Branches `bkp-main-pos-review-v116` / `bkp-planb` — históricos (opcional apagar).
+**Ops (decisão 05/08/2026):**
+
+- Meta Pixel / GTM — **quando for lançar Ads** (colar IDs no Admin → Configurações).
+- Backups GitHub **guardar**: `cursor/bkp-pre-deps-python-v1513-c0b1` (@ `357bc22`), `cursor/bkp-main-pos-review-v116-9182`, `cursor/bkp-planb-antes-review-v116-9182`.
 
 Testes: `tests/test_hardening_ux_v1514.py`, E2E smoke axe.
 
@@ -913,8 +916,10 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [ ] Deploy VPS v1.50.14.1 — após merge (`cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`)
-- [x] Backup restore pré-deps — branch `cursor/bkp-pre-deps-python-v1513-c0b1` @ **`357bc22`** (§2.24) — manter até VPS estável
+- [x] Deploy VPS v1.50.14 — confirmado 05/08/2026 (`atualizar-vps-agora.sh`; API `git_commit` **`93c35bd`**; home 200; `/manifest.webmanifest` 200; `/documentacao` 404; CSP nonce+strict-dynamic)
+- [x] Backups GitHub **guardados** (não apagar): `cursor/bkp-pre-deps-python-v1513-c0b1` @ **`357bc22`**; `cursor/bkp-main-pos-review-v116-9182`; `cursor/bkp-planb-antes-review-v116-9182`
+- [x] tip produção (VPS) — **`93c35bd`** / v1.50.14
+- [x] tip `main` (v1.50.14.1 fechamento) — **`1696283`** (PR #133; hotfixes CI — redeploy opcional)
 - [x] tip `main` (v1.50.14) — **`93c35bd`** (PR #132)
 - [x] tip `main` (pré-v1.50.14) — **`181b3d1`** / v1.50.13
 - [x] tip `main` (pré-v1.50.13) — **`357bc22`** / v1.50.12 + E2E fix
@@ -930,7 +935,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 - [x] Deploy VPS v1.47.2 — **`915d2aa`** — confirmado 03/08/2026 (`atualizar-vps-agora.sh`; API/Web `915d2aa`; health/ready OK)
 - [x] Migração `20260802_000049` (Pixel/GTM em `platform_settings`) — aplicada (`alembic upgrade head`)
 - [x] Disco VPS — limpeza build cache Docker 03/08/2026 (`docker builder prune -af`; 68 GB → 5,8 GB usados; stack healthy). **Nunca** `docker system prune --volumes` em produção.
-- [ ] Meta Pixel / GTM — colar IDs em Admin → Configurações (ou `.env`); só necessário ao rodar campanhas Ads
+- [ ] Meta Pixel / GTM — **quando for lançar Ads** (colar IDs em Admin → Configurações)
 - [x] tip de produto — v1.46 mergeado; VPS **`d608169`** (deploy v1.46 confirmado 02/08/2026)
 - [x] E2E seeds — `registrarOrganizadorE2e` + contato obrigatório nos seeds; cookie sessão expirada usa `baseURL` do Playwright (fecha PR #101)
 - [x] **Turnstile em produção** — chaves no `.env` + rebuild `web`/`api` (confirmado 02/08/2026; Managed mode — validação automática para visitantes legítimos)
@@ -1052,7 +1057,20 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.12** | tip `45f3d42`/`357bc22` (PRs #129–#130) | **APROVADA** — deps + JSON-LD (§2.23) |
 | **v1.50.13** | tip `181b3d1` (PR #131) / **520** | **APROVADA** — upgrade Python seguro (§2.24) |
 | **v1.50.14** | tip `93c35bd` (PR #132) | **APROVADA** — títulos/PWA/axe/CSP doc (§2.25) |
-| **v1.50.14.1 (este)** | tip `93c35bd` + hotfixes CI | **APROVADA** — fechamento /review + CI |
+| **v1.50.14.1** | tip `1696283` (PR #133) | **APROVADA** — fechamento /review + CI |
+| **v1.50.14.2 (este)** | VPS `93c35bd` + fechamento | **APROVADA** — deploy confirmado; Meta adiados; bkp mantidos |
+
+### 11.1 Requisitos recentes — resultado (v1.50.14.2)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §7 | Deploy VPS tip API **`93c35bd`** | **PASS** (confirmado usuário + `/api/public/version`) |
+| §2.25 | `/manifest.webmanifest` 200 em produção | **PASS** |
+| §2.20 | `/documentacao` 404 em produção | **PASS** |
+| §2.25 | CSP produção: nonce + `strict-dynamic` | **PASS** |
+| §7 | Meta Pixel / GTM | **adiado** — quando for lançar Ads |
+| §7 | Branches `cursor/bkp-*` | **mantidas** (decisão usuário) |
+| `/review` | Checklist código × produção | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.14.1)
 
@@ -1062,7 +1080,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.25 | Código×spec (títulos/PWA/axe/CSP/contraste) | **PASS** |
 | §2.25 | Hotfix E2E planos (sem logo SVG) + overflow-x clip | **PASS** |
 | §2.25 | Hotfix fila contato (90s + restart worker) | **PASS** |
-| §7 | Deploy VPS v1.50.14.1 | **pendente** |
+| §7 | Deploy VPS | supersedido — **PASS** na v1.50.14.2 |
 | GitHub | PRs abertas | **nenhuma** |
 | `/review` | Checklist código × spec | **APROVADA** |
 
@@ -1527,7 +1545,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `93c35bd`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**; deploy VPS pendente. |
+| 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`**. Manifest 200; docs 404; CSP nonce OK. Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
+| 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
 | 1.50.14 | 2026-08-05 | **Hardening UX/a11y/PWA.** §2.25: títulos auth; `manifest.ts`; CSP style residual documentado + nonce themes; axe smoke home; contraste `btn-success` (brand-700) e links do rodapé. Merge PR #132 → `93c35bd`. |
 | 1.50.13 | 2026-08-05 | **Upgrade seguro deps Python.** §2.24: FastAPI 0.141.1, Pillow 12.3.0, PyJWT (remove ecdsa/python-jose), pytest 9.0.3, requests 2.34.2. `pip-audit` 0; CI pip-audit bloqueante. Backup `cursor/bkp-pre-deps-python-v1513-c0b1` @ `357bc22`. Testes 516→520. |
 | 1.50.12 | 2026-08-05 | **Achados pertinentes.** §2.23: `npm audit fix` (0 vulns); JSON-LD em `/produtor`, `/blog`, `/eventos`; CI `deps-audit`; bumps `requests`/`python-multipart`/`python-dotenv`. Fora: CSP style, PWA, Lighthouse, títulos auth, Pillow/FastAPI. Hotfix E2E: asserção `/produtor` não usa logo SVG «Eventos» (tspan hidden). |
