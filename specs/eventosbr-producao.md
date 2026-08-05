@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.17
+**Versão:** 1.50.17.1
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.17):** Mobile sem overflow horizontal; «Cadastre-se» e CTAs finais → **`/cadastro`** (não `/auth?mode=register`). Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
+> **Esta versão (v1.50.17.1):** Deploy VPS v1.50.17 confirmado (tip **`2fc5927`**). Mobile sem overflow; «Cadastre-se» e CTAs → `/cadastro`. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
 >
-> **Produção (VPS):** tip **`1ff4ef7`** / v1.50.16.1 (pré-1.50.17). Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip **`2fc5927`** / v1.50.17. Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -953,10 +953,12 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
+- [x] Deploy VPS v1.50.17 — confirmado 05/08/2026 (`atualizar-vps-agora.sh`; API/Web **`2fc5927`**; `/ready` OK; Cadastre-se→`/cadastro`; mobile sem overflow)
 - [x] Deploy VPS v1.50.14.2 — confirmado 05/08/2026 (`atualizar-vps-agora.sh`; API/Web **`49612a6`**; `/ready` OK; `/manifest.webmanifest` 200; verificação produção sem falhas críticas)
 - [x] Deploy VPS v1.50.14 (primeiro) — tip **`93c35bd`** (antes do tip de fechamento)
 - [x] Backups GitHub **guardados** (não apagar): `cursor/bkp-pre-deps-python-v1513-c0b1` @ **`357bc22`**; `cursor/bkp-main-pos-review-v116-9182`; `cursor/bkp-planb-antes-review-v116-9182`
-- [x] tip produção (VPS) — **`49612a6`** / v1.50.14.2
+- [x] tip produção (VPS) — **`2fc5927`** / v1.50.17
+- [x] tip `main` (v1.50.17 / fechamento 1.50.17.1) — **`2fc5927`**
 - [x] tip `main` (v1.50.14.2) — **`49612a6`** (PR #134)
 - [x] tip `main` (v1.50.14.1) — **`1696283`** (PR #133)
 - [x] tip `main` (v1.50.14) — **`93c35bd`** (PR #132)
@@ -1103,7 +1105,21 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.15** | logo whitelabel | **APROVADA** — mergeada na v1.50.16.1 (PR #136) |
 | **v1.50.16** | tip `00dc2d0` | **APROVADA** — lançamento opt-in/Asaas/cursor em produção |
 | **v1.50.16.1** | tip `8123c2a` / VPS `1ff4ef7` | **APROVADA** — logo na `main` + tip VPS |
-| **v1.50.17 (este)** | tip `a4d0e4c` | **APROVADA** — mobile + `/cadastro`; deploy VPS pendente |
+| **v1.50.17** | tip `a4d0e4c` / VPS `2fc5927` | **APROVADA** — mobile + `/cadastro` em produção |
+| **v1.50.17.1 (este)** | tip `2fc5927` | **APROVADA** — deploy VPS confirmado |
+
+### 11.1 Requisitos recentes — resultado (v1.50.17.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §7 | Deploy VPS tip **`2fc5927`** (v1.50.17) | **PASS** (`/api/public/version`) |
+| §7 | `/ready` OK; home/cadastro/auth/sobre/produtores 200 | **PASS** |
+| §2.28 | Mobile sem overflow (home + produtores) em produção | **PASS** |
+| §2.28 | «Cadastre-se» → `/cadastro` em produção | **PASS** |
+| §2.28 | `/auth?mode=register` → 307 `/cadastro` em produção | **PASS** |
+| §2.28 | CTA `/sobre` «Criar conta» → `/cadastro` | **PASS** |
+| GitHub | Sem PRs de produto abertas (`cursor/bkp-*` mantidos) | **PASS** |
+| `/review` | Código × spec × produção | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.17)
 
@@ -1115,6 +1131,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.28 | CTA final `/sobre` → `/cadastro` | **PASS** |
 | §2.28 | Fim de seção (home/produtores/planos) → `/cadastro` | **PASS** |
 | `/review` | Código × spec §2.28 | **APROVADA** |
+| §7 | Deploy VPS tip `2fc5927` | **PASS** (confirmado na 1.50.17.1) |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.16.1)
 
@@ -1636,6 +1653,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
+| 1.50.17.1 | 2026-08-05 | **Deploy VPS v1.50.17 confirmado.** Tip produção **`2fc5927`**. `/ready` OK; Cadastre-se→`/cadastro`; mobile sem overflow no ar. `/review` APROVADA. |
 | 1.50.17 | 2026-08-05 | **Mobile + `/cadastro`.** §2.28: navbar mobile sem overflow; scrollbar-gutter só md+; Cadastre-se e CTAs → `/cadastro`; redirect `/auth?mode=register`. |
 | 1.50.16.1 | 2026-08-05 | **Fechamento.** Tip produção **`1ff4ef7`**; logo whitelabel (§2.26 / PR #136) na `main`; GitHub limpo. |
 | 1.50.16 | 2026-08-05 | **Lançamento.** §2.27: opt-in e-mail/WhatsApp pré-marcado em cortesia; cursor pointer; Asaas citável + autorização BC; copy verdadeiro (sem hipérboles). Tip produção **`00dc2d0`**. |
@@ -1723,4 +1741,4 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | 1.8 | 2026-07-24 | Auditoria completa de segurança/SEO/UX: 2FA (organizador+admin), CAPTCHA Turnstile, cifra `enc:v2` de CPF/CNPJ, correções TOCTOU/webhook/CSV-injection, SEO técnico (JSON-LD, sitemap dinâmico, canonical), indicador de força de senha. Fechadas 29 PRs obsoletas cujo conteúdo já estava incorporado à `main`. Testes: 241 → 265. |
 | 1.7 | 2026-07-22 | Versão anterior (conta de recebimento BaaS, onboarding tracker, white-label de mensagens). |
 
-**Regra a partir da v1.8:** qualquer mudança relevante no código (nova feature, correção de segurança, mudança de contrato de API) deve vir acompanhada de uma atualização desta spec no mesmo commit/PR, com nova linha no changelog acima.
+**Regra a parti
