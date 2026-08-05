@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.16
+**Versão:** 1.50.16.1
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.16):** Lançamento — opt-in pré-marcado em evento gratuito; cursor pointer; Asaas nomeado com autorização BC (verdade); auditoria de claims. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
+> **Esta versão (v1.50.16.1):** Fechamento — logo whitelabel (§2.26) na `main`; tip produção **`00dc2d0`** (v1.50.16) confirmado; PR #136 fechada. **Redeploy VPS** necessário para a logo ir ao ar. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
 >
-> **Produção (VPS):** tip **`4bba850`** / v1.50.14.4. Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip **`00dc2d0`** / v1.50.16 (logo §2.26 ainda pendente de redeploy). Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -277,6 +277,15 @@ Auth: `app/services/auth.py` — `import jwt` / `PyJWTError` (API compatível HS
 | Sem claims fantasiosos | Manter banimentos §2.22; suavizar “sem filas” / “menos de 2 minutos” |
 
 Testes: `tests/test_lancamento_optin_asaas_v1516.py`, atualização `test_ajuda_copy_v1510.py`.
+
+### 2.26 Hotfix logo whitelabel (v1.50.15 → merge v1.50.16.1)
+
+**Problema:** em `/organizador/whitelabel`, a logo da marca usava o padrão **512×512** do `ImagemAssetField` (quadrado) e o upload podia responder **500** (ex.: I/O no disco, MIME com `charset`, falha de processamento não mapeada).
+
+**Correção:**
+- UI: logo da marca **480×120** (faixa horizontal, igual admin); foto de perfil **400×400**; copy deixa claro que o tamanho é máximo recomendado (proporção preservada).
+- API: normaliza `Content-Type` (remove `; charset=…`); I/O → **503** com mensagem clara; falhas de resize/convert não derrubam o upload (mantém original validado); subdir do org em minúsculas.
+- Testes: `tests/test_upload_logo_whitelabel.py`, casos 454×116 em `test_imagem_processamento.py`.
 
 ### 2.25 Hardening UX / a11y / PWA residual (v1.50.14)
 
@@ -1077,7 +1086,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.14.2** | VPS `93c35bd` → fechamento | **APROVADA** — 1º deploy; Meta adiados; bkp mantidos |
 | **v1.50.14.3** | VPS **`49612a6`** | **APROVADA** — redeploy tip final confirmado |
 | **v1.50.14.4** | tip `4bba850` | **APROVADA** — nome completo + CTA brand-600 |
-| **v1.50.16 (este)** | lançamento opt-in/Asaas/cursor | **APROVADA** (código×spec; deploy VPS pendente) |
+| **v1.50.15** | logo whitelabel | **APROVADA** — mergeada na v1.50.16.1 (PR #136) |
+| **v1.50.16** | tip `00dc2d0` | **APROVADA** — lançamento opt-in/Asaas/cursor em produção |
+| **v1.50.16.1 (este)** | fechamento GitHub + logo | **APROVADA** |
+
+### 11.1 Requisitos recentes — resultado (v1.50.16.1)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §7 | Deploy VPS tip **`00dc2d0`** (v1.50.16) | **PASS** (`/api/public/version`) |
+| §2.26 | Logo whitelabel na `main` (PR #136) | **PASS** (código); **redeploy VPS** p/ ir ao ar |
+| §2.27 | Opt-in / cursor / Asaas+BC / copy verdadeiro | **PASS** (já em produção) |
+| GitHub | Sem PRs de produto abertas (`cursor/bkp-*` mantidos) | **PASS** após fechar #136 |
+| `/review` | Código × spec × produção | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.16)
 
@@ -1088,7 +1109,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | §2.27 | Asaas citada + autorização BC (verdade verificável) | **PASS** |
 | §2.22/§2.27 | Sem claims 100%/máxima segurança/500 req/s/sem filas/2 min | **PASS** |
 | `/review` | Código × spec §2.27 | **APROVADA** |
-| §7 | Deploy VPS tip desta versão | **pendente** |
+| §7 | Deploy VPS tip `00dc2d0` | **PASS** (confirmado na 1.50.16.1) |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.14.3)
 
@@ -1589,7 +1610,9 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
-| 1.50.16 | 2026-08-05 | **Lançamento.** §2.27: opt-in e-mail/WhatsApp pré-marcado em cortesia; cursor pointer; Asaas citável + autorização BC; copy verdadeiro (sem hipérboles). |
+| 1.50.16.1 | 2026-08-05 | **Fechamento.** Tip produção **`00dc2d0`**; logo whitelabel (§2.26 / PR #136) na `main`; GitHub limpo; **redeploy VPS** p/ logo ao ar. |
+| 1.50.16 | 2026-08-05 | **Lançamento.** §2.27: opt-in e-mail/WhatsApp pré-marcado em cortesia; cursor pointer; Asaas citável + autorização BC; copy verdadeiro (sem hipérboles). Tip produção **`00dc2d0`**. |
+| 1.50.15 | 2026-08-05 | **Hotfix logo whitelabel.** §2.26: alvo 480×120 (não 512×512); upload endurecido (MIME/charset, I/O→503); logo 454×116 aceita. Testes `test_upload_logo_whitelabel.py`. Mergeada na 1.50.16.1. |
 | 1.50.14.4 | 2026-08-05 | **Restaura navbar.** Nome do usuário completo (sem truncate/max-w); `.btn-success` de volta a `--brand-600` (pedido do produto). Merge → `4bba850`. |
 | 1.50.14 | 2026-08-05 | **Hardening UX/a11y/PWA.** §2.25: títulos auth; `manifest.ts`; CSP style residual documentado + nonce themes; axe smoke home; contraste `btn-success` (depois revertido na 1.50.14.4) e links do rodapé. Merge PR #132 → `93c35bd`. |
 | 1.50.13 | 2026-08-05 | **Upgrade seguro deps Python.** §2.24: FastAPI 0.141.1, Pillow 12.3.0, PyJWT (remove ecdsa/python-jose), pytest 9.0.3, requests 2.34.2. `pip-audit` 0; CI pip-audit bloqueante. Backup `cursor/bkp-pre-deps-python-v1513-c0b1` @ `357bc22`. Testes 516→520. |

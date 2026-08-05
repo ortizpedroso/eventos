@@ -58,3 +58,24 @@ class TestRedimensionarImagem:
             raise AssertionError("esperava ValueError para bytes inválidos")
         except ValueError as e:
             assert "inválido" in str(e).lower() or "corrompido" in str(e).lower()
+
+    def test_logo_larga_454x116_cabe_em_alvo_quadrado_sem_ampliar(self):
+        """Caso real whitelabel: logo horizontal menor que 512×512 — não deve falhar nem ampliar."""
+        original = _png_bytes(454, 116, mode="RGBA")
+        novo_conteudo, _novo_tipo = redimensionar_imagem(
+            original, "image/png", max_width=512, max_height=512
+        )
+        img = Image.open(io.BytesIO(novo_conteudo))
+        assert img.width == 454
+        assert img.height == 116
+
+    def test_logo_larga_maior_que_alvo_encaixa_preservando_proporcao(self):
+        original = _png_bytes(1920, 480, mode="RGBA")
+        novo_conteudo, novo_tipo = redimensionar_imagem(
+            original, "image/png", max_width=480, max_height=120
+        )
+        assert novo_tipo == "image/webp"
+        img = Image.open(io.BytesIO(novo_conteudo))
+        assert img.width <= 480
+        assert img.height <= 120
+        assert abs(img.width / img.height - 1920 / 480) < 0.05

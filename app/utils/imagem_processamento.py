@@ -29,7 +29,7 @@ def redimensionar_imagem(
     Se a recodificação WebP falhar ou não reduzir, devolve o original **já validado**.
     """
     try:
-        from PIL import Image
+        from PIL import Image, ImageOps
     except ImportError:
         logger.warning("Pillow não disponível — upload seguirá sem redimensionar.")
         return content, content_type
@@ -41,26 +41,46 @@ def redimensionar_imagem(
         logger.info("Arquivo de imagem inválido (%s) — rejeitando upload.", e)
         raise ValueError("Arquivo de imagem inválido ou corrompido.") from e
 
-    largura, altura = img.size
-    escala = min(1.0, max_width / largura, max_height / altura)
-
-    if escala < 1.0:
-        nova_largura = max(1, round(largura * escala))
-        nova_altura = max(1, round(altura * escala))
-        img = img.resize((nova_largura, nova_altura), Image.LANCZOS)
-
-    # Preserva transparência (RGBA) — comum em logos/favicons.
-    if img.mode not in ("RGB", "RGBA"):
-        img = img.convert("RGBA" if "transparency" in img.info or img.mode in ("P", "LA") else "RGB")
-
-    buffer = io.BytesIO()
     try:
-        img.save(buffer, format="WEBP", quality=qualidade, method=6)
+        img = ImageOps.exif_transpose(img) or img
     except Exception as e:
-        logger.info("Falha ao recodificar em WebP (%s) — mantendo original validado.", e)
+        logger.info("EXIF transpose ignorado (%s).", e)
+
+    largura, altura = img.size
+    if largura < 1 or altura < 1:
+        raise ValueError("Arquivo de imagem inválido ou corrompido.")
+
+    try:
+        escala = min(1.0, max_width / largura, max_height / altura)
+
+        if escala < 1.0:
+            nova_largura = max(1, round(largura * escala))
+            nova_altura = max(1, round(altura * escala))
+            resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
+            img = img.resize((nova_largura, nova_altura), resample)
+
+        # Preserva transparência (RGBA) — comum em logos/favicons.
+        # Inclui P/PA/LA (paleta e luminância com alpha).
+        if img.mode not in ("RGB", "RGBA"):
+            tem_alpha = (
+                "transparency" in img.info
+                or img.mode in ("P", "PA", "LA")
+                or (img.mode.endswith("A") and img.mode != "RGBA")
+            )
+            img = img.convert("RGBA" if tem_alpha else "RGB")
+
+        buffer = io.BytesIO()
+        img.save(buffer, format="WEBP", quality=qualidade, method=6)
+    except ValueError:
+        raise
+    except Exception as e:
+        # Resize/convert/WebP — não derruba o upload com 500; tenta manter o original validado.
+        logger.info("Falha ao redimensionar/recodificar (%s) — mantendo original validado.", e)
         return content, content_type
 
     novo_conteudo = buffer.getvalue()
+    if not novo_conteudo:
+        return content, content_type
     if escala == 1.0 and len(novo_conteudo) >= len(content):
         # Já era pequena e recodificar não ajudou — não vale trocar de formato à toa.
         return content, content_type

@@ -106,11 +106,13 @@ export function ImagemAssetField({
       {hint ? <p className="text-xs text-zinc-500">{hint}</p> : null}
       {!compact ? (
         <p className="text-xs text-zinc-400">
-          Tamanho recomendado: {larguraAlvo}×{alturaAlvo}px. Enviamos maior? Redimensionamos e comprimimos
-          automaticamente antes de salvar.
+          Tamanho recomendado (máx.): {larguraAlvo}×{alturaAlvo}px. Não precisa ser exato — se for maior,
+          redimensionamos e comprimimos automaticamente (proporção preservada).
         </p>
       ) : (
-        <p className="text-xs text-zinc-500">Tamanho recomendado: {larguraAlvo}×{alturaAlvo}px</p>
+        <p className="text-xs text-zinc-500">
+          Máx. recomendado: {larguraAlvo}×{alturaAlvo}px (redimensionamos se for maior)
+        </p>
       )}
       {urlModo ? (
         <input
