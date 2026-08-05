@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { PerfilPublicoOrganizador } from "@/components/perfil-publico-organizador";
 
 export const metadata: Metadata = {
-  title: "Whitelabel | EventosBR",
+  title: "Whitelabel",
   description: "Personalize a marca, o subdomínio e a página pública do seu perfil de organizador.",
 };
 

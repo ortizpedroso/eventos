@@ -1,4 +1,11 @@
-/** CSP com nonce para scripts próprios (Google OAuth e Cloudflare Turnstile na allowlist). */
+/**
+ * CSP com nonce para scripts próprios (Google OAuth e Cloudflare Turnstile na allowlist).
+ *
+ * `style-src` mantém `'unsafe-inline'` de propósito: React usa `style={...}` em atributos
+ * (navbar, hero, brand CSS vars no `<html>`, etc.). Em CSP3, nonce/hash em `style-src`
+ * desativa `'unsafe-inline'` — remover o gap quebraria a UI. Tags `<style>` críticos já
+ * recebem nonce quando possível (SSR theme / EarlyScrollReset).
+ */
 export function buildContentSecurityPolicy(nonce: string, dev: boolean): string {
   const connect = new Set([
     "'self'",

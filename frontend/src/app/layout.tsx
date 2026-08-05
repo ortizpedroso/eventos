@@ -46,6 +46,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {nonce ? <meta name="csp-nonce" content={nonce} /> : null}
         <EarlyScrollReset nonce={nonce} />
         {/* Escala de marca no <head> (SSR) — não depende só do cliente */}
         <style
