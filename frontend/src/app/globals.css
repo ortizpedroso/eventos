@@ -83,10 +83,11 @@ body > footer {
   
   .btn-success {
     @apply flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
-    background-color: var(--brand-600);
+    /* brand-700: contraste WCAG AA com texto branco (brand-600 #10b981 falha ~2.5:1) */
+    background-color: var(--brand-700);
   }
   .btn-success:hover {
-    background-color: var(--brand-700);
+    background-color: var(--brand-800);
   }
   .btn-success:focus-visible {
     --tw-ring-color: var(--brand-600);

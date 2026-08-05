@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.13
+**Versão:** 1.50.14
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.13):** Upgrade seguro deps Python (§2.24) — FastAPI/Starlette, Pillow, PyJWT (remove ecdsa), pytest, requests. `pip-audit` **0** vulns. Backup restore: `cursor/bkp-pre-deps-python-v1513-c0b1` @ `357bc22`.
+> **Esta versão (v1.50.14):** Hardening UX/SEO residual (§2.25) — títulos `/conta`/`/organizador`, PWA manifest, CSP style documentado + nonce em themes, axe smoke na home, contraste footer/`btn-success`.
 >
 > **Produção (VPS):** tip anterior até `atualizar-vps-agora.sh`. Repo **privado** + Deploy Key SSH.
 >
@@ -263,6 +263,20 @@ Testes: `tests/test_seo_json_ld_publico_v1512.py`.
    ```
 
 Auth: `app/services/auth.py` — `import jwt` / `PyJWTError` (API compatível HS256). Tokens já emitidos com HS256 continuam válidos.
+
+### 2.25 Hardening UX / a11y / PWA residual (v1.50.14)
+
+| Item | Ação |
+|------|------|
+| Títulos auth | `metadata.title` curto em páginas `/conta/*` e `/organizador/*` (template root → `… \| EventosBR`); layouts sem sufixo duplicado; `conta/ingressos/[id]/layout.tsx` |
+| PWA | `frontend/src/app/manifest.ts` → `/manifest.webmanifest` (`display: browser`, ícones SVG existentes) |
+| CSP `style-src` | **Mantém** `'unsafe-inline'` (React `style={}`); documentado em `csp.ts`. Nonce em `<style>` de theme (SSR + cliente via `meta[name=csp-nonce]`) |
+| axe CI | `@axe-core/playwright` no smoke da home — bloqueia `critical`/`serious` |
+| Contraste | `.btn-success` usa `--brand-700`; links do rodapé com underline + contraste AA |
+
+**Ainda ops (não código):** Meta Pixel / GTM IDs no Admin. Backup Python `cursor/bkp-pre-deps-python-v1513-c0b1` manter até VPS estável.
+
+Testes: `tests/test_hardening_ux_v1514.py`, E2E smoke axe.
 
 ### 2.13 Lançamento comercial — home dual, Ads e SEO (v1.47)
 
@@ -897,8 +911,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [ ] Deploy VPS v1.50.13 — após merge (`cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`)
-- [x] Backup restore pré-deps — branch `cursor/bkp-pre-deps-python-v1513-c0b1` @ **`357bc22`** (§2.24)
+- [ ] Deploy VPS v1.50.14 — após merge (`cd /opt/eventosbr && bash scripts/atualizar-vps-agora.sh`)
+- [x] Backup restore pré-deps — branch `cursor/bkp-pre-deps-python-v1513-c0b1` @ **`357bc22`** (§2.24) — manter até VPS estável
+- [x] tip `main` (pré-v1.50.14) — **`181b3d1`** / v1.50.13
 - [x] tip `main` (pré-v1.50.13) — **`357bc22`** / v1.50.12 + E2E fix
 - [x] tip `main` (v1.50.11) — **`aba91a8`** (PR #128)
 - [x] tip `main` (v1.50.10.1) — **`6a8c0cf`** (PR #127)
@@ -972,6 +987,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Ajuda + copy v1.50.10 | `components/ajuda-nav.tsx`, `app/ajuda/**`, `app/ajuda/pagamentos-e-seguranca/page.tsx`, `home-selos-confianca.tsx`, `home-faq.tsx`, `lib/payment-provider.ts`, `tests/test_ajuda_copy_v1510.py` |
 | SEO JSON-LD v1.50.12 | `lib/public-json-ld.ts`, `app/produtor/[slug]/page.tsx`, `app/blog/**`, `app/eventos/page.tsx`, `tests/test_seo_json_ld_publico_v1512.py` |
 | Deps Python v1.50.13 | `requirements.txt`, `app/services/auth.py` (PyJWT), `tests/test_deps_python_seguro_v1513.py` |
+| Hardening UX v1.50.14 | `app/manifest.ts`, `lib/csp.ts`, `site-footer.tsx`, `e2e/smoke.spec.ts` (axe), `tests/test_hardening_ux_v1514.py` |
 | Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py`, `test_pdv_correcao_email.py` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
@@ -1031,7 +1047,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.10.1** | tip `6a8c0cf` (PR #127) / **511** | **APROVADA** — fechamento spec; deploy VPS pendente |
 | **v1.50.11** | tip `aba91a8` (PR #128) | **APROVADA** — corrige formatação Ajuda (§2.22) |
 | **v1.50.12** | tip `45f3d42`/`357bc22` (PRs #129–#130) | **APROVADA** — deps + JSON-LD (§2.23) |
-| **v1.50.13 (este)** | branch `cursor/deps-python-seguro-c0b1` / **520** | **APROVADA** — upgrade Python seguro (§2.24) |
+| **v1.50.13** | tip `181b3d1` (PR #131) / **520** | **APROVADA** — upgrade Python seguro (§2.24) |
+| **v1.50.14 (este)** | branch `cursor/hardening-ux-seo-c0b1` | **APROVADA** — títulos/PWA/axe/CSP doc (§2.25) |
+
+### 11.1 Requisitos recentes — resultado (v1.50.14)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.25 | Títulos `/conta` e `/organizador` | **PASS** |
+| §2.25 | `manifest.ts` / `/manifest.webmanifest` | **PASS** |
+| §2.25 | CSP style: unsafe-inline documentado + nonce themes | **PASS** |
+| §2.25 | axe smoke home (critical/serious = 0) | **PASS** |
+| §2.25 | Contraste `btn-success` + links rodapé | **PASS** |
+| `/review` | Checklist código × spec | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.13)
 
@@ -1483,6 +1511,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50.14 | 2026-08-05 | **Hardening UX/a11y/PWA.** §2.25: títulos auth; `manifest.ts`; CSP style residual documentado + nonce themes; axe smoke home; contraste `btn-success` (brand-700) e links do rodapé. |
 | 1.50.13 | 2026-08-05 | **Upgrade seguro deps Python.** §2.24: FastAPI 0.141.1, Pillow 12.3.0, PyJWT (remove ecdsa/python-jose), pytest 9.0.3, requests 2.34.2. `pip-audit` 0; CI pip-audit bloqueante. Backup `cursor/bkp-pre-deps-python-v1513-c0b1` @ `357bc22`. Testes 516→520. |
 | 1.50.12 | 2026-08-05 | **Achados pertinentes.** §2.23: `npm audit fix` (0 vulns); JSON-LD em `/produtor`, `/blog`, `/eventos`; CI `deps-audit`; bumps `requests`/`python-multipart`/`python-dotenv`. Fora: CSP style, PWA, Lighthouse, títulos auth, Pillow/FastAPI. Hotfix E2E: asserção `/produtor` não usa logo SVG «Eventos» (tspan hidden). |
 | 1.50.11 | 2026-08-05 | **Correção formatação Ajuda.** §2.22: restaura tipografia do Índice (`text-sm font-medium`); mesma formatação em todos os pills da nav; cards do índice de volta ao layout anterior (`text-base font-semibold` + card). Remove forçar `font-normal`/peso 400. Copy v1.50.10 mantido. |

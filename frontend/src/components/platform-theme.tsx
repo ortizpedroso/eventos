@@ -33,5 +33,14 @@ export function PlatformTheme({ settings }: Props) {
     return () => bc.close();
   }, []);
 
-  return <style id="eventosbr-platform-theme">{css}</style>;
+  const nonce =
+    typeof document !== "undefined"
+      ? document.querySelector('meta[name="csp-nonce"]')?.getAttribute("content") || undefined
+      : undefined;
+
+  return (
+    <style id="eventosbr-platform-theme" nonce={nonce}>
+      {css}
+    </style>
+  );
 }

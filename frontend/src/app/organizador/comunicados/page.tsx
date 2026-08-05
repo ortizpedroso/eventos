@@ -1,7 +1,7 @@
 import { ComunicadosClient } from "./comunicados-client";
 
 export const metadata = {
-  title: "Comunicados | Organizador | EventosBR",
+  title: "Comunicados",
 };
 
 export default function OrganizadorComunicadosPage() {

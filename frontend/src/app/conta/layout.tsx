@@ -5,7 +5,7 @@ import { ContaBanners } from "@/components/conta-banners";
 import { ContaShell } from "@/components/conta-shell";
 
 export const metadata: Metadata = {
-  title: "Minha conta | EventosBR",
+  title: "Minha conta",
   description: "Ingressos, perfil e notificações na EventosBR.",
   robots: { index: false, follow: false },
 };

@@ -1,7 +1,7 @@
 import { CheckinClient } from "./checkin-client";
 
 export const metadata = {
-  title: "Check-in | Organizador",
+  title: "Check-in",
 };
 
 export default function OrganizadorCheckinPage() {

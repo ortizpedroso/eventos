@@ -30,9 +30,18 @@ export function OrganizerBrandTheme({
     ? buildScopedBrandCss(`.${SCOPE}`, primaryHex, dark || undefined)
     : "";
 
+  const nonce =
+    typeof document !== "undefined"
+      ? document.querySelector('meta[name="csp-nonce"]')?.getAttribute("content") || undefined
+      : undefined;
+
   return (
     <>
-      {hasBrand ? <style id="eventosbr-organizer-brand">{css}</style> : null}
+      {hasBrand ? (
+        <style id="eventosbr-organizer-brand" nonce={nonce}>
+          {css}
+        </style>
+      ) : null}
       <div className={hasBrand ? SCOPE : undefined}>{children}</div>
     </>
   );

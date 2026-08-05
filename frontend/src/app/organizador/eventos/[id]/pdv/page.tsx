@@ -1,7 +1,7 @@
 import { PdvPresencialClient } from "./pdv-presencial-client";
 
 export const metadata = {
-  title: "PDV / Venda presencial | Organizador",
+  title: "PDV / Venda presencial",
 };
 
 type Props = { params: Promise<{ id: string }> };

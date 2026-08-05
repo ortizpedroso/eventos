@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 test.describe("Smoke — páginas públicas", () => {
@@ -5,6 +6,14 @@ test.describe("Smoke — páginas públicas", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveTitle(/EventosBR/i);
     await expect(page.getByRole("link", { name: /eventos/i }).first()).toBeVisible();
+  });
+
+  test("home sem violações axe críticas/sérias", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveTitle(/EventosBR/i);
+    const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+    const graves = results.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
+    expect(graves, JSON.stringify(graves, null, 2)).toEqual([]);
   });
 
   test("lista de eventos responde", async ({ page }) => {
