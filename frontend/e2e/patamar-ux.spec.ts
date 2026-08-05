@@ -576,6 +576,7 @@ test.describe("Perfil público do produtor", () => {
 
     await page.goto(`/produtor/${slug}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: new RegExp(nome, "i") })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(/eventos/i).first()).toBeVisible();
+    // Evita o logo SVG («Eventos» em <tspan> hidden); valida métrica do perfil.
+    await expect(page.getByText(/evento\(s\) publicado/i)).toBeVisible();
   });
 });
