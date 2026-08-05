@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.14.3
+**Versão:** 1.50.15
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.14.3):** Redeploy VPS confirmado — tip produção **`49612a6`** (API+Web). Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
+> **Esta versão (v1.50.15):** Hotfix upload logo whitelabel (454×116 → erro 500 / copy 512×512). Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
 >
-> **Produção (VPS):** tip **`49612a6`** / v1.50.14.2. Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip **`49612a6`** / v1.50.14.3 (pré-hotfix). Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -263,6 +263,15 @@ Testes: `tests/test_seo_json_ld_publico_v1512.py`.
    ```
 
 Auth: `app/services/auth.py` — `import jwt` / `PyJWTError` (API compatível HS256). Tokens já emitidos com HS256 continuam válidos.
+
+### 2.26 Hotfix logo whitelabel (v1.50.15)
+
+**Problema:** em `/organizador/whitelabel`, a logo da marca usava o padrão **512×512** do `ImagemAssetField` (quadrado) e o upload podia responder **500** (ex.: I/O no disco, MIME com `charset`, falha de processamento não mapeada).
+
+**Correção:**
+- UI: logo da marca **480×120** (faixa horizontal, igual admin); foto de perfil **400×400**; copy deixa claro que o tamanho é máximo recomendado (proporção preservada).
+- API: normaliza `Content-Type` (remove `; charset=…`); I/O → **503** com mensagem clara; falhas de resize/convert não derrubam o upload (mantém original validado); subdir do org em minúsculas.
+- Testes: `tests/test_upload_logo_whitelabel.py`, casos 454×116 em `test_imagem_processamento.py`.
 
 ### 2.25 Hardening UX / a11y / PWA residual (v1.50.14)
 
@@ -1061,7 +1070,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.14** | tip `93c35bd` (PR #132) | **APROVADA** — títulos/PWA/axe/CSP doc (§2.25) |
 | **v1.50.14.1** | tip `1696283` (PR #133) | **APROVADA** — fechamento /review + CI |
 | **v1.50.14.2** | VPS `93c35bd` → fechamento | **APROVADA** — 1º deploy; Meta adiados; bkp mantidos |
-| **v1.50.14.3 (este)** | VPS **`49612a6`** | **APROVADA** — redeploy tip final confirmado |
+| **v1.50.14.3** | VPS **`49612a6`** | **APROVADA** — redeploy tip final confirmado |
+| **v1.50.15 (este)** | branch hotfix logo | **em curso** — upload logo whitelabel |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.14.3)
 
@@ -1562,6 +1572,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
+| 1.50.15 | 2026-08-05 | **Hotfix logo whitelabel.** §2.26: alvo 480×120 (não 512×512); upload endurecido (MIME/charset, I/O→503); logo 454×116 aceita. Testes `test_upload_logo_whitelabel.py`. |
 | 1.50.14 | 2026-08-05 | **Hardening UX/a11y/PWA.** §2.25: títulos auth; `manifest.ts`; CSP style residual documentado + nonce themes; axe smoke home; contraste `btn-success` (brand-700) e links do rodapé. Merge PR #132 → `93c35bd`. |
 | 1.50.13 | 2026-08-05 | **Upgrade seguro deps Python.** §2.24: FastAPI 0.141.1, Pillow 12.3.0, PyJWT (remove ecdsa/python-jose), pytest 9.0.3, requests 2.34.2. `pip-audit` 0; CI pip-audit bloqueante. Backup `cursor/bkp-pre-deps-python-v1513-c0b1` @ `357bc22`. Testes 516→520. |
 | 1.50.12 | 2026-08-05 | **Achados pertinentes.** §2.23: `npm audit fix` (0 vulns); JSON-LD em `/produtor`, `/blog`, `/eventos`; CI `deps-audit`; bumps `requests`/`python-multipart`/`python-dotenv`. Fora: CSP style, PWA, Lighthouse, títulos auth, Pillow/FastAPI. Hotfix E2E: asserção `/produtor` não usa logo SVG «Eventos» (tspan hidden). |

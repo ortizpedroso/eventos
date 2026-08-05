@@ -160,9 +160,12 @@ export function PerfilPublicoOrganizador() {
         <ImagemAssetField
           id="foto_url_publica"
           label="Foto ou logo do perfil"
+          hint="Quadrada ou próxima disso — usada no avatar da página pública."
           value={fotoUrl}
           onChange={setFotoUrl}
           uploadUrl="/api/organizador/assets/upload"
+          larguraAlvo={400}
+          alturaAlvo={400}
         />
 
         <div className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -187,9 +190,12 @@ export function PerfilPublicoOrganizador() {
               <ImagemAssetField
                 id="brand_logo_url"
                 label="Logo da marca"
+                hint="Logo horizontal (faixa). Qualquer proporção é aceita — redimensionamos para caber."
                 value={brandLogoUrl}
                 onChange={setBrandLogoUrl}
                 uploadUrl="/api/organizador/assets/upload"
+                larguraAlvo={480}
+                alturaAlvo={120}
               />
             </div>
             <BrandColorPicker
