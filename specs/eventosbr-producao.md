@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.8.3
+**Versão:** 1.50.9
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip **`e370a63`** / v1.50.8 — docs técnicas fora do site. `/documentacao*`, `/openapi.json` → **404**. `/ready` OK. Repo **privado** + Deploy Key SSH. pytest **496**. `/review` **APROVADA**.
+> **Esta versão (v1.50.9):** correções pertinentes da auditoria de lançamento (§2.21) — erro de API em produção, upload fail-closed, not-found/error, sitemap paginado, SSR produtor, Twitter metadata, robots, `migrate_encryption` completo, Next 16.3.0.
 >
-> **main (spec):** tip **`9db907d`** (merge PR #123 — fechamento deploy v1.50.8.2). Redeploy VPS só por spec não é obrigatório.
+> **Produção (VPS):** tip **`e370a63`** / v1.50.8 até deploy desta versão. Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -151,6 +151,27 @@ Documento de referência para a equipe produzir conteúdo, anúncios e comunica�
 Docs operacionais permanecem no **repositório** (`docs/`, `specs/`) — acesso só a quem tem permissão no GitHub (repo privado).
 
 Testes: `tests/test_docs_nao_publicas.py`.
+
+### 2.21 Correções pertinentes da auditoria de lançamento (v1.50.9)
+
+Escopo: itens **necessários/pertinentes** (não o backlog completo de polish UI). Ref: `docs/15-auditoria-lancamento-2026-08.md`.
+
+| Área | Requisito | Implementação |
+|------|-----------|---------------|
+| UX/API | Sem mensagem Docker/uvicorn ao usuário em produção | `api.ts`: mensagem genérica se `NODE_ENV === "production"` |
+| Segurança | Upload não aceita bytes arbitrários se Pillow falhar | `redimensionar_imagem` levanta `ValueError`; callers já mapeiam para 400 |
+| UX | Páginas de erro amigáveis | `app/not-found.tsx`, `app/error.tsx` |
+| SEO | Sitemap não trava em 100 eventos | `fetchEventosPublicos` com `skip`; `sitemap.ts` pagina até esgotar |
+| SEO | Perfil produtor com SSR + metadata | `generateMetadata` + fetch SSR + `initialPerfil` no client |
+| SEO | Twitter em página de evento | `twitter` alinhado ao Open Graph em `eventos/[slug]/page.tsx` |
+| SEO | robots bloqueia rotas privadas extras | `/cadastro`, `/ingresso/`, `/eventos/novo`, `/eventos/*/editar` |
+| Segurança | `migrate_encryption` cobre CPF/TOTP | Campos `asaas_repasse_cpf_cnpj`, `totp_secret` além da API key |
+| Dependência | Next.js ≥ 16.3.0 | Bump `frontend` `16.2.6` → `16.3.0` |
+| Repo | Ignorar artefato graphify | `**/graphify-out/` no `.gitignore` |
+
+**Fora de escopo (backlog):** contraste zinc-400, `text-[10px]`, `window.confirm`, skeletons admin, touch 44px, CSP no FastAPI (CSP já no Next/`proxy.ts`), enumeração de e-mail no registro.
+
+Testes: `tests/test_imagem_processamento.py`, `tests/test_secret_storage.py`, `tests/test_auditoria_lancamento_v1509.py`, E2E smoke (404 docs mantido).
 
 ### 2.13 Lançamento comercial — home dual, Ads e SEO (v1.47)
 
@@ -771,7 +792,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (**496** testes — +4 `test_docs_nao_publicas`)
+- [x] `pytest` verde (**504** passed + 1 skipped; collect **505**)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -783,8 +804,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto (VPS) — **`e370a63`** / v1.50.8 (PRs #121/#122 + deploy 05/08/2026)
-- [x] tip `main` (spec) — **`9db907d`** / v1.50.8.2 (PR #123)
+- [ ] Deploy VPS v1.50.9 — após merge (`atualizar-vps-agora.sh`)
+- [x] tip de produto (VPS) — **`e370a63`** / v1.50.8 até deploy v1.50.9
+- [x] tip `main` (spec) — **`266cb34`** / v1.50.8.3 (PR #124)
 - [x] Playbook Oficial de Marketing — `docs/14-playbook-marketing-eventosbr.md` (§2.19 / v1.50.7)
 - [x] Docs técnicas fora do site — §2.20 / v1.50.8 (código + **produção**: 404 `/documentacao*`, `/openapi.json`)
 - [x] Deploy VPS v1.50.8 — confirmado 05/08/2026 (`atualizar-vps-agora.sh`; API/Web `e370a63`; `/ready` OK; Deploy Key SSH após repo privado)
@@ -849,6 +871,7 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Go-live ops | `docs/11-go-live-asaas.md`, `atualizar-vps-agora.sh`, `configure-asaas-env.sh`, `configure-turnstile-env.sh`, `setup-turnstile-e2e.sh`, `turnstile-spin/` |
 | Marketing (playbook) | `docs/14-playbook-marketing-eventosbr.md`, `docs/README.md` |
 | Docs não públicas | `scripts/export-openapi.py` → `docs/openapi.generated.json`; `tests/test_docs_nao_publicas.py` |
+| Auditoria v1.50.9 | `docs/15-auditoria-lancamento-2026-08.md`, `tests/test_auditoria_lancamento_v1509.py`, `frontend/src/app/not-found.tsx`, `frontend/src/app/error.tsx`, `frontend/src/lib/produtor-publico.ts` |
 | Testes | `test_compra_split_fluxo_mock.py`, `test-compra-split-mock.sh`, `test-asaas-webhook.sh`, `test-asaas-connection.py`, `validar-go-live-vps.sh`, `test_xss_auditoria_lancamento.py`, `test_pdv_correcao_email.py` |
 | CI | `.github/workflows/ci.yml` |
 | Backup produção | `backup-prod-env.sh`, `verify-prod-backup.sh`, `restore-prod-env.sh` |
@@ -902,7 +925,25 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.8** | tip `dfabe91` (PR #121) / **496** | **APROVADA** (código) — docs fora do site (§2.20) |
 | **v1.50.8.1** | tip `e370a63` (PR #122) / **496** | **APROVADA** — fechamento spec; deploy pendente na época |
 | **v1.50.8.2** | VPS `e370a63` + PR #123 / **496** | **APROVADA** — deploy VPS confirmado; docs 404 no ar |
-| **v1.50.8.3 (este)** | tip `9db907d` + rechecagem produção / **496** | **APROVADA** — fechamento /review pós-deploy |
+| **v1.50.8.3** | tip `266cb34` + rechecagem produção / **496** | **APROVADA** — fechamento /review pós-deploy |
+| **v1.50.9 (este)** | branch `cursor/auditoria-correcoes-c0b1` / **505** | **APROVADA** — auditoria pertinente (§2.21) |
+
+### 11.1 Requisitos recentes — resultado (v1.50.9)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.21 | API erro genérico em produção | **PASS** |
+| §2.21 | Upload fail-closed (imagem inválida) | **PASS** |
+| §2.21 | `not-found.tsx` + `error.tsx` | **PASS** |
+| §2.21 | Sitemap pagina além de 100 | **PASS** |
+| §2.21 | Produtor SSR + generateMetadata + twitter | **PASS** |
+| §2.21 | Evento metadata twitter | **PASS** |
+| §2.21 | robots rotas privadas extras | **PASS** |
+| §2.21 | migrate_encryption CPF/TOTP | **PASS** |
+| §2.21 | Next.js 16.3.0 + `npm run build` | **PASS** |
+| §2.21 | gitignore graphify-out | **PASS** |
+| §7 Qualidade | `pytest` collect **505** | **PASS** |
+| `/review` | Checklist código × spec | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.8.3)
 
@@ -1281,7 +1322,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.8.3 | 2026-08-05 | **Fechamento /review.** Tip `main` **`9db907d`**; VPS **`e370a63`**. Rechecagem: docs 404 + `/ready` OK. Checklist §2.20/§7 **APROVADA**. |
+| 1.50.9 | 2026-08-05 | **Auditoria pertinente.** §2.21: erro API produção; upload fail-closed; not-found/error; sitemap paginado; SSR/metadata produtor; twitter evento; robots; migrate_encryption CPF/TOTP; Next 16.3.0; gitignore graphify. Docs `15-auditoria-…`. |
+| 1.50.8.3 | 2026-08-05 | **Fechamento /review.** Tip `main` **`266cb34`**; VPS **`e370a63`**. Rechecagem: docs 404 + `/ready` OK. Checklist §2.20/§7 **APROVADA**. |
 | 1.50.8.2 | 2026-08-05 | **Deploy VPS v1.50.8 confirmado.** Tip produção **`e370a63`**. `/documentacao*`, `/openapi.json` → 404 no ar. Deploy Key SSH após repo privado. `/review` APROVADA. Merge PR #123 → `9db907d`. |
 | 1.50.8.1 | 2026-08-04 | **Fechamento /review v1.50.8.** Tip `main` **`e370a63`** (PR #122 sobre #121). §7/§11: código×spec **APROVADA**; deploy VPS pendente na época. |
 | 1.50.8 | 2026-08-04 | **Docs técnicas fora do site.** §2.20: remove `/documentacao*`, `openapi.json` público e link do rodapé; export OpenAPI só em `docs/openapi.generated.json`; sitemap/robots; teste `test_docs_nao_publicas.py`. Repo privado. Merge PR #121 → `dfabe91`. |

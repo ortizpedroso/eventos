@@ -2,21 +2,27 @@
 
 from __future__ import annotations
 
+import io
 import uuid
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app.main import app
 from config.settings import settings
 
 client = TestClient(app)
 
-PNG_1X1 = bytes.fromhex(
-    "89504e470d0a1a0a0000000d49484452000000010000000108"
-    "0600000031e995ed0000000c4944415478da6360000002000155"
-    "0121a30000000049454e44ae426082"
-)
+
+def _png_bytes(width: int = 8, height: int = 8) -> bytes:
+    img = Image.new("RGB", (width, height), color=(16, 185, 129))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+PNG_1X1 = _png_bytes(1, 1)
 
 
 def _registrar_organizador(email: str) -> str:
@@ -82,11 +88,12 @@ class TestR2StorageService:
             url = r2_storage.upload_imagem_evento(PNG_1X1, "image/png", prefixo="eventos")
 
         assert url.startswith("https://pub-x.r2.dev/eventos/")
-        assert url.endswith(".png")
+        # Pipeline recodifica para WebP quando compensar; aceita png ou webp.
+        assert url.endswith(".png") or url.endswith(".webp")
         mock_client.put_object.assert_called_once()
         kwargs = mock_client.put_object.call_args.kwargs
         assert kwargs["Bucket"] == "eventosbr"
-        assert kwargs["ContentType"] == "image/png"
+        assert kwargs["ContentType"] in ("image/png", "image/webp")
 
 
 class TestUploadImagemEventoRoute:

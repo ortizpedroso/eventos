@@ -204,7 +204,7 @@ test.describe("Checkout — copy de pagamento", () => {
     const titulo = page.getByRole("heading", { level: 3, name: "Eventos gratuitos" });
     await expect(titulo).toBeVisible({ timeout: 15_000 });
     const opacidade = await titulo.evaluate((el) => {
-      let node: HTMLElement | null = el;
+      let node: Element | null = el;
       while (node) {
         const o = Number.parseFloat(window.getComputedStyle(node).opacity);
         if (o < 1) return o;

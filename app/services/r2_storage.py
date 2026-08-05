@@ -62,7 +62,10 @@ def upload_imagem_evento(content: bytes, content_type: str, *, prefixo: str = "e
     if len(content) > MAX_UPLOAD_BYTES:
         raise R2UploadError(f"Arquivo maior que {MAX_UPLOAD_BYTES // (1024 * 1024)}MB.")
 
-    content, ct = redimensionar_imagem(content, ct, max_width=1920, max_height=1080)
+    try:
+        content, ct = redimensionar_imagem(content, ct, max_width=1920, max_height=1080)
+    except ValueError as e:
+        raise R2UploadError(str(e)) from e
     ext = ALLOWED_CONTENT_TYPES.get(ct, ext)
 
     key = f"{prefixo}/{uuid.uuid4().hex}.{ext}"

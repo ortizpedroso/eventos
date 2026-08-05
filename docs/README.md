@@ -28,6 +28,7 @@ Documentação do sistema (API FastAPI + frontend Next.js + Postgres/Redis + pag
 | [12 — Checklist publicação](./12-checklist-publicacao.md) | O que está pronto no código vs o que falta no VPS |
 | [13 — Automação GitHub](./13-github-automacao.md) | CI em `cursor/*`, PR automático e permissões |
 | [14 — Playbook de Marketing](./14-playbook-marketing-eventosbr.md) | Posicionamento, tom de voz, Ciclo 1 (15 dias), Reels, Ads, e-mail, WhatsApp e KPIs |
+| [15 — Auditoria lançamento](./15-auditoria-lancamento-2026-08.md) | Correções pertinentes v1.50.9 (segurança, SEO, UX de erro) |
 | **Spec produção** | [`specs/eventosbr-producao.md`](../specs/eventosbr-producao.md) — documento único `/build` e `/review` |
 
 ## Documentação interativa da API

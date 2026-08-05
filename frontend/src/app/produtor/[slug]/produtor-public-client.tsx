@@ -5,34 +5,42 @@ import { EventoCardVitrine } from "@/components/evento-card-vitrine";
 import { OrganizerBrandTheme } from "@/components/organizer-brand-theme";
 import { apiFetch } from "@/lib/api";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
+import type { ProdutorPerfilPublico } from "@/lib/produtor-publico";
 import { resolveUrlPublicaHref } from "@/lib/url-publica";
-import type { Evento } from "@/lib/types";
 
-type Perfil = {
+type Perfil = ProdutorPerfilPublico;
+
+export function ProdutorPublicClient({
+  slug,
+  initialPerfil = null,
+}: {
   slug: string;
-  nome: string;
-  bio?: string | null;
-  foto_url?: string | null;
-  social_instagram?: string | null;
-  social_whatsapp?: string | null;
-  social_site?: string | null;
-  brand_name?: string | null;
-  brand_logo_url?: string | null;
-  brand_primary_color?: string | null;
-  brand_primary_color_dark?: string | null;
-  metricas: { eventos_publicados: number; ingressos_pagos: number };
-  eventos: Evento[];
-};
-
-export function ProdutorPublicClient({ slug }: { slug: string }) {
-  const [perfil, setPerfil] = useState<Perfil | null>(null);
+  initialPerfil?: Perfil | null;
+}) {
+  const [perfil, setPerfil] = useState<Perfil | null>(initialPerfil);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialPerfil && initialPerfil.slug === slug) {
+      setPerfil(initialPerfil);
+      setErr(null);
+      return;
+    }
+    let cancelled = false;
     void apiFetch<Perfil>(`/api/produtor/${encodeURIComponent(slug)}`)
-      .then(setPerfil)
-      .catch(() => setErr("Produtor não encontrado."));
-  }, [slug]);
+      .then((p) => {
+        if (!cancelled) {
+          setPerfil(p);
+          setErr(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setErr("Produtor não encontrado.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, initialPerfil]);
 
   if (err) return <p className="py-12 text-center text-zinc-600">{err}</p>;
   if (!perfil) return <p className="py-12 text-center text-zinc-500">Carregando…</p>;

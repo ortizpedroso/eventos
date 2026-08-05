@@ -115,10 +115,11 @@ export async function apiFetch<T>(
       credentials: "include",
     });
   } catch {
-    throw new ApiNetworkError(
+    const msgProd = "Não foi possível contactar o servidor. Tente novamente em instantes.";
+    const msgDev =
       "Não foi possível contactar a API. Confirme que o backend está a correr (porta 8000): " +
-        "com Docker use `docker compose up -d` na raiz do projeto; em local use `uvicorn app.main:app --host 127.0.0.1 --port 8000`.",
-    );
+      "com Docker use `docker compose up -d` na raiz do projeto; em local use `uvicorn app.main:app --host 127.0.0.1 --port 8000`.";
+    throw new ApiNetworkError(process.env.NODE_ENV === "production" ? msgProd : msgDev);
   }
 
   if (res.status === 401 && typeof window !== "undefined") {

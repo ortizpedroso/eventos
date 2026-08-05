@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { fetchEventosPublicos } from "@/lib/eventos-publicos";
+import { fetchTodosEventosPublicos } from "@/lib/eventos-publicos";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://eventosbr.app.br";
 
@@ -29,14 +29,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let eventosEntries: MetadataRoute.Sitemap = [];
   try {
-    // Limite máximo aceito pela API pública (ver app/routes/eventos.py::listar_eventos).
-    const eventos = await fetchEventosPublicos(100);
+    // Pagina a API (limit máx. 100) até esgotar — não trava em 100 eventos.
+    const eventos = await fetchTodosEventosPublicos();
     eventosEntries = eventos
       .filter((evento) => Boolean(evento.slug))
       .map((evento) => ({
         url: `${SITE_URL}/eventos/${evento.slug}`,
         lastModified: evento.data_criacao ? new Date(evento.data_criacao) : now,
-        changeFrequency: "daily",
+        changeFrequency: "daily" as const,
         priority: 0.8,
       }));
   } catch {

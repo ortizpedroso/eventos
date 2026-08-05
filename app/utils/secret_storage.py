@@ -129,8 +129,18 @@ def _decrypt_v1(secret: bytes, raw: str) -> str:
         ) from exc
 
 
+_CAMPOS_MIGRAVELS = (
+    "asaas_subaccount_api_key",
+    "asaas_repasse_cpf_cnpj",
+    "totp_secret",
+)
+
+
 def migrate_encryption(db, old_key: str, new_key: str) -> int:
-    """Re-cifra todos os asaas_subaccount_api_key de enc:v1/v2 com old_key para enc:v2 com new_key.
+    """Re-cifra campos Fernet em repouso de enc:v1/v2 (old_key) para enc:v2 (new_key).
+
+    Campos: ``asaas_subaccount_api_key``, ``asaas_repasse_cpf_cnpj``, ``totp_secret``.
+    (``totp_recovery_codes`` usa bcrypt — fora do escopo.)
 
     Uso:
         from app.utils.secret_storage import migrate_encryption
@@ -141,30 +151,44 @@ def migrate_encryption(db, old_key: str, new_key: str) -> int:
         db.close()
     """
     from app.models import Usuario
+    from sqlalchemy import or_
 
     old_bytes = old_key.strip().encode("utf-8")
     new_bytes = new_key.strip().encode("utf-8")
     updated = 0
-    for usuario in db.query(Usuario).filter(
-        Usuario.asaas_subaccount_api_key.isnot(None),
-        Usuario.asaas_subaccount_api_key != "",
-    ).all():
-        raw_enc = (usuario.asaas_subaccount_api_key or "").strip()
-        if not is_encrypted_at_rest(raw_enc):
+
+    filtros = or_(
+        *(
+            (getattr(Usuario, campo).isnot(None)) & (getattr(Usuario, campo) != "")
+            for campo in _CAMPOS_MIGRAVELS
+        )
+    )
+    for usuario in db.query(Usuario).filter(filtros).all():
+        mudou = False
+        for campo in _CAMPOS_MIGRAVELS:
+            raw_enc = (getattr(usuario, campo, None) or "").strip()
+            if not raw_enc or not is_encrypted_at_rest(raw_enc):
+                continue
+            try:
+                if raw_enc.startswith(ENC_PREFIX_V2):
+                    plain = _decrypt_v2(old_bytes, raw_enc)
+                else:
+                    plain = _decrypt_v1(old_bytes, raw_enc)
+            except RuntimeError:
+                logger.error(
+                    "Não foi possível decifrar %s do usuário %s com old_key",
+                    campo,
+                    usuario.id,
+                )
+                continue
+            salt = os.urandom(32)
+            token = _fernet_with_salt(new_bytes, salt).encrypt(plain.encode("utf-8")).decode("ascii")
+            salt_b64 = base64.urlsafe_b64encode(salt).decode("ascii")
+            setattr(usuario, campo, f"{ENC_PREFIX_V2}{salt_b64}:{token}")
+            mudou = True
+            updated += 1
+        if not mudou:
             continue
-        try:
-            if raw_enc.startswith(ENC_PREFIX_V2):
-                plain = _decrypt_v2(old_bytes, raw_enc)
-            else:
-                plain = _decrypt_v1(old_bytes, raw_enc)
-        except RuntimeError:
-            logger.error("Não foi possível decifrar registro do usuário %s com old_key", usuario.id)
-            continue
-        salt = os.urandom(32)
-        token = _fernet_with_salt(new_bytes, salt).encrypt(plain.encode("utf-8")).decode("ascii")
-        salt_b64 = base64.urlsafe_b64encode(salt).decode("ascii")
-        usuario.asaas_subaccount_api_key = f"{ENC_PREFIX_V2}{salt_b64}:{token}"
-        updated += 1
     db.commit()
-    logger.info("migrate_encryption: %d registros re-cifrados", updated)
+    logger.info("migrate_encryption: %d campos re-cifrados", updated)
     return updated

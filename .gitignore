@@ -85,6 +85,9 @@ tools/stripe-cli/
 # OpenAPI gerado (uso interno — não servir no site)
 docs/openapi.generated.json
 
+# Artefato local de ferramentas de grafo/análise
+**/graphify-out/
+
 # Node (frontend)
 node_modules/
 frontend/dist/
