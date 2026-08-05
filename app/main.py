@@ -16,6 +16,7 @@ load_dotenv()
 from app.routes import admin, assets, auth, checkin, eventos, financeiro, ingressos, listas, notificacoes, organizador, pagamentos, portaria, produtor, public, relatorios, simuladores, webhooks
 from app.models import create_tables, get_db
 from app.middleware.request_id import RequestIdMiddleware
+from app.services.production_checks import _cors_https_ok
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -28,8 +29,28 @@ def _cors_allow_origins() -> list[str]:
     return [o.strip() for o in raw.split(",") if o.strip()]
 
 
+def _validate_production_cors() -> None:
+    """Fail-fast: em produção, CORS_ORIGINS deve conter origens HTTPS explícitas.
+
+    Reutiliza `_cors_https_ok` (app/services/production_checks.py) para não
+    duplicar a regra. Levantar aqui, antes do `yield` do lifespan, faz o
+    FastAPI/Uvicorn abortar o startup — a API nunca chega a aceitar tráfego
+    com CORS mal configurado.
+    """
+    if settings.ENVIRONMENT != "production":
+        return
+    cors = (settings.CORS_ORIGINS or "").strip()
+    if not _cors_https_ok(cors, True):
+        raise RuntimeError(
+            "CORS_ORIGINS inválido em produção: deve conter origens HTTPS explícitas "
+            "(sem '*', sem vazio, sem http://). Defina a variável de ambiente "
+            "CORS_ORIGINS com as URLs do frontend, ex.: https://eventosbr.app.br"
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _validate_production_cors()
     # Em produção, migrações (Alembic) devem rodar antes de subir a API.
     if settings.ASAAS_DISABLED:
         logger.warning("ASAAS_DISABLED ativo na API — pagamentos Asaas desligados.")
@@ -43,12 +64,6 @@ async def lifespan(app: FastAPI):
             logger.warning("ASAAS_WEBHOOK_TOKEN ausente — webhook Asaas sem autenticação em produção.")
     if settings.ENVIRONMENT == "development":
         create_tables()
-    if settings.ENVIRONMENT == "production":
-        cors = (settings.CORS_ORIGINS or "").strip()
-        if not cors or cors == "*":
-            logger.warning(
-                "CORS_ORIGINS está vazio ou '*' em produção — defina origens explícitas (URLs do front)."
-            )
     from app.services.production_checks import log_production_warnings
     from app.services.ticket_email import start_ticket_email_worker, stop_ticket_email_worker
     from app.services.notificacao_email import start_email_simples_worker, stop_email_simples_worker
