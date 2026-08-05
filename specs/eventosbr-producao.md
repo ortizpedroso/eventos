@@ -1,12 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.8.2
+**Versão:** 1.50.8.3
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Produção (VPS):** tip **`e370a63`** / v1.50.8.x — docs fora do site no ar. `/documentacao`, `/documentacao/api` e `/openapi.json` → **404**. `/ready` OK. Repo GitHub **privado** + Deploy Key SSH no VPS. pytest **496**.
+> **Produção (VPS):** tip **`e370a63`** / v1.50.8 — docs técnicas fora do site. `/documentacao*`, `/openapi.json` → **404**. `/ready` OK. Repo **privado** + Deploy Key SSH. pytest **496**. `/review` **APROVADA**.
+>
+> **main (spec):** tip **`9db907d`** (merge PR #123 — fechamento deploy v1.50.8.2). Redeploy VPS só por spec não é obrigatório.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -781,7 +783,8 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [x] tip de produto — **`e370a63`** / v1.50.8.x na `main` e na VPS (PRs #121/#122 + deploy 05/08/2026)
+- [x] tip de produto (VPS) — **`e370a63`** / v1.50.8 (PRs #121/#122 + deploy 05/08/2026)
+- [x] tip `main` (spec) — **`9db907d`** / v1.50.8.2 (PR #123)
 - [x] Playbook Oficial de Marketing — `docs/14-playbook-marketing-eventosbr.md` (§2.19 / v1.50.7)
 - [x] Docs técnicas fora do site — §2.20 / v1.50.8 (código + **produção**: 404 `/documentacao*`, `/openapi.json`)
 - [x] Deploy VPS v1.50.8 — confirmado 05/08/2026 (`atualizar-vps-agora.sh`; API/Web `e370a63`; `/ready` OK; Deploy Key SSH após repo privado)
@@ -898,7 +901,18 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.7** | tip `3306f62` / **492** | docs — Playbook Oficial de Marketing (§2.19) |
 | **v1.50.8** | tip `dfabe91` (PR #121) / **496** | **APROVADA** (código) — docs fora do site (§2.20) |
 | **v1.50.8.1** | tip `e370a63` (PR #122) / **496** | **APROVADA** — fechamento spec; deploy pendente na época |
-| **v1.50.8.2 (este)** | VPS `e370a63` + `/review` / **496** | **APROVADA** — deploy VPS confirmado; docs 404 no ar |
+| **v1.50.8.2** | VPS `e370a63` + PR #123 / **496** | **APROVADA** — deploy VPS confirmado; docs 404 no ar |
+| **v1.50.8.3 (este)** | tip `9db907d` + rechecagem produção / **496** | **APROVADA** — fechamento /review pós-deploy |
+
+### 11.1 Requisitos recentes — resultado (v1.50.8.3)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.20 | Produção: `/documentacao`, `/documentacao/api`, `/openapi.json` → 404 | **PASS** |
+| §7 Ops | VPS API/Web `e370a63`; `/ready` OK | **PASS** |
+| §7 Ops | `main` tip `9db907d` (spec v1.50.8.2 mergeada) | **PASS** |
+| §7 Ops | Repo privado + Deploy Key SSH operacional | **PASS** |
+| `/review` | Checklist código × spec × produção | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.8.2)
 
@@ -1267,7 +1281,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.8.2 | 2026-08-05 | **Deploy VPS v1.50.8 confirmado.** Tip produção **`e370a63`**. `/documentacao*`, `/openapi.json` → 404 no ar. Deploy Key SSH após repo privado. `/review` APROVADA. |
+| 1.50.8.3 | 2026-08-05 | **Fechamento /review.** Tip `main` **`9db907d`**; VPS **`e370a63`**. Rechecagem: docs 404 + `/ready` OK. Checklist §2.20/§7 **APROVADA**. |
+| 1.50.8.2 | 2026-08-05 | **Deploy VPS v1.50.8 confirmado.** Tip produção **`e370a63`**. `/documentacao*`, `/openapi.json` → 404 no ar. Deploy Key SSH após repo privado. `/review` APROVADA. Merge PR #123 → `9db907d`. |
 | 1.50.8.1 | 2026-08-04 | **Fechamento /review v1.50.8.** Tip `main` **`e370a63`** (PR #122 sobre #121). §7/§11: código×spec **APROVADA**; deploy VPS pendente na época. |
 | 1.50.8 | 2026-08-04 | **Docs técnicas fora do site.** §2.20: remove `/documentacao*`, `openapi.json` público e link do rodapé; export OpenAPI só em `docs/openapi.generated.json`; sitemap/robots; teste `test_docs_nao_publicas.py`. Repo privado. Merge PR #121 → `dfabe91`. |
 | 1.50.7 | 2026-08-04 | **Playbook Oficial de Marketing.** §2.19: `docs/14-playbook-marketing-eventosbr.md` — posicionamento (a EventosBR), proposta de valor, promessa *Organize melhor. Venda mais.*, pilares, Ciclo 1 (15 dias), Reels, Ads, e-mail, WhatsApp, KPIs e ciclos 2/3. Índice em `docs/README.md`. Sem mudança de código. |
