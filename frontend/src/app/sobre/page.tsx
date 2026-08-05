@@ -82,7 +82,7 @@ export default function SobrePage() {
               </div>
               <h3 className="mt-5 text-lg font-semibold text-zinc-900">Participantes</h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-                O seu público final, que exige uma experiência mobile fluida, rapidez no pagamento via PIX ou cartão e máxima segurança nos dados.
+                O seu público final, que exige uma experiência mobile fluida, rapidez no pagamento via PIX ou cartão e uma compra clara e transparente.
               </p>
             </div>
           </div>
@@ -114,13 +114,14 @@ export default function SobrePage() {
                 Estabilidade no dia do evento
               </h2>
               <p className="mt-6 text-lg leading-relaxed text-zinc-300">
-                Construída para picos de venda e check-in simultâneo. O painel é rápido no celular
-                e no desktop; pagamentos e reembolsos passam por infraestrutura financeira
-                robusta, com proteção antifraude em cada transação.
+                O painel funciona no celular e no desktop. Estoque de ingressos é controlado na
+                reserva; pagamentos e reembolsos passam pelo processador certificado, com as
+                proteções antifraude dele em cada cobrança.
               </p>
               <p className="mt-4 text-lg leading-relaxed text-zinc-300">
-                Você não precisa entender a tecnologia por trás — só precisa que funcione quando o
-                lote vira e a fila na entrada começa.
+                Em picos extremos a plataforma pode ficar mais lenta — como qualquer serviço
+                online. Seguimos melhorando com o uso real. Você não precisa entender a
+                tecnologia por trás: precisa que a venda e a entrada façam sentido no dia do evento.
               </p>
             </div>
 
@@ -135,7 +136,7 @@ export default function SobrePage() {
                   <p><span className="text-pink-400">import</span> {"{ EventosBR }"} <span className="text-pink-400">from</span> <span className="text-emerald-300">&apos;future&apos;</span>;</p>
                   <p className="text-zinc-500 pt-2">{"// Inicia o motor de vendas"}</p>
                   <p>EventosBR.<span className="text-blue-300">startSales</span>();</p>
-                  <p className="pt-2 text-emerald-400">➜ Vendas a 500 req/s. Stable.</p>
+                  <p className="pt-2 text-emerald-400">➜ Reserva do lote OK. Pagamento em processamento.</p>
                 </div>
               </div>
             </div>

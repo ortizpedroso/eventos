@@ -145,12 +145,12 @@ const destaques = [
   },
   {
     id: "pagamento",
-    titulo: "Segurança de nível global",
-    texto: "O dinheiro do seu evento não pode correr riscos. Pagamentos processados com tecnologia de ponta, o padrão ouro do mercado em segurança antifraude.",
+    titulo: "Pagamentos com processador certificado",
+    texto: "PIX e cartão passam por um processador de pagamentos certificado. A EventosBR organiza a venda e o ingresso — não armazena o número completo do cartão nos nossos servidores.",
     itens: [
-      "Aceite cartões, PIX e outras modalidades com proteção total",
-      "Menos estornos e proteção robusta contra fraudes",
-      "Recebimento direto na sua conta, sem dor de cabeça",
+      "Aceite PIX, cartão e outras modalidades disponíveis no checkout",
+      "Antifraude e cobrança ficam a cargo do processador de pagamentos",
+      "Repasse líquido na conta de recebimento do organizador",
     ],
     imageSrc: "/marketing/checkout.webp",
     imageAlt:
@@ -162,7 +162,7 @@ const destaques = [
     titulo: "Check-in sem filas na porta",
     texto: "A experiência do seu público começa na entrada. Controle os acessos de forma ágil com validação inteligente de QR Code.",
     itens: [
-      "Ingressos únicos e à prova de falsificação",
+      "Ingressos com QR Code único por compra",
       "Status instantâneo: válido, já utilizado ou cancelado",
       "Organize múltiplas portarias simultaneamente",
     ],

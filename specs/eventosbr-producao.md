@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.9
+**Versão:** 1.50.10
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.9):** correções pertinentes da auditoria de lançamento (§2.21) — erro de API em produção, upload fail-closed, not-found/error, sitemap paginado, SSR produtor, Twitter metadata, robots, `migrate_encryption` completo, Next 16.3.0.
+> **Esta versão (v1.50.10):** Central de Ajuda (nav uniforme) + copy verdadeiro sobre pagamento/segurança/capacidade (§2.22). Sem claims “100% seguro” / “500 req/s”.
 >
-> **Produção (VPS):** tip **`e370a63`** / v1.50.8 até deploy desta versão. Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip **`96b9c62`** / v1.50.9 até deploy desta versão. Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -172,6 +172,33 @@ Escopo: itens **necessários/pertinentes** (não o backlog completo de polish UI
 **Fora de escopo (backlog):** contraste zinc-400, `text-[10px]`, `window.confirm`, skeletons admin, touch 44px, CSP no FastAPI (CSP já no Next/`proxy.ts`), enumeração de e-mail no registro.
 
 Testes: `tests/test_imagem_processamento.py`, `tests/test_secret_storage.py`, `tests/test_auditoria_lancamento_v1509.py`, E2E smoke (404 docs mantido).
+
+### 2.22 Ajuda + copy verdadeiro (pagamento, segurança, capacidade) (v1.50.10)
+
+**Central de Ajuda — UI**
+
+- Todos os botões/links da nav (`AjudaNav`: Índice + tópicos) compartilham a **mesma formatação de texto** (tamanho, peso, cores ativo/inativo).
+- `.content-prose a` **não** sobrescreve a nav (classe `ajuda-nav` isola estilos).
+- Cards de tópico no índice usam o mesmo padrão tipográfico da nav (`text-sm`, sem `font-semibold` divergente).
+
+**Copy — regras de verdade**
+
+| Evitar | Preferir |
+|--------|----------|
+| “100% seguro”, “proteção total”, “máxima segurança”, “padrão ouro” | HTTPS; processador de pagamentos certificado; antifraude do processador |
+| “Pagamento seguro pela plataforma” (implica que a EventosBR guarda cartão) | EventosBR **não armazena** o número completo do cartão; dados sensíveis de pagamento vão ao **processador certificado** (Asaas em produção — **white-label**: não citar a marca Asaas no site público) |
+| “500 req/s”, “construída para picos” como garantia | Controle de estoque com reserva no banco; rate limit; filas de e-mail; sem waiting-room ainda |
+
+**Capacidade sob pico (fato técnico, para copy e ajuda)**
+
+- Estoque de ingressos: `SELECT FOR UPDATE` no lote + reserva ~35 min.
+- Rate limit no checkout (Redis em produção).
+- Pagamento: processado pelo gateway; EventosBR guarda status/IDs, não PAN.
+- **Não** há fila virtual (waiting room) nem cluster horizontal documentado como garantia — não prometer.
+
+**Páginas/copy tocadas:** `ajuda/*`, `ajuda-nav`, `globals.css`, `home-selos-confianca`, `home-faq`, `funcionalidades`, `sobre`, `checkout-asaas-painel`, `payment-provider`, artigo ajuda “Pagamentos e segurança”.
+
+Testes: `tests/test_ajuda_copy_v1510.py`.
 
 ### 2.13 Lançamento comercial — home dual, Ads e SEO (v1.47)
 
@@ -792,7 +819,7 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 ### Qualidade (código + CI)
 
-- [x] `pytest` verde (**504** passed + 1 skipped; collect **505**)
+- [x] `pytest` verde (collect atualizado na v1.50.10)
 - [x] `npm run build` verde
 - [x] CI `api`, `web`, `e2e`, `e2e-compra`, `e2e-asaas`, `prod-compose` configurados em `.github/workflows/ci.yml`; job `api` roda com serviço Redis desde v1.16 (antes falhava com 15 erros nos testes de fila confiável por falta de Redis no runner)
 - [x] Teste mock compra + split: `scripts/test-compra-split-mock.sh`
@@ -804,9 +831,9 @@ Bloqueia `ready_for_production` se qualquer check crítico estiver `pendente`.
 
 **Estado do repositório:**
 
-- [ ] Deploy VPS v1.50.9 — após merge (`atualizar-vps-agora.sh`)
-- [x] tip de produto (VPS) — **`e370a63`** / v1.50.8 até deploy v1.50.9
-- [x] tip `main` (spec) — **`266cb34`** / v1.50.8.3 (PR #124)
+- [ ] Deploy VPS v1.50.10 — após merge (`atualizar-vps-agora.sh`)
+- [x] tip de produto (VPS) — até deploy: tip anterior na VPS; `main` com v1.50.9+
+- [x] tip `main` (pré-esta versão) — **`96b9c62`** / v1.50.9 (PR #125)
 - [x] Playbook Oficial de Marketing — `docs/14-playbook-marketing-eventosbr.md` (§2.19 / v1.50.7)
 - [x] Docs técnicas fora do site — §2.20 / v1.50.8 (código + **produção**: 404 `/documentacao*`, `/openapi.json`)
 - [x] Deploy VPS v1.50.8 — confirmado 05/08/2026 (`atualizar-vps-agora.sh`; API/Web `e370a63`; `/ready` OK; Deploy Key SSH após repo privado)
@@ -926,7 +953,20 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.8.1** | tip `e370a63` (PR #122) / **496** | **APROVADA** — fechamento spec; deploy pendente na época |
 | **v1.50.8.2** | VPS `e370a63` + PR #123 / **496** | **APROVADA** — deploy VPS confirmado; docs 404 no ar |
 | **v1.50.8.3** | tip `266cb34` + rechecagem produção / **496** | **APROVADA** — fechamento /review pós-deploy |
-| **v1.50.9 (este)** | branch `cursor/auditoria-correcoes-c0b1` / **505** | **APROVADA** — auditoria pertinente (§2.21) |
+| **v1.50.9** | tip `96b9c62` (PR #125) / **505** | **APROVADA** — auditoria pertinente (§2.21) |
+| **v1.50.10 (este)** | branch `cursor/ajuda-copy-seguranca-c0b1` / **511** | **APROVADA** — Ajuda + copy verdadeiro (§2.22) |
+
+### 11.1 Requisitos recentes — resultado (v1.50.10)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.22 | Nav Ajuda: mesmo estilo do Índice em todos os botões | **PASS** |
+| §2.22 | Prose não sobrescreve `ajuda-nav-link` | **PASS** |
+| §2.22 | Sem “100% seguro” / “500 req/s” / “padrão ouro” no site | **PASS** |
+| §2.22 | Copy: processador certificado + não armazena PAN | **PASS** |
+| §2.22 | Artigo `/ajuda/pagamentos-e-seguranca` (pico + pagamento) | **PASS** |
+| §2.22 | White-label: sem marca Asaas no artigo público | **PASS** |
+| `/review` | Checklist código × spec | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.9)
 
@@ -1322,6 +1362,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50.10 | 2026-08-05 | **Ajuda + copy verdadeiro.** §2.22: nav/cards da Central de Ajuda com tipografia unificada; remove claims 100%/500 req/s; pagamento via processador certificado (sem PAN na EventosBR); artigo Pagamentos e segurança; sobre/funcionalidades/FAQ/selos/checkout. |
 | 1.50.9 | 2026-08-05 | **Auditoria pertinente.** §2.21: erro API produção; upload fail-closed; not-found/error; sitemap paginado; SSR/metadata produtor; twitter evento; robots; migrate_encryption CPF/TOTP; Next 16.3.0; gitignore graphify. Docs `15-auditoria-…`. |
 | 1.50.8.3 | 2026-08-05 | **Fechamento /review.** Tip `main` **`266cb34`**; VPS **`e370a63`**. Rechecagem: docs 404 + `/ready` OK. Checklist §2.20/§7 **APROVADA**. |
 | 1.50.8.2 | 2026-08-05 | **Deploy VPS v1.50.8 confirmado.** Tip produção **`e370a63`**. `/documentacao*`, `/openapi.json` → 404 no ar. Deploy Key SSH após repo privado. `/review` APROVADA. Merge PR #123 → `9db907d`. |

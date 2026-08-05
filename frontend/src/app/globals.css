@@ -164,6 +164,21 @@ body > footer {
     text-decoration: underline;
   }
 
+  /* Nav da Central de Ajuda: todos os botões iguais ao Índice (prose não sobrescreve). */
+  .content-prose .ajuda-nav a.ajuda-nav-link,
+  .content-prose a.ajuda-nav-link {
+    font-weight: 400;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .content-prose .ajuda-nav a.ajuda-nav-link:hover,
+  .content-prose a.ajuda-nav-link:hover {
+    text-decoration: none;
+  }
+
   .content-prose strong {
     font-weight: 600;
     color: #18181b;

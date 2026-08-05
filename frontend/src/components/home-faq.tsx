@@ -15,7 +15,7 @@ const perguntas = [
   },
   {
     q: "É seguro comprar ingresso aqui?",
-    a: "Sim. Pagamentos via PIX e cartão, ingresso com QR Code único e reembolso dentro do prazo legal.",
+    a: "O site usa HTTPS. PIX e cartão são processados por um processador certificado — a EventosBR não armazena o número completo do cartão. O ingresso tem QR Code único; reembolso segue o prazo legal.",
   },
   {
     q: "Posso usar minha marca?",
