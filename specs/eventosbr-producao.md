@@ -1158,7 +1158,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.16.1** | tip `8123c2a` / VPS `1ff4ef7` | **APROVADA** — logo na `main` + tip VPS |
 | **v1.50.17** | tip `a4d0e4c` / VPS `2fc5927` | **APROVADA** — mobile + `/cadastro` em produção |
 | **v1.50.17.1** | tip `2fc5927` | **APROVADA** — deploy VPS confirmado |
-| **v1.50.18 (este)** | diagnóstico UI/UX/SEO/sec | **APROVADA** |
+| **v1.50.18 (este)** | tip `9b11bef` | **APROVADA** — diagnóstico + fixes; deploy VPS pendente |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.18)
 
