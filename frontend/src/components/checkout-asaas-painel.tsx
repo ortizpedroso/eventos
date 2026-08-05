@@ -457,8 +457,7 @@ export function CheckoutAsaasPainel({
       {metodo === "card" ? (
         <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
           <p className="text-xs text-zinc-600">
-            Dados do cartão — processados pelo nosso parceiro de pagamentos certificado. A EventosBR
-            não armazena o número completo do cartão.
+            Dados do cartão — processados pela Asaas (instituição de pagamento autorizada pelo Banco Central do Brasil). A EventosBR não armazena o número completo do cartão.
           </p>
           <input
             className="w-full rounded border px-3 py-2 text-sm"

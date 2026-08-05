@@ -87,9 +87,12 @@ export function CompraInfoConfianca() {
             Pagamento
           </p>
           <p className="mt-2">
-            PIX e cartão são processados por um{" "}
-            <strong className="font-medium text-zinc-700">processador de pagamentos certificado</strong>. A
-            EventosBR <strong className="font-medium text-zinc-700">não armazena</strong> o número completo do cartão.
+            PIX e cartão são processados pela{" "}
+            <strong className="font-medium text-zinc-700">
+              Asaas (instituição de pagamento autorizada pelo Banco Central do Brasil)
+            </strong>
+            . A EventosBR <strong className="font-medium text-zinc-700">não armazena</strong> o número
+            completo do cartão.
           </p>
           <p className="mt-2 text-zinc-500">
             {labelPagamentoSeguro()}. Parcelamento, quando disponível, segue as opções do checkout.
@@ -102,8 +105,7 @@ export function CompraInfoConfianca() {
             Ligação encriptada
           </p>
           <p className="mt-2">
-            A comunicação com este site usa HTTPS. O processador de pagamentos segue práticas da indústria para
-            dados sensíveis de pagamento.
+            A comunicação com este site usa HTTPS. Dados sensíveis de pagamento ficam com a Asaas.
           </p>
           <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-zinc-100 pt-3 text-zinc-500">
             <Link href="/termos" className="text-emerald-700 underline-offset-2 hover:underline">

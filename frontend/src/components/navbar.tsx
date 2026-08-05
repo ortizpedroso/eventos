@@ -290,7 +290,7 @@ export function Navbar() {
               type="button"
               data-navbar-account
               onClick={toggleAccountMenu}
-              className="flex shrink-0 items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+              className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pl-2 pr-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               aria-label="Abrir menu da conta"
@@ -332,7 +332,7 @@ export function Navbar() {
             <div className="relative z-40 flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+                className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
                 aria-expanded={mobileNavOpen}
                 aria-controls="nav-mobile-menu"
                 aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}

@@ -57,9 +57,12 @@ export default function PrivacidadePage() {
               </li>
               <li>
                 <strong className="text-zinc-800">Pagamento:</strong> dados de cartão e transação são
-                tratados por <strong className="text-zinc-800">gateways de pagamento parceiros e certificados</strong>.
-                A plataforma recebe atualizações de status da transação e valores, mas nunca armazena
-                o número completo do seu cartão nos próprios servidores.
+                tratados pela{" "}
+                <strong className="text-zinc-800">
+                  Asaas (instituição de pagamento autorizada pelo Banco Central do Brasil)
+                </strong>
+                . A plataforma recebe atualizações de status da transação e valores, mas nunca
+                armazena o número completo do seu cartão nos próprios servidores.
               </li>
               <li>
                 <strong className="text-zinc-800">Registros técnicos:</strong> endereço IP, tipo de navegador e
@@ -88,9 +91,9 @@ export default function PrivacidadePage() {
           <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-lg font-semibold text-zinc-900">4. Compartilhamento com terceiros</h2>
             <p className="mt-3 text-justify">
-              Compartilhamos dados com prestadores estritamente necessários à operação do serviço, em especial o
-              processador e gateway de pagamentos escolhido e a infraestrutura (hospedagem, banco de dados,
-              envio de e-mail), sempre com salvaguardas contratuais rigorosas.
+              Compartilhamos dados com prestadores estritamente necessários à operação do serviço, em
+              especial a Asaas (pagamentos) e a infraestrutura (hospedagem, banco de dados, envio de
+              e-mail), sempre com salvaguardas contratuais.
             </p>
           </div>
 

@@ -15,7 +15,7 @@ const perguntas = [
   },
   {
     q: "É seguro comprar ingresso aqui?",
-    a: "O site usa HTTPS. PIX e cartão são processados por um processador certificado — a EventosBR não armazena o número completo do cartão. O ingresso tem QR Code único; reembolso segue o prazo legal.",
+    a: "O site usa HTTPS. PIX e cartão são processados pela Asaas — instituição de pagamento autorizada pelo Banco Central do Brasil. A EventosBR não armazena o número completo do cartão. O ingresso tem QR Code único; reembolso segue o prazo legal.",
   },
   {
     q: "Posso usar minha marca?",

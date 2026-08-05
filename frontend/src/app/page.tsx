@@ -86,8 +86,9 @@ export default function Home() {
           <div className="rounded-2xl border border-emerald-600 bg-white p-6 shadow-md ring-1 ring-emerald-600 sm:p-8">
             <h2 className="text-lg font-semibold text-emerald-700">Transparência e segurança</h2>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
-              PIX e cartão via processador certificado; a EventosBR não guarda o número completo do
-              cartão. Taxas estimadas nos simuladores. Reembolso dentro do prazo legal em Minha conta.{" "}
+              PIX e cartão via Asaas (autorizada pelo Banco Central); a EventosBR não guarda o número
+              completo do cartão. Taxas estimadas nos simuladores. Reembolso dentro do prazo legal em
+              Minha conta.{" "}
               <Link href="/ajuda/pagamentos-e-seguranca" className="font-medium text-emerald-700 hover:underline">
                 Pagamentos e segurança
               </Link>

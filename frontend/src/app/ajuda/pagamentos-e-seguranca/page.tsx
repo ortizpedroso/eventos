@@ -4,7 +4,7 @@ import { AjudaArticle } from "@/components/ajuda-article";
 export const metadata: Metadata = {
   title: "Pagamentos e segurança | Ajuda EventosBR",
   description:
-    "Como a EventosBR trata pagamentos, o que fica com o processador certificado e o que esperar em picos de inscrição.",
+    "Como a EventosBR trata pagamentos com a Asaas (autorizada pelo Banco Central) e o que esperar em picos de inscrição.",
 };
 
 export default function AjudaPagamentosSegurancaPage() {
@@ -12,16 +12,17 @@ export default function AjudaPagamentosSegurancaPage() {
     <AjudaArticle title="Pagamentos e segurança" current="/ajuda/pagamentos-e-seguranca">
       <h2>Quem processa o pagamento?</h2>
       <p>
-        PIX e cartão são processados por um <strong>processador de pagamentos certificado</strong>,
-        parceiro da EventosBR. A plataforma orquestra a compra (ingresso, lote, status) e recebe do
-        processador a confirmação da transação e os valores —{" "}
-        <strong>não armazenamos o número completo do cartão</strong> nos nossos servidores.
+        PIX, cartão e boleto são processados pela{" "}
+        <strong>Asaas (Asaas Gestão Financeira Instituição de Pagamento S.A.)</strong>, instituição
+        de pagamento <strong>autorizada pelo Banco Central do Brasil</strong>. A EventosBR
+        orquestra a compra (ingresso, lote, status) e recebe da Asaas a confirmação da transação e
+        os valores — <strong>não armazenamos o número completo do cartão</strong> nos nossos
+        servidores.
       </p>
       <p>
         Nenhum site pode prometer segurança absoluta. Usamos HTTPS em todo o site, boas práticas de
-        proteção da conta e a infraestrutura antifraude do processador nas cobranças. Para detalhes
-        de dados pessoais, veja a{" "}
-        <a href="/privacidade">Política de privacidade</a>.
+        proteção da conta e a infraestrutura antifraude da Asaas nas cobranças. Para detalhes de
+        dados pessoais, veja a <a href="/privacidade">Política de privacidade</a>.
       </p>
 
       <h2>O que a EventosBR guarda?</h2>
@@ -40,8 +41,8 @@ export default function AjudaPagamentosSegurancaPage() {
       <p>
         Em picos extremos a experiência pode ficar mais lenta — como em qualquer plataforma online.
         Não há fila virtual (waiting room) neste momento; seguimos melhorando a capacidade conforme o
-        uso real. Se um pagamento for confirmado pelo processador, o ingresso correspondente é
-        atualizado pelo fluxo de confirmação da plataforma.
+        uso real. Se um pagamento for confirmado pela Asaas, o ingresso correspondente é atualizado
+        pelo fluxo de confirmação da plataforma.
       </p>
     </AjudaArticle>
   );

@@ -51,7 +51,7 @@ const passos = [
   {
     numero: "1",
     titulo: "Crie sua conta",
-    texto: "Cadastro gratuito, sem cartão de crédito. Leva menos de 2 minutos.",
+    texto: "Cadastro gratuito, sem cartão de crédito para criar a conta.",
   },
   {
     numero: "2",

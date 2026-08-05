@@ -65,16 +65,18 @@ def test_sem_claims_100_porcento_seguro():
             assert p.lower() not in texto.lower(), f"{rel} ainda contém «{p}»"
 
 
-def test_copy_nao_armazena_cartao_e_processador():
+def test_copy_nao_armazena_cartao_e_asaas_bc():
     selos = _read("frontend/src/components/home-selos-confianca.tsx")
     checkout = _read("frontend/src/components/checkout-asaas-painel.tsx")
     ajuda = _read("frontend/src/app/ajuda/pagamentos-e-seguranca/page.tsx")
     assert "não armazena" in selos.lower() or "nao armazena" in selos.lower()
-    assert "processador" in checkout.lower() or "parceiro de pagamentos" in checkout.lower()
+    assert "asaas" in checkout.lower()
+    assert "banco central" in checkout.lower()
     assert "não armazenamos o número completo do cartão" in ajuda.lower()
     assert "pico" in ajuda.lower()
-    # White-label: não citar marca Asaas no site público
-    assert "asaas" not in ajuda.lower()
+    # Credibilidade: citar Asaas + autorização BC (v1.50.16)
+    assert "asaas" in ajuda.lower()
+    assert "banco central" in ajuda.lower()
 
 
 def test_sobre_sem_garantia_500_rps():

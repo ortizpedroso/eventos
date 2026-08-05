@@ -31,8 +31,8 @@ export function CheckoutPrecoDetalhe({ precoIngresso, destaque = false, classNam
         <p className="text-sm font-semibold text-emerald-700">Ingresso: {formatBrl(precoIngresso)}</p>
       )}
       <p className="mt-2 text-xs text-emerald-700/90">
-        O valor final no checkout pode incluir acréscimo de parcelamento, quando disponível. Pagamento processado por
-        processador certificado — {labelPagamentoSeguro().toLowerCase()}.
+        O valor final no checkout pode incluir acréscimo de parcelamento, quando disponível.{" "}
+        {labelPagamentoSeguro()}
       </p>
       <p className="mt-2 text-[11px] text-emerald-700/70">{AVISO_LEGAL_TAXAS}</p>
       <p className="mt-2 text-[11px] text-emerald-700/70">

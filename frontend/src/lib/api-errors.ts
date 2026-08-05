@@ -35,7 +35,10 @@ export function mensagemErroHttp(status: number, detail?: unknown): string {
   return sanitizarMensagemPagamento(msg);
 }
 
-/** Oculta nome do processador de pagamentos em mensagens exibidas ao usuário. */
+/**
+ * Suaviza jargão técnico do gateway em mensagens de erro.
+ * Copy de marketing/ajuda pode citar a Asaas de propósito — este filtro é só para erros.
+ */
 export function sanitizarMensagemPagamento(texto: string): string {
   return texto
     .replace(/conta\s+asaas/gi, "conta de recebimentos")
@@ -43,6 +46,5 @@ export function sanitizarMensagemPagamento(texto: string): string {
     .replace(/\bsubconta\b/gi, "conta de recebimento")
     .replace(/chave\s+api\s+asaas/gi, "chave de acesso da conta de recebimentos")
     .replace(/api\s+asaas/gi, "API da conta de recebimentos")
-    .replace(/\basaas\b/gi, "processador de pagamentos")
     .replace(/walletid/gi, "ID da conta");
 }

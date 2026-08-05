@@ -145,11 +145,11 @@ const destaques = [
   },
   {
     id: "pagamento",
-    titulo: "Pagamentos com processador certificado",
-    texto: "PIX e cartão passam por um processador de pagamentos certificado. A EventosBR organiza a venda e o ingresso — não armazena o número completo do cartão nos nossos servidores.",
+    titulo: "Pagamentos via Asaas (BC)",
+    texto: "PIX e cartão passam pela Asaas — instituição de pagamento autorizada pelo Banco Central do Brasil. A EventosBR organiza a venda e o ingresso — não armazena o número completo do cartão nos nossos servidores.",
     itens: [
       "Aceite PIX, cartão e outras modalidades disponíveis no checkout",
-      "Antifraude e cobrança ficam a cargo do processador de pagamentos",
+      "Antifraude e cobrança ficam a cargo da Asaas",
       "Repasse líquido na conta de recebimento do organizador",
     ],
     imageSrc: "/marketing/checkout.webp",
@@ -159,8 +159,8 @@ const destaques = [
   },
   {
     id: "checkin",
-    titulo: "Check-in sem filas na porta",
-    texto: "A experiência do seu público começa na entrada. Controle os acessos de forma ágil com validação inteligente de QR Code.",
+    titulo: "Check-in com QR Code na porta",
+    texto: "A experiência do seu público começa na entrada. Controle os acessos com validação de QR Code único por ingresso.",
     itens: [
       "Ingressos com QR Code único por compra",
       "Status instantâneo: válido, já utilizado ou cancelado",

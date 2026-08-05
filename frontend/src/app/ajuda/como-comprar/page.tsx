@@ -12,7 +12,7 @@ export default function AjudaComoComprarPage() {
         </li>
         <li>Na página do evento, preencha nome, e-mail e CPF do participante.</li>
         <li>
-          Escolha PIX ou cartão (processados por um processador certificado — a EventosBR não
+          Escolha PIX ou cartão (processados pela Asaas, autorizada pelo Banco Central — a EventosBR não
           armazena o número completo do cartão).
         </li>
         <li>Após confirmação, o ingresso com QR Code fica em Minha conta → Ingressos.</li>

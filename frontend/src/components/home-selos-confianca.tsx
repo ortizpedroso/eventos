@@ -1,10 +1,12 @@
+import { descricaoProcessadorPagamento } from "@/lib/payment-provider";
+
 const selos = [
   {
-    label: "Pagamento com processador certificado",
-    desc: "A EventosBR não armazena o número completo do cartão",
+    label: "Pagamentos via Asaas",
+    desc: `${descricaoProcessadorPagamento()}. A EventosBR não armazena o número completo do cartão.`,
   },
   { label: "HTTPS em todo o site", desc: "Conexão criptografada no navegador" },
-  { label: "QR Code na entrada", desc: "Check-in rápido na portaria" },
+  { label: "QR Code na entrada", desc: "Check-in com QR Code na portaria" },
 ] as const;
 
 export function HomeSelosConfianca() {

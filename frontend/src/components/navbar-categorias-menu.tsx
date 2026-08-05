@@ -108,7 +108,7 @@ export function NavbarCategoriasMenu({ compact = false, onNavigate }: Props) {
       <button
         ref={buttonRef}
         type="button"
-        className={`inline-flex shrink-0 items-center gap-1 transition-colors hover:text-zinc-900 ${
+        className={`inline-flex shrink-0 cursor-pointer items-center gap-1 transition-colors hover:text-zinc-900 ${
           emEventos ? "font-semibold text-emerald-900" : ""
         }`}
         aria-expanded={open}

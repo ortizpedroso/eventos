@@ -16,6 +16,7 @@ import { authHrefParaComprarIngresso } from "@/lib/criar-evento-routes";
 import { apiFetch, fetchSession } from "@/lib/api";
 import { isDevCheckoutWarning, mapCheckoutError } from "@/lib/checkout-errors";
 import { CheckoutTermoResponsabilidade } from "@/components/checkout-termo-responsabilidade";
+import { ComunicacaoMarketingOptIn } from "@/components/comunicacao-marketing-opt-in";
 import { TERMO_COMPRA_VERSAO } from "@/lib/termo-compra";
 import { formatCpfMask, isValidCpf, onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask, isTelefoneBrasilOk } from "@/lib/telefone-br";
@@ -192,6 +193,9 @@ export function ComprarIngresso({
   const [cupomBusy, setCupomBusy] = useState(false);
   const [cupomMsg, setCupomMsg] = useState<string | null>(null);
   const [termoAceito, setTermoAceito] = useState(false);
+  /** Opt-in marketing — pré-marcado só em evento/ingresso gratuito (cortesia). */
+  const [aceitaComEmail, setAceitaComEmail] = useState(false);
+  const [aceitaComWhatsapp, setAceitaComWhatsapp] = useState(false);
   const [sessaoUsuario, setSessaoUsuario] = useState<Usuario | null>(
     sessaoInicialResolvida ? usuarioInicial : null,
   );
@@ -374,6 +378,12 @@ export function ComprarIngresso({
   }, []);
 
   const ehCortesia = Number.isFinite(precoUnitario) && precoUnitario <= 0;
+  useEffect(() => {
+    if (!ehCortesia) return;
+    // Evento gratuito: já deixa e-mail e WhatsApp marcados (usuário pode desmarcar).
+    setAceitaComEmail(true);
+    setAceitaComWhatsapp(true);
+  }, [ehCortesia]);
   const precoCentavosUnit = ehCortesia ? 0 : Math.round(precoUnitario * 100);
   const precoCentavosCheckout = cupomPreview?.valor_centavos ?? precoCentavosUnit * quantidade;
   const precoReaisCheckout = precoCentavosCheckout / 100;
@@ -569,6 +579,25 @@ export function ComprarIngresso({
             currency: "BRL",
             event_id: data.ingresso_id,
           });
+          // Persiste preferências de comunicação escolhidas no checkout gratuito.
+          // PATCH /me exige nome+email — reutiliza a sessão atual.
+          const me = sessaoUsuario ?? (await fetchSession().catch(() => null));
+          if (me?.nome && me?.email) {
+            try {
+              await apiFetch<Usuario>("/api/auth/me", {
+                method: "PATCH",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  nome: me.nome,
+                  email: me.email,
+                  aceita_comunicacao_email: aceitaComEmail,
+                  aceita_comunicacao_whatsapp: aceitaComWhatsapp,
+                }),
+              });
+            } catch {
+              /* não bloqueia a cortesia se o perfil falhar */
+            }
+          }
         }
         return;
       }
@@ -1028,6 +1057,17 @@ export function ComprarIngresso({
                   "Sessão ativa — pode continuar."
                 )}
               </p>
+
+              {ehCortesia ? (
+                <ComunicacaoMarketingOptIn
+                  email={aceitaComEmail}
+                  whatsapp={aceitaComWhatsapp}
+                  onEmailChange={setAceitaComEmail}
+                  onWhatsappChange={setAceitaComWhatsapp}
+                  telefoneInformado={Boolean(sessaoUsuario?.telefone?.trim())}
+                  compact
+                />
+              ) : null}
 
               <CheckoutTermoResponsabilidade
                 eventoNome={eventoNome}

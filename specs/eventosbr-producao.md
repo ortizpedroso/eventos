@@ -1,14 +1,14 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.14.4
+**Versão:** 1.50.16
 **Data:** 2026-08-05
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.14.4):** Restaura navbar — nome do usuário completo (sem truncate) e `.btn-success` em `--brand-600`. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
+> **Esta versão (v1.50.16):** Lançamento — opt-in pré-marcado em evento gratuito; cursor pointer; Asaas nomeado com autorização BC (verdade); auditoria de claims. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
 >
-> **Produção (VPS):** tip **`49612a6`** / v1.50.14.3. Repo **privado** + Deploy Key SSH.
+> **Produção (VPS):** tip **`4bba850`** / v1.50.14.4. Repo **privado** + Deploy Key SSH.
 >
 > **Fluxo de trabalho (a partir da v1.8):** o repositório passou a usar commits diretos em `main` (sem PRs de longa duração) — em 07/2026 foram revisadas e fechadas 29 PRs antigas cujo conteúdo já estava incorporado à `main` por outros caminhos. Esta spec é o documento vivo do sistema: **toda mudança relevante deve atualizar este arquivo** (`/build` + `/review` seguido de atualização da spec).
 
@@ -18,9 +18,9 @@
 
 Publicar o EventosBR (`eventosbr.app.br`) como plataforma de ingressos com:
 
-- Pagamentos integrados (PIX, cartão, boleto) — processador **Asaas** em produção, **invisível ao usuário final**
+- Pagamentos integrados (PIX, cartão, boleto) — processador **Asaas** (instituição de pagamento autorizada pelo Banco Central do Brasil); a marca **pode e deve** ser citada no site público para credibilidade (verdade)
 - Repasse automático ao organizador via **split**
-- Cada organizador possui **conta de recebimento** criada e gerida **pela plataforma** (sem conta Asaas separada, sem “subconta” exposta na UX)
+- Organizador: UX de **conta de recebimento** (modo `linked` — o organizador cria/vincula a própria conta Asaas; sem jargão interno “subconta”)
 - UX de compra, conta, organizador e portaria em nível de mercado
 - Segurança e configuração prontas para **produção**
 
@@ -186,9 +186,12 @@ Testes: `tests/test_imagem_processamento.py`, `tests/test_secret_storage.py`, `t
 
 | Evitar | Preferir |
 |--------|----------|
-| “100% seguro”, “proteção total”, “máxima segurança”, “padrão ouro” | HTTPS; processador de pagamentos certificado; antifraude do processador |
-| “Pagamento seguro pela plataforma” (implica que a EventosBR guarda cartão) | EventosBR **não armazena** o número completo do cartão; dados sensíveis de pagamento vão ao **processador certificado** (Asaas em produção — **white-label**: não citar a marca Asaas no site público) |
+| “100% seguro”, “proteção total”, “máxima segurança”, “padrão ouro” | HTTPS; antifraude do processador; sem promessa de segurança absoluta |
+| “Pagamento seguro pela plataforma” (implica que a EventosBR guarda cartão) | EventosBR **não armazena** o número completo do cartão; PIX/cartão processados pela **Asaas** (instituição de pagamento **autorizada pelo Banco Central do Brasil**) |
 | “500 req/s”, “construída para picos” como garantia | Controle de estoque com reserva no banco; rate limit; filas de e-mail; sem waiting-room ainda |
+| “menos de 2 minutos”, “sem filas” como garantia | Cadastro gratuito; check-in com QR Code na portaria |
+
+**Asaas no site público (v1.50.16 — verdade / credibilidade):** citar a marca e o fato verificável de autorização pelo BC. Não inventar selos, rankings ou “aprovado para eventos”. Erros técnicos internos ainda podem ser sanitizados (`api-errors.ts`).
 
 **Capacidade sob pico (fato técnico, para copy e ajuda)**
 
@@ -263,6 +266,17 @@ Testes: `tests/test_seo_json_ld_publico_v1512.py`.
    ```
 
 Auth: `app/services/auth.py` — `import jwt` / `PyJWTError` (API compatível HS256). Tokens já emitidos com HS256 continuam válidos.
+
+### 2.27 Lançamento — opt-in gratuito, cursor, Asaas/BC, verdade (v1.50.16)
+
+| Requisito | Implementação |
+|-----------|---------------|
+| Evento/ingresso gratuito (cortesia / preço ≤ 0) | No checkout (`comprar-ingresso.tsx`), exibir `ComunicacaoMarketingOptIn` com e-mail e WhatsApp **pré-marcados**; usuário pode desmarcar; ao confirmar cortesia, persistir via `PATCH /api/auth/me` |
+| Cursor “mãozinha” | `cursor-pointer` em `.btn-*` + regra global `button:not(:disabled)`; botões custom da navbar/categorias |
+| Asaas + BC | Copy central em `payment-provider.ts`; ajuda, FAQ, selos, checkout, privacidade — nome **Asaas** + “instituição de pagamento autorizada pelo Banco Central do Brasil” (fato público verificável) |
+| Sem claims fantasiosos | Manter banimentos §2.22; suavizar “sem filas” / “menos de 2 minutos” |
+
+Testes: `tests/test_lancamento_optin_asaas_v1516.py`, atualização `test_ajuda_copy_v1510.py`.
 
 ### 2.25 Hardening UX / a11y / PWA residual (v1.50.14)
 
@@ -1062,7 +1076,19 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.14.1** | tip `1696283` (PR #133) | **APROVADA** — fechamento /review + CI |
 | **v1.50.14.2** | VPS `93c35bd` → fechamento | **APROVADA** — 1º deploy; Meta adiados; bkp mantidos |
 | **v1.50.14.3** | VPS **`49612a6`** | **APROVADA** — redeploy tip final confirmado |
-| **v1.50.14.4 (este)** | restaura navbar CTA/nome | **em curso** |
+| **v1.50.14.4** | tip `4bba850` | **APROVADA** — nome completo + CTA brand-600 |
+| **v1.50.16 (este)** | lançamento opt-in/Asaas/cursor | **APROVADA** (código×spec; deploy VPS pendente) |
+
+### 11.1 Requisitos recentes — resultado (v1.50.16)
+
+| Spec | Requisito | Resultado |
+|------|-----------|-----------|
+| §2.27 | Opt-in e-mail/WhatsApp pré-marcado em cortesia + persistência | **PASS** |
+| §2.27 | `cursor-pointer` em botões / controles | **PASS** |
+| §2.27 | Asaas citada + autorização BC (verdade verificável) | **PASS** |
+| §2.22/§2.27 | Sem claims 100%/máxima segurança/500 req/s/sem filas/2 min | **PASS** |
+| `/review` | Código × spec §2.27 | **APROVADA** |
+| §7 | Deploy VPS tip desta versão | **pendente** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.14.3)
 
@@ -1563,7 +1589,8 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
-| 1.50.14.4 | 2026-08-05 | **Restaura navbar.** Nome do usuário completo (sem truncate/max-w); `.btn-success` de volta a `--brand-600` (pedido do produto). |
+| 1.50.16 | 2026-08-05 | **Lançamento.** §2.27: opt-in e-mail/WhatsApp pré-marcado em cortesia; cursor pointer; Asaas citável + autorização BC; copy verdadeiro (sem hipérboles). |
+| 1.50.14.4 | 2026-08-05 | **Restaura navbar.** Nome do usuário completo (sem truncate/max-w); `.btn-success` de volta a `--brand-600` (pedido do produto). Merge → `4bba850`. |
 | 1.50.14 | 2026-08-05 | **Hardening UX/a11y/PWA.** §2.25: títulos auth; `manifest.ts`; CSP style residual documentado + nonce themes; axe smoke home; contraste `btn-success` (depois revertido na 1.50.14.4) e links do rodapé. Merge PR #132 → `93c35bd`. |
 | 1.50.13 | 2026-08-05 | **Upgrade seguro deps Python.** §2.24: FastAPI 0.141.1, Pillow 12.3.0, PyJWT (remove ecdsa/python-jose), pytest 9.0.3, requests 2.34.2. `pip-audit` 0; CI pip-audit bloqueante. Backup `cursor/bkp-pre-deps-python-v1513-c0b1` @ `357bc22`. Testes 516→520. |
 | 1.50.12 | 2026-08-05 | **Achados pertinentes.** §2.23: `npm audit fix` (0 vulns); JSON-LD em `/produtor`, `/blog`, `/eventos`; CI `deps-audit`; bumps `requests`/`python-multipart`/`python-dotenv`. Fora: CSP style, PWA, Lighthouse, títulos auth, Pillow/FastAPI. Hotfix E2E: asserção `/produtor` não usa logo SVG «Eventos» (tspan hidden). |

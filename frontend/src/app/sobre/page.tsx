@@ -115,8 +115,8 @@ export default function SobrePage() {
               </h2>
               <p className="mt-6 text-lg leading-relaxed text-zinc-300">
                 O painel funciona no celular e no desktop. Estoque de ingressos é controlado na
-                reserva; pagamentos e reembolsos passam pelo processador certificado, com as
-                proteções antifraude dele em cada cobrança.
+                reserva; pagamentos e reembolsos passam pela Asaas (autorizada pelo Banco Central),
+                com as proteções antifraude dela em cada cobrança.
               </p>
               <p className="mt-4 text-lg leading-relaxed text-zinc-300">
                 Em picos extremos a plataforma pode ficar mais lenta — como qualquer serviço

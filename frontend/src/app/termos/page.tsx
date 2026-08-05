@@ -29,7 +29,9 @@ export default function TermosPage() {
             <h2 className="text-lg font-semibold text-zinc-900">1. Serviço</h2>
             <p className="mt-3 text-justify">
               A EventosBR é uma plataforma online que permite a organizadores criar páginas de eventos, definir
-              preços de ingresso e, quando configurado, receber pagamentos através de gateways financeiros
+              preços de ingresso e, quando configurado, receber pagamentos através da Asaas
+              (instituição de pagamento autorizada pelo Banco Central do Brasil) e demais
+              prestadores financeiros necessários
               externos e rigorosamente homologados. A plataforma não substitui assessoria jurídica, fiscal
               ou contábil do organizador.
             </p>
