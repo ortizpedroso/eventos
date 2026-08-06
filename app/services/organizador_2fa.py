@@ -115,3 +115,34 @@ def desativar_totp(db: Session, usuario: Usuario, codigo: str) -> None:
     usuario.totp_recovery_codes = None
     db.add(usuario)
     db.commit()
+
+
+def login_exige_desafio_2fa(usuario: Usuario) -> bool:
+    """Desafio TOTP no login só para organizadores com 2FA ativo."""
+    return (
+        usuario.tipo == "organizador"
+        and bool(usuario.totp_ativado)
+        and bool((usuario.totp_secret or "").strip())
+    )
+
+
+def sanear_totp_login(db: Session, usuario: Usuario) -> None:
+    """Corrige estado inconsistente de 2FA antes do login."""
+    if not usuario.totp_ativado:
+        return
+    if usuario.tipo != "organizador":
+        return
+    if not (usuario.totp_secret or "").strip():
+        usuario.totp_ativado = False
+        usuario.totp_recovery_codes = None
+        db.add(usuario)
+        db.commit()
+        return
+    try:
+        decrypt_at_rest(usuario.totp_secret)
+    except Exception:
+        usuario.totp_ativado = False
+        usuario.totp_secret = None
+        usuario.totp_recovery_codes = None
+        db.add(usuario)
+        db.commit()

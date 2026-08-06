@@ -49,7 +49,7 @@ from app.services.auth import (
     verify_password,
     TRUSTED_DEVICE_DIAS,
 )
-from app.services.organizador_2fa import TotpError, confirmar_totp, desativar_totp, iniciar_totp, verificar_totp_ou_recovery
+from app.services.organizador_2fa import TotpError, confirmar_totp, desativar_totp, iniciar_totp, login_exige_desafio_2fa, sanear_totp_login, verificar_totp_ou_recovery
 from app.services.turnstile import turnstile_habilitado, verificar_turnstile
 from app.services.usuario_pagamentos import criar_pagamento_para_novo_usuario
 from app.services.password_reset_email import enviar_email_recuperacao_senha
@@ -391,7 +391,9 @@ async def login(
             ),
         )
 
-    if usuario.totp_ativado:
+    sanear_totp_login(db, usuario)
+
+    if login_exige_desafio_2fa(usuario):
         trusted_cookie = request.cookies.get(TRUSTED_DEVICE_COOKIE_NAME)
         if trusted_cookie and decode_trusted_device_token(
             trusted_cookie, usuario.id, int(usuario.token_version or 0)
@@ -428,7 +430,7 @@ async def verificar_login_2fa(
         raise HTTPException(status_code=401, detail="Sessão de login expirada. Faça login novamente.")
 
     usuario = db.get(Usuario, usuario_id)
-    if not usuario or not usuario.ativo or not usuario.totp_ativado:
+    if not usuario or not usuario.ativo or not login_exige_desafio_2fa(usuario):
         raise HTTPException(status_code=401, detail="Sessão de login expirada. Faça login novamente.")
 
     if not verificar_totp_ou_recovery(db, usuario, body.codigo):

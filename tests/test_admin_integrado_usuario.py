@@ -118,6 +118,26 @@ class TestAcessoAdminViaSessao:
         assert depois.status_code == 403
         assert "2FA" in depois.json()["detail"] or "duas etapas" in depois.json()["detail"]
 
+    def test_cliente_admin_login_nao_exige_desafio_2fa(self, monkeypatch):
+        """2FA de admin protege o painel, não o login da conta cliente."""
+        monkeypatch.setattr(settings, "PLATFORM_ADMIN_API_KEY", "chave-admin-teste")
+        email = f"cliadm_login_{uuid.uuid4().hex[:8]}@teste.com"
+        senha = "senha-forte-123"
+        data = _registrar(email, tipo="cliente")
+        _marcar_admin(data["usuario"]["id"])
+        headers = {"Authorization": f"Bearer {data['access_token']}"}
+
+        setup = client.post("/api/auth/2fa/iniciar", headers=headers).json()
+        codigo = totp_service.gerar_codigo_atual(setup["secret"])
+        ativar = client.post("/api/auth/2fa/ativar", json={"codigo": codigo}, headers=headers)
+        assert ativar.status_code == 200, ativar.text
+
+        login = client.post("/api/auth/login", json={"email": email, "senha": senha})
+        assert login.status_code == 200, login.text
+        body = login.json()
+        assert body.get("requires_2fa") is not True
+        assert body.get("access_token")
+
 
 class TestGerenciarAdmins:
     def test_conceder_e_revogar_admin(self, monkeypatch):

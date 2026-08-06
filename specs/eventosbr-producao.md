@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.18.1
-**Data:** 2026-08-05
+**Versão:** 1.50.19
+**Data:** 2026-08-06
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.18.1):** Rodapé sem sublinhado (`zinc-300`, hover só cor; links clicáveis). Tip `main` **`6cfb9ef`**. Meta = ao lançar Ads. Backups `cursor/bkp-*` mantidos.
+> **Esta versão (v1.50.19):** Login cliente **sem** desafio 2FA (2FA só no login de **organizador** opt-in; admin usa 2FA só no painel). Cancelamento de ingresso grátis/cortesia/PDV sem reembolso Asaas. Pausar evento com imagem legada via `PATCH …/publicado`. §2.30.
 >
 > **Produção (VPS):** tip **`2fc5927`** / v1.50.17 (pré-1.50.18). Repo **privado** + Deploy Key SSH.
 >
@@ -266,6 +266,47 @@ Testes: `tests/test_seo_json_ld_publico_v1512.py`.
    ```
 
 Auth: `app/services/auth.py` — `import jwt` / `PyJWTError` (API compatível HS256). Tokens já emitidos com HS256 continuam válidos.
+
+### 2.30 Login, cancelamento e pausar evento (v1.50.19)
+
+Correções de bugs reportados em produção (comprador e organizador).
+
+#### Login — 2FA só para organizador
+
+| Regra | Implementação |
+|-------|----------------|
+| **Cliente** (incl. `is_platform_admin` com 2FA ativo) | Login e-mail/senha **sem** tela de código; 2FA exigido só ao acessar `/admin/*` (`platform_admin.py`) |
+| **Organizador** com `totp_ativado=True` | Login em duas etapas (`TotpChallengeResponse` → `POST /api/auth/2fa/verificar-login`); cookie «Lembrar dispositivo» 30 dias |
+| Estado inconsistente (`totp_ativado` sem segredo) | `sanear_totp_login()` reseta antes do login |
+
+Arquivos: `app/services/organizador_2fa.py` (`login_exige_desafio_2fa`, `sanear_totp_login`), `app/routes/auth.py`.
+
+Testes: `tests/test_admin_integrado_usuario.py` (`test_cliente_admin_login_nao_exige_desafio_2fa`), `tests/test_2fa_organizador.py`.
+
+#### Cancelamento de ingresso pelo comprador
+
+`POST /api/pagamentos/cancelar`:
+
+| Caso | Gateway Asaas | Resposta |
+|------|---------------|----------|
+| Ingresso pago online (`valor > 0`, pay_id reembolsável) | Reembolso via `cancelar_com_reembolso_asaas` | `reembolso_gateway: true` + mensagem de prazo |
+| Cortesia / R$ 0 / prefixos `cortesia_`, `pdv_`, `disabled_` | **Não chama** | `reembolso_gateway: false`, `valor_reembolso: 0` |
+| PDV pago manual (`pdv_`, valor > 0) | Não chama | Orienta contactar organizador |
+
+Listagem `GET /api/pagamentos/meus` expõe `reembolso_online` para UX em `/conta/pagamentos` (botão «Cancelar ingresso» vs «Cancelar e reembolsar»).
+
+Arquivos: `app/services/ingresso_pago.py` (`ingresso_requer_reembolso_gateway`), `app/routes/pagamentos.py`, `frontend/.../pagamentos-client.tsx`.
+
+Testes: `tests/test_cancelar_ingresso_gratis.py`.
+
+#### Pausar/publicar evento com imagem legada
+
+| Ação | Endpoint | Validação de imagem |
+|------|----------|---------------------|
+| Pausar/publicar na vitrine (lista organizador) | `PATCH /api/eventos/id/{id}/publicado` | Só altera `publicado` — **não** revalida `imagem_url` |
+| Editar evento completo | `PATCH /api/eventos/id/{id}` | URL externa legada permitida se **inalterada** (`validar_imagem_url_se_alterada`, idem galeria) |
+
+Testes: `tests/test_evento_publicado_imagem_legada.py`.
 
 ### 2.29 Diagnóstico final — UI / UX / SEO / segurança (v1.50.18)
 
@@ -873,12 +914,12 @@ Ambas as correções têm comentários extensos no próprio `Caddyfile` e em `ne
 
 ### 5.2 2FA — TOTP (adicionado v1.8)
 
-- **Organizador:** TOTP opt-in (`Usuario.totp_ativado`), segredo cifrado em repouso (`totp_secret`), 8 códigos de recuperação de uso único (hash bcrypt). Login em duas etapas quando ativo: senha correta emite token de desafio de 5 min (`create_2fa_challenge_token`), segunda etapa em `POST /api/auth/2fa/verificar-login`. Gestão em `/organizador/perfil` → `SegurancaDoisFatores`.
+- **Organizador:** TOTP opt-in (`Usuario.totp_ativado`), segredo cifrado em repouso (`totp_secret`), 8 códigos de recuperação de uso único (hash bcrypt). **Login em duas etapas apenas para `tipo=organizador`** quando 2FA ativo: senha correta emite token de desafio de 5 min (`create_2fa_challenge_token`), segunda etapa em `POST /api/auth/2fa/verificar-login`. Gestão em `/organizador/perfil` → `SegurancaDoisFatores`.
   - Implementação TOTP própria (RFC 6238, HMAC-SHA1), validada contra `pyotp` como referência — sem dependência nova.
   - Endpoints: `POST /api/auth/2fa/{iniciar,ativar,desativar}`, `POST /api/auth/2fa/verificar-login`.
   - Arquivos: `app/services/totp.py`, `app/services/organizador_2fa.py`.
-- **Admin (dois mecanismos, coexistindo — v1.11):**
-  1. **Principal:** login normal (e-mail/senha) de uma conta com `is_platform_admin=True` e `totp_ativado=True` — mesmo TOTP de organizador, ver 5.1.1.
+- **Admin (dois mecanismos, coexistindo — v1.11, clarificado v1.50.19):**
+  1. **Principal:** login normal (e-mail/senha) **sem** desafio 2FA na tela de entrar; acesso ao painel exige sessão com `is_platform_admin=True` **e** `totp_ativado=True` (`platform_admin.py`). Cliente-admin ativa 2FA em Perfil e usa o mesmo TOTP só ao abrir Administração.
   2. **Emergência:** chave compartilhada (`PLATFORM_ADMIN_API_KEY`) + TOTP opcional em separado (`ADMIN_TOTP_SECRET`, opt-in) verificado em `frontend/src/app/api/admin/session/route.ts` antes de aceitar a chave, com rate limit de 8 tentativas/min por IP.
   - Implementação TOTP em TypeScript (Node `crypto`) em `frontend/src/lib/admin-totp.ts`, validada contra a implementação Python.
 
@@ -1723,6 +1764,7 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.50.19 | 2026-08-06 | **Login + cancelamento + pausar evento.** §2.30: 2FA no login só organizador; cliente/admin entram sem código (2FA só no painel admin); cancelamento cortesia/R$0/PDV sem Asaas; `PATCH …/publicado` para pausar sem revalidar imagem legada; UX `/conta/pagamentos`. Testes: `test_cancelar_ingresso_gratis`, `test_evento_publicado_imagem_legada`, `test_admin_integrado_usuario`. `/review` **APROVADA**. |
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |
 | 1.50.14.1 | 2026-08-05 | **Fechamento /review v1.50.14.** Tip `1696283`; hotfixes CI (E2E planos/overflow, fila contato 90s). Código×spec **APROVADA**. |
