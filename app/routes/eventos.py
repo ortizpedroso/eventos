@@ -9,7 +9,13 @@ from slugify import slugify
 
 from app.models import Evento, EventoCupom, Usuario, get_db
 from app.schemas.cupom import CupomResponse, CupomWrite
-from app.schemas.evento import AtualizarEventoRequest, CriarEventoRequest, EventoResponse, montar_evento_response
+from app.schemas.evento import (
+    AtualizarEventoRequest,
+    CriarEventoRequest,
+    EventoPublicadoUpdate,
+    EventoResponse,
+    montar_evento_response,
+)
 from app.routes.auth import get_usuario_atual, get_usuario_atual_opcional
 from app.services.ingresso_lotes import (
     contar_ocupacao_por_lotes,
@@ -162,7 +168,12 @@ async def atualizar_evento(
     evento.data_fim = body.data_fim or body.data_inicio
     evento.local = body.local
     evento.cidade = resolver_cidade(body.cidade, body.local)
-    evento.imagem_url = body.imagem_url
+    from app.utils.imagem_url import validar_imagem_url_se_alterada
+
+    try:
+        evento.imagem_url = validar_imagem_url_se_alterada(body.imagem_url, evento.imagem_url)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     evento.contato_telefone = body.contato_telefone
     evento.contato_email = body.contato_email
     evento.preco_ingresso = body.preco_ingresso
@@ -232,6 +243,58 @@ async def atualizar_evento(
     db.commit()
     db.refresh(evento)
     logger.info("Evento %s atualizado por %s", evento.id, usuario_atual.id)
+
+    from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
+
+    tem_venda_aberta = evento_tem_venda_aberta(db, evento)
+    if deve_notificar_abertura(
+        evento,
+        era_publicado=era_publicado,
+        tinha_venda_aberta=tinha_venda_aberta,
+        tem_venda_aberta=tem_venda_aberta,
+    ):
+        notificar_abertura_vendas(db, evento)
+
+    return montar_evento_response(db, evento)
+
+
+@router.patch("/id/{evento_id}/publicado", response_model=EventoResponse)
+async def atualizar_publicacao_evento(
+    evento_id: str,
+    body: EventoPublicadoUpdate,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    """Publica ou pausa na vitrine sem revalidar imagem_url legada."""
+    if usuario_atual.tipo != "organizador":
+        raise HTTPException(status_code=403, detail="Apenas organizadores podem editar eventos")
+
+    evento = db.get(Evento, evento_id)
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+    if evento.organizador_id != usuario_atual.id:
+        raise HTTPException(status_code=403, detail="Sem permissão para editar este evento")
+
+    era_publicado = evento.publicado
+    from app.services.ingresso_lotes import evento_tem_venda_aberta
+
+    tinha_venda_aberta = evento_tem_venda_aberta(db, evento) if era_publicado else False
+
+    from app.services.evento_repasse import validar_publicacao_evento_pago
+    from app.services.organizador_asaas import atualizar_status_repasse_organizador
+
+    usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
+    validar_publicacao_evento_pago(db, usuario_atual, evento, body.publicado)
+    evento.publicado = body.publicado
+
+    db.commit()
+    db.refresh(evento)
+    logger.info(
+        "Evento %s publicado=%s por %s",
+        evento.id,
+        body.publicado,
+        usuario_atual.id,
+    )
 
     from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
 

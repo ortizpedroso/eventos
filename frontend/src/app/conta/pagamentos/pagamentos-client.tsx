@@ -26,7 +26,7 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
     readContaCache<PagamentoListItem[]>(CONTA_CACHE_KEYS.pagamentos) ?? null,
   );
   const [error, setError] = useState<string | null>(null);
-  const [cancelMsg, setCancelMsg] = useState<string | null>(null);
+  const [cancelMsg, setCancelMsg] = useState<{ texto: string; ok: boolean } | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -72,12 +72,17 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ingresso_id: ingressoId }),
       });
-      setCancelMsg("Cancelamento solicitado com sucesso.");
+      setCancelMsg({
+        ok: true,
+        texto: "Cancelamento solicitado com sucesso. O reembolso será processado conforme o prazo do meio de pagamento.",
+      });
       await load();
     } catch (e) {
-      setCancelMsg(
-        e instanceof Error ? e.message : "Não foi possível cancelar",
-      );
+      const msg =
+        e instanceof Error && e.message.trim()
+          ? e.message
+          : "Não foi possível cancelar este ingresso. Tente novamente ou fale conosco.";
+      setCancelMsg({ ok: false, texto: msg });
     }
   }
 
@@ -166,8 +171,15 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
       ) : null}
 
       {cancelMsg ? (
-        <div className="rounded-md border border-zinc-200 bg-white p-3 text-sm text-zinc-800">
-          {cancelMsg}
+        <div
+          className={`rounded-md border p-3 text-sm ${
+            cancelMsg.ok
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : "border-red-200 bg-red-50 text-red-800"
+          }`}
+          role="status"
+        >
+          {cancelMsg.texto}
         </div>
       ) : null}
 

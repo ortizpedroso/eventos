@@ -32,6 +32,29 @@ def _hosts_imagem_permitidos() -> set[str]:
     return hosts
 
 
+def validar_imagem_url_formato(v: object) -> str | None:
+    """Valida formato/tamanho sem restringir host (uso em PATCH antes de comparar com valor atual)."""
+    if v is None:
+        return None
+    if not isinstance(v, str):
+        raise ValueError("imagem_url deve ser texto ou nulo")
+    s = v.strip()
+    if not s:
+        return None
+    if len(s) > _MAX_IMAGEM_URL_LEN:
+        raise ValueError(f"imagem_url excede {_MAX_IMAGEM_URL_LEN} caracteres")
+    if _DATA_IMAGE_RE.match(s):
+        return s
+    if s.startswith("/uploads/"):
+        return s
+    parsed = urlparse(s)
+    if parsed.scheme not in ("https", "http"):
+        raise ValueError("imagem_url deve usar http(s)://, /uploads/ ou data:image/*")
+    if not parsed.netloc:
+        raise ValueError("imagem_url inválida")
+    return s
+
+
 def validar_imagem_url(v: object) -> str | None:
     """Aceita https:// no nosso domínio/R2, /uploads/ local ou data:image/* base64 (limitado)."""
     if v is None:
@@ -60,3 +83,12 @@ def validar_imagem_url(v: object) -> str | None:
             "as imagens devem ser hospedadas na plataforma (upload ou armazenamento configurado)."
         )
     return s
+
+
+def validar_imagem_url_se_alterada(nova: str | None, atual: str | None) -> str | None:
+    """Na atualização: mantém URL legada se inalterada; exige host permitido se mudou."""
+    if nova is None:
+        return None
+    if (nova or "") == (atual or ""):
+        return nova
+    return validar_imagem_url(nova)

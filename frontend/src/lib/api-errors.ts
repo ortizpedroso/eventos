@@ -25,12 +25,26 @@ export function mensagemErroHttp(status: number, detail?: unknown): string {
         return loc ? `${loc}: ${m}` : m;
       })
       .join("; ");
+  } else if (typeof detail === "object" && detail !== null && !Array.isArray(detail)) {
+    const obj = detail as Record<string, unknown>;
+    const nested =
+      (typeof obj.detail === "string" && obj.detail.trim()) ||
+      (typeof obj.message === "string" && obj.message.trim()) ||
+      (typeof obj.mensagem === "string" && obj.mensagem.trim());
+    msg = nested || STATUS_FALLBACK[status] || `Não foi possível concluir a operação (erro ${status}).`;
   } else if (status >= 500) {
     msg =
       STATUS_FALLBACK[status] ??
       "A API não respondeu corretamente. Confirme que o backend está a correr na porta 8000.";
   } else {
     msg = STATUS_FALLBACK[status] ?? `Não foi possível concluir a operação (erro ${status}).`;
+  }
+  if (!msg || !msg.trim()) {
+    msg =
+      STATUS_FALLBACK[status] ??
+      (status >= 500
+        ? "A API não respondeu corretamente. Tente novamente em instantes."
+        : `Não foi possível concluir a operação (erro ${status}).`);
   }
   return sanitizarMensagemPagamento(msg);
 }

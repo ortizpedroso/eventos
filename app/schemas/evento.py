@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
-from app.utils.imagem_url import validar_imagem_url
+from app.utils.imagem_url import validar_imagem_url, validar_imagem_url_formato
 from app.utils.evento_categorias import normalizar_categoria_evento
 from app.utils.evento_ficha import (
     normalizar_classificacao_etaria,
@@ -195,6 +195,16 @@ class AtualizarEventoRequest(CriarEventoRequest):
     """Mesmos campos da criação; omitir `publicado` mantém o valor atual."""
 
     publicado: bool | None = None
+
+    @field_validator("imagem_url", mode="before")
+    @classmethod
+    def _imagem_url(cls, v: object) -> str | None:
+        # Host permitido é validado na rota só quando a URL mudar (eventos legados).
+        return validar_imagem_url_formato(v)
+
+
+class EventoPublicadoUpdate(BaseModel):
+    publicado: bool
 
 
 class EventoResponse(BaseModel):

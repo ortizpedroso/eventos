@@ -658,6 +658,8 @@ async def cancelar_ingresso(
             "refund_id": asaas_refund_id,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Erro ao processar reembolso")
         raise HTTPException(status_code=400, detail=REEMBOLSO_CLIENTE) from e

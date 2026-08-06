@@ -22,31 +22,13 @@ function ordenarPorCriacaoDesc(lista: Evento[]): Evento[] {
   );
 }
 
-/** Corpo do PATCH /api/eventos/id/… (inclui lotes para não serem apagados ao publicar/pausar). */
-function corpoAtualizarEvento(e: Evento, overrides: { publicado?: boolean }): Record<string, unknown> {
-  const lotes = e.ingresso_lotes ?? [];
-  return {
-    nome: e.nome,
-    descricao: e.descricao,
-    data_inicio: e.data_inicio,
-    data_fim: e.data_fim,
-    local: e.local,
-    imagem_url: e.imagem_url ?? null,
-    preco_ingresso: e.preco_ingresso,
-    categoria: e.categoria,
-    mensagem_confirmacao: e.mensagem_confirmacao ?? null,
-    publicado: overrides.publicado ?? e.publicado,
-    ingresso_lotes: lotes.map((l) => ({
-      id: l.id,
-      nome: l.nome,
-      preco: l.preco,
-      ordem: l.ordem,
-      quantidade_maxima: l.quantidade_maxima,
-      ativo: l.ativo,
-      vendas_inicio: l.vendas_inicio,
-      vendas_fim: l.vendas_fim,
-    })),
-  };
+/** Alterna publicação na vitrine sem reenviar todos os campos do evento. */
+async function alternarPublicacaoEvento(eventoId: string, publicado: boolean): Promise<Evento> {
+  return apiFetch<Evento>(`/api/eventos/id/${eventoId}/publicado`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ publicado }),
+  });
 }
 
 type ResumoEvento = {
@@ -148,11 +130,7 @@ export function OrganizadorEventosClient() {
     setPublishErr(null);
     setPublishBusyId(e.id);
     try {
-      await apiFetch<Evento>(`/api/eventos/id/${e.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(corpoAtualizarEvento(e, { publicado: true })),
-      });
+      await alternarPublicacaoEvento(e.id, true);
       await recarregar();
     } catch (err) {
       setPublishErr(err instanceof Error ? err.message : "Não foi possível publicar");
@@ -169,11 +147,7 @@ export function OrganizadorEventosClient() {
     setPublishErr(null);
     setPublishBusyId(e.id);
     try {
-      await apiFetch<Evento>(`/api/eventos/id/${e.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(corpoAtualizarEvento(e, { publicado: false })),
-      });
+      await alternarPublicacaoEvento(e.id, false);
       await recarregar();
     } catch (err) {
       setPublishErr(err instanceof Error ? err.message : "Não foi possível pausar");
