@@ -154,3 +154,52 @@ def test_trocar_imagem_externa_bloqueada(monkeypatch):
     )
     assert patch_r.status_code == 400, patch_r.text
     assert "externa" in patch_r.json()["detail"].lower()
+
+
+def test_atualizar_galeria_externa_inalterada_ok(monkeypatch):
+    monkeypatch.setattr(settings, "FRONTEND_PUBLIC_URL", "https://eventosbr.app.br")
+
+    token = _registrar_org()
+    headers = {"Authorization": f"Bearer {token}"}
+    criar_ok = client.post("/api/eventos/criar", json=_payload_evento(), headers=headers)
+    assert criar_ok.status_code == 200
+    ev_id = criar_ok.json()["id"]
+    nome = criar_ok.json()["nome"]
+    externa = "https://cdn.exemplo.com/foto-antiga.jpg"
+
+    from app.models import Evento, EventoGaleriaFoto
+
+    db = test_api.TestingSessionLocal()
+    try:
+        ev = db.get(Evento, ev_id)
+        assert ev is not None
+        db.add(
+            EventoGaleriaFoto(
+                evento_id=ev_id,
+                url=externa,
+                ordem=0,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    patch_r = client.patch(
+        f"/api/eventos/id/{ev_id}",
+        json={
+            "nome": nome,
+            "descricao": "Teste",
+            "data_inicio": "2026-12-01T10:00:00",
+            "data_fim": "2026-12-01T22:00:00",
+            "local": "SP",
+            "preco_ingresso": 0,
+            "categoria": "Outros",
+            "contato_telefone": "11987654321",
+            "contato_email": "contato@teste.com",
+            "publicado": False,
+            "galeria_urls": [externa],
+        },
+        headers=headers,
+    )
+    assert patch_r.status_code == 200, patch_r.text
+    assert patch_r.json()["galeria_urls"] == [externa]

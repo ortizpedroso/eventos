@@ -57,7 +57,20 @@ def _garantir_ledger_ingresso(db: Session, ingresso: Ingresso) -> None:
 
 
 def _pay_id_reembolsavel(pay_id: str) -> bool:
-    return bool(pay_id) and not pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:"))
+    return bool(pay_id) and not pay_id.startswith(
+        ("disabled_", "cortesia_", "legacy_stripe:", "pdv_")
+    )
+
+
+def ingresso_requer_reembolso_gateway(ingresso: Ingresso, *, payments_disabled: bool = False) -> bool:
+    """True quando o cancelamento deve chamar o Asaas para reembolso."""
+    if payments_disabled:
+        return False
+    pay_id = (ingresso.asaas_payment_id or "").strip()
+    if not _pay_id_reembolsavel(pay_id):
+        return False
+    valor = float(getattr(ingresso, "valor_cobrado", None) or ingresso.valor or 0)
+    return valor > 0
 
 
 def marcar_ingresso_pago(db: Session, ingresso: Ingresso, *, pago_em: datetime | None = None) -> bool:
@@ -230,7 +243,7 @@ def processar_cobranca_confirmada_gateway(
 ) -> list[str]:
     """Consulta o Asaas, marca ingressos pagos ou reembolsa se fulfillment bloqueado."""
     pay_id = (payment_ref or "").strip()
-    if not pay_id or pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:")):
+    if not pay_id or pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:", "pdv_")):
         return []
 
     if payment is None or not (payment.get("status") or "").strip():

@@ -60,9 +60,12 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
     router.replace(urlPosCompraEvento(destaque.evento.slug, ingresso));
   }, [ok, ingresso, destaque?.evento.slug, router]);
 
-  async function cancelar(ingressoId: string) {
+  async function cancelar(ingressoId: string, valor: number) {
+    const gratis = valor <= 0;
     const ok = window.confirm(
-      "Deseja cancelar este ingresso e solicitar reembolso? Esta ação não pode ser desfeita.",
+      gratis
+        ? "Deseja cancelar este ingresso? Esta ação não pode ser desfeita."
+        : "Deseja cancelar este ingresso e solicitar reembolso? Esta ação não pode ser desfeita.",
     );
     if (!ok) return;
     setCancelMsg(null);
@@ -74,7 +77,9 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
       });
       setCancelMsg({
         ok: true,
-        texto: "Cancelamento solicitado com sucesso. O reembolso será processado conforme o prazo do meio de pagamento.",
+        texto: gratis
+          ? "Ingresso cancelado com sucesso."
+          : "Cancelamento solicitado com sucesso. O reembolso será processado conforme o prazo do meio de pagamento.",
       });
       await load();
     } catch (e) {
@@ -232,8 +237,17 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
                   {labelStatusIngresso(it.status)}
                 </span>
                 <span className="text-zinc-500">
-                  Prazo reembolso:{" "}
-                  {new Date(it.data_limite_cancelamento).toLocaleDateString("pt-BR")}
+                  {it.valor > 0 ? (
+                    <>
+                      Prazo reembolso:{" "}
+                      {new Date(it.data_limite_cancelamento).toLocaleDateString("pt-BR")}
+                    </>
+                  ) : (
+                    <>
+                      Prazo cancelamento:{" "}
+                      {new Date(it.data_limite_cancelamento).toLocaleDateString("pt-BR")}
+                    </>
+                  )}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -246,10 +260,10 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
                 {it.status === "pago" ? (
                   <button
                     type="button"
-                    onClick={() => void cancelar(it.id)}
+                    onClick={() => void cancelar(it.id, it.valor)}
                     className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-800 hover:bg-red-100"
                   >
-                    Cancelar e reembolsar
+                    {it.valor > 0 ? "Cancelar e reembolsar" : "Cancelar ingresso"}
                   </button>
                 ) : null}
               </div>

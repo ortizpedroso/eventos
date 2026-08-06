@@ -412,7 +412,10 @@ def retomar_pagamento_asaas(db: Session, ingresso: Ingresso) -> dict:
 
 def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
     pay_id = (ingresso.asaas_payment_id or "").strip()
-    if not pay_id or pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:")):
+    if not pay_id or pay_id.startswith(("disabled_", "cortesia_", "legacy_stripe:", "pdv_")):
+        return None
+    valor = float(getattr(ingresso, "valor_cobrado", None) or ingresso.valor or 0)
+    if valor <= 0:
         return None
     outros_pagos = (
         db.query(Ingresso)
@@ -423,7 +426,6 @@ def cancelar_com_reembolso_asaas(db: Session, ingresso: Ingresso) -> str | None:
         )
         .count()
     )
-    valor = float(getattr(ingresso, "valor_cobrado", None) or ingresso.valor or 0)
     try:
         current = obter_cobranca(pay_id)
         current_status = (current.get("status") or "").upper() if current else ""

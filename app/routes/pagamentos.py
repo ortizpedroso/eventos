@@ -614,12 +614,14 @@ async def cancelar_ingresso(
         raise HTTPException(status_code=400, detail="Prazo para cancelamento expirou")
 
     agora = datetime.now(timezone.utc).replace(tzinfo=None)
-    skip_gateway_refund = settings.payments_disabled or (
-        (ingresso.asaas_payment_id or "").startswith("disabled_")
+    from app.services.ingresso_pago import ingresso_requer_reembolso_gateway
+
+    requer_reembolso = ingresso_requer_reembolso_gateway(
+        ingresso, payments_disabled=settings.payments_disabled
     )
 
     try:
-        if skip_gateway_refund:
+        if not requer_reembolso:
             asaas_refund_id: str | None = None
             logger.warning(
                 "Cancelamento sem reembolso no gateway (modo teste): ingresso %s",

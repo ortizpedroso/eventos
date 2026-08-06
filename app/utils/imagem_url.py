@@ -92,3 +92,40 @@ def validar_imagem_url_se_alterada(nova: str | None, atual: str | None) -> str |
     if (nova or "") == (atual or ""):
         return nova
     return validar_imagem_url(nova)
+
+
+def validar_galeria_urls_formato(v: object) -> list[str] | None:
+    """Valida formato das URLs da galeria sem restringir host (PATCH antes de comparar)."""
+    if v is None:
+        return None
+    if not isinstance(v, list):
+        raise ValueError("galeria_urls deve ser uma lista")
+    out: list[str] = []
+    for item in v:
+        u = validar_imagem_url_formato(item)
+        if u:
+            out.append(u)
+    if len(out) > 6:
+        raise ValueError("máximo de 6 fotos na galeria")
+    return out
+
+
+def validar_galeria_urls_se_alterada(nova: list[str] | None, atual: list[str]) -> list[str] | None:
+    """Na atualização: mantém URLs legadas inalteradas; exige host permitido nas novas."""
+    if nova is None:
+        return None
+    atuais = list(atual or [])
+    if nova == atuais:
+        return nova
+    legadas = set(atuais)
+    out: list[str] = []
+    for item in nova:
+        if item in legadas:
+            out.append(item)
+            continue
+        u = validar_imagem_url(item)
+        if u:
+            out.append(u)
+    if len(out) > 6:
+        raise ValueError("máximo de 6 fotos na galeria")
+    return out

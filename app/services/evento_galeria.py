@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.models import Evento, EventoGaleriaFoto
-from app.utils.imagem_url import validar_imagem_url
+from app.utils.imagem_url import validar_galeria_urls_se_alterada
 
 GALERIA_MAX = 6
 
@@ -26,19 +26,22 @@ def listar_urls(db: Session, evento_id: str) -> list[str]:
     return [r.url for r in rows if r.url]
 
 
-def substituir_galeria(db: Session, evento: Evento, urls: list[str] | None) -> list[str]:
+def substituir_galeria(
+    db: Session,
+    evento: Evento,
+    urls: list[str] | None,
+    *,
+    urls_atuais: list[str] | None = None,
+) -> list[str]:
     """Substitui a galeria do evento. `None` = não altera; `[]` = limpa."""
     if urls is None:
         return listar_urls(db, evento.id)
 
-    limpas: list[str] = []
-    for u in urls:
-        try:
-            v = validar_imagem_url(u)
-        except Exception as e:
-            raise ValueError(str(e)) from e
-        if v:
-            limpas.append(v)
+    atuais = urls_atuais if urls_atuais is not None else listar_urls(db, evento.id)
+    try:
+        limpas = validar_galeria_urls_se_alterada(urls, atuais) or []
+    except ValueError as e:
+        raise ValueError(str(e)) from e
     if len(limpas) > GALERIA_MAX:
         raise ValueError(f"Máximo de {GALERIA_MAX} fotos na galeria")
 
