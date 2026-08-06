@@ -181,6 +181,7 @@ export type PagamentoListItem = {
   status: string;
   data_compra: string;
   data_limite_cancelamento: string;
+  reembolso_online?: boolean;
   reservado_ate?: string | null;
 };
 

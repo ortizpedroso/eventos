@@ -53,3 +53,5 @@ def test_cancelar_ingresso_cortesia_sem_chamar_asaas():
     body = cancel.json()
     assert body["valor_reembolso"] == 0
     assert body.get("refund_id") is None
+    assert body.get("reembolso_gateway") is False
+    assert "cancelado" in body["mensagem"].lower()

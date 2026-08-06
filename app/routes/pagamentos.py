@@ -483,6 +483,7 @@ async def listar_meus_pagamentos(
         query = query.filter(Ingresso.status == status)
     
     ingressos = query.all()
+    from app.services.ingresso_pago import ingresso_requer_reembolso_gateway
 
     return [
         {
@@ -504,6 +505,9 @@ async def listar_meus_pagamentos(
             "status": ingresso.status,
             "data_compra": ingresso.data_compra,
             "data_limite_cancelamento": ingresso.data_limite_cancelamento,
+            "reembolso_online": ingresso_requer_reembolso_gateway(
+                ingresso, payments_disabled=settings.payments_disabled
+            ),
             "reservado_ate": (
                 ingresso.reservado_ate.isoformat() + "Z"
                 if ingresso.reservado_ate is not None
@@ -620,12 +624,28 @@ async def cancelar_ingresso(
         ingresso, payments_disabled=settings.payments_disabled
     )
 
+    def _mensagem_cancelamento() -> str:
+        valor = float(ingresso.valor or 0)
+        if requer_reembolso:
+            return (
+                "Cancelamento solicitado com sucesso. O reembolso será processado "
+                "conforme o prazo do meio de pagamento."
+            )
+        if valor <= 0:
+            return "Ingresso cancelado com sucesso."
+        return (
+            "Ingresso cancelado com sucesso. Para reembolso do valor pago, "
+            "entre em contacto com o organizador do evento."
+        )
+
     try:
         if not requer_reembolso:
             asaas_refund_id: str | None = None
-            logger.warning(
-                "Cancelamento sem reembolso no gateway (modo teste): ingresso %s",
+            logger.info(
+                "Cancelamento sem reembolso no gateway: ingresso %s valor=%.2f pay_id=%s",
                 ingresso.id,
+                float(ingresso.valor or 0),
+                ingresso.asaas_payment_id,
             )
         else:
             asaas_refund_id = cancelar_com_reembolso_asaas(db, ingresso)
@@ -655,9 +675,10 @@ async def cancelar_ingresso(
         db.commit()
 
         return {
-            "mensagem": "Ingresso cancelado com sucesso",
-            "valor_reembolso": ingresso.valor,
+            "mensagem": _mensagem_cancelamento(),
+            "valor_reembolso": ingresso.valor if requer_reembolso else 0,
             "refund_id": asaas_refund_id,
+            "reembolso_gateway": requer_reembolso,
         }
 
     except HTTPException:

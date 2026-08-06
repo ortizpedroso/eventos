@@ -60,26 +60,24 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
     router.replace(urlPosCompraEvento(destaque.evento.slug, ingresso));
   }, [ok, ingresso, destaque?.evento.slug, router]);
 
-  async function cancelar(ingressoId: string, valor: number) {
+  async function cancelar(ingressoId: string, valor: number, reembolsoOnline: boolean) {
     const gratis = valor <= 0;
     const ok = window.confirm(
-      gratis
+      gratis || !reembolsoOnline
         ? "Deseja cancelar este ingresso? Esta ação não pode ser desfeita."
         : "Deseja cancelar este ingresso e solicitar reembolso? Esta ação não pode ser desfeita.",
     );
     if (!ok) return;
     setCancelMsg(null);
     try {
-      await apiFetch("/api/pagamentos/cancelar", {
+      const resp = await apiFetch<{ mensagem: string }>("/api/pagamentos/cancelar", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ingresso_id: ingressoId }),
       });
       setCancelMsg({
         ok: true,
-        texto: gratis
-          ? "Ingresso cancelado com sucesso."
-          : "Cancelamento solicitado com sucesso. O reembolso será processado conforme o prazo do meio de pagamento.",
+        texto: resp.mensagem?.trim() || "Ingresso cancelado com sucesso.",
       });
       await load();
     } catch (e) {
@@ -237,7 +235,7 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
                   {labelStatusIngresso(it.status)}
                 </span>
                 <span className="text-zinc-500">
-                  {it.valor > 0 ? (
+                  {it.valor > 0 && it.reembolso_online !== false ? (
                     <>
                       Prazo reembolso:{" "}
                       {new Date(it.data_limite_cancelamento).toLocaleDateString("pt-BR")}
@@ -260,10 +258,14 @@ export function PagamentosClient({ okParam = null, ingressoParam = null }: Props
                 {it.status === "pago" ? (
                   <button
                     type="button"
-                    onClick={() => void cancelar(it.id, it.valor)}
+                    onClick={() =>
+                      void cancelar(it.id, it.valor, it.reembolso_online !== false)
+                    }
                     className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-800 hover:bg-red-100"
                   >
-                    {it.valor > 0 ? "Cancelar e reembolsar" : "Cancelar ingresso"}
+                    {it.valor > 0 && it.reembolso_online !== false
+                      ? "Cancelar e reembolsar"
+                      : "Cancelar ingresso"}
                   </button>
                 ) : null}
               </div>
