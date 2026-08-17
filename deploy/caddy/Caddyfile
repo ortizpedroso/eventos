@@ -65,8 +65,9 @@ www.{$DOMAIN} {
 # SIGEP. Mantendo-o no git, o roteamento sobrevive a qualquer deploy.
 #
 # O hook do SIGEP (`/opt/sigep-forca/deploy/hook-eventosbr-caddy.sh`) é idempotente
-# e apenas SUBSTITUI o bloco marcado abaixo (marcador `# Métrica / SIGEP`) — por
-# isso o marcador precisa ser mantido exatamente como está.
+# e apenas SUBSTITUI o bloco marcado logo abaixo — por isso a linha de marcação
+# imediatamente acima do site precisa ser mantida exatamente como está. NÃO
+# repita esse texto de marcação em comentários (o hook casa a 1a ocorrência).
 # -----------------------------------------------------------------------------
 
 # Métrica / SIGEP — não remover o bloco do eventosbr
