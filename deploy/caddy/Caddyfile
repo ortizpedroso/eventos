@@ -51,3 +51,22 @@ www.{$DOMAIN} {
 		reverse_proxy web:3000
 	}
 }
+
+# -----------------------------------------------------------------------------
+# Sites adicionais hospedados no MESMO VPS/IP que o EventosBR.
+#
+# Este Caddy é o único proxy de borda (dono das portas 80/443) do servidor, logo
+# precisa conhecer TODOS os domínios que apontam para este IP. Cada domínio tem
+# um bloco EXPLÍCITO; não há site "default"/catch-all, então um Host desconhecido
+# recebe 404 e NUNCA cai por engano em outro app.
+#
+# IMPORTANTE: mantenha estes blocos versionados aqui. Se ficarem só como edição
+# manual no servidor, o `scripts/deploy-vps.sh` (git pull) pode sobrescrevê-los e
+# o roteamento quebra (ex.: `eventosbr.app.br` passando a exibir o SIGEP).
+# -----------------------------------------------------------------------------
+
+# SIGEP-Força (TJRR) — app separado, containers `metrica_*` na mesma rede.
+sigep.inovesw.com.br {
+	encode gzip zstd
+	reverse_proxy metrica_web:3000
+}
