@@ -53,19 +53,23 @@ www.{$DOMAIN} {
 }
 
 # -----------------------------------------------------------------------------
-# Sites adicionais hospedados no MESMO VPS/IP que o EventosBR.
+# Sites de OUTROS apps que rodam no MESMO VPS/IP. Este Caddy é o único proxy de
+# borda (dono das portas 80/443), então precisa conhecer todos os domínios que
+# apontam para este IP. Cada domínio tem um bloco EXPLÍCITO; não há site
+# "default"/catch-all, logo um Host desconhecido recebe 404 e NUNCA cai por
+# engano em outro app.
 #
-# Este Caddy é o único proxy de borda (dono das portas 80/443) do servidor, logo
-# precisa conhecer TODOS os domínios que apontam para este IP. Cada domínio tem
-# um bloco EXPLÍCITO; não há site "default"/catch-all, então um Host desconhecido
-# recebe 404 e NUNCA cai por engano em outro app.
+# Por que versionado aqui: o `scripts/deploy-vps.sh` (git checkout/pull) restaura
+# este arquivo a partir do git. Se o bloco ficasse só como edição manual/hook no
+# servidor, qualquer deploy o apagaria e `eventosbr.app.br` voltaria a exibir o
+# SIGEP. Mantendo-o no git, o roteamento sobrevive a qualquer deploy.
 #
-# IMPORTANTE: mantenha estes blocos versionados aqui. Se ficarem só como edição
-# manual no servidor, o `scripts/deploy-vps.sh` (git pull) pode sobrescrevê-los e
-# o roteamento quebra (ex.: `eventosbr.app.br` passando a exibir o SIGEP).
+# O hook do SIGEP (`/opt/sigep-forca/deploy/hook-eventosbr-caddy.sh`) é idempotente
+# e apenas SUBSTITUI o bloco marcado abaixo (marcador `# Métrica / SIGEP`) — por
+# isso o marcador precisa ser mantido exatamente como está.
 # -----------------------------------------------------------------------------
 
-# SIGEP-Força (TJRR) — app separado, containers `metrica_*` na mesma rede.
+# Métrica / SIGEP — não remover o bloco do eventosbr
 sigep.inovesw.com.br {
 	encode gzip zstd
 	reverse_proxy metrica_web:3000
