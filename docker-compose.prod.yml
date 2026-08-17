@@ -104,7 +104,14 @@ services:
       api:
         condition: service_healthy
     networks:
-      - eventosbr_internal
+      eventosbr_internal:
+        # Alias EXCLUSIVO do web do EventosBR. Outro app no mesmo VPS (SIGEP /
+        # metrica_web) entra nesta rede respondendo também pelo nome "web"
+        # (hostname do container dele), o que fazia o `reverse_proxy web:3000`
+        # do Caddy alternar (round-robin DNS) entre EventosBR e SIGEP. O Caddy
+        # passa a usar `eventosbr_web` (nome que só este serviço responde).
+        aliases:
+          - eventosbr_web
 
   caddy:
     image: caddy:2-alpine

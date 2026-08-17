@@ -33,7 +33,7 @@ www.{$DOMAIN} {
 	# Correto: prefixo `/api/admin/proxy*` (Caddy: /foo* casa /foo/bar/baz).
 	@admin_frontend path /api/admin/session /api/admin/proxy* /api/admin/revalidate-platform
 	handle @admin_frontend {
-		reverse_proxy web:3000
+		reverse_proxy eventosbr_web:3000
 	}
 
 	@api path /api/*
@@ -47,7 +47,7 @@ www.{$DOMAIN} {
 	}
 
 	handle {
-		reverse_proxy web:3000
+		reverse_proxy eventosbr_web:3000
 	}
 }
 
