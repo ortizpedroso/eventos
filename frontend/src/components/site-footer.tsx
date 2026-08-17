@@ -6,7 +6,6 @@ import { EventosBRLogo } from "@/components/eventosbr-logo";
 import { usePlatformSettings } from "@/components/platform-settings-provider";
 import { hrefCadastroOrganizador } from "@/lib/criar-evento-routes";
 import { formatTelefoneBrMask } from "@/lib/telefone-br";
-import { resolveWhatsappHref } from "@/lib/whatsapp-contato";
 
 function IconInstagram({ className }: { className?: string }) {
   return (
@@ -37,7 +36,7 @@ export function SiteFooter() {
 
   const socialLinks = [
     { href: socialLink(platform.social_instagram_url), label: "Instagram", Icon: IconInstagram },
-    { href: resolveWhatsappHref(platform), label: "WhatsApp", Icon: IconWhatsapp },
+    { href: socialLink(platform.social_whatsapp_url), label: "WhatsApp", Icon: IconWhatsapp },
     { href: socialLink(platform.social_linkedin_url), label: "LinkedIn" },
     { href: socialLink(platform.social_x_url), label: "X" },
     { href: socialLink(platform.social_youtube_url), label: "YouTube" },

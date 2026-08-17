@@ -1,12 +1,12 @@
 # Spec: EventosBR — Produção, produto e pagamentos
 
-**Versão:** 1.50.20
-**Data:** 2026-08-17
+**Versão:** 1.50.19
+**Data:** 2026-08-06
 **Comando:** `/build` implementa; `/review` valida contra este arquivo.
 
 > **Documento único** de referência para publicação do sistema. Substitui `repasse-asaas-pagamentos.md` e `patamar-completo-ux-produto.md`.
 >
-> **Esta versão (v1.50.20):** WhatsApp em `/contato` volta a abrir o número cadastrado (fallback `contact_phone`); link **Administração** visível na navbar para `is_platform_admin`; bootstrap concede admin ao `EMAIL_USER` quando ninguém tem o papel. §2.31.
+> **Esta versão (v1.50.19):** Login cliente **sem** desafio 2FA (2FA só no login de **organizador** opt-in; admin usa 2FA só no painel). Cancelamento de ingresso grátis/cortesia/PDV sem reembolso Asaas. Pausar evento com imagem legada via `PATCH …/publicado`. §2.30.
 >
 > **Produção (VPS):** tip **`2fc5927`** / v1.50.17 (pré-1.50.18). Repo **privado** + Deploy Key SSH.
 >
@@ -75,7 +75,7 @@ Migração: `20260730_000046_carrinho_promoters_galeria.py`. Testes: `test_lembr
 
 **Ficha técnica (opcional):** campos `classificacao_etaria` (livre | 12+ | 16+ | 18+), `o_que_levar`, `estacionamento` no criar/editar; página pública (`EventoFichaTecnica`) só mostra o que estiver preenchido — nunca placeholder genérico. Migração `20260731_000047_evento_ficha_tecnica.py`.
 
-**WhatsApp em /contato:** CTA complementar ao formulário via `social_whatsapp_url` das Configurações da plataforma (mesmo campo do rodapé); **fallback:** se `social_whatsapp_url` vazio, usa `contact_phone` (Telefone em Admin → Configurações) normalizado para `https://wa.me/55…` (`frontend/src/lib/whatsapp-contato.ts`); sem nenhum dos dois o botão não aparece.
+**WhatsApp em /contato:** CTA complementar ao formulário via `social_whatsapp_url` das Configurações da plataforma (mesmo campo do rodapé); sem URL configurada o botão não aparece.
 
 **Duplicar:** botão na listagem `/organizador/eventos` chama `POST /api/eventos/id/{id}/duplicar` (já existia); redireciona para editar a cópia; cópia nasce `publicado=false`.
 
@@ -307,38 +307,6 @@ Testes: `tests/test_cancelar_ingresso_gratis.py`.
 | Editar evento completo | `PATCH /api/eventos/id/{id}` | URL externa legada permitida se **inalterada** (`validar_imagem_url_se_alterada`, idem galeria) |
 
 Testes: `tests/test_evento_publicado_imagem_legada.py`.
-
-### 2.31 WhatsApp /contato e link Administração (v1.50.20)
-
-Recuperação de funcionalidades reportadas como ausentes após deploys no VPS.
-
-#### WhatsApp em `/contato`
-
-| Campo admin | Uso |
-|-------------|-----|
-| **Redes sociais → WhatsApp** (`social_whatsapp_url`) | Preferencial — `wa.me` normalizado no backend |
-| **Telefone** (`contact_phone`) | Fallback quando WhatsApp social vazio — mesmo número do rodapé vira link `wa.me` |
-
-Helper compartilhado: `resolveWhatsappHref()` — usado em `contato-whatsapp-cta.tsx` e `site-footer.tsx`.
-
-Testes: `tests/test_contato_whatsapp_cta.py`.
-
-#### Link «Administração» (dono da plataforma)
-
-| Onde | Condição |
-|------|----------|
-| Navbar — botão visível (`data-navbar-admin`) | `loggedIn` **e** `is_platform_admin` |
-| Navbar — dropdown da conta | idem (mantido) |
-| Menu ☰ mobile | idem |
-| Sidebar `/conta/*` e `/organizador/*` | idem (já existia) |
-
-Sessão inicializa `is_platform_admin`/`totp_ativado` a partir do cache de `/api/auth/me` (`peekSessionCache`) para não «piscar» sem o link.
-
-**Bootstrap admin:** no startup da API, se **zero** usuários têm `is_platform_admin=True`, concede o papel à conta cujo e-mail = `EMAIL_USER` do `.env` (`app/services/bootstrap_platform_admin.py`). Não revoga nem altera admins existentes. Alternativa manual: `scripts/set_platform_admin.py <email>`.
-
-Acesso ao painel continua exigindo **2FA ativo** (`totp_ativado`) — link sem 2FA leva a Perfil com `?ativar_2fa_admin=1`.
-
-Testes: `tests/test_bootstrap_platform_admin.py`, `tests/test_navbar_layout.py`.
 
 ### 2.29 Diagnóstico final — UI / UX / SEO / segurança (v1.50.18)
 
@@ -932,8 +900,8 @@ Ver spec dedicada: `specs/admin-integrado-usuario.md`. Resumo:
 - Acesso ao painel via **login normal** (e-mail/senha) exige `is_platform_admin=True` **e** `totp_ativado=True`; sem 2FA, acesso bloqueado com mensagem explicando o motivo (não é mais preciso colar a chave todo login).
 - `PLATFORM_ADMIN_API_KEY` mantida como **acesso de emergência** (sem exigir 2FA).
 - TOTP liberado para `tipo=organizador` **OU** `is_platform_admin=True` (antes só organizador podia ativar).
-- Gerenciamento: `PATCH /api/admin/usuarios/{id}/admin` — conceder/revogar o papel; primeiro admin via `scripts/set_platform_admin.py <email>` **ou** bootstrap automático ao `EMAIL_USER` quando ninguém tem admin (§2.31).
-- Item **«Administração»** visível na navbar (`data-navbar-admin`), dropdown da conta e menu mobile quando `is_platform_admin=true` (login normal não redireciona automaticamente ao painel — acesso manual pelo link).
+- Gerenciamento: `PATCH /api/admin/usuarios/{id}/admin` — conceder/revogar o papel; primeiro admin definido via `scripts/set_platform_admin.py <email>` (rodado manualmente uma vez).
+- Login de conta admin redireciona automaticamente para `/admin/dashboard` (`destinoPosAuth`). Item "Administração" aparece no dropdown do usuário (navbar) e no menu lateral (organizador/conta shells) quando `is_platform_admin=true`.
 
 ### 5.1.2 Roteamento Caddy + Next.js — lição aprendida (adicionado v1.11)
 
@@ -1144,8 +1112,8 @@ cd /opt/eventosbr && bash scripts/validar-go-live-vps.sh
 | Sessão expirada → login | `proxy.ts`, `lib/api.ts`, `lib/session-expired-cookie.ts`, `auth-client.tsx` |
 | White-label | `api-errors.ts`, `mensagens_publicas.py`, `documentacao/api/page.tsx`, `export-openapi.py` |
 | 2FA (organizador + admin) | `services/totp.py`, `services/organizador_2fa.py`, `components/seguranca-2fa.tsx`, `lib/admin-totp.ts`, `app/api/admin/session/route.ts` |
-| Admin integrado à conta | `deps/platform_admin.py`, `routes/admin.py` (`/usuarios/{id}/admin`), `scripts/set_platform_admin.py`, `services/bootstrap_platform_admin.py`, `components/tornar-organizador-card.tsx`, `specs/admin-integrado-usuario.md` |
-| Contato do evento / plataforma | `schemas/evento.py` (contato_telefone/email), `models/platform_settings.py`, `routes/public.py` (`/contato`), `lib/whatsapp-contato.ts`, `components/contato-whatsapp-cta.tsx`, `app/contato/` |
+| Admin integrado à conta | `deps/platform_admin.py`, `routes/admin.py` (`/usuarios/{id}/admin`), `scripts/set_platform_admin.py`, `components/tornar-organizador-card.tsx`, `specs/admin-integrado-usuario.md` |
+| Contato do evento / plataforma | `schemas/evento.py` (contato_telefone/email), `models/platform_settings.py`, `routes/public.py` (`/contato`), `app/contato/` |
 | PDV presencial + correção | `services/pdv_presencial.py`, `services/pdv_correcao.py`, `services/conta_cliente.py`, `routes/eventos.py` (`/pdv`, `/pdv/vendas/*`), `pdv-presencial-client.tsx` |
 | Compressão de imagem | `lib/comprimir-imagem.ts` (navegador), `utils/imagem_processamento.py` (servidor, Pillow) |
 | CAPTCHA | `services/turnstile.py`, `components/turnstile-widget.tsx` |
@@ -1233,22 +1201,6 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 | **v1.50.17.1** | tip `2fc5927` | **APROVADA** — deploy VPS confirmado |
 | **v1.50.18** | tip `9b11bef` | **APROVADA** — diagnóstico + fixes |
 | **v1.50.18.1 (este)** | tip `6cfb9ef` | **APROVADA** — rodapé sem sublinhado |
-| **v1.50.20 (este)** | branch `cursor/recover-whatsapp-admin-126d` | **APROVADA** — WhatsApp /contato + Administração (§2.31) |
-
-### 11.1 Requisitos recentes — resultado (v1.50.20)
-
-| Spec | Requisito | Resultado |
-|------|-----------|-----------|
-| §2.31 | WhatsApp `/contato` via `social_whatsapp_url` | **PASS** |
-| §2.31 | Fallback `contact_phone` → `wa.me` quando social vazio | **PASS** |
-| §2.31 | Rodapé WhatsApp usa mesmo helper | **PASS** |
-| §2.31 | Link «Administração» visível na navbar (`data-navbar-admin`) | **PASS** |
-| §2.31 | Link no menu mobile ☰ para admin | **PASS** |
-| §2.31 | Bootstrap admin ao `EMAIL_USER` se zero admins | **PASS** |
-| §2.31 | Navbar inicializa `is_platform_admin` do cache de sessão | **PASS** |
-| §7 | `pytest` verde | **PASS** |
-| §7 | `npm run build` frontend | **PASS** |
-| `/review` | Código × spec §2.31 | **APROVADA** |
 
 ### 11.1 Requisitos recentes — resultado (v1.50.18.1)
 
@@ -1812,7 +1764,6 @@ Antecipação automática de cartão, cancelamento de saque, mock E2E (`ASAAS_E2
 
 | Versão | Data | Mudanças |
 |---|---|---|
-| 1.50.20 | 2026-08-17 | **WhatsApp /contato + Administração.** §2.31: CTA WhatsApp com fallback `contact_phone`; link Administração visível na navbar/mobile; bootstrap `is_platform_admin` ao `EMAIL_USER` se zero admins; cache de sessão no navbar. Testes: `test_contato_whatsapp_cta`, `test_bootstrap_platform_admin`, `test_navbar_layout`. `/review` **APROVADA**. |
 | 1.50.19 | 2026-08-06 | **Login + cancelamento + pausar evento.** §2.30: 2FA no login só organizador; cliente/admin entram sem código (2FA só no painel admin); cancelamento cortesia/R$0/PDV sem Asaas; `PATCH …/publicado` para pausar sem revalidar imagem legada; UX `/conta/pagamentos`. Testes: `test_cancelar_ingresso_gratis`, `test_evento_publicado_imagem_legada`, `test_admin_integrado_usuario`. `/review` **APROVADA**. |
 | 1.50.14.3 | 2026-08-05 | **Redeploy VPS tip final.** Tip produção **`49612a6`** (API+Web). `/ready` OK; verificação produção OK. Meta adiados; bkp mantidos. |
 | 1.50.14.2 | 2026-08-05 | **Deploy VPS confirmado.** Tip produção **`93c35bd`** (depois atualizado). Meta Pixel/GTM adiado até lançar Ads. Backups `cursor/bkp-*` guardados. |

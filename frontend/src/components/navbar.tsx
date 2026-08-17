@@ -89,10 +89,8 @@ export function Navbar() {
   const [loggedIn, setLoggedIn] = useState(() => peekSessionCache() != null);
   const [userNome, setUserNome] = useState<string | null>(() => peekSessionCache()?.nome ?? null);
   const [userTipo, setUserTipo] = useState<string | null>(() => peekSessionCache()?.tipo ?? null);
-  const [isPlatformAdmin, setIsPlatformAdmin] = useState(() =>
-    Boolean(peekSessionCache()?.is_platform_admin),
-  );
-  const [totpAtivado, setTotpAtivado] = useState(() => Boolean(peekSessionCache()?.totp_ativado));
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [totpAtivado, setTotpAtivado] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuPos, setAccountMenuPos] = useState({ top: 0, right: 0 });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -130,8 +128,6 @@ export function Navbar() {
       setLoggedIn(false);
       setUserNome(null);
       setUserTipo(null);
-      setIsPlatformAdmin(false);
-      setTotpAtivado(false);
       setMenuOpen(false);
       setMobileNavOpen(false);
       router.push("/");
@@ -288,15 +284,6 @@ export function Navbar() {
   function AuthActions() {
     return (
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-3" data-navbar-auth>
-        {loggedIn && isPlatformAdmin ? (
-          <Link
-            href={hrefAdmin}
-            className={`${navItemClass} hidden rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-sm font-semibold text-emerald-900 transition hover:border-emerald-300 hover:bg-emerald-100 sm:inline-flex`}
-            data-navbar-admin
-          >
-            Administração
-          </Link>
-        ) : null}
         {loggedIn ? (
           <div className="relative shrink-0">
             <button
@@ -428,16 +415,6 @@ export function Navbar() {
                 <Link href="/sobre" className={mobileLink} onClick={() => setMobileNavOpen(false)}>
                   Sobre
                 </Link>
-                {loggedIn && isPlatformAdmin ? (
-                  <Link
-                    href={hrefAdmin}
-                    className={`${mobileLink} font-semibold text-emerald-900`}
-                    onClick={() => setMobileNavOpen(false)}
-                    data-navbar-admin
-                  >
-                    Administração
-                  </Link>
-                ) : null}
               </div>
             </nav>
           ) : null}
