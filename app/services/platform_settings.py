@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.platform_settings import PlatformSettings
 from app.schemas.platform_settings import PlatformSettingsPublic, PlatformSettingsUpdate
 from app.utils.url_publica import normalizar_url_whatsapp
+from config.settings import settings
 
 SETTINGS_ID = "default"
 
@@ -28,7 +29,10 @@ def _defaults() -> dict[str, str | None]:
         "site_tagline": _DEFAULT_TAGLINE,
         "footer_description": _DEFAULT_FOOTER,
         "contact_email": _env("NEXT_PUBLIC_EMAIL_CONTATO") or _env("EMAIL_USER"),
-        "contact_phone": _env("NEXT_PUBLIC_TELEFONE_CONTATO"),
+        "contact_phone": _env("TELEFONE_CONTATO")
+        or _env("NEXT_PUBLIC_TELEFONE_CONTATO")
+        or (settings.TELEFONE_CONTATO or "").strip()
+        or None,
         "support_email": _env("NEXT_PUBLIC_EMAIL_DENUNCIAS"),
         "logo_url": _env("NEXT_PUBLIC_LOGO_URL"),
         "logo_light_url": None,

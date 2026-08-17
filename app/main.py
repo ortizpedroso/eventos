@@ -74,9 +74,11 @@ async def lifespan(app: FastAPI):
         try:
             from config.database import SessionLocal
             from app.services.bootstrap_platform_admin import ensure_platform_owner_admin
+            from app.services.bootstrap_platform_contact import ensure_platform_contact_from_env
 
             db = SessionLocal()
             try:
+                ensure_platform_contact_from_env(db)
                 ensure_platform_owner_admin(db)
             finally:
                 db.close()

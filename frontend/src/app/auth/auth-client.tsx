@@ -16,7 +16,7 @@ import {
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import type { LoginTotpChallenge, TokenResponse, Usuario } from "@/lib/types";
 import { trackAnalyticsEvent } from "@/lib/analytics";
-import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
+import { apiFetch, fetchSession, peekSessionCache, seedSessionCache } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import { onlyDigits } from "@/lib/cpf";
 import { formatTelefoneBrMask } from "@/lib/telefone-br";
@@ -186,6 +186,7 @@ export default function AuthClient({
       setError("Resposta de autenticação incompleta.");
       return;
     }
+    seedSessionCache(data.usuario);
     dispatchAuthSync();
     const next =
       nextParam ||

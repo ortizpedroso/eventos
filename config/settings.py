@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     EMAIL_USER: str = ""
     EMAIL_PASSWORD: str = ""
     EMAIL_FROM_NAME: str = "EventosBR"
+    # Telefone público da plataforma (rodapé, /contato). NEXT_PUBLIC_* é alias legado.
+    TELEFONE_CONTATO: str = ""
+    # E-mail da conta de login do proprietário (admin da plataforma). Se vazio, usa EMAIL_USER.
+    PLATFORM_OWNER_EMAIL: str = ""
     # STARTTLS na porta 587 (Gmail, Hostinger). false só para relay local sem TLS.
     EMAIL_USE_TLS: bool = True
     # SSL implícito na porta 465 (Hostinger). Se true, ignora STARTTLS.

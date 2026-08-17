@@ -10,6 +10,11 @@ export function peekSessionCache(): Usuario | null | undefined {
   return sessionCache;
 }
 
+/** Atualiza cache após login/registro — evita menu admin atrasado até o próximo /me. */
+export function seedSessionCache(user: Usuario | null): void {
+  sessionCache = user;
+}
+
 export function clearSessionCache(): void {
   sessionCache = undefined;
 }

@@ -13,6 +13,8 @@ ORG_SHELL = Path("frontend/src/app/organizador/organizador-shell.tsx").read_text
 
 def test_contato_usa_cta_whatsapp_da_plataforma():
     assert "ContatoWhatsappCta" in CONTATO_PAGE
+    assert "fetchPlatformSettings" in CONTATO_PAGE
+    assert "initialHref" in CONTATO_PAGE
     assert "resolveWhatsappHref" in CTA
     assert "contact_phone" in RESOLVER
     assert "11999999999" not in CTA

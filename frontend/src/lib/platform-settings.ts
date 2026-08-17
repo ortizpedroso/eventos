@@ -27,7 +27,10 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   footer_description:
     "Ingressos, reembolsos e repasses com transparência — do primeiro clique ao dia do evento.",
   contact_email: process.env.NEXT_PUBLIC_EMAIL_CONTATO?.trim() || null,
-  contact_phone: null,
+  contact_phone:
+    process.env.NEXT_PUBLIC_TELEFONE_CONTATO?.trim() ||
+    process.env.TELEFONE_CONTATO?.trim() ||
+    null,
   support_email: process.env.NEXT_PUBLIC_EMAIL_DENUNCIAS?.trim() || null,
   logo_url: process.env.NEXT_PUBLIC_LOGO_URL?.trim() || null,
   logo_light_url: null,

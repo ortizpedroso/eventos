@@ -89,8 +89,10 @@ export function Navbar() {
   const [loggedIn, setLoggedIn] = useState(() => peekSessionCache() != null);
   const [userNome, setUserNome] = useState<string | null>(() => peekSessionCache()?.nome ?? null);
   const [userTipo, setUserTipo] = useState<string | null>(() => peekSessionCache()?.tipo ?? null);
-  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
-  const [totpAtivado, setTotpAtivado] = useState(false);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(() =>
+    Boolean(peekSessionCache()?.is_platform_admin),
+  );
+  const [totpAtivado, setTotpAtivado] = useState(() => Boolean(peekSessionCache()?.totp_ativado));
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuPos, setAccountMenuPos] = useState({ top: 0, right: 0 });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);

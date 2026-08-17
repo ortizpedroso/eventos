@@ -11,10 +11,15 @@ function IconWhatsapp({ className }: { className?: string }) {
   );
 }
 
+type Props = {
+  /** Href resolvido no SSR (fetchPlatformSettings) — evita botão ausente no primeiro paint. */
+  initialHref?: string | null;
+};
+
 /** CTA WhatsApp em /contato — mesmo número da plataforma (rodapé / telefone de contato). */
-export function ContatoWhatsappCta() {
+export function ContatoWhatsappCta({ initialHref = null }: Props) {
   const platform = usePlatformSettings();
-  const href = resolveWhatsappHref(platform);
+  const href = resolveWhatsappHref(platform) ?? initialHref;
   if (!href) return null;
 
   return (
