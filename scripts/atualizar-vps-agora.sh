@@ -161,6 +161,11 @@ echo ""
 echo "[8/9] Web + Caddy..."
 docker compose -f "$COMPOSE" up -d --force-recreate web caddy
 
+CADDY_CID="$(docker compose -f "$COMPOSE" ps -q caddy 2>/dev/null || true)"
+if [ -n "$CADDY_CID" ]; then
+  docker exec "$CADDY_CID" caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true
+fi
+
 sleep 15
 docker compose -f "$COMPOSE" ps
 
@@ -244,6 +249,16 @@ fi
 
 if [ -x ./scripts/verify-production.sh ]; then
   ./scripts/verify-production.sh || echo "  AVISO: verify-production retornou erro — revise manualmente"
+fi
+
+if [ -x ./scripts/verificar-roteamento-caddy.sh ]; then
+  echo ""
+  if ./scripts/verificar-roteamento-caddy.sh "$DOMAIN"; then
+    echo "  OK  roteamento EventosBR vs SIGEP"
+  else
+    echo "  FALHA  roteamento EventosBR vs SIGEP (colisão DNS ou Caddy desatualizado)"
+    ok=1
+  fi
 fi
 
 echo ""

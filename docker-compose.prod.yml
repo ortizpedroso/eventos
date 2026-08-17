@@ -79,6 +79,10 @@ services:
       - eventosbr_internal
 
   web:
+    # Nome fixo no DNS Docker — evita colisão com o serviço `web` do SIGEP na mesma
+    # rede (round-robin no Caddy). O alias `eventosbr_web` sozinho ainda pode falhar
+    # durante recriação de containers; container_name resolve para UM IP sempre.
+    container_name: eventosbr-web
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -105,11 +109,7 @@ services:
         condition: service_healthy
     networks:
       eventosbr_internal:
-        # Alias EXCLUSIVO do web do EventosBR. Outro app no mesmo VPS (SIGEP /
-        # metrica_web) entra nesta rede respondendo também pelo nome "web"
-        # (hostname do container dele), o que fazia o `reverse_proxy web:3000`
-        # do Caddy alternar (round-robin DNS) entre EventosBR e SIGEP. O Caddy
-        # passa a usar `eventosbr_web` (nome que só este serviço responde).
+        # Alias legado (scripts/diagnóstico). Upstream do Caddy: container_name acima.
         aliases:
           - eventosbr_web
 

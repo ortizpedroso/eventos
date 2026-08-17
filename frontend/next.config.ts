@@ -64,6 +64,12 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        // EventosBR usa /auth; /login é rota do SIGEP — redireciona links antigos/errados.
+        source: "/login",
+        destination: "/auth?login=1",
+        permanent: true,
+      },
+      {
         source: "/evento/:slug",
         destination: "/eventos/:slug",
         permanent: true,

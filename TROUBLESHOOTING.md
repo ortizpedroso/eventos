@@ -271,6 +271,36 @@ docker compose -f docker-compose.prod.yml up -d --build api
 
 ---
 
+## eventosbr.app.br mostra página do SIGEP (ex.: `/login`)
+
+**Sintoma:** ao atualizar o site várias vezes, `https://eventosbr.app.br/login` (ou às vezes a home) exibe o SIGEP em vez do EventosBR. O EventosBR autentica em **`/auth`**, não em `/login` — `/login` é rota típica do SIGEP, o que confirma vazamento de backend.
+
+**Causa:** no mesmo VPS, o Caddy do EventosBR e o frontend do SIGEP partilham a rede Docker. Dois containers respondiam pelo hostname genérico `web`; o `reverse_proxy web:3000` fazia **round-robin DNS** entre EventosBR e SIGEP.
+
+**Correção (a partir do commit com `container_name: eventosbr-web`):**
+
+```bash
+cd /opt/eventosbr
+git fetch origin && git reset --hard origin/main
+docker compose -f docker-compose.prod.yml up -d --force-recreate web caddy
+docker exec "$(docker compose -f docker-compose.prod.yml ps -q caddy)" \
+  caddy reload --config /etc/caddy/Caddyfile
+./scripts/verificar-roteamento-caddy.sh
+```
+
+O script confirma:
+
+- Caddy usa `eventosbr-web:3000` (não `web:3000`)
+- DNS `eventosbr-web` resolve para **um** IP
+- `/login` redireciona para `/auth?login=1` (301/308)
+- Amostragem de `/` sem HTML do SIGEP
+
+**No SIGEP:** o bloco `sigep.inovesw.com.br` no `deploy/caddy/Caddyfile` deve usar `metrica_web:3000`. Nunca altere o bloco `{$DOMAIN}` do EventosBR para apontar a `web:3000`.
+
+Se usar **Cloudflare** (proxy laranja), purgue o cache de `eventosbr.app.br/login` após corrigir o VPS — respostas antigas do SIGEP podem ficar cacheadas por URL.
+
+---
+
 ## Site “fora do ar” / lista de eventos vazia / erros ao fazer login
 
 O **Next** (porta **3000**) e a **API FastAPI** (porta **8000**) são **dois processos**. O site precisa dos **dois** a correr (ou Docker com `web` + `api`).

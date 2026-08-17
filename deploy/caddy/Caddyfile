@@ -4,6 +4,7 @@
 # /api/admin/session e /api/admin/proxy/* (qualquer profundidade) → Next.js
 # /api/* (resto) → API FastAPI (pagamentos, webhooks Asaas, etc.)
 # /health e /ready → readiness/liveness para monitoramento externo
+# /login → redirect permanente para /auth (EventosBR não usa /login; evita cair no SIGEP)
 # resto → Next.js
 {
 	email {$ACME_EMAIL}
@@ -16,6 +17,13 @@ www.{$DOMAIN} {
 
 {$DOMAIN} {
 	encode gzip zstd
+
+	# EventosBR autentica em /auth — /login é rota do SIGEP. Redireciona na borda
+	# (antes de qualquer reverse_proxy) para nunca servir HTML errado nesse caminho.
+	@legacy_login path /login /login/*
+	handle @legacy_login {
+		redir * /auth?login=1 permanent
+	}
 
 	@health path /health /ready
 	handle @health {
@@ -33,7 +41,7 @@ www.{$DOMAIN} {
 	# Correto: prefixo `/api/admin/proxy*` (Caddy: /foo* casa /foo/bar/baz).
 	@admin_frontend path /api/admin/session /api/admin/proxy* /api/admin/revalidate-platform
 	handle @admin_frontend {
-		reverse_proxy eventosbr_web:3000
+		reverse_proxy eventosbr-web:3000
 	}
 
 	@api path /api/*
@@ -47,7 +55,7 @@ www.{$DOMAIN} {
 	}
 
 	handle {
-		reverse_proxy eventosbr_web:3000
+		reverse_proxy eventosbr-web:3000
 	}
 }
 
