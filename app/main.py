@@ -71,14 +71,19 @@ async def lifespan(app: FastAPI):
 
     log_production_warnings()
     if settings.ENVIRONMENT != "test":
-        from app.models import SessionLocal
-        from app.services.bootstrap_platform_admin import ensure_platform_owner_admin
-
-        db = SessionLocal()
         try:
-            ensure_platform_owner_admin(db)
-        finally:
-            db.close()
+            from config.database import SessionLocal
+            from app.services.bootstrap_platform_admin import ensure_platform_owner_admin
+
+            db = SessionLocal()
+            try:
+                ensure_platform_owner_admin(db)
+            finally:
+                db.close()
+        except Exception:
+            logger.exception(
+                "bootstrap_platform_admin falhou — API continua (use set_platform_admin.py)"
+            )
     # Em ENVIRONMENT=test o TestClient sobe o lifespan em vários módulos.
     # Workers em background competem com os testes de fila confiável quando
     # esses testes monkeypatcham ENVIRONMENT/REDIS_URL: o mesmo thread passa a
