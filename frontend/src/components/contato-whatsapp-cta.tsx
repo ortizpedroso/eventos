@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlatformSettings } from "@/components/platform-settings-provider";
+import { resolveWhatsappHref } from "@/lib/whatsapp-contato";
 
 function IconWhatsapp({ className }: { className?: string }) {
   return (
@@ -10,11 +11,11 @@ function IconWhatsapp({ className }: { className?: string }) {
   );
 }
 
-/** CTA WhatsApp em /contato — só aparece se a plataforma tiver social_whatsapp_url configurado. */
+/** CTA WhatsApp em /contato — usa social_whatsapp_url ou telefone de contato da plataforma. */
 export function ContatoWhatsappCta() {
   const platform = usePlatformSettings();
-  const href = platform.social_whatsapp_url?.trim() || "";
-  if (!href || href === "#") return null;
+  const href = resolveWhatsappHref(platform);
+  if (!href) return null;
 
   return (
     <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
