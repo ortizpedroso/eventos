@@ -261,6 +261,16 @@ if [ -x ./scripts/verificar-roteamento-caddy.sh ]; then
   fi
 fi
 
+if [ -x ./scripts/post-deploy-contato-admin.sh ]; then
+  echo ""
+  if ./scripts/post-deploy-contato-admin.sh; then
+    echo "  OK  pós-deploy contato/admin"
+  else
+    echo "  FALHA  pós-deploy contato/admin"
+    ok=1
+  fi
+fi
+
 echo ""
 if [ "$ok" -eq 0 ]; then
   echo "✅ SITE NO AR: https://${DOMAIN}"

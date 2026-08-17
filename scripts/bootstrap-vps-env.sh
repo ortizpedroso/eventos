@@ -47,6 +47,10 @@ if [ -f "$ENV_FILE" ]; then
     old_turnstile_secret="$(env_get TURNSTILE_SECRET_KEY "$ENV_FILE" || true)"
   fi
   old_turnstile_site="$(env_get NEXT_PUBLIC_TURNSTILE_SITE_KEY "$ENV_FILE" || true)"
+  old_telefone="$(env_get TELEFONE_CONTATO "$ENV_FILE" || true)"
+  old_telefone_pub="$(env_get NEXT_PUBLIC_TELEFONE_CONTATO "$ENV_FILE" || true)"
+  old_whatsapp="$(env_get NEXT_PUBLIC_SOCIAL_WHATSAPP_URL "$ENV_FILE" || true)"
+  old_owner="$(env_get PLATFORM_OWNER_EMAIL "$ENV_FILE" || true)"
 fi
 
 SECRET_KEY="$(env_get SECRET_KEY "$ENV_FILE" || true)"
@@ -130,6 +134,13 @@ _write_env "EMAIL_PASSWORD"               "$EMAIL_PASSWORD"
 _write_env "EMAIL_FROM_NAME"              "EventosBR"
 _write_env "EMAIL_USE_TLS"                "false"
 _write_env "EMAIL_USE_SSL"                "true"
+printf '\n' >> "$ENV_FILE"
+
+_write_env "NEXT_PUBLIC_EMAIL_CONTATO"    "contato@${DOMAIN}"
+_write_env "TELEFONE_CONTATO"             "${old_telefone:-}"
+_write_env "NEXT_PUBLIC_TELEFONE_CONTATO" "${old_telefone_pub:-${old_telefone:-}}"
+_write_env "NEXT_PUBLIC_SOCIAL_WHATSAPP_URL" "${old_whatsapp:-}"
+_write_env "PLATFORM_OWNER_EMAIL"         "${old_owner:-contato@${DOMAIN}}"
 printf '\n' >> "$ENV_FILE"
 
 _write_env "REDIS_URL"                    "redis://redis:6379"

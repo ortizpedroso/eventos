@@ -101,6 +101,10 @@ echo ""
 echo "[8/8] Estado dos containers"
 docker compose -f "$COMPOSE" ps
 
+if [ -x ./scripts/post-deploy-contato-admin.sh ]; then
+  ./scripts/post-deploy-contato-admin.sh
+fi
+
 echo ""
 echo "✅ Branch $BRANCH no ar: https://${DOMAIN}"
 echo "   Para voltar à main: ./scripts/atualizar-vps-agora.sh"

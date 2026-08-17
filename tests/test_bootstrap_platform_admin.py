@@ -133,3 +133,36 @@ def test_bootstrap_contact_phone_from_env(monkeypatch):
         assert pub.social_whatsapp_url == "https://wa.me/5511987654321"
     finally:
         db.close()
+
+
+def test_discover_contact_from_telefone_do_dono(monkeypatch):
+    monkeypatch.delenv("TELEFONE_CONTATO", raising=False)
+    monkeypatch.delenv("NEXT_PUBLIC_TELEFONE_CONTATO", raising=False)
+    monkeypatch.setattr(settings, "TELEFONE_CONTATO", "")
+    email = f"dono_tel_{uuid.uuid4().hex[:8]}@eventosbr.app.br"
+    monkeypatch.setattr(settings, "EMAIL_USER", email)
+    db = TestingSessionLocal()
+    try:
+        row = db.get(PlatformSettings, "default")
+        if row:
+            row.contact_phone = None
+            row.social_whatsapp_url = None
+            db.commit()
+
+        db.add(
+            Usuario(
+                email=email,
+                nome="Dono",
+                senha_hash=hash_password("senha-forte-123"),
+                tipo="organizador",
+                telefone="11988776655",
+            )
+        )
+        db.commit()
+
+        ensure_platform_contact_from_env(db)
+        pub = get_public_settings(db)
+        assert pub.contact_phone == "11988776655"
+        assert pub.social_whatsapp_url == "https://wa.me/5511988776655"
+    finally:
+        db.close()
