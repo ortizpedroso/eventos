@@ -75,7 +75,7 @@ Migração: `20260730_000046_carrinho_promoters_galeria.py`. Testes: `test_lembr
 
 **Ficha técnica (opcional):** campos `classificacao_etaria` (livre | 12+ | 16+ | 18+), `o_que_levar`, `estacionamento` no criar/editar; página pública (`EventoFichaTecnica`) só mostra o que estiver preenchido — nunca placeholder genérico. Migração `20260731_000047_evento_ficha_tecnica.py`.
 
-**WhatsApp em /contato:** CTA complementar ao formulário via `social_whatsapp_url` das Configurações da plataforma (mesmo campo do rodapé); sem URL configurada o botão não aparece.
+**WhatsApp em /contato:** CTA acima do formulário com o **mesmo telefone da plataforma** do rodapé (`contact_phone`); se houver `social_whatsapp_url` separado, ele tem prioridade. Sem telefone configurado o botão não aparece.
 
 **Duplicar:** botão na listagem `/organizador/eventos` chama `POST /api/eventos/id/{id}/duplicar` (já existia); redireciona para editar a cópia; cópia nasce `publicado=false`.
 

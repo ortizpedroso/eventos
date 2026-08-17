@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlatformSettings } from "@/components/platform-settings-provider";
+import { resolveWhatsappHref } from "@/lib/whatsapp-contato";
 
 function IconWhatsapp({ className }: { className?: string }) {
   return (
@@ -10,17 +11,18 @@ function IconWhatsapp({ className }: { className?: string }) {
   );
 }
 
-/** CTA WhatsApp em /contato — só aparece se a plataforma tiver social_whatsapp_url configurado. */
+/** CTA WhatsApp em /contato — mesmo número da plataforma (rodapé / telefone de contato). */
 export function ContatoWhatsappCta() {
   const platform = usePlatformSettings();
-  const href = platform.social_whatsapp_url?.trim() || "";
-  if (!href || href === "#") return null;
+  const href = resolveWhatsappHref(platform);
+  if (!href) return null;
 
   return (
     <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
       <p className="text-sm font-medium text-emerald-950">Prefere falar pelo WhatsApp?</p>
       <p className="mt-1 text-sm text-emerald-900/80">
-        O formulário continua disponível — este canal é um atalho opcional.
+        Se quiser resposta mais rápida, fale direto conosco pelo WhatsApp da plataforma. O
+        formulário abaixo continua disponível.
       </p>
       <a
         href={href}

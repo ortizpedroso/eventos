@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.platform_settings import PlatformSettings
 from app.schemas.platform_settings import PlatformSettingsPublic, PlatformSettingsUpdate
+from app.utils.url_publica import normalizar_url_whatsapp
 
 SETTINGS_ID = "default"
 
@@ -44,10 +45,22 @@ def _defaults() -> dict[str, str | None]:
     }
 
 
+def _with_platform_whatsapp(pub: PlatformSettingsPublic) -> PlatformSettingsPublic:
+    """WhatsApp da plataforma = social_whatsapp_url ou o mesmo telefone de contato."""
+    if (pub.social_whatsapp_url or "").strip():
+        return pub
+    if not pub.contact_phone:
+        return pub
+    wa = normalizar_url_whatsapp(pub.contact_phone)
+    if not wa:
+        return pub
+    return pub.model_copy(update={"social_whatsapp_url": wa})
+
+
 def _merge_row(row: PlatformSettings | None) -> PlatformSettingsPublic:
     d = _defaults()
     if row is None:
-        return PlatformSettingsPublic(**d)  # type: ignore[arg-type]
+        return _with_platform_whatsapp(PlatformSettingsPublic(**d))  # type: ignore[arg-type]
 
     def pick(field: str) -> str | None:
         val = getattr(row, field, None)
@@ -55,25 +68,27 @@ def _merge_row(row: PlatformSettings | None) -> PlatformSettingsPublic:
             return d.get(field)  # type: ignore[return-value]
         return val
 
-    return PlatformSettingsPublic(
-        site_name=row.site_name or d["site_name"],  # type: ignore[arg-type]
-        site_tagline=pick("site_tagline"),
-        footer_description=pick("footer_description"),
-        contact_email=pick("contact_email"),
-        contact_phone=pick("contact_phone"),
-        support_email=pick("support_email"),
-        logo_url=pick("logo_url"),
-        logo_light_url=pick("logo_light_url"),
-        favicon_url=pick("favicon_url"),
-        primary_color=row.primary_color or d["primary_color"],  # type: ignore[arg-type]
-        primary_color_dark=row.primary_color_dark or d["primary_color_dark"],  # type: ignore[arg-type]
-        social_instagram_url=pick("social_instagram_url"),
-        social_whatsapp_url=pick("social_whatsapp_url"),
-        social_linkedin_url=pick("social_linkedin_url"),
-        social_x_url=pick("social_x_url"),
-        social_youtube_url=pick("social_youtube_url"),
-        meta_pixel_id=pick("meta_pixel_id"),
-        gtm_id=pick("gtm_id"),
+    return _with_platform_whatsapp(
+        PlatformSettingsPublic(
+            site_name=row.site_name or d["site_name"],  # type: ignore[arg-type]
+            site_tagline=pick("site_tagline"),
+            footer_description=pick("footer_description"),
+            contact_email=pick("contact_email"),
+            contact_phone=pick("contact_phone"),
+            support_email=pick("support_email"),
+            logo_url=pick("logo_url"),
+            logo_light_url=pick("logo_light_url"),
+            favicon_url=pick("favicon_url"),
+            primary_color=row.primary_color or d["primary_color"],  # type: ignore[arg-type]
+            primary_color_dark=row.primary_color_dark or d["primary_color_dark"],  # type: ignore[arg-type]
+            social_instagram_url=pick("social_instagram_url"),
+            social_whatsapp_url=pick("social_whatsapp_url"),
+            social_linkedin_url=pick("social_linkedin_url"),
+            social_x_url=pick("social_x_url"),
+            social_youtube_url=pick("social_youtube_url"),
+            meta_pixel_id=pick("meta_pixel_id"),
+            gtm_id=pick("gtm_id"),
+        )
     )
 
 

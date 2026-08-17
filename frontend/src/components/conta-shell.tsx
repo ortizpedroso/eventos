@@ -5,7 +5,8 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { fetchSession } from "@/lib/api";
+import { fetchSession, peekSessionCache } from "@/lib/api";
+import { AUTH_SYNC_EVENT } from "@/lib/auth-sync";
 
 const LINKS = [
   { href: "/conta/perfil", label: "Perfil" },
@@ -23,14 +24,21 @@ function isActive(pathname: string, href: string) {
 
 export function ContaShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [ehAdminPlataforma, setEhAdminPlataforma] = useState(false);
-  const [totpAtivado, setTotpAtivado] = useState(false);
+  const [ehAdminPlataforma, setEhAdminPlataforma] = useState(() =>
+    Boolean(peekSessionCache()?.is_platform_admin),
+  );
+  const [totpAtivado, setTotpAtivado] = useState(() => Boolean(peekSessionCache()?.totp_ativado));
 
   useEffect(() => {
-    void fetchSession().then((u) => {
+    async function syncSession() {
+      const u = await fetchSession();
       setEhAdminPlataforma(Boolean(u?.is_platform_admin));
       setTotpAtivado(Boolean(u?.totp_ativado));
-    });
+    }
+    const onSync = () => void syncSession();
+    void syncSession();
+    window.addEventListener(AUTH_SYNC_EVENT, onSync);
+    return () => window.removeEventListener(AUTH_SYNC_EVENT, onSync);
   }, []);
 
   // Spec admin-integrado-usuario.md §3.5: sem 2FA, o item continua visível mas
