@@ -55,5 +55,9 @@ def test_gitignore_graphify():
 
 
 def test_next_minimo_16_3():
-    pkg = (ROOT / "frontend/package.json").read_text(encoding="utf-8")
-    assert '"next": "16.3.0"' in pkg or '"next": "^16.3.0"' in pkg
+    import json
+
+    pkg = json.loads((ROOT / "frontend/package.json").read_text(encoding="utf-8"))
+    versao = pkg["dependencies"]["next"].lstrip("^~")
+    major, minor = (int(x) for x in versao.split(".")[:2])
+    assert (major, minor) >= (16, 3), versao

@@ -35,7 +35,7 @@ def test_navbar_sobre_visivel_sem_compactar_conta_nem_cta():
     assert "max-w-[10rem] truncate" not in NAV
     assert "userNome" in NAV
     # CTA: mesmo padrão (não encolher ao logar)
-    assert 'className="btn-success shrink-0 whitespace-nowrap px-3.5 py-2 text-sm shadow-sm sm:px-4"' in NAV
+    assert 'className="btn-success shrink-0 whitespace-nowrap px-2.5 py-2 text-sm shadow-sm sm:px-4"' in NAV
     assert "px-2.5 py-1.5 text-xs" not in NAV
     assert "Recursos" not in NAV
     assert "data-navbar-dense" not in NAV

@@ -70,7 +70,7 @@ jobs:
           NEXT_PUBLIC_PAYMENT_PROVIDER: asaas
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.60 não suporta Ubuntu 26.04 (ubuntu-latest)
     needs: web
     defaults:
       run:
@@ -134,7 +134,7 @@ jobs:
           echo "docker-compose.prod.yml OK"
 
   e2e-compra:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.60 não suporta Ubuntu 26.04 (ubuntu-latest)
     needs: [api, web]
     steps:
       - uses: actions/checkout@v4
@@ -173,7 +173,7 @@ jobs:
           PLAYWRIGHT_API_URL: http://127.0.0.1:8000
 
   e2e-asaas:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.60 não suporta Ubuntu 26.04 (ubuntu-latest)
     needs: [api, web]
     steps:
       - uses: actions/checkout@v4
