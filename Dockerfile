@@ -23,7 +23,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 ARG GIT_COMMIT=dev
 COPY . .
 ENV GIT_COMMIT=$GIT_COMMIT
-RUN chown -R appuser:appuser /app
+# /app/uploads precisa existir na imagem com dono appuser: um volume nomeado vazio
+# herda o dono do ponto de montagem. Sem isso o Docker cria o volume como root e
+# o upload de imagens falha com PermissionError ("Não foi possível gravar a imagem").
+RUN mkdir -p /app/uploads && chown -R appuser:appuser /app
 
 USER appuser
 
