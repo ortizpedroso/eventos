@@ -28,7 +28,7 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     const senha = "senha12345";
     const cpf = "52998224725";
 
-    await page.goto("/auth?mode=register", { waitUntil: "networkidle" });
+    await page.goto(`/auth?mode=register&next=${encodeURIComponent(`/eventos/${slug}`)}`, { waitUntil: "networkidle" });
     await page.waitForSelector("form[data-auth-ready=true]", { timeout: 15_000 });
     await page.locator("#email").fill(email);
     await page.locator("#nome").fill("Cliente Asaas E2E");
@@ -51,7 +51,7 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
 
     await page.getByTestId("checkout-continuar").click();
 
-    await expect(page.getByText(/Pagamento seguro/i).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Pagamento online via Asaas/i).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Stripe/i)).not.toBeVisible();
 
     await expect(page.getByRole("button", { name: /Pagar .* com PIX/i })).toBeVisible({ timeout: 30_000 });
@@ -79,7 +79,7 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     const senha = "senha12345";
     const cpf = "52998224725";
 
-    await page.goto("/auth?mode=register", { waitUntil: "networkidle" });
+    await page.goto(`/auth?mode=register&next=${encodeURIComponent(`/eventos/${slug}`)}`, { waitUntil: "networkidle" });
     await page.waitForSelector("form[data-auth-ready=true]", { timeout: 15_000 });
     await page.locator("#email").fill(email);
     await page.locator("#nome").fill("Cliente Parcelado Full");
@@ -100,7 +100,7 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     }
     await page.getByTestId("checkout-continuar").click();
 
-    await expect(page.getByText(/Pagamento seguro/i).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Pagamento online via Asaas/i).first()).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /cartão/i }).click();
     await expect(page.getByTestId("checkout-parcelas")).toBeVisible({ timeout: 15_000 });
     await page.getByLabel(/3x de/i).check();
@@ -136,7 +136,7 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     const email = `e2e_parc_ui_${suf}@test.com`;
     const senha = "senha12345";
 
-    await page.goto("/auth?mode=register", { waitUntil: "networkidle" });
+    await page.goto(`/auth?mode=register&next=${encodeURIComponent(`/eventos/${slug}`)}`, { waitUntil: "networkidle" });
     await page.waitForSelector("form[data-auth-ready=true]", { timeout: 15_000 });
     await page.locator("#email").fill(email);
     await page.locator("#nome").fill("Cliente Parcelado");
@@ -153,7 +153,7 @@ test.describe("Checkout — fluxo Asaas (mock)", () => {
     await page.getByRole("checkbox", { name: /li e aceito o termo/i }).check();
     await page.getByTestId("checkout-continuar").click();
 
-    await expect(page.getByText(/Pagamento seguro/i).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Pagamento online via Asaas/i).first()).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /cartão/i }).click();
     await expect(page.getByTestId("checkout-parcelas")).toBeVisible({ timeout: 15_000 });
     await page.getByLabel(/3x de/i).check();
