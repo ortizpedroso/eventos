@@ -5,13 +5,21 @@ import { DEFAULT_PLATFORM_SETTINGS } from "@/lib/platform-settings";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://eventosbr.app.br";
 
+/** Imagem padrão da prévia de link (WhatsApp, Facebook…). Ao trocar o PNG, suba o `v` para furar o cache. */
+export const DEFAULT_OG_IMAGE = {
+  url: `${SITE_URL}/og-image.png?v=2`,
+  width: 1200,
+  height: 630,
+  alt: "EventosBR — ingressos para shows, festas e eventos",
+};
+
 const SITE_DESCRIPTION =
   "Venda e compre ingressos para shows, festas, palestras e eventos corporativos. PIX e cartão, QR Code na entrada, reembolsos automáticos e repasse direto para organizadores. Crie sua conta grátis.";
 
 export function buildMetadata(platform: PlatformSettings): Metadata {
   const siteName = platform.site_name || "EventosBR";
   const title = `${siteName} — Ingressos, Shows e Eventos Online no Brasil`;
-  const ogImage = { url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: siteName };
+  const ogImage = { ...DEFAULT_OG_IMAGE, alt: siteName };
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -53,6 +61,13 @@ export const homeMetadata: Metadata = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     url: SITE_URL,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
   },
 };
 
