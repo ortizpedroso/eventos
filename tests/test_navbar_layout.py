@@ -35,15 +35,15 @@ def test_navbar_sobre_visivel_sem_compactar_conta_nem_cta():
     assert "max-w-[10rem] truncate" not in NAV
     assert "userNome" in NAV
     # CTA: mesmo padrão (não encolher ao logar)
-    assert 'className="btn-success shrink-0 whitespace-nowrap px-3.5 py-2 text-sm shadow-sm sm:px-4"' in NAV
+    assert 'className="btn-success shrink-0 whitespace-nowrap px-2.5 py-2 text-sm shadow-sm sm:px-4"' in NAV
     assert "px-2.5 py-1.5 text-xs" not in NAV
     assert "Recursos" not in NAV
     assert "data-navbar-dense" not in NAV
 
 
-def test_btn_success_usa_brand_600():
-    """Cor do CTA «Crie um evento» — brand-600 (não o tom mais escuro brand-700)."""
+def test_btn_success_usa_brand_700():
+    """Botões verdes padronizados em brand-700 (#047857): contraste AA com texto branco."""
     css = Path("frontend/src/app/globals.css").read_text(encoding="utf-8")
     bloco = css.split(".btn-success")[1].split(".btn-outline")[0]
-    assert "var(--brand-600)" in bloco
-    assert "background-color: var(--brand-700);" not in bloco.split(":hover")[0]
+    assert "background-color: var(--brand-700);" in bloco.split(":hover")[0]
+    assert "background-color: var(--brand-600);" not in bloco

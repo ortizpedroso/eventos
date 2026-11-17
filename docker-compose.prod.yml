@@ -28,6 +28,8 @@ services:
       - /bin/sh
       - /app/scripts/docker-api-start.sh
     depends_on:
+      uploads-init:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
@@ -46,6 +48,17 @@ services:
       start_period: 120s
     networks:
       - eventosbr_internal
+
+  # Corrige o dono do volume de uploads (volumes criados antes de a API rodar como
+  # appuser ficaram com dono root → upload de imagens falhava por permissão).
+  uploads-init:
+    image: busybox:1.36
+    user: "0:0"
+    command: ["sh", "-c", "chown -R 1000:1000 /app/uploads; chmod 755 /app/uploads; exit 0"]
+    volumes:
+      - uploads_data:/app/uploads
+    restart: "no"
+    network_mode: none
 
   db:
     image: postgres:16-alpine

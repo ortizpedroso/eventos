@@ -19,7 +19,7 @@ test.describe("Checkout — aviso de meia-entrada e confirmação de e-mail", ()
 
   async function registrarEIrParaEvento(page: import("@playwright/test").Page, slug: string, email: string) {
     const senha = "senha12345";
-    await page.goto("/auth?mode=register", { waitUntil: "networkidle" });
+    await page.goto(`/auth?mode=register&next=${encodeURIComponent(`/eventos/${slug}`)}`, { waitUntil: "networkidle" });
     await page.waitForSelector("form[data-auth-ready=true]", { timeout: 15_000 });
     await page.locator("#email").fill(email);
     await page.locator("#nome").fill("Cliente E2E");
@@ -91,6 +91,6 @@ test.describe("Checkout — aviso de meia-entrada e confirmação de e-mail", ()
     await page.getByTestId("checkout-continuar").click();
 
     await expect(page.getByText(/Os e-mails não coincidem/i)).not.toBeVisible();
-    await expect(page.getByText(/Pagamento seguro/i).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Pagamento online via Asaas/i).first()).toBeVisible({ timeout: 15_000 });
   });
 });

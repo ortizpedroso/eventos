@@ -49,7 +49,7 @@ def test_galeria_max_e_substituicao():
         assert len(out) == GALERIA_MAX
         assert listar_urls(db, ev.id) == urls
 
-        with pytest.raises(ValueError, match="Máximo"):
+        with pytest.raises(ValueError, match="(?i)máximo"):
             substituir_galeria(db, ev, urls + ["/uploads/eventos/test/extra.webp"])
 
         # limpar

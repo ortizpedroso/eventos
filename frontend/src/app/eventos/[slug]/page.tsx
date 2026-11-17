@@ -5,6 +5,7 @@ import { typicalAgeRangeFromClassificacao } from "@/lib/evento-ficha";
 import { getEventoPublicoBySlug } from "@/lib/eventos-publicos";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { serializeJsonLdForScript } from "@/lib/json-ld-html";
+import { DEFAULT_OG_IMAGE } from "@/lib/site-metadata";
 
 export async function generateMetadata({
   params,
@@ -28,13 +29,13 @@ export async function generateMetadata({
         description: desc || undefined,
         type: "website",
         url: `${base}/eventos/${evento.slug}`,
-        ...(imageUrl ? { images: [{ url: imageUrl }] } : {}),
+        images: [imageUrl ? { url: imageUrl } : DEFAULT_OG_IMAGE],
       },
       twitter: {
         card: "summary_large_image",
         title: evento.nome,
         description,
-        ...(imageUrl ? { images: [imageUrl] } : {}),
+        images: [imageUrl ?? DEFAULT_OG_IMAGE.url],
       },
     };
   } catch {

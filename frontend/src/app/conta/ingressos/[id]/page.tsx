@@ -342,7 +342,7 @@ export default function IngressoDetalhePage() {
             href={downloadHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-auto w-full rounded-lg bg-emerald-600 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            className="mt-auto w-full rounded-lg bg-emerald-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
           >
             Gerar vista para impressão / PDF
           </a>

@@ -19,7 +19,8 @@ test.describe("Checkout — compra com Asaas mock", () => {
     const email = `e2e_cli_${suf}@test.com`;
     const senha = "senha12345";
 
-    await page.goto("/auth?mode=register", { waitUntil: "networkidle" });
+    // Cadastro de cliente exige `next` de compra; sem ele /auth?mode=register vai para /cadastro (organizador).
+    await page.goto(`/auth?mode=register&next=${encodeURIComponent(`/eventos/${slug}`)}`, { waitUntil: "networkidle" });
     await page.waitForSelector("form[data-auth-ready=true]", { timeout: 15_000 });
     await page.locator("#email").fill(email);
     await page.locator("#nome").fill("Cliente E2E");
