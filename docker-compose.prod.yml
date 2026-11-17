@@ -54,7 +54,7 @@ services:
   uploads-init:
     image: busybox:1.36
     user: "0:0"
-    command: ["sh", "-c", "chown -R 1000:1000 /app/uploads && chmod 755 /app/uploads"]
+    command: ["sh", "-c", "chown -R 1000:1000 /app/uploads; chmod 755 /app/uploads; exit 0"]
     volumes:
       - uploads_data:/app/uploads
     restart: "no"
