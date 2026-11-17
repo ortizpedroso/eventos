@@ -50,7 +50,7 @@ export function EventoCardVitrine({ evento: e }: Props) {
             {vendasAbertas ? `A partir de ${preco}` : "Vendas encerradas"}
           </p>
           <span
-            className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition group-hover:bg-emerald-700"
+            className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white transition group-hover:bg-emerald-800"
           >
             {vendasAbertas ? "Comprar ingresso" : "Ver evento"}
           </span>

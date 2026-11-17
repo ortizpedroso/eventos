@@ -41,9 +41,9 @@ def test_navbar_sobre_visivel_sem_compactar_conta_nem_cta():
     assert "data-navbar-dense" not in NAV
 
 
-def test_btn_success_usa_brand_600():
-    """Cor do CTA «Crie um evento» — brand-600 (não o tom mais escuro brand-700)."""
+def test_btn_success_usa_brand_700():
+    """Botões verdes padronizados em brand-700 (#047857): contraste AA com texto branco."""
     css = Path("frontend/src/app/globals.css").read_text(encoding="utf-8")
     bloco = css.split(".btn-success")[1].split(".btn-outline")[0]
-    assert "var(--brand-600)" in bloco
-    assert "background-color: var(--brand-700);" not in bloco.split(":hover")[0]
+    assert "background-color: var(--brand-700);" in bloco.split(":hover")[0]
+    assert "background-color: var(--brand-600);" not in bloco
