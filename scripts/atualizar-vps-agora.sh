@@ -198,7 +198,7 @@ _tenant_route_ok() {
   # 404 + JSON é resposta correta quando o subdomínio não existe (curl -f falharia no 404).
   local resp code body
   resp="$(curl -sS --max-time 20 -w $'\n%{http_code}' \
-    "https://${DOMAIN}/api/public/tenant?subdomain=__deploy_check__" 2>/dev/null)" || return 1
+    "https://${DOMAIN}/api/public/tenant?host=deploy-check.invalid" 2>/dev/null)" || return 1
   code="${resp##*$'\n'}"
   body="${resp%$'\n'*}"
   [ "$code" = "404" ] && printf '%s' "$body" | grep -q 'Organizador não encontrado'

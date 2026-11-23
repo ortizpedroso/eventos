@@ -8,14 +8,14 @@
 # resto → Next.js
 {
 	email {$ACME_EMAIL}
+	# Certificado sob demanda para endereços de organizadores (white-label).
+	# A API só autoriza subdomínios e domínios próprios ativos; o resto falha no TLS.
+	on_demand_tls {
+		ask http://api:8000/api/public/tls-ask
+	}
 }
 
-# Redireciona www → apex (CORS já inclui ambos no .env)
-www.{$DOMAIN} {
-	redir https://{$DOMAIN}{uri} permanent
-}
-
-{$DOMAIN} {
+(eventosbr_rotas) {
 	encode gzip zstd
 
 	# EventosBR autentica em /auth — /login é rota do SIGEP. Redireciona na borda
@@ -59,12 +59,30 @@ www.{$DOMAIN} {
 	}
 }
 
+# Redireciona www → apex (CORS já inclui ambos no .env)
+www.{$DOMAIN} {
+	import eventosbr_rotas
+}
+
+# Organizadores: subdomínios da plataforma e domínios próprios (CNAME para {$DOMAIN}).
+# O Next.js identifica o organizador pelo Host e serve a página dele nesse endereço.
+https:// {
+	tls {
+		on_demand
+	}
+	import eventosbr_rotas
+}
+
+http:// {
+	redir https://{host}{uri} permanent
+}
+
 # -----------------------------------------------------------------------------
 # Sites de OUTROS apps que rodam no MESMO VPS/IP. Este Caddy é o único proxy de
 # borda (dono das portas 80/443), então precisa conhecer todos os domínios que
-# apontam para este IP. Cada domínio tem um bloco EXPLÍCITO; não há site
-# "default"/catch-all, logo um Host desconhecido recebe 404 e NUNCA cai por
-# engano em outro app.
+# apontam para este IP. Cada domínio tem um bloco EXPLÍCITO, que vence o bloco
+# genérico `https://` dos organizadores acima. Um Host desconhecido não recebe
+# certificado (a API nega no `ask`), então NUNCA cai por engano em outro app.
 #
 # Por que versionado aqui: o `scripts/deploy-vps.sh` (git checkout/pull) restaura
 # este arquivo a partir do git. Se o bloco ficasse só como edição manual/hook no

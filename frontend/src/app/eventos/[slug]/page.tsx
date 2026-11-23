@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { EventoPublicClient } from "./evento-public-client";
 import { typicalAgeRangeFromClassificacao } from "@/lib/evento-ficha";
 import { getEventoPublicoBySlug } from "@/lib/eventos-publicos";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { serializeJsonLdForScript } from "@/lib/json-ld-html";
+import { urlPlataforma } from "@/lib/organizer-tenant";
 import { DEFAULT_OG_IMAGE } from "@/lib/site-metadata";
+import { getVitrine, urlNaVitrine } from "@/lib/vitrine-server";
 
 export async function generateMetadata({
   params,
@@ -14,21 +17,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const evento = await getEventoPublicoBySlug(slug);
+    const [evento, vitrine] = await Promise.all([getEventoPublicoBySlug(slug), getVitrine()]);
+    const caminho = `/eventos/${evento.slug}`;
     const desc = evento.descricao.trim().slice(0, 160);
     const img = resolveEventoImagemSrc(evento.imagem_url);
     const base = (process.env.NEXT_PUBLIC_LAN_ORIGIN || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
     const imageUrl = img ? (img.startsWith("http") ? img : `${base}${img}`) : undefined;
     const description = desc || `Ingressos para ${evento.nome}`;
     return {
-      title: `${evento.nome} | EventosBR`,
+      title: evento.nome,
       description,
-      alternates: { canonical: `/eventos/${evento.slug}` },
+      alternates: { canonical: vitrine ? urlNaVitrine(vitrine, caminho) : caminho },
       openGraph: {
         title: evento.nome,
         description: desc || undefined,
         type: "website",
-        url: `${base}/eventos/${evento.slug}`,
+        url: vitrine ? urlNaVitrine(vitrine, caminho) : `${base}${caminho}`,
         images: [imageUrl ? { url: imageUrl } : DEFAULT_OG_IMAGE],
       },
       twitter: {
@@ -39,7 +43,7 @@ export async function generateMetadata({
       },
     };
   } catch {
-    return { title: "Evento | EventosBR" };
+    return { title: "Evento" };
   }
 }
 
@@ -121,6 +125,11 @@ export default async function EventoPage({
     initialEvento = await getEventoPublicoBySlug(slug);
   } catch {
     initialEvento = null;
+  }
+
+  const vitrine = await getVitrine();
+  if (vitrine && initialEvento && initialEvento.organizador_id !== vitrine.organizador_id) {
+    redirect(urlPlataforma(`/eventos/${slug}`));
   }
 
   return (

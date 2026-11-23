@@ -59,7 +59,7 @@ fi
 _tenant_route_ok() {
   local resp code body
   resp="$(curl -sS --max-time 20 -w $'\n%{http_code}' \
-    "${URL}/api/public/tenant?subdomain=__check__" 2>/dev/null)" || return 1
+    "${URL}/api/public/tenant?host=check.invalid" 2>/dev/null)" || return 1
   code="${resp##*$'\n'}"
   body="${resp%$'\n'*}"
   [ "$code" = "404" ] && printf '%s' "$body" | grep -q 'Organizador não encontrado'

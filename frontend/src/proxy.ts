@@ -4,7 +4,13 @@ import type { NextRequest } from "next/server";
 import { buildContentSecurityPolicy } from "@/lib/csp";
 import { SESSION_EXPIRED_COOKIE } from "@/lib/session-expired-cookie";
 import { fetchMiddlewareSession } from "@/lib/middleware-api";
-import { extractSubdomain, fetchTenantBySubdomain } from "@/lib/organizer-tenant";
+import {
+  VITRINE_HOST_HEADER,
+  fetchVitrinePorHost,
+  hostPodeSerVitrine,
+  rotaNaVitrine,
+  urlPlataforma,
+} from "@/lib/organizer-tenant";
 
 const AUTH_COOKIE = "eventosbr_session";
 const ADMIN_COOKIE = "eventosbr_admin_key";
@@ -103,16 +109,23 @@ export async function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const headers = withNonce(request, nonce);
 
-  const baseDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN?.trim();
+  headers.delete(VITRINE_HOST_HEADER);
   const host = request.headers.get("host") ?? "";
-  if (baseDomain && (pathname === "/" || pathname === "/eventos")) {
-    const sub = extractSubdomain(host, baseDomain);
-    if (sub) {
-      const tenant = await fetchTenantBySubdomain(sub);
-      if (tenant?.slug) {
-        const dest = new URL(`/produtor/${tenant.slug}`, request.url);
-        if (pathname === "/eventos") dest.pathname = `/produtor/${tenant.slug}`;
-        return finish(NextResponse.redirect(dest), nonce);
+  if (hostPodeSerVitrine(host)) {
+    const vitrine = await fetchVitrinePorHost(host);
+    if (vitrine) {
+      headers.set(VITRINE_HOST_HEADER, vitrine.host);
+      const rota = rotaNaVitrine(pathname, vitrine.slug);
+      if (rota.tipo === "pagina-do-produtor") {
+        const destino = new URL(`/produtor/${vitrine.slug}`, request.url);
+        return finish(NextResponse.rewrite(destino, { request: { headers } }), nonce);
+      }
+      if (rota.tipo === "inicio") {
+        return finish(NextResponse.redirect(new URL("/", request.url)), nonce);
+      }
+      if (rota.tipo === "plataforma") {
+        const destino = urlPlataforma(`${pathname}${request.nextUrl.search}`);
+        return finish(NextResponse.redirect(destino), nonce);
       }
     }
   }
