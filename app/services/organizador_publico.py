@@ -9,6 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Evento, Ingresso, Usuario
+from app.services.whitelabel_acesso import acesso_whitelabel
 from config.settings import settings
 
 _SUBDOMAIN_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
@@ -177,8 +178,11 @@ def resolver_tenant_por_host(db: Session, host: str | None) -> dict | None:
     org = _organizador_por_host(db, h)
     if not org or not org.slug_publico:
         return None
+    base = _dominio_base_plataforma()
+    dominio_proprio = not (base and h.endswith(f".{base}"))
     return {
         "host": h,
+        "liberado": acesso_whitelabel(org).liberado if dominio_proprio else True,
         "slug": org.slug_publico,
         "organizador_id": org.id,
         "nome": (org.brand_name or org.nome or "").strip() or org.nome,

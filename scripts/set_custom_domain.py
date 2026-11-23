@@ -4,6 +4,7 @@
 Uso (dentro do container da API, ou localmente com o mesmo DATABASE_URL):
   python3 scripts/set_custom_domain.py cristiano-braga-duarte eventos.agenciadovale.com.br
   python3 scripts/set_custom_domain.py cristiano-braga-duarte --remove
+  python3 scripts/set_custom_domain.py cristiano-braga-duarte --cortesia-ate 2027-03-31
 
 Ative só depois que o organizador apontar o domínio para a plataforma (CNAME para o
 domínio principal). Com o domínio ativo, o Caddy emite o certificado no primeiro acesso
@@ -14,7 +15,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,7 @@ sys.path.insert(0, str(ROOT))
 
 from app.models import Usuario, get_db  # noqa: E402
 from app.services.organizador_publico import validar_dominio_proprio  # noqa: E402
+from app.services.whitelabel_acesso import acesso_whitelabel, fim_do_dia_brasilia  # noqa: E402
 
 
 def main() -> int:
@@ -29,10 +31,16 @@ def main() -> int:
     parser.add_argument("slug", help="Slug público do organizador (/produtor/<slug>)")
     parser.add_argument("domain", nargs="?", help="Domínio próprio, ex.: eventos.suamarca.com.br")
     parser.add_argument("--remove", action="store_true", help="Remove o domínio do organizador")
+    parser.add_argument(
+        "--cortesia-ate",
+        type=date.fromisoformat,
+        help="Libera o domínio sem mensalidade até esta data (AAAA-MM-DD, até 23h59 de Brasília)",
+    )
     args = parser.parse_args()
 
-    if args.remove == bool(args.domain):
-        parser.error("informe o domínio ou --remove (apenas um dos dois)")
+    acoes = sum([bool(args.domain), args.remove, args.cortesia_ate is not None])
+    if acoes != 1:
+        parser.error("informe exatamente um: o domínio, --remove ou --cortesia-ate")
 
     db = next(get_db())
     try:
@@ -44,6 +52,13 @@ def main() -> int:
         if not org:
             print(f"ERRO: nenhum organizador com slug {args.slug!r}.", file=sys.stderr)
             return 1
+
+        if args.cortesia_ate is not None:
+            org.whitelabel_cortesia_ate = fim_do_dia_brasilia(args.cortesia_ate)
+            db.commit()
+            acesso = acesso_whitelabel(org)
+            print(f"OK: cortesia de {args.slug} até {args.cortesia_ate:%d/%m/%Y} (acesso: {acesso.motivo}).")
+            return 0
 
         if args.remove:
             org.brand_custom_domain = None

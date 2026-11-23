@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
+from app.services.whitelabel_acesso import acesso_whitelabel
 from app.models import Usuario, get_db
 from app.routes.auth import get_usuario_atual
 from app.services.organizador_publico import (
@@ -90,6 +91,8 @@ def _perfil_response(usuario: Usuario, slug: str) -> dict:
         "brand_primary_color": usuario.brand_primary_color,
         "brand_primary_color_dark": usuario.brand_primary_color_dark,
         "brand_subdomain": usuario.brand_subdomain,
+        "dominio_proprio": usuario.brand_custom_domain if usuario.brand_custom_domain_ativo_em else None,
+        "dominio_proprio_acesso": acesso_whitelabel(usuario).para_json(),
     }
 
 

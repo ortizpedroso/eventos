@@ -75,6 +75,7 @@ class Usuario(Base):
     brand_subdomain = Column(String(63), unique=True, index=True, nullable=True)
     brand_custom_domain = Column(String(253), unique=True, index=True, nullable=True)
     brand_custom_domain_ativo_em = Column(DateTime, nullable=True)
+    whitelabel_cortesia_ate = Column(DateTime, nullable=True)
 
     # Verificação de e-mail (compra rápida / reenvio)
     email_verificado = Column(Boolean, default=True, nullable=False)

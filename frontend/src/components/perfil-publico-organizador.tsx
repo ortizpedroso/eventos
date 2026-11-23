@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { BrandColorPicker } from "@/components/brand-color-picker";
+import { DominioProprioStatus, type AcessoDominio } from "@/components/dominio-proprio-status";
 import { ImagemAssetField } from "@/components/imagem-asset-field";
 import { TelefoneInput } from "@/components/telefone-input";
 import { apiFetch } from "@/lib/api";
@@ -20,6 +21,8 @@ type PerfilPublico = {
   brand_primary_color: string | null;
   brand_primary_color_dark: string | null;
   brand_subdomain: string | null;
+  dominio_proprio?: string | null;
+  dominio_proprio_acesso?: AcessoDominio;
 };
 
 const PLATFORM_DOMAIN = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN?.trim() || "eventosbr.app.br";
@@ -125,6 +128,9 @@ export function PerfilPublicoOrganizador() {
       <p className="mt-1 text-sm text-zinc-600">
         Bio, foto, marca e redes exibidas em <code className="text-xs">/produtor/seu-slug</code>.
       </p>
+      {perfil?.dominio_proprio && perfil.dominio_proprio_acesso ? (
+        <DominioProprioStatus dominio={perfil.dominio_proprio} acesso={perfil.dominio_proprio_acesso} />
+      ) : null}
 
       {slug ? (
         <p className="mt-2 text-sm">

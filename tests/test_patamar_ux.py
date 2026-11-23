@@ -2221,10 +2221,14 @@ def test_ciclo_assinatura_expirada_rebaixa_plano():
         db.add(org)
         db.commit()
 
+        from app.services.tarifas_plataforma import tarifa_para_organizador
+
+        vencida_em = org.assinatura_valida_ate
         stats = processar_ciclo_assinaturas(db)
         assert stats["expiradas"] >= 1
         db.refresh(org)
         assert org.plano_tarifa == "padrao"
-        assert org.assinatura_valida_ate is None
+        assert tarifa_para_organizador(org).id == "padrao"
+        assert org.assinatura_valida_ate == vencida_em, "data guardada para a tolerância do white-label"
     finally:
         db.close()

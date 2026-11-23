@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { TelefoneInput } from "@/components/telefone-input";
 import { adminFetch } from "@/lib/admin-api";
 
+import { AdminWhitelabelCortesia } from "./admin-whitelabel-cortesia";
+
 export type UsuarioAdminEdit = {
   id: string;
   email: string;
@@ -85,6 +87,7 @@ export function AdminEditUsuarioModal({ usuario, onClose, onSaved }: Props) {
             <TelefoneInput value={telefone} onChange={setTelefone} />
           </label>
         </div>
+        {usuario.tipo === "organizador" ? <AdminWhitelabelCortesia organizadorId={usuario.id} /> : null}
         {erro ? (
           <p className="mt-3 text-sm text-red-700" role="alert">{erro}</p>
         ) : null}
