@@ -61,6 +61,10 @@
 
 # Redireciona www → apex (CORS já inclui ambos no .env)
 www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+{$DOMAIN} {
 	import eventosbr_rotas
 }
 

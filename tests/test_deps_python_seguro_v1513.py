@@ -15,9 +15,10 @@ def _read(*parts: str) -> str:
 def test_requirements_sem_python_jose_com_versoes_seguras():
     req = _read("requirements.txt")
     assert "python-jose" not in req
-    assert "PyJWT[crypto]==2.13.0" in req
+    assert "PyJWT[crypto]==2.15.0" in req
     assert "fastapi==0.141.1" in req
-    assert "Pillow==12.3.0" in req
+    assert "Pillow==13.0.0" in req
+    assert "fpdf2==2.8.8" in req
     assert "pytest==9.0.3" in req
     assert "requests==2.34.2" in req
 
