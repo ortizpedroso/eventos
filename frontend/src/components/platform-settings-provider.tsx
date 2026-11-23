@@ -29,9 +29,12 @@ const PlatformSettingsContext = createContext<PlatformSettingsContextValue>({
 
 export function PlatformSettingsProvider({
   settings,
+  aplicaTemaDaPlataforma = true,
   children,
 }: {
   settings: PlatformSettings;
+  /** Falso na vitrine do organizador: as cores do documento são as dele, não as da plataforma. */
+  aplicaTemaDaPlataforma?: boolean;
   children: ReactNode;
 }) {
   const [live, setLive] = useState(settings);
@@ -42,16 +45,16 @@ export function PlatformSettingsProvider({
 
   const replaceSettings = useCallback((next: PlatformSettings) => {
     setLive(next);
-    if (typeof document !== "undefined") {
+    if (aplicaTemaDaPlataforma && typeof document !== "undefined") {
       applyBrandThemeToDocument(next.primary_color, next.primary_color_dark);
     }
-  }, []);
+  }, [aplicaTemaDaPlataforma]);
 
   const patchSettings = useCallback(
     (patch: Partial<PlatformSettings>) => {
       setLive((prev) => {
         const next = { ...prev, ...patch };
-        if (typeof document !== "undefined") {
+        if (aplicaTemaDaPlataforma && typeof document !== "undefined") {
           applyBrandThemeToDocument(
             next.primary_color,
             next.primary_color_dark,
@@ -60,7 +63,7 @@ export function PlatformSettingsProvider({
         return next;
       });
     },
-    [],
+    [aplicaTemaDaPlataforma],
   );
 
   // Recarrega no cliente para não ficar preso ao cache SSR do layout.

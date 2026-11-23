@@ -9,6 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Evento, Ingresso, Usuario
+from config.settings import settings
 
 _SUBDOMAIN_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 _HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
@@ -125,30 +126,66 @@ def montar_perfil_publico(db: Session, slug: str) -> dict | None:
     }
 
 
-def resolver_tenant_por_subdomain(db: Session, subdomain: str) -> dict | None:
-    try:
-        sub = validar_brand_subdomain(subdomain)
-    except ValueError:
+def normalizar_host(value: str | None) -> str | None:
+    s = (value or "").strip().lower().split(":", 1)[0].rstrip(".")
+    if not s or len(s) > 253:
         return None
-    if not sub:
+    labels = s.split(".")
+    if len(labels) < 2 or not all(_SUBDOMAIN_RE.match(label) for label in labels):
         return None
-    org = (
-        db.query(Usuario)
-        .filter(
-            Usuario.brand_subdomain == sub,
-            Usuario.tipo == "organizador",
-            Usuario.ativo.is_(True),
-        )
-        .first()
-    )
+    return s
+
+
+def _dominio_base_plataforma() -> str | None:
+    return normalizar_host(settings.PLATFORM_BASE_DOMAIN)
+
+
+def validar_dominio_proprio(value: str | None) -> str | None:
+    if value is None or not value.strip():
+        return None
+    host = normalizar_host(value)
+    if not host:
+        raise ValueError("Domínio inválido (ex.: eventos.suamarca.com.br)")
+    base = _dominio_base_plataforma()
+    if base and (host == base or host.endswith(f".{base}")):
+        raise ValueError("Use o campo de subdomínio para endereços da própria plataforma")
+    return host
+
+
+def _organizador_por_host(db: Session, host: str) -> Usuario | None:
+    base = _dominio_base_plataforma()
+    q = db.query(Usuario).filter(Usuario.tipo == "organizador", Usuario.ativo.is_(True))
+    if base and host.endswith(f".{base}"):
+        try:
+            sub = validar_brand_subdomain(host[: -len(base) - 1])
+        except ValueError:
+            return None
+        return q.filter(Usuario.brand_subdomain == sub).first() if sub else None
+    if base and host == base:
+        return None
+    return q.filter(
+        Usuario.brand_custom_domain == host,
+        Usuario.brand_custom_domain_ativo_em.isnot(None),
+    ).first()
+
+
+def resolver_tenant_por_host(db: Session, host: str | None) -> dict | None:
+    """Organizador dono do endereço acessado: subdomínio da plataforma ou domínio próprio ativo."""
+    h = normalizar_host(host)
+    if not h:
+        return None
+    org = _organizador_por_host(db, h)
     if not org or not org.slug_publico:
         return None
-    display_name = (org.brand_name or org.nome or "").strip() or org.nome
     return {
+        "host": h,
         "slug": org.slug_publico,
-        "subdomain": sub,
-        "nome": display_name,
+        "organizador_id": org.id,
+        "nome": (org.brand_name or org.nome or "").strip() or org.nome,
         "brand_logo_url": org.brand_logo_url or org.foto_url,
         "brand_primary_color": org.brand_primary_color,
         "brand_primary_color_dark": org.brand_primary_color_dark,
+        "social_instagram": org.social_instagram,
+        "social_whatsapp": org.social_whatsapp,
+        "social_site": org.social_site,
     }

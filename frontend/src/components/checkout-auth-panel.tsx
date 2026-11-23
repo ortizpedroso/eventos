@@ -2,8 +2,9 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
+import { TurnstileWidget, turnstileSiteKeyConfigurada } from "@/components/turnstile-widget";
 import { apiFetch } from "@/lib/api";
 import { dispatchAuthSync } from "@/lib/auth-sync";
 import { mapCheckoutError } from "@/lib/checkout-errors";
@@ -38,6 +39,8 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [mostrarOAuth, setMostrarOAuth] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileResetRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setMostrarOAuth(true));
@@ -100,13 +103,14 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
       await apiFetch<TokenResponse>("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: em, senha }),
+        body: JSON.stringify({ email: em, senha, turnstile_token: turnstileToken }),
       });
       dispatchAuthSync();
       setSucesso("Login feito! Continue a compra abaixo.");
       onAuthenticated();
     } catch (err) {
       setErro(mapCheckoutError(err instanceof Error ? err.message : "Não foi possível entrar."));
+      turnstileResetRef.current?.();
     } finally {
       setBusy(false);
     }
@@ -128,6 +132,7 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
               setPainel("inicio");
               setErro(null);
               setSucesso(null);
+              setTurnstileToken(null);
             }}
             className="shrink-0 text-xs font-medium text-sky-800 underline hover:text-sky-950"
           >
@@ -183,9 +188,10 @@ export function CheckoutAuthPanel({ authLoginHref, authRegisterHref, onAuthentic
               Esqueci minha senha
             </Link>
           </div>
+          <TurnstileWidget onToken={setTurnstileToken} resetRef={turnstileResetRef} />
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || (turnstileSiteKeyConfigurada() && !turnstileToken)}
             className="w-full rounded-md bg-sky-800 px-3 py-2.5 text-sm font-medium text-white hover:bg-sky-900 disabled:opacity-60"
           >
             {busy ? "Entrando…" : "Entrar"}

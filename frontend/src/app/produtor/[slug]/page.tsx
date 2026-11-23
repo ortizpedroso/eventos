@@ -5,17 +5,18 @@ import { ProdutorPublicClient } from "./produtor-public-client";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { getProdutorPublicoBySlug } from "@/lib/produtor-publico";
 import { buildProdutorJsonLd } from "@/lib/public-json-ld";
+import { getVitrine, urlNaVitrine } from "@/lib/vitrine-server";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const perfil = await getProdutorPublicoBySlug(slug);
+    const [perfil, vitrine] = await Promise.all([getProdutorPublicoBySlug(slug), getVitrine()]);
     const nome = perfil.brand_name?.trim() || perfil.nome;
     const desc =
       (perfil.bio || "").trim().slice(0, 160) ||
-      `Eventos e ingressos de ${nome} na EventosBR.`;
+      `Eventos e ingressos de ${nome}${vitrine ? "" : " na EventosBR"}.`;
     const img = resolveEventoImagemSrc(perfil.foto_url || perfil.brand_logo_url);
     const base = (
       process.env.NEXT_PUBLIC_LAN_ORIGIN ||
@@ -24,14 +25,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ).replace(/\/+$/, "");
     const imageUrl = img ? (img.startsWith("http") ? img : `${base}${img}`) : undefined;
     return {
-      title: `${nome} | EventosBR`,
+      title: vitrine ? { absolute: nome } : nome,
       description: desc,
-      alternates: { canonical: `/produtor/${perfil.slug}` },
+      alternates: { canonical: vitrine ? urlNaVitrine(vitrine, "/") : `/produtor/${perfil.slug}` },
       openGraph: {
         title: nome,
         description: desc,
         type: "website",
-        url: `${base}/produtor/${perfil.slug}`,
+        url: vitrine ? urlNaVitrine(vitrine, "/") : `${base}/produtor/${perfil.slug}`,
         ...(imageUrl ? { images: [{ url: imageUrl }] } : {}),
       },
       twitter: {
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     };
   } catch {
-    return { title: "Produtor | EventosBR" };
+    return { title: "Produtor" };
   }
 }
 

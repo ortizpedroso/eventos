@@ -14,15 +14,18 @@ import { ScrollRevealObserver } from "@/components/scroll-reveal-observer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { SkipToContent } from "@/components/skip-to-content";
+import { VitrineFooter } from "@/components/vitrine-footer";
+import { VitrineHeader } from "@/components/vitrine-header";
 import { brandCssProperties, buildBrandRootCss } from "@/lib/brand-css-style";
 import { fetchPlatformSettings } from "@/lib/platform-settings";
 import { buildOrganizationJsonLd } from "@/lib/organization-json-ld";
-import { buildMetadata } from "@/lib/site-metadata";
+import { buildMetadata, buildVitrineMetadata } from "@/lib/site-metadata";
+import { getVitrine } from "@/lib/vitrine-server";
 import "./globals.css";
 
 export async function generateMetadata() {
-  const platform = await fetchPlatformSettings();
-  return buildMetadata(platform);
+  const [platform, vitrine] = await Promise.all([fetchPlatformSettings(), getVitrine()]);
+  return vitrine ? buildVitrineMetadata(vitrine) : buildMetadata(platform);
 }
 
 export default async function RootLayout({
@@ -31,12 +34,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
-  const platform = await fetchPlatformSettings();
-  const brandStyle = brandCssProperties(
-    platform.primary_color,
-    platform.primary_color_dark,
-  ) as CSSProperties;
-  const brandCss = buildBrandRootCss(platform.primary_color, platform.primary_color_dark);
+  const [platform, vitrine] = await Promise.all([fetchPlatformSettings(), getVitrine()]);
+  const primary = vitrine?.brand_primary_color || platform.primary_color;
+  const primaryDark = vitrine?.brand_primary_color ? vitrine.brand_primary_color_dark : platform.primary_color_dark;
+  const brandStyle = brandCssProperties(primary, primaryDark) as CSSProperties;
+  const brandCss = buildBrandRootCss(primary, primaryDark);
 
   return (
     <html
@@ -55,25 +57,27 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: brandCss }}
         />
         {platform.favicon_url ? <link rel="icon" href={platform.favicon_url} /> : null}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: buildOrganizationJsonLd(platform.site_name || "EventosBR"),
-          }}
-        />
+        {vitrine ? null : (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: buildOrganizationJsonLd(platform.site_name || "EventosBR"),
+            }}
+          />
+        )}
       </head>
       <body
         className="grid min-h-dvh grid-rows-[auto_1fr_auto] antialiased"
         suppressHydrationWarning
         nonce={nonce}
       >
-        <PlatformSettingsProvider settings={platform}>
-          <PlatformThemeLive />
+        <PlatformSettingsProvider settings={platform} aplicaTemaDaPlataforma={!vitrine}>
+          {vitrine ? null : <PlatformThemeLive />}
           <MarketingAnalytics />
           <SkipToContent />
           <BuildMarker />
           <ScrollToTop />
-          <Navbar />
+          {vitrine ? <VitrineHeader vitrine={vitrine} /> : <Navbar />}
           <main
             id="conteudo-principal"
             className="mx-auto flex min-h-0 w-full flex-col px-4 py-6 sm:px-6 lg:px-8 max-w-7xl"
@@ -81,7 +85,11 @@ export default async function RootLayout({
             <div className="flex flex-1 flex-col">{children}</div>
           </main>
 
-          <SiteFooter />
+          {vitrine ? (
+            <VitrineFooter vitrine={vitrine} platformName={platform.site_name || "EventosBR"} />
+          ) : (
+            <SiteFooter />
+          )}
           <BackToTopButton />
           <ScrollRevealObserver />
         </PlatformSettingsProvider>

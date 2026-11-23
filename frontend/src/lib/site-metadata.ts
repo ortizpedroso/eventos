@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import type { PlatformSettings } from "@/lib/platform-settings";
 import { DEFAULT_PLATFORM_SETTINGS } from "@/lib/platform-settings";
+import type { VitrineProdutor } from "@/lib/organizer-tenant";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://eventosbr.app.br";
 
@@ -47,6 +48,25 @@ export function buildMetadata(platform: PlatformSettings): Metadata {
       index: true,
       follow: true,
     },
+  };
+}
+
+/** Metadados do site servido no endereço do organizador: nome dele no título e na prévia de link. */
+export function buildVitrineMetadata(vitrine: VitrineProdutor): Metadata {
+  const description = `Eventos e ingressos de ${vitrine.nome}.`;
+  return {
+    metadataBase: new URL(`https://${vitrine.host}`),
+    title: { default: vitrine.nome, template: `%s | ${vitrine.nome}` },
+    description,
+    openGraph: {
+      type: "website",
+      locale: "pt_BR",
+      siteName: vitrine.nome,
+      title: vitrine.nome,
+      description,
+      url: `https://${vitrine.host}/`,
+    },
+    robots: { index: true, follow: true },
   };
 }
 

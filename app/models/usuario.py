@@ -73,6 +73,8 @@ class Usuario(Base):
     brand_primary_color = Column(String(7), nullable=True)
     brand_primary_color_dark = Column(String(7), nullable=True)
     brand_subdomain = Column(String(63), unique=True, index=True, nullable=True)
+    brand_custom_domain = Column(String(253), unique=True, index=True, nullable=True)
+    brand_custom_domain_ativo_em = Column(DateTime, nullable=True)
 
     # Verificação de e-mail (compra rápida / reenvio)
     email_verificado = Column(Boolean, default=True, nullable=False)
