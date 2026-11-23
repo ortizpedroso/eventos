@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from queue import Empty, Queue
 
+from app.services.fila_retentativas import Retentativas, atraso_da_tentativa
 from app.services.redis_conn import get_redis_optional
 from config.settings import settings
 
@@ -33,6 +33,7 @@ _REDIS_PROCESSING_KEY = "eventosbr:q:contato_email:processing"
 _REDIS_ATTEMPTS_PREFIX = "eventosbr:q:contato_email:attempts:"
 
 _memory_queue: Queue[str] = Queue()
+_retentativas = Retentativas(_REDIS_QUEUE_KEY, _memory_queue)
 _worker_lock = threading.Lock()
 _worker_started = False
 _worker_thread: threading.Thread | None = None
@@ -175,6 +176,7 @@ def _send_sync(mensagem_id: str) -> bool:
 
 def _dequeue_next() -> str | None:
     r = get_redis_optional()
+    _retentativas.promover_vencidas(r if _use_redis_queue() else None)
     if _use_redis_queue() and r:
         try:
             # FIFO: enqueue faz lpush (LEFT); blmove tira da RIGHT.
@@ -234,10 +236,9 @@ def _schedule_retry(mensagem_id: str) -> None:
             attempts = int(r.incr(key))
             r.expire(key, 86_400)
             if attempts < max_attempts:
-                time.sleep(min(attempts * 2, 15))
-                r.lpush(_REDIS_QUEUE_KEY, mensagem_id)
+                _retentativas.agendar_redis(r, mensagem_id, atraso_da_tentativa(attempts))
                 logger.warning(
-                    "E-mail contato %s reenfileirado (tentativa %s/%s)",
+                    "E-mail contato %s agendado para nova tentativa (%s/%s)",
                     mensagem_id,
                     attempts,
                     max_attempts,
@@ -256,10 +257,9 @@ def _schedule_retry(mensagem_id: str) -> None:
     attempts = _memory_attempts.get(mensagem_id, 0) + 1
     _memory_attempts[mensagem_id] = attempts
     if attempts < max_attempts:
-        time.sleep(min(attempts * 2, 15))
-        _memory_queue.put(mensagem_id)
+        _retentativas.agendar_memoria(mensagem_id, atraso_da_tentativa(attempts))
         logger.warning(
-            "E-mail contato %s reenfileirado em memória (tentativa %s/%s)",
+            "E-mail contato %s agendado para nova tentativa em memória (%s/%s)",
             mensagem_id,
             attempts,
             max_attempts,
@@ -280,7 +280,11 @@ def _worker_loop() -> None:
         if not mensagem_id:
             continue
         try:
-            ok = _send_sync(mensagem_id)
+            try:
+                ok = _send_sync(mensagem_id)
+            except Exception:
+                logger.exception("Erro inesperado ao enviar e-mail de contato %s", mensagem_id)
+                ok = False
             if not ok:
                 _schedule_retry(mensagem_id)
         finally:

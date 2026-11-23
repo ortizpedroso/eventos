@@ -15,6 +15,7 @@ from app.models import Evento, Ingresso
 from app.utils.html_escape import esc
 from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
 from app.services.ingresso_qr import ingresso_qr_payload, montar_carteirinha_ingresso_bytes
+from app.services.fila_retentativas import Retentativas, atraso_da_tentativa
 from app.services.redis_conn import get_redis_optional
 from app.services.senha_definir import gerar_link_definir_senha
 from config.database import SessionLocal
@@ -27,6 +28,7 @@ _REDIS_PROCESSING_KEY = "eventosbr:q:ticket_email:processing"
 _REDIS_ATTEMPTS_PREFIX = "eventosbr:email:att:"
 
 _memory_queue: Queue[str] = Queue()
+_retentativas = Retentativas(_REDIS_QUEUE_KEY, _memory_queue)
 _worker_lock = threading.Lock()
 _worker_started = False
 _worker_thread: threading.Thread | None = None
@@ -173,6 +175,7 @@ def _enqueue_redis(ingresso_id: str) -> bool:
 
 def _dequeue_next() -> str | None:
     r = get_redis_optional()
+    _retentativas.promover_vencidas(r if _use_redis_queue() else None)
     if _use_redis_queue() and r:
         try:
             # blmove (não brpop): move atomicamente pra lista "processing" em vez de
@@ -234,12 +237,9 @@ def _schedule_retry(ingresso_id: str) -> None:
             attempts = int(r.incr(key))
             r.expire(key, 86_400)
             if attempts < max_attempts:
-                import time
-
-                time.sleep(min(attempts * 2, 15))
-                r.lpush(_REDIS_QUEUE_KEY, ingresso_id)
+                _retentativas.agendar_redis(r, ingresso_id, atraso_da_tentativa(attempts))
                 logger.warning(
-                    "E-mail ingresso %s reenfileirado (tentativa %s/%s)",
+                    "E-mail ingresso %s agendado para nova tentativa (%s/%s)",
                     ingresso_id,
                     attempts,
                     max_attempts,
@@ -262,7 +262,11 @@ def _worker_loop() -> None:
         if not ingresso_id:
             continue
         try:
-            ok = _send_sync(ingresso_id)
+            try:
+                ok = _send_sync(ingresso_id)
+            except Exception:
+                logger.exception("Erro inesperado ao enviar e-mail do ingresso %s", ingresso_id)
+                ok = False
             if not ok:
                 _schedule_retry(ingresso_id)
         finally:

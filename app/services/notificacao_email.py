@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from queue import Empty, Queue
 
+from app.services.fila_retentativas import Retentativas, atraso_da_tentativa
 from app.services.redis_conn import get_redis_optional
 from app.services.smtp_client import format_from_header_branded, send_prebuilt_message, smtp_configured
 from config.settings import settings
@@ -22,6 +22,7 @@ _REDIS_KEY = "eventosbr:q:email_simples"
 _REDIS_PROCESSING_KEY = "eventosbr:q:email_simples:processing"
 _REDIS_ATTEMPTS_PREFIX = "eventosbr:q:email_simples:attempts:"
 _memory: Queue[str] = Queue()
+_retentativas = Retentativas(_REDIS_KEY, _memory)
 _worker_lock = threading.Lock()
 _worker_started = False
 _worker_thread: threading.Thread | None = None
@@ -64,6 +65,7 @@ def _use_redis_queue() -> bool:
 
 def _dequeue_next() -> str | None:
     r = get_redis_optional()
+    _retentativas.promover_vencidas(r if _use_redis_queue() else None)
     if _use_redis_queue() and r:
         try:
             # blmove (não blpop): move pra lista "processing" em vez de descartar —
@@ -134,10 +136,9 @@ def _schedule_retry(payload: str) -> None:
             attempts = int(r.incr(key))
             r.expire(key, 86_400)
             if attempts < max_attempts:
-                time.sleep(min(attempts * 2, 15))
-                r.lpush(_REDIS_KEY, payload)
+                _retentativas.agendar_redis(r, payload, atraso_da_tentativa(attempts))
                 logger.warning(
-                    "E-mail simples reenfileirado (tentativa %s/%s)",
+                    "E-mail simples agendado para nova tentativa (%s/%s)",
                     attempts,
                     max_attempts,
                 )
@@ -150,10 +151,9 @@ def _schedule_retry(payload: str) -> None:
     attempts = _memory_attempts.get(digest, 0) + 1
     _memory_attempts[digest] = attempts
     if attempts < max_attempts:
-        time.sleep(min(attempts * 2, 15))
-        _memory.put(payload)
+        _retentativas.agendar_memoria(payload, atraso_da_tentativa(attempts))
         logger.warning(
-            "E-mail simples reenfileirado em memória (tentativa %s/%s)",
+            "E-mail simples agendado para nova tentativa em memória (%s/%s)",
             attempts,
             max_attempts,
         )
@@ -169,7 +169,11 @@ def _worker_loop() -> None:
             continue
         try:
             destino, assunto, html = _parse(payload)
-            ok = bool(destino) and _send_sync(destino, assunto, html)
+            try:
+                ok = bool(destino) and _send_sync(destino, assunto, html)
+            except Exception:
+                logger.exception("Erro inesperado ao enviar e-mail simples para %s", destino)
+                ok = False
             if destino and not ok:
                 _schedule_retry(payload)
         finally:
