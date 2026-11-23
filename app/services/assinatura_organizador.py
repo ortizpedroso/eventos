@@ -69,6 +69,17 @@ def cancelar_assinatura(db: Session, usuario: Usuario) -> Usuario:
     return usuario
 
 
+def expirar_assinatura(db: Session, usuario: Usuario) -> Usuario:
+    """Vencimento sem pagamento: volta à taxa padrão, mas guarda a data para a tolerância do white-label."""
+    usuario.plano_tarifa = "padrao"
+    usuario.assinatura_renovacao_payment_id = None
+    usuario.assinatura_renovacao_criado_em = None
+    usuario.data_atualizacao = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+
 def _resposta_assinatura(payment: dict, *, criado_em: datetime | None = None) -> dict:
     """Resposta da cobrança da assinatura (PIX-only), sem expor o gateway ao usuário."""
     from app.services.pagamento_asaas import extrair_pix, obter_pix_qrcode

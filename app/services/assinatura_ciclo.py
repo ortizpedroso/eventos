@@ -85,7 +85,7 @@ def _processar_ciclo_assinaturas_db(db: Session) -> dict[str, int]:
         enviar_email_aviso_expiracao_assinatura,
         enviar_email_renovacao_assinatura_gerada,
     )
-    from app.services.assinatura_organizador import cancelar_assinatura, iniciar_cobranca_assinatura
+    from app.services.assinatura_organizador import expirar_assinatura, iniciar_cobranca_assinatura
 
     agora = _agora()
     stats = {"avisos": 0, "renovacoes": 0, "expiradas": 0}
@@ -108,7 +108,7 @@ def _processar_ciclo_assinaturas_db(db: Session) -> dict[str, int]:
 
         if dias < 0:
             if usuario.plano_tarifa == "assinatura":
-                cancelar_assinatura(db, usuario)
+                expirar_assinatura(db, usuario)
                 stats["expiradas"] += 1
             continue
 

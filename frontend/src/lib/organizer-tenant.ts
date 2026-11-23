@@ -1,6 +1,8 @@
 /** Vitrine do organizador: o site servido no endereço dele (subdomínio da plataforma ou domínio próprio). */
 export type VitrineProdutor = {
   host: string;
+  /** Falso quando o domínio próprio está sem assinatura e sem cortesia: o endereço leva à página na EventosBR. */
+  liberado: boolean;
   slug: string;
   organizador_id: string;
   nome: string;
@@ -82,4 +84,9 @@ export function rotaNaVitrine(pathname: string, slug: string): RotaVitrine {
   if (pathname === "/eventos/novo" || pathname.startsWith("/eventos/novo/")) return { tipo: "plataforma" };
   if (/^\/eventos\/[^/]+\/editar/.test(pathname)) return { tipo: "plataforma" };
   return PREFIXOS_DA_VITRINE.some((p) => comecaCom(pathname, p)) ? { tipo: "seguir" } : { tipo: "plataforma" };
+}
+
+/** Destino na plataforma quando o domínio próprio não está liberado: o comprador nunca cai numa página quebrada. */
+export function caminhoNaPlataforma(pathname: string, slug: string): string {
+  return pathname === "/" || pathname === "/eventos" ? `/produtor/${slug}` : pathname;
 }

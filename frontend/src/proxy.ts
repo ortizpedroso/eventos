@@ -6,6 +6,7 @@ import { SESSION_EXPIRED_COOKIE } from "@/lib/session-expired-cookie";
 import { fetchMiddlewareSession } from "@/lib/middleware-api";
 import {
   VITRINE_HOST_HEADER,
+  caminhoNaPlataforma,
   fetchVitrinePorHost,
   hostPodeSerVitrine,
   rotaNaVitrine,
@@ -113,6 +114,10 @@ export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
   if (hostPodeSerVitrine(host)) {
     const vitrine = await fetchVitrinePorHost(host);
+    if (vitrine && !vitrine.liberado) {
+      const destino = urlPlataforma(`${caminhoNaPlataforma(pathname, vitrine.slug)}${request.nextUrl.search}`);
+      return finish(NextResponse.redirect(destino), nonce);
+    }
     if (vitrine) {
       headers.set(VITRINE_HOST_HEADER, vitrine.host);
       const rota = rotaNaVitrine(pathname, vitrine.slug);

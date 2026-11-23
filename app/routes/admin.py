@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+from datetime import date
 from typing import Literal
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,52 @@ async def admin_atualizar_assinatura(
         usuario_id, body.plano_tarifa, body.meses,
     )
     return {"id": usuario.id, "plano_tarifa": usuario.plano_tarifa, "assinatura_valida_ate": usuario.assinatura_valida_ate}
+
+
+class WhitelabelAdminUpdate(BaseModel):
+    cortesia_ate: date | None = None
+
+
+def _whitelabel_admin_json(usuario: Usuario) -> dict:
+    from app.services.whitelabel_acesso import acesso_whitelabel, dia_brasilia
+
+    cortesia = usuario.whitelabel_cortesia_ate
+    return {
+        "id": usuario.id,
+        "dominio_proprio": usuario.brand_custom_domain,
+        "dominio_ativo": usuario.brand_custom_domain_ativo_em is not None,
+        "cortesia_ate": dia_brasilia(cortesia).isoformat() if cortesia else None,
+        "acesso": acesso_whitelabel(usuario).para_json(),
+    }
+
+
+def _organizador_ou_404(db: Session, usuario_id: str) -> Usuario:
+    usuario = db.get(Usuario, usuario_id)
+    if not usuario or usuario.tipo != "organizador":
+        raise HTTPException(status_code=404, detail="Organizador não encontrado.")
+    return usuario
+
+
+@router.get("/organizadores/{usuario_id}/whitelabel")
+async def admin_ver_whitelabel(usuario_id: str, db: Session = Depends(get_db)):
+    return _whitelabel_admin_json(_organizador_ou_404(db, usuario_id))
+
+
+@router.patch("/organizadores/{usuario_id}/whitelabel")
+async def admin_cortesia_whitelabel(
+    usuario_id: str,
+    body: WhitelabelAdminUpdate,
+    db: Session = Depends(get_db),
+):
+    """Cortesia do dono da plataforma: domínio próprio liberado sem mensalidade até a data informada."""
+    from app.services.whitelabel_acesso import fim_do_dia_brasilia
+
+    usuario = _organizador_ou_404(db, usuario_id)
+    usuario.whitelabel_cortesia_ate = fim_do_dia_brasilia(body.cortesia_ate) if body.cortesia_ate else None
+    db.commit()
+    db.refresh(usuario)
+    logger.info("admin_action=cortesia_whitelabel usuario_id=%s ate=%s", usuario_id, body.cortesia_ate)
+    return _whitelabel_admin_json(usuario)
 
 
 @router.get("/setup")
