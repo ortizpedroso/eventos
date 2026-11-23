@@ -41,6 +41,7 @@ export function PerfilPublicoOrganizador() {
   const [brandColor, setBrandColor] = useState("");
   const [brandColorDark, setBrandColorDark] = useState("");
   const [brandSubdomain, setBrandSubdomain] = useState("");
+  const [trocaSubdominio, setTrocaSubdominio] = useState<{ anterior: string; novo: string } | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -69,8 +70,19 @@ export function PerfilPublicoOrganizador() {
     void carregar();
   }, [carregar]);
 
-  async function onSubmit(e: FormEvent) {
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const anterior = perfil?.brand_subdomain ?? "";
+    const novo = brandSubdomain.trim().toLowerCase();
+    if (anterior && novo !== anterior) {
+      setTrocaSubdominio({ anterior, novo });
+      return;
+    }
+    void salvar();
+  }
+
+  async function salvar() {
+    setTrocaSubdominio(null);
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -269,9 +281,37 @@ export function PerfilPublicoOrganizador() {
             placeholder="https://..."
           />
         </div>
-        <button type="submit" disabled={saving} className="btn-success px-6 py-2 text-sm">
-          {saving ? "Salvando…" : "Salvar perfil público"}
-        </button>
+        {trocaSubdominio ? (
+          <div role="alertdialog" aria-labelledby="troca-subdominio-titulo" className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+            <p id="troca-subdominio-titulo" className="font-semibold">
+              {trocaSubdominio.novo
+                ? `Você está trocando ${trocaSubdominio.anterior}.${PLATFORM_DOMAIN} por ${trocaSubdominio.novo}.${PLATFORM_DOMAIN}.`
+                : `Você está removendo ${trocaSubdominio.anterior}.${PLATFORM_DOMAIN}.`}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>
+                Se o seu domínio próprio aponta para a plataforma por <strong>CNAME</strong>, não precisa fazer nada.
+              </li>
+              <li>
+                Se você configurou um <strong>redirecionamento</strong> no seu provedor para o endereço antigo,
+                atualize para o novo endereço.
+              </li>
+              <li>Links e QR Codes já divulgados com o endereço antigo deixam de funcionar.</li>
+            </ul>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => void salvar()} className="btn-success px-4 py-2 text-sm">
+                Confirmar troca
+              </button>
+              <button type="button" onClick={() => setTrocaSubdominio(null)} className="btn-outline px-4 py-2 text-sm">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="submit" disabled={saving} className="btn-success px-6 py-2 text-sm">
+            {saving ? "Salvando…" : "Salvar perfil público"}
+          </button>
+        )}
       </form>
     </section>
   );
