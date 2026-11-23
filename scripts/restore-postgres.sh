@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # Restaura backup .sql ou .sql.gz no Postgres do Compose.
 # Uso: ./scripts/restore-postgres.sh backups/backup_eventosbr_20260517_1200.sql.gz
 #

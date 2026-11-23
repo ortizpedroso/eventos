@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # Backup PostgreSQL com rotação, log e upload off-site opcional.
 # Pensado para cron no VPS Hostinger:
 #   0 3 * * * cd /opt/eventosbr && ./scripts/backup-postgres-cron.sh

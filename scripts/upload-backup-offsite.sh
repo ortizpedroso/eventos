@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # Copia o último backup para destino remoto (rclone, scp ou aws cli).
 #
 # Configure no .env do VPS:

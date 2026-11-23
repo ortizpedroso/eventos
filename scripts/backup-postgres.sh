@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # Backup lógico PostgreSQL (Docker Compose prod ou dev).
 # Uso na raiz do repo:
 #   ./scripts/backup-postgres.sh
