@@ -52,7 +52,7 @@ def test_retry_reenfileira_no_redis(monkeypatch):
     monkeypatch.setattr(ticket_email, "get_redis_optional", lambda: mock_redis)
     monkeypatch.setattr(ticket_email, "_use_redis_queue", lambda: True)
 
-    with patch("time.sleep"):
-        ticket_email._schedule_retry("ing-retry")
+    ticket_email._schedule_retry("ing-retry")
 
-    mock_redis.lpush.assert_any_call(ticket_email._REDIS_QUEUE_KEY, "ing-retry")
+    agendados = [c.args[1] for c in mock_redis.zadd.call_args_list if c.args[0] == f"{ticket_email._REDIS_QUEUE_KEY}:retry"]
+    assert any("ing-retry" in membros for membros in agendados), "nova tentativa agendada, sem dormir no worker"

@@ -37,10 +37,10 @@ def _redis_disponivel(monkeypatch):
     reset_redis_client_for_tests()
     r = get_redis_optional()
     assert r is not None, "Redis precisa estar disponível para estes testes"
-    r.delete(contato_email._REDIS_QUEUE_KEY, contato_email._REDIS_PROCESSING_KEY)
+    r.delete(contato_email._REDIS_QUEUE_KEY, contato_email._REDIS_PROCESSING_KEY, f"{contato_email._REDIS_QUEUE_KEY}:retry")
     yield r
     parar_workers_email()
-    r.delete(contato_email._REDIS_QUEUE_KEY, contato_email._REDIS_PROCESSING_KEY)
+    r.delete(contato_email._REDIS_QUEUE_KEY, contato_email._REDIS_PROCESSING_KEY, f"{contato_email._REDIS_QUEUE_KEY}:retry")
     reset_redis_client_for_tests()
 
 
@@ -173,7 +173,7 @@ class TestFilaConfiavelContato:
         with (
             patch("app.services.platform_settings.get_public_settings") as mock_settings,
             patch("app.services.smtp_client.smtp_configured", return_value=True),
-            patch("app.services.smtp_client.send_email", return_value=True),
+            patch("app.services.smtp_client.send_email", return_value=True) as mock_send,
         ):
             mock_settings.return_value.contact_email = "dono@eventosbr.app.br"
             mock_settings.return_value.support_email = None
@@ -186,23 +186,26 @@ class TestFilaConfiavelContato:
             thread = contato_email._worker_thread
             assert thread is not None and thread.is_alive(), "worker de contato não iniciou"
 
-            # Worker usa blmove(timeout=2) — sob carga do suite completa em CI pode demorar.
-            deadline = time.monotonic() + 90.0
-            enviado = False
+            # O banco de teste é uma única conexão SQLite (StaticPool): ler enquanto o worker
+            # grava faria o ROLLBACK do teste desfazer o UPDATE do worker. Espera o ciclo
+            # terminar pelo Redis e só então consulta o banco.
+            deadline = time.monotonic() + 30.0
             while time.monotonic() < deadline:
-                thread = contato_email._worker_thread
-                if thread is None or not thread.is_alive():
-                    contato_email.start_contato_email_worker()
-                db = TestingSessionLocal()
-                try:
-                    registro = db.get(ContatoSiteMensagem, mensagem_id)
-                    enviado = bool(registro and registro.email_enviado)
-                finally:
-                    db.close()
-                if enviado:
+                terminou = (
+                    mock_send.called
+                    and r.llen(contato_email._REDIS_QUEUE_KEY) == 0
+                    and r.llen(contato_email._REDIS_PROCESSING_KEY) == 0
+                )
+                if terminou:
                     break
-                time.sleep(0.25)
-            assert enviado, "worker não processou a mensagem em segundo plano a tempo"
+                time.sleep(0.1)
+            assert mock_send.called, "worker não processou a mensagem em segundo plano a tempo"
+
+            db = TestingSessionLocal()
+            try:
+                assert db.get(ContatoSiteMensagem, mensagem_id).email_enviado is True
+            finally:
+                db.close()
 
         contato_email.stop_contato_email_worker(aguardar_segundos=5)
         if contato_email._worker_thread is not None:

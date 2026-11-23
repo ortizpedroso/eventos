@@ -22,10 +22,10 @@ def _redis_disponivel(monkeypatch):
     reset_redis_client_for_tests()
     r = get_redis_optional()
     assert r is not None, "Redis precisa estar disponível para estes testes"
-    r.delete(notificacao_email._REDIS_KEY, notificacao_email._REDIS_PROCESSING_KEY)
+    r.delete(notificacao_email._REDIS_KEY, notificacao_email._REDIS_PROCESSING_KEY, f"{notificacao_email._REDIS_KEY}:retry")
     yield r
     parar_workers_email()
-    r.delete(notificacao_email._REDIS_KEY, notificacao_email._REDIS_PROCESSING_KEY)
+    r.delete(notificacao_email._REDIS_KEY, notificacao_email._REDIS_PROCESSING_KEY, f"{notificacao_email._REDIS_KEY}:retry")
     reset_redis_client_for_tests()
 
 
