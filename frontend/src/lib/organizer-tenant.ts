@@ -9,6 +9,9 @@ export type VitrineProdutor = {
   brand_logo_url: string | null;
   /** Favicon escolhido pelo organizador ou, na falta dele, a foto do perfil. */
   brand_favicon_url: string | null;
+  /** Nulo = padrão (topo claro, rodapé escuro). */
+  brand_tema_vitrine: "claro" | "escuro" | null;
+  brand_rodape_texto: string | null;
   brand_primary_color: string | null;
   brand_primary_color_dark: string | null;
   social_instagram: string | null;
