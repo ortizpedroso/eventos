@@ -46,6 +46,7 @@ export function ProdutorPublicClient({
   if (!perfil) return <p className="py-12 text-center text-zinc-500">Carregando…</p>;
 
   const fotoSrc = resolveEventoImagemSrc(perfil.foto_url || perfil.brand_logo_url);
+  const capaSrc = resolveEventoImagemSrc(perfil.brand_cover_url);
   const instagramHref = resolveUrlPublicaHref(perfil.social_instagram);
   const whatsappHref = resolveUrlPublicaHref(perfil.social_whatsapp);
   const siteHref = resolveUrlPublicaHref(perfil.social_site);
@@ -53,6 +54,15 @@ export function ProdutorPublicClient({
   return (
     <OrganizerBrandTheme brand={perfil}>
       <div className="mx-auto max-w-6xl py-12 px-4">
+        {capaSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={capaSrc}
+            alt={`Capa de ${perfil.nome}`}
+            className="mb-8 aspect-[4/1] w-full rounded-2xl object-cover"
+            data-produtor-capa
+          />
+        ) : null}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-start">
           {fotoSrc ? (
             // eslint-disable-next-line @next/next/no-img-element

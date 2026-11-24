@@ -18,6 +18,8 @@ type PerfilPublico = {
   social_site: string | null;
   brand_name: string | null;
   brand_logo_url: string | null;
+  brand_cover_url: string | null;
+  brand_favicon_url: string | null;
   brand_primary_color: string | null;
   brand_primary_color_dark: string | null;
   brand_subdomain: string | null;
@@ -41,6 +43,8 @@ export function PerfilPublicoOrganizador() {
   const [site, setSite] = useState("");
   const [brandName, setBrandName] = useState("");
   const [brandLogoUrl, setBrandLogoUrl] = useState("");
+  const [brandCoverUrl, setBrandCoverUrl] = useState("");
+  const [brandFaviconUrl, setBrandFaviconUrl] = useState("");
   const [brandColor, setBrandColor] = useState("");
   const [brandColorDark, setBrandColorDark] = useState("");
   const [brandSubdomain, setBrandSubdomain] = useState("");
@@ -59,6 +63,8 @@ export function PerfilPublicoOrganizador() {
       setSite(p.social_site ?? "");
       setBrandName(p.brand_name ?? "");
       setBrandLogoUrl(p.brand_logo_url ?? "");
+      setBrandCoverUrl(p.brand_cover_url ?? "");
+      setBrandFaviconUrl(p.brand_favicon_url ?? "");
       setBrandColor(p.brand_primary_color ?? "");
       setBrandColorDark(p.brand_primary_color_dark ?? "");
       setBrandSubdomain(p.brand_subdomain ?? "");
@@ -101,6 +107,8 @@ export function PerfilPublicoOrganizador() {
           social_site: site.trim() || null,
           brand_name: brandName.trim() || null,
           brand_logo_url: brandLogoUrl.trim() || null,
+          brand_cover_url: brandCoverUrl.trim() || null,
+          brand_favicon_url: brandFaviconUrl.trim() || null,
           brand_primary_color: brandColor.trim() || null,
           brand_primary_color_dark: brandColorDark.trim() || null,
           brand_subdomain: brandSubdomain.trim().toLowerCase() || null,
@@ -214,6 +222,30 @@ export function PerfilPublicoOrganizador() {
                 uploadUrl="/api/organizador/assets/upload"
                 larguraAlvo={480}
                 alturaAlvo={120}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <ImagemAssetField
+                id="brand_cover_url"
+                label="Imagem de capa"
+                hint="Faixa larga no topo da sua página pública (proporção 4:1, por exemplo 1600×400)."
+                value={brandCoverUrl}
+                onChange={setBrandCoverUrl}
+                uploadUrl="/api/organizador/assets/upload"
+                larguraAlvo={1600}
+                alturaAlvo={400}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <ImagemAssetField
+                id="brand_favicon_url"
+                label="Favicon (ícone da aba do navegador)"
+                hint="Imagem quadrada e simples. Aparece no seu domínio ou subdomínio. Sem favicon, usamos a foto do perfil."
+                value={brandFaviconUrl}
+                onChange={setBrandFaviconUrl}
+                uploadUrl="/api/organizador/assets/upload"
+                larguraAlvo={192}
+                alturaAlvo={192}
               />
             </div>
             <BrandColorPicker
