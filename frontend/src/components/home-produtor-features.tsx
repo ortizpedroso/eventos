@@ -13,7 +13,7 @@ const features = [
   },
   {
     titulo: "Dinheiro no painel",
-    descricao: "Extrato, saldo e pedido de saque no mesmo lugar.",
+    descricao: "Extrato e saldo das vendas no mesmo lugar.",
   },
   {
     titulo: "Você recebe na venda",
@@ -21,7 +21,7 @@ const features = [
   },
   {
     titulo: "Sua marca",
-    descricao: "Logo e cores na sua página pública de produtor.",
+    descricao: "Logo, cores e capa na sua página e no seu subdomínio.",
   },
   {
     titulo: "Relatórios claros",

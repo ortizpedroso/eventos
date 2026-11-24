@@ -11,6 +11,29 @@ export const metadata: Metadata = {
     "Preços transparentes: eventos gratuitos, taxa por ingresso vendido ou assinatura com taxa reduzida no EventosBR.",
 };
 
+const COMPARATIVO: { recurso: string; gratuitos: boolean; pagos: boolean; assinatura: boolean }[] = [
+  { recurso: "Página do produtor com logo, cores, capa e favicon", gratuitos: true, pagos: true, assinatura: true },
+  { recurso: "Vitrine no seu subdomínio (seunome.eventosbr.app.br)", gratuitos: true, pagos: true, assinatura: true },
+  { recurso: "Topo e rodapé da vitrine com as suas cores e o seu texto", gratuitos: true, pagos: true, assinatura: true },
+  { recurso: "E-mail do ingresso com o seu logo e o seu nome", gratuitos: true, pagos: true, assinatura: true },
+  { recurso: "Check-in com QR Code e lista de participantes", gratuitos: true, pagos: true, assinatura: true },
+  { recurso: "PIX, cartão e boleto, com reembolso automatizado", gratuitos: false, pagos: true, assinatura: true },
+  { recurso: "Taxa reduzida por ingresso", gratuitos: false, pagos: false, assinatura: true },
+  { recurso: "Domínio próprio (ex.: eventos.suamarca.com.br)", gratuitos: false, pagos: false, assinatura: true },
+];
+
+function Marca({ ok }: { ok: boolean }) {
+  return ok ? (
+    <span className="font-semibold text-emerald-700" aria-label="Incluído">
+      ✓
+    </span>
+  ) : (
+    <span className="text-zinc-400" aria-label="Não incluído">
+      –
+    </span>
+  );
+}
+
 export default function PlanosPage() {
   return (
     <div className="pb-16 pt-8 sm:pb-24 sm:pt-12 lg:pb-32 lg:pt-16">
@@ -27,6 +50,32 @@ export default function PlanosPage() {
       <div className="textos-justificados">
         <div className="mx-auto mt-16 max-w-6xl sm:mt-20">
           <PlanosPricingCards />
+        </div>
+
+        <div className="mx-auto mt-16 max-w-4xl sm:mt-20">
+          <h2 className="text-center text-2xl font-bold tracking-tight text-zinc-900">O que cada plano inclui</h2>
+          <div className="mt-6 overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+            <table className="w-full min-w-[36rem] text-left text-sm" data-planos-comparativo>
+              <thead className="bg-zinc-50 text-zinc-700">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Recurso</th>
+                  <th className="px-4 py-3 text-center font-semibold">Eventos gratuitos</th>
+                  <th className="px-4 py-3 text-center font-semibold">Eventos pagos</th>
+                  <th className="px-4 py-3 text-center font-semibold">Assinatura mensal</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 text-zinc-700">
+                {COMPARATIVO.map((linha) => (
+                  <tr key={linha.recurso}>
+                    <td className="px-4 py-3">{linha.recurso}</td>
+                    <td className="px-4 py-3 text-center"><Marca ok={linha.gratuitos} /></td>
+                    <td className="px-4 py-3 text-center"><Marca ok={linha.pagos} /></td>
+                    <td className="px-4 py-3 text-center"><Marca ok={linha.assinatura} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="mx-auto mt-16 max-w-6xl sm:mt-20">

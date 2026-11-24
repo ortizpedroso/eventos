@@ -30,19 +30,19 @@ const diferenciais: { titulo: string; texto: string; icone: string }[] = [
   {
     titulo: "Sua marca, não a nossa",
     texto:
-      "Personalize logo, cores e subdomínio da sua página de vendas. Quem compra vê a sua identidade — a EventosBR fica nos bastidores, cuidando da parte chata (pagamento, segurança, infraestrutura).",
+      "Personalize logo, cores, capa e subdomínio da sua página de vendas. Quem compra vê a sua identidade — a EventosBR fica nos bastidores, cuidando da parte chata (pagamento, segurança, infraestrutura).",
     icone: "M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42",
   },
   {
     titulo: "Repasse sem enrolação",
     texto:
-      "Acompanhe cada venda no seu extrato dentro da plataforma, em tempo real. Antecipação automática disponível pra quem quer receber antes do prazo padrão, sem burocracia.",
+      "Acompanhe cada venda no seu extrato dentro da plataforma, em tempo real. O líquido cai direto na sua conta Asaas, sem repasse manual.",
     icone: "M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z",
   },
   {
     titulo: "Operação completa, não só a venda",
     texto:
-      "Lotes com data de troca automática, cupons de desconto, lista de espera, check-in por QR Code com múltiplas portarias simultâneas e reembolso automático conforme sua política.",
+      "Lotes com data de troca automática, cupons de desconto, lista de espera, check-in por QR Code com múltiplas portarias simultâneas e reembolso automático em até 10 dias da compra, se o ingresso não foi usado.",
     icone: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
   },
 ];
@@ -128,9 +128,9 @@ export default function ParaProdutoresPage() {
                 A página de vendas veste a sua marca
               </h2>
               <p className="mt-4 text-zinc-700 text-justify">
-                Configure logo, favicon, cores e um subdomínio próprio direto no seu perfil de organizador.
-                Quem compra o ingresso vê a identidade do seu evento do início ao fim — inclusive nos
-                e-mails de confirmação.
+                Configure logo, capa, favicon, cores e um subdomínio próprio direto no seu perfil de organizador.
+                No seu subdomínio, quem compra vê a sua identidade do início ao fim, inclusive no e-mail
+                do ingresso. No plano com assinatura, use também o seu próprio domínio.
               </p>
               <CriarEventoLink className="mt-6 inline-flex items-center font-medium text-emerald-700 underline-offset-2 hover:underline">
                 Criar conta e personalizar →
@@ -139,7 +139,7 @@ export default function ParaProdutoresPage() {
             <ul className="space-y-3 text-sm text-zinc-700">
               <li className="flex items-start gap-2">
                 <Icone path="M4.5 12.75l6 6 9-13.5" />
-                <span>Logo e favicon próprios em toda a experiência de compra</span>
+                <span>Logo, capa e favicon próprios na sua vitrine</span>
               </li>
               <li className="flex items-start gap-2">
                 <Icone path="M4.5 12.75l6 6 9-13.5" />
@@ -148,6 +148,14 @@ export default function ParaProdutoresPage() {
               <li className="flex items-start gap-2">
                 <Icone path="M4.5 12.75l6 6 9-13.5" />
                 <span>Subdomínio próprio (ex.: seuevento.eventosbr.app.br)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Icone path="M4.5 12.75l6 6 9-13.5" />
+                <span>E-mail do ingresso com o seu logo e o seu nome</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Icone path="M4.5 12.75l6 6 9-13.5" />
+                <span>Domínio próprio (ex.: eventos.suamarca.com.br) no plano com assinatura</span>
               </li>
               <li className="flex items-start gap-2">
                 <Icone path="M4.5 12.75l6 6 9-13.5" />

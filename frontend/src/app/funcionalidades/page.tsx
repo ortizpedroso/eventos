@@ -148,7 +148,7 @@ const destaques = [
     titulo: "Pagamentos via Asaas (BC)",
     texto: "PIX e cartão passam pela Asaas — instituição de pagamento autorizada pelo Banco Central do Brasil. A EventosBR organiza a venda e o ingresso — não armazena o número completo do cartão nos nossos servidores.",
     itens: [
-      "Aceite PIX, cartão e outras modalidades disponíveis no checkout",
+      "Aceite PIX, cartão (com parcelamento) e boleto no checkout",
       "Antifraude e cobrança ficam a cargo da Asaas",
       "Repasse líquido na conta de recebimento do organizador",
     ],
@@ -188,7 +188,7 @@ const outrosRecursos = [
   {
     icone: "pagamento",
     titulo: "Financeiro e repasse",
-    texto: "Extrato, saldo e saque na plataforma. O líquido da venda cai na sua conta de recebimento com split automático.",
+    texto: "Extrato e saldo das vendas no painel. O líquido de cada venda cai direto na sua conta Asaas, com split automático.",
   },
   {
     icone: "resumo",
@@ -198,12 +198,7 @@ const outrosRecursos = [
   {
     icone: "ingresso",
     titulo: "Página com sua marca",
-    texto: "Whitelabel: logo, cores e domínio personalizado na página pública do evento e nos e-mails.",
-  },
-  {
-    icone: "api",
-    titulo: "Integrações quando precisar",
-    texto: "Conecte ferramentas externas ou automações — documentação disponível para equipes técnicas.",
+    texto: "Logo, cores, capa e favicon na sua página, vitrine no seu subdomínio e e-mail do ingresso com a sua marca. Domínio próprio no plano com assinatura.",
   },
 ] as const;
 
