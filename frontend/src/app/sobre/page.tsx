@@ -44,7 +44,7 @@ export default function SobrePage() {
             <div className="flex-1 lg:max-w-xl">
               <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">A nossa proposta</h2>
               <p className="mt-6 text-lg leading-relaxed text-zinc-600">
-                Acreditamos que organizar um evento não deve ser um pesadelo logístico. Queremos reduzir fricção: oferecemos formulários claros, uma página pública otimizada para conversão, pagamentos seguros e regras de cancelamento flexíveis.
+                Acreditamos que organizar um evento não deve ser um pesadelo logístico. Queremos reduzir fricção: oferecemos formulários claros, uma página pública otimizada para conversão, pagamentos seguros e regras de cancelamento claras.
               </p>
               <p className="mt-4 text-lg leading-relaxed text-zinc-600">
                 O nosso objetivo é devolver o seu tempo. Menos horas lidando com burocracias ou conciliações financeiras, e mais tempo para focar no conteúdo, na experiência e na energia do seu público.
@@ -94,10 +94,10 @@ export default function SobrePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
                 </svg>
               </div>
-              <h3 className="mt-5 text-lg font-semibold text-zinc-900">Equipes e integrações</h3>
+              <h3 className="mt-5 text-lg font-semibold text-zinc-900">Agências e produtoras</h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-                Agências e times que precisam conectar CRM, automações ou relatórios customizados —
-                com documentação para desenvolvedores quando a operação exige.
+                Agências e produtoras que vendem com a própria marca: página, subdomínio e e-mail do
+                ingresso com a identidade da casa, e relatórios de vendas e participantes para exportar.
               </p>
             </div>
           </div>

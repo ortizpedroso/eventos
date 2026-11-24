@@ -49,6 +49,7 @@ export function PlanosPricingCards({ compact = false }: Props) {
           <Feature>Eventos ilimitados</Feature>
           <Feature>Ingressos gratuitos ilimitados</Feature>
           <Feature>QR Code na entrada</Feature>
+          <Feature>Sua marca na página e no subdomínio</Feature>
         </ul>
         {!compact ? (
           <div className="mt-8">
@@ -71,9 +72,10 @@ export function PlanosPricingCards({ compact = false }: Props) {
           </span>
         </div>
         <ul className="mt-8 space-y-3">
-          <Feature>PIX, cartão e pagamento seguro</Feature>
+          <Feature>PIX, cartão (com parcelamento) e boleto</Feature>
           <Feature>Reembolso automatizado</Feature>
-          <Feature>Recebimento direto na conta</Feature>
+          <Feature>Recebimento direto na sua conta Asaas</Feature>
+          <Feature>Sua marca na página, no subdomínio e no e-mail do ingresso</Feature>
         </ul>
         {!compact ? (
           <div className="mt-8">
@@ -103,7 +105,8 @@ export function PlanosPricingCards({ compact = false }: Props) {
         </div>
         <ul className="mt-8 space-y-3">
           <Feature>Taxa reduzida em cada venda</Feature>
-          <Feature>Mesmos recursos do plano pago</Feature>
+          <Feature>Vitrine no seu próprio domínio</Feature>
+          <Feature>Tudo do plano Eventos pagos</Feature>
           <Feature>Indicado para alto volume</Feature>
         </ul>
         {!compact ? (
