@@ -19,7 +19,7 @@ const perguntas = [
   },
   {
     q: "Posso usar minha marca?",
-    a: "Sim. No seu perfil você define logo, cores, capa e favicon, e ganha uma vitrine no seu subdomínio (seunome.eventosbr.app.br). O e-mail do ingresso sai com a sua marca. No plano com assinatura, dá para usar o seu próprio domínio.",
+    a: "Sim. Na página pública do produtor você define logo, cores, capa e favicon, e ganha uma vitrine no seu subdomínio (seunome.eventosbr.app.br). O e-mail do ingresso sai com a sua marca. No plano com assinatura, dá para usar o seu próprio domínio.",
   },
 ] as const;
 
