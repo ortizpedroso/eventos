@@ -70,6 +70,7 @@ def _brand_payload(org: Usuario) -> dict:
     return {
         "brand_name": org.brand_name,
         "brand_logo_url": org.brand_logo_url,
+        "brand_cover_url": org.brand_cover_url,
         "brand_primary_color": org.brand_primary_color,
         "brand_primary_color_dark": org.brand_primary_color_dark,
         "brand_subdomain": org.brand_subdomain,
@@ -187,6 +188,7 @@ def resolver_tenant_por_host(db: Session, host: str | None) -> dict | None:
         "organizador_id": org.id,
         "nome": (org.brand_name or org.nome or "").strip() or org.nome,
         "brand_logo_url": org.brand_logo_url or org.foto_url,
+        "brand_favicon_url": org.brand_favicon_url or org.foto_url,
         "brand_primary_color": org.brand_primary_color,
         "brand_primary_color_dark": org.brand_primary_color_dark,
         "social_instagram": org.social_instagram,

@@ -7,6 +7,8 @@ export type VitrineProdutor = {
   organizador_id: string;
   nome: string;
   brand_logo_url: string | null;
+  /** Favicon escolhido pelo organizador ou, na falta dele, a foto do perfil. */
+  brand_favicon_url: string | null;
   brand_primary_color: string | null;
   brand_primary_color_dark: string | null;
   social_instagram: string | null;

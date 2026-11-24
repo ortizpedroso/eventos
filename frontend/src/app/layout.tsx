@@ -56,7 +56,7 @@ export default async function RootLayout({
           nonce={nonce}
           dangerouslySetInnerHTML={{ __html: brandCss }}
         />
-        {platform.favicon_url ? <link rel="icon" href={platform.favicon_url} /> : null}
+        {platform.favicon_url && !vitrine ? <link rel="icon" href={platform.favicon_url} /> : null}
         {vitrine ? null : (
           <script
             type="application/ld+json"

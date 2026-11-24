@@ -37,11 +37,13 @@ class PerfilPublicoUpdate(BaseModel):
     social_site: str | None = Field(default=None, max_length=500)
     brand_name: str | None = Field(default=None, max_length=120)
     brand_logo_url: str | None = Field(default=None, max_length=2048)
+    brand_cover_url: str | None = Field(default=None, max_length=2048)
+    brand_favicon_url: str | None = Field(default=None, max_length=2048)
     brand_primary_color: str | None = Field(default=None, max_length=7)
     brand_primary_color_dark: str | None = Field(default=None, max_length=7)
     brand_subdomain: str | None = Field(default=None, max_length=63)
 
-    @field_validator("foto_url", "brand_logo_url", mode="before")
+    @field_validator("foto_url", "brand_logo_url", "brand_cover_url", "brand_favicon_url", mode="before")
     @classmethod
     def _foto_url(cls, v: object) -> str | None:
         return validar_imagem_url(v)
@@ -88,6 +90,8 @@ def _perfil_response(usuario: Usuario, slug: str) -> dict:
         "social_site": usuario.social_site,
         "brand_name": usuario.brand_name,
         "brand_logo_url": usuario.brand_logo_url,
+        "brand_cover_url": usuario.brand_cover_url,
+        "brand_favicon_url": usuario.brand_favicon_url,
         "brand_primary_color": usuario.brand_primary_color,
         "brand_primary_color_dark": usuario.brand_primary_color_dark,
         "brand_subdomain": usuario.brand_subdomain,
@@ -148,6 +152,10 @@ async def atualizar_perfil_publico(
                 usuario_atual.brand_name = val.strip()[:120] if val else None
             else:
                 setattr(usuario_atual, field, val)
+
+    for field in ("brand_cover_url", "brand_favicon_url"):
+        if field in body.model_fields_set:
+            setattr(usuario_atual, field, getattr(body, field))
 
     slug = garantir_slug_publico(db, usuario_atual)
     db.commit()

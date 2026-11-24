@@ -70,6 +70,8 @@ class Usuario(Base):
     # White-label do organizador (marca na página pública e subdomínio)
     brand_name = Column(String(120), nullable=True)
     brand_logo_url = Column(Text, nullable=True)
+    brand_cover_url = Column(Text, nullable=True)
+    brand_favicon_url = Column(Text, nullable=True)
     brand_primary_color = Column(String(7), nullable=True)
     brand_primary_color_dark = Column(String(7), nullable=True)
     brand_subdomain = Column(String(63), unique=True, index=True, nullable=True)

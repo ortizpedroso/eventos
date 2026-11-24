@@ -13,6 +13,7 @@ export type ProdutorPerfilPublico = {
   social_site?: string | null;
   brand_name?: string | null;
   brand_logo_url?: string | null;
+  brand_cover_url?: string | null;
   brand_primary_color?: string | null;
   brand_primary_color_dark?: string | null;
   metricas: { eventos_publicados: number; ingressos_pagos: number };

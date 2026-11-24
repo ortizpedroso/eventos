@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import type { PlatformSettings } from "@/lib/platform-settings";
 import { DEFAULT_PLATFORM_SETTINGS } from "@/lib/platform-settings";
+import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import type { VitrineProdutor } from "@/lib/organizer-tenant";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://eventosbr.app.br";
@@ -12,6 +13,14 @@ export const DEFAULT_OG_IMAGE = {
   width: 1200,
   height: 630,
   alt: "EventosBR — ingressos para shows, festas e eventos",
+};
+
+/** Ícones da plataforma ficam em `public/`, não em `app/`: ícone em arquivo no `app/` vence o `icons` do metadata e a vitrine não conseguiria trocá-lo. */
+const PLATFORM_ICONS: Metadata["icons"] = {
+  icon: [
+    { url: "/favicon.ico", sizes: "any" },
+    { url: "/icon.svg", type: "image/svg+xml" },
+  ],
 };
 
 const SITE_DESCRIPTION =
@@ -29,6 +38,7 @@ export function buildMetadata(platform: PlatformSettings): Metadata {
       template: `%s | ${siteName}`,
     },
     description: SITE_DESCRIPTION,
+    icons: PLATFORM_ICONS,
     openGraph: {
       type: "website",
       locale: "pt_BR",
@@ -54,10 +64,12 @@ export function buildMetadata(platform: PlatformSettings): Metadata {
 /** Metadados do site servido no endereço do organizador: nome dele no título e na prévia de link. */
 export function buildVitrineMetadata(vitrine: VitrineProdutor): Metadata {
   const description = `Eventos e ingressos de ${vitrine.nome}.`;
+  const favicon = resolveEventoImagemSrc(vitrine.brand_favicon_url);
   return {
     metadataBase: new URL(`https://${vitrine.host}`),
     title: { default: vitrine.nome, template: `%s | ${vitrine.nome}` },
     description,
+    icons: favicon ? { icon: favicon, apple: favicon } : PLATFORM_ICONS,
     openGraph: {
       type: "website",
       locale: "pt_BR",
