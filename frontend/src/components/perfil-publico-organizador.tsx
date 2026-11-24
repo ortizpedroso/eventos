@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { BrandColorPicker } from "@/components/brand-color-picker";
+import { DominioProprioAssistente } from "@/components/dominio-proprio-assistente";
 import { DominioProprioStatus, type AcessoDominio } from "@/components/dominio-proprio-status";
 import { ImagemAssetField } from "@/components/imagem-asset-field";
 import { TelefoneInput } from "@/components/telefone-input";
@@ -24,6 +25,9 @@ type PerfilPublico = {
   brand_primary_color_dark: string | null;
   brand_subdomain: string | null;
   dominio_proprio?: string | null;
+  dominio_proprio_cadastrado?: string | null;
+  brand_tema_vitrine: "claro" | "escuro" | null;
+  brand_rodape_texto: string | null;
   dominio_proprio_acesso?: AcessoDominio;
 };
 
@@ -45,6 +49,8 @@ export function PerfilPublicoOrganizador() {
   const [brandLogoUrl, setBrandLogoUrl] = useState("");
   const [brandCoverUrl, setBrandCoverUrl] = useState("");
   const [brandFaviconUrl, setBrandFaviconUrl] = useState("");
+  const [temaVitrine, setTemaVitrine] = useState<"" | "claro" | "escuro">("");
+  const [rodapeTexto, setRodapeTexto] = useState("");
   const [brandColor, setBrandColor] = useState("");
   const [brandColorDark, setBrandColorDark] = useState("");
   const [brandSubdomain, setBrandSubdomain] = useState("");
@@ -65,6 +71,8 @@ export function PerfilPublicoOrganizador() {
       setBrandLogoUrl(p.brand_logo_url ?? "");
       setBrandCoverUrl(p.brand_cover_url ?? "");
       setBrandFaviconUrl(p.brand_favicon_url ?? "");
+      setTemaVitrine(p.brand_tema_vitrine ?? "");
+      setRodapeTexto(p.brand_rodape_texto ?? "");
       setBrandColor(p.brand_primary_color ?? "");
       setBrandColorDark(p.brand_primary_color_dark ?? "");
       setBrandSubdomain(p.brand_subdomain ?? "");
@@ -109,6 +117,8 @@ export function PerfilPublicoOrganizador() {
           brand_logo_url: brandLogoUrl.trim() || null,
           brand_cover_url: brandCoverUrl.trim() || null,
           brand_favicon_url: brandFaviconUrl.trim() || null,
+          brand_tema_vitrine: temaVitrine || null,
+          brand_rodape_texto: rodapeTexto.trim() || null,
           brand_primary_color: brandColor.trim() || null,
           brand_primary_color_dark: brandColorDark.trim() || null,
           brand_subdomain: brandSubdomain.trim().toLowerCase() || null,
@@ -138,6 +148,22 @@ export function PerfilPublicoOrganizador() {
       </p>
       {perfil?.dominio_proprio && perfil.dominio_proprio_acesso ? (
         <DominioProprioStatus dominio={perfil.dominio_proprio} acesso={perfil.dominio_proprio_acesso} />
+      ) : null}
+      {perfil?.dominio_proprio_acesso ? (
+        <div className="mt-3">
+          <DominioProprioAssistente
+            cadastrado={perfil.dominio_proprio_cadastrado ?? null}
+            ativo={perfil.dominio_proprio ?? null}
+            liberado={perfil.dominio_proprio_acesso.liberado}
+            onAtualizado={(r) =>
+              setPerfil((prev) =>
+                prev
+                  ? { ...prev, dominio_proprio: r.dominio_proprio, dominio_proprio_cadastrado: r.dominio_proprio_cadastrado }
+                  : prev,
+              )
+            }
+          />
+        </div>
       ) : null}
 
       {slug ? (
@@ -258,6 +284,36 @@ export function PerfilPublicoOrganizador() {
                 setBrandColorDark(dark);
               }}
             />
+            <div className="sm:col-span-2">
+              <label className="text-sm font-medium text-zinc-800" htmlFor="brand_tema_vitrine">
+                Cores do topo e do rodapé
+              </label>
+              <select
+                id="brand_tema_vitrine"
+                value={temaVitrine}
+                onChange={(e) => setTemaVitrine(e.target.value as "" | "claro" | "escuro")}
+                className="mt-1 w-full max-w-xs rounded-md border border-zinc-300 px-3 py-2 text-sm"
+              >
+                <option value="">Padrão (topo claro, rodapé escuro)</option>
+                <option value="claro">Tudo claro</option>
+                <option value="escuro">Tudo escuro</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-sm font-medium text-zinc-800" htmlFor="brand_rodape_texto">
+                Texto do rodapé
+              </label>
+              <textarea
+                id="brand_rodape_texto"
+                value={rodapeTexto}
+                onChange={(e) => setRodapeTexto(e.target.value)}
+                maxLength={500}
+                rows={2}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                placeholder="Ex.: Agência do Vale · CNPJ 00.000.000/0001-00 · Rua X, 123, Lajeado/RS"
+              />
+              <p className="mt-1 text-xs text-zinc-500">Aparece no rodapé do seu domínio ou subdomínio.</p>
+            </div>
             <div className="sm:col-span-2">
               <label className="text-sm font-medium text-zinc-800" htmlFor="brand_subdomain">
                 Subdomínio

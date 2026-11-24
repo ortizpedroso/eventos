@@ -39,6 +39,34 @@ class EmailBranding:
         )
 
 
+def _url_absoluta(url: str | None) -> str | None:
+    u = (url or "").strip()
+    if not u or u.lower().startswith("data:"):
+        return None
+    if u.startswith("/"):
+        return f"{(settings.FRONTEND_PUBLIC_URL or 'http://localhost:3000').rstrip('/')}{u}"
+    return u
+
+
+def branding_do_organizador(plataforma: EmailBranding, org) -> tuple[EmailBranding, str]:
+    """Marca do organizador no e-mail do comprador; a plataforma fica no rodapé (retornado à parte)."""
+    rodape = f"Ingresso emitido pela plataforma {esc(plataforma.site_name)} — {esc(plataforma.footer_domain)}"
+    nome = ((org.brand_name or org.nome or "") if org else "").strip()
+    if not nome:
+        return plataforma, rodape
+    cor = org.brand_primary_color
+    return (
+        EmailBranding(
+            site_name=nome,
+            primary_color=cor or plataforma.primary_color,
+            primary_color_dark=(org.brand_primary_color_dark or cor) if cor else plataforma.primary_color_dark,
+            logo_url=_url_absoluta(org.brand_logo_url or org.foto_url),
+            footer_domain=plataforma.footer_domain,
+        ),
+        rodape,
+    )
+
+
 def get_email_branding(db: Session | None = None) -> EmailBranding:
     from app.schemas.platform_settings import PlatformSettingsPublic
 

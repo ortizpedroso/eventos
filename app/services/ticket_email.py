@@ -13,7 +13,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models import Evento, Ingresso
 from app.utils.html_escape import esc
-from app.services.email_branding import build_email_html, format_email_subject, get_email_branding, link_style
+from app.services.email_branding import (
+    branding_do_organizador,
+    build_email_html,
+    format_email_subject,
+    get_email_branding,
+    link_style,
+)
 from app.services.ingresso_qr import ingresso_qr_payload, montar_carteirinha_ingresso_bytes
 from app.services.fila_retentativas import Retentativas, atraso_da_tentativa
 from app.services.redis_conn import get_redis_optional
@@ -40,11 +46,10 @@ from app.services.smtp_client import format_from_header_branded, send_prebuilt_m
 
 def _build_html(ingresso: Ingresso, qr_cid: str, db: Session) -> str:
     evento = ingresso.evento
-    branding = get_email_branding(db)
+    org = getattr(evento, "organizador", None)
+    branding, rodape = branding_do_organizador(get_email_branding(db), org)
     valor_fmt = f"{ingresso.valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     base = (settings.FRONTEND_PUBLIC_URL or "http://localhost:3000").rstrip("/")
-    org = getattr(evento, "organizador", None)
-    org_name = (org.brand_name or org.nome) if org else None
 
     dono = getattr(ingresso, "usuario", None)
     if dono is not None and not dono.senha_hash:
@@ -79,7 +84,7 @@ def _build_html(ingresso: Ingresso, qr_cid: str, db: Session) -> str:
         title=evento.nome,
         body_html=body,
         branding=branding,
-        organizer_name=org_name,
+        footer_note=rodape,
     )
 
 
@@ -110,7 +115,7 @@ def _send_sync(ingresso_id: str) -> bool:
         qr_bytes = montar_carteirinha_ingresso_bytes(ingresso)
         qr_cid = "ingresso_qr"
         html = _build_html(ingresso, qr_cid, db)
-        branding = get_email_branding(db)
+        branding, _ = branding_do_organizador(get_email_branding(db), ingresso.evento.organizador)
 
         msg = MIMEMultipart("related")
         msg["Subject"] = format_email_subject(f"Seu ingresso — {ingresso.evento.nome}", branding)

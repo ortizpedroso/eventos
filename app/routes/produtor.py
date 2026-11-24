@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import re
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
+from app.services.dominio_proprio import DominioIndisponivel, checar_apontamento, definir_dominio, verificar_e_ativar
 from app.services.whitelabel_acesso import acesso_whitelabel
 from app.models import Usuario, get_db
 from app.routes.auth import get_usuario_atual
@@ -42,6 +44,13 @@ class PerfilPublicoUpdate(BaseModel):
     brand_primary_color: str | None = Field(default=None, max_length=7)
     brand_primary_color_dark: str | None = Field(default=None, max_length=7)
     brand_subdomain: str | None = Field(default=None, max_length=63)
+    brand_tema_vitrine: Literal["claro", "escuro"] | None = None
+    brand_rodape_texto: str | None = Field(default=None, max_length=500)
+
+    @field_validator("brand_rodape_texto", mode="before")
+    @classmethod
+    def _rodape(cls, v: object) -> str | None:
+        return v.strip() or None if isinstance(v, str) else None
 
     @field_validator("foto_url", "brand_logo_url", "brand_cover_url", "brand_favicon_url", mode="before")
     @classmethod
@@ -95,7 +104,10 @@ def _perfil_response(usuario: Usuario, slug: str) -> dict:
         "brand_primary_color": usuario.brand_primary_color,
         "brand_primary_color_dark": usuario.brand_primary_color_dark,
         "brand_subdomain": usuario.brand_subdomain,
+        "brand_tema_vitrine": usuario.brand_tema_vitrine,
+        "brand_rodape_texto": usuario.brand_rodape_texto,
         "dominio_proprio": usuario.brand_custom_domain if usuario.brand_custom_domain_ativo_em else None,
+        "dominio_proprio_cadastrado": usuario.brand_custom_domain,
         "dominio_proprio_acesso": acesso_whitelabel(usuario).para_json(),
     }
 
@@ -153,7 +165,7 @@ async def atualizar_perfil_publico(
             else:
                 setattr(usuario_atual, field, val)
 
-    for field in ("brand_cover_url", "brand_favicon_url"):
+    for field in ("brand_cover_url", "brand_favicon_url", "brand_tema_vitrine", "brand_rodape_texto"):
         if field in body.model_fields_set:
             setattr(usuario_atual, field, getattr(body, field))
 
@@ -161,6 +173,55 @@ async def atualizar_perfil_publico(
     db.commit()
     db.refresh(usuario_atual)
     return {"ok": True, "slug_publico": slug, **_perfil_response(usuario_atual, slug)}
+
+
+class DominioProprioUpdate(BaseModel):
+    dominio: str | None = Field(default=None, max_length=253)
+
+
+def _exigir_organizador(usuario: Usuario) -> None:
+    if usuario.tipo != "organizador":
+        raise HTTPException(status_code=403, detail="Apenas organizadores")
+
+
+@router.put("/meu-perfil/dominio-proprio")
+async def definir_dominio_proprio(
+    body: DominioProprioUpdate,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    _exigir_organizador(usuario_atual)
+    try:
+        definir_dominio(db, usuario_atual, body.dominio)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DominioIndisponivel as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    db.commit()
+    db.refresh(usuario_atual)
+    dominio = usuario_atual.brand_custom_domain
+    return {
+        **_perfil_response(usuario_atual, garantir_slug_publico(db, usuario_atual)),
+        "apontamento": checar_apontamento(dominio).para_json() if dominio else None,
+    }
+
+
+@router.post("/meu-perfil/dominio-proprio/verificar")
+async def verificar_dominio_proprio(
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db),
+):
+    _exigir_organizador(usuario_atual)
+    try:
+        apontamento = verificar_e_ativar(usuario_atual)
+    except DominioIndisponivel as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    db.commit()
+    db.refresh(usuario_atual)
+    return {
+        **_perfil_response(usuario_atual, garantir_slug_publico(db, usuario_atual)),
+        "apontamento": apontamento.para_json(),
+    }
 
 
 @router.get("/{slug}")
