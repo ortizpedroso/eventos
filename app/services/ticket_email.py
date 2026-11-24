@@ -88,6 +88,36 @@ def _build_html(ingresso: Ingresso, qr_cid: str, db: Session) -> str:
     )
 
 
+def montar_email_ingresso(ingresso: Ingresso, db: Session, destino: str) -> MIMEMultipart:
+    qr_cid = "ingresso_qr"
+    html = _build_html(ingresso, qr_cid, db)
+    branding, _ = branding_do_organizador(get_email_branding(db), ingresso.evento.organizador)
+
+    msg = MIMEMultipart("related")
+    msg["Subject"] = format_email_subject(f"Seu ingresso — {ingresso.evento.nome}", branding)
+    msg["From"] = format_from_header_branded(db)
+    msg["To"] = destino
+
+    alt = MIMEMultipart("alternative")
+    alt.attach(
+        MIMEText(
+            f"Ingresso: {ingresso.evento.nome}\n"
+            f"Participante: {ingresso.participante_nome}\n"
+            f"QR: {ingresso_qr_payload(ingresso.id)}",
+            "plain",
+            "utf-8",
+        )
+    )
+    alt.attach(MIMEText(html, "html", "utf-8"))
+    msg.attach(alt)
+
+    img = MIMEImage(montar_carteirinha_ingresso_bytes(ingresso), _subtype="png")
+    img.add_header("Content-ID", f"<{qr_cid}>")
+    img.add_header("Content-Disposition", "inline", filename="ingresso-qr.png")
+    msg.attach(img)
+    return msg
+
+
 def _send_sync(ingresso_id: str) -> bool:
     db: Session = SessionLocal()
     try:
@@ -112,33 +142,7 @@ def _send_sync(ingresso_id: str) -> bool:
             logger.warning("E-mail ingresso %s: sem destino", ingresso_id)
             return False
 
-        qr_bytes = montar_carteirinha_ingresso_bytes(ingresso)
-        qr_cid = "ingresso_qr"
-        html = _build_html(ingresso, qr_cid, db)
-        branding, _ = branding_do_organizador(get_email_branding(db), ingresso.evento.organizador)
-
-        msg = MIMEMultipart("related")
-        msg["Subject"] = format_email_subject(f"Seu ingresso — {ingresso.evento.nome}", branding)
-        msg["From"] = format_from_header_branded(db)
-        msg["To"] = destino
-
-        alt = MIMEMultipart("alternative")
-        alt.attach(
-            MIMEText(
-                f"Ingresso: {ingresso.evento.nome}\n"
-                f"Participante: {ingresso.participante_nome}\n"
-                f"QR: {ingresso_qr_payload(ingresso.id)}",
-                "plain",
-                "utf-8",
-            )
-        )
-        alt.attach(MIMEText(html, "html", "utf-8"))
-        msg.attach(alt)
-
-        img = MIMEImage(qr_bytes, _subtype="png")
-        img.add_header("Content-ID", f"<{qr_cid}>")
-        img.add_header("Content-Disposition", "inline", filename="ingresso-qr.png")
-        msg.attach(img)
+        msg = montar_email_ingresso(ingresso, db, destino)
 
         if not smtp_configured():
             # False (não True): evita o worker marcar como "ok" e descartar sem
