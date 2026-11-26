@@ -171,6 +171,15 @@ def _organizador_por_host(db: Session, host: str) -> Usuario | None:
     ).first()
 
 
+def pagina_publica_url(org: Usuario) -> str | None:
+    """Domínio próprio só quando ativo e liberado; senão a página do produtor na plataforma."""
+    if org.brand_custom_domain and org.brand_custom_domain_ativo_em and acesso_whitelabel(org).liberado:
+        return f"https://{org.brand_custom_domain}"
+    if org.slug_publico:
+        return f"/produtor/{org.slug_publico}"
+    return None
+
+
 def _marketing_da_vitrine(org: Usuario) -> dict:
     """Pixel e IDs do Google do organizador só valem com white-label liberado; sem isso a vitrine fica sem tags."""
     liberado = acesso_whitelabel(org).liberado
