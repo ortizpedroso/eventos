@@ -221,6 +221,7 @@ class EventoResponse(BaseModel):
     slug: str
     organizador_id: str
     organizador_nome: str | None = None
+    organizador_pagina_url: str | None = None
     organizador_brand_primary_color: str | None = None
     organizador_brand_primary_color_dark: str | None = None
     nome: str
@@ -279,6 +280,7 @@ def montar_evento_response(
     from app.services.urgencia import calcular_urgencia
     from app.services.lista_espera import janela_exclusiva_espera_ativa
     from app.services.evento_repasse import organizador_pode_vender
+    from app.services.organizador_publico import pagina_publica_url
     from app.services.evento_galeria import listar_urls as listar_urls_galeria
     from config.settings import settings
 
@@ -345,6 +347,9 @@ def montar_evento_response(
             (evento.organizador.brand_name or evento.organizador.nome)
             if getattr(evento, "organizador", None)
             else None
+        ),
+        "organizador_pagina_url": (
+            pagina_publica_url(evento.organizador) if getattr(evento, "organizador", None) else None
         ),
         "organizador_brand_primary_color": (
             evento.organizador.brand_primary_color

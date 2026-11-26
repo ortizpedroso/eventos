@@ -612,5 +612,11 @@ test.describe("Perfil público do produtor", () => {
     await expect(page.getByText("Produtor de testes E2E")).toBeVisible();
     // Produtor novo, sem vendas: abaixo de 50 ingressos o contador não aparece (não exibe "0 ingressos").
     await expect(page.locator("[data-produtor-metricas]")).toHaveCount(0);
+
+    await page.locator('a[href^="/eventos/"]').first().click();
+    const linkOrganizador = page.locator("[data-organizador-pagina]");
+    await expect(linkOrganizador).toHaveAttribute("href", `/produtor/${slug}`, { timeout: 20_000 });
+    await linkOrganizador.click();
+    await expect(page).toHaveURL(new RegExp(`/produtor/${slug}$`));
   });
 });

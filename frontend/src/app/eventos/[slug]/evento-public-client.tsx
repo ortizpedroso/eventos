@@ -457,7 +457,20 @@ export function EventoPublicClient({
                 {evento.organizador_nome ? (
                   <div>
                     <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Nome</p>
-                    <p className="mt-1 text-sm font-medium text-zinc-900">{evento.organizador_nome}</p>
+                    {evento.organizador_pagina_url ? (
+                      <p className="mt-1 text-sm">
+                        <a
+                          href={evento.organizador_pagina_url}
+                          className="font-medium text-emerald-700 hover:underline"
+                          data-organizador-pagina
+                        >
+                          {evento.organizador_nome}
+                        </a>
+                        <span className="mt-0.5 block text-xs text-zinc-500">Ver todos os eventos</span>
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm font-medium text-zinc-900">{evento.organizador_nome}</p>
+                    )}
                   </div>
                 ) : null}
                 {evento.contato_email ? (
