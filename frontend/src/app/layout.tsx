@@ -73,7 +73,18 @@ export default async function RootLayout({
       >
         <PlatformSettingsProvider settings={platform} aplicaTemaDaPlataforma={!vitrine}>
           {vitrine ? null : <PlatformThemeLive />}
-          <MarketingAnalytics />
+          <MarketingAnalytics
+            vitrine={
+              vitrine
+                ? {
+                    metaPixelId: vitrine.marketing_meta_pixel_id,
+                    ga4Id: vitrine.marketing_ga4_id,
+                    googleAdsId: vitrine.marketing_google_ads_id,
+                    googleAdsLabel: vitrine.marketing_google_ads_label,
+                  }
+                : undefined
+            }
+          />
           <SkipToContent />
           <BuildMarker />
           <ScrollToTop />

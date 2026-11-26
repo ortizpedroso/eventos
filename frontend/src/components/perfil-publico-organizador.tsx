@@ -28,6 +28,10 @@ type PerfilPublico = {
   dominio_proprio_cadastrado?: string | null;
   brand_tema_vitrine: "claro" | "escuro" | null;
   brand_rodape_texto: string | null;
+  marketing_meta_pixel_id: string | null;
+  marketing_ga4_id: string | null;
+  marketing_google_ads_id: string | null;
+  marketing_google_ads_label: string | null;
   dominio_proprio_acesso?: AcessoDominio;
 };
 
@@ -51,10 +55,16 @@ export function PerfilPublicoOrganizador() {
   const [brandFaviconUrl, setBrandFaviconUrl] = useState("");
   const [temaVitrine, setTemaVitrine] = useState<"" | "claro" | "escuro">("");
   const [rodapeTexto, setRodapeTexto] = useState("");
+  const [metaPixelId, setMetaPixelId] = useState("");
+  const [ga4Id, setGa4Id] = useState("");
+  const [googleAdsId, setGoogleAdsId] = useState("");
+  const [googleAdsLabel, setGoogleAdsLabel] = useState("");
   const [brandColor, setBrandColor] = useState("");
   const [brandColorDark, setBrandColorDark] = useState("");
   const [brandSubdomain, setBrandSubdomain] = useState("");
   const [trocaSubdominio, setTrocaSubdominio] = useState<{ anterior: string; novo: string } | null>(null);
+
+  const marketingLiberado = perfil?.dominio_proprio_acesso?.liberado ?? false;
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -73,6 +83,10 @@ export function PerfilPublicoOrganizador() {
       setBrandFaviconUrl(p.brand_favicon_url ?? "");
       setTemaVitrine(p.brand_tema_vitrine ?? "");
       setRodapeTexto(p.brand_rodape_texto ?? "");
+      setMetaPixelId(p.marketing_meta_pixel_id ?? "");
+      setGa4Id(p.marketing_ga4_id ?? "");
+      setGoogleAdsId(p.marketing_google_ads_id ?? "");
+      setGoogleAdsLabel(p.marketing_google_ads_label ?? "");
       setBrandColor(p.brand_primary_color ?? "");
       setBrandColorDark(p.brand_primary_color_dark ?? "");
       setBrandSubdomain(p.brand_subdomain ?? "");
@@ -119,6 +133,14 @@ export function PerfilPublicoOrganizador() {
           brand_favicon_url: brandFaviconUrl.trim() || null,
           brand_tema_vitrine: temaVitrine || null,
           brand_rodape_texto: rodapeTexto.trim() || null,
+          ...(marketingLiberado
+            ? {
+                marketing_meta_pixel_id: metaPixelId.trim() || null,
+                marketing_ga4_id: ga4Id.trim() || null,
+                marketing_google_ads_id: googleAdsId.trim() || null,
+                marketing_google_ads_label: googleAdsLabel.trim() || null,
+              }
+            : {}),
           brand_primary_color: brandColor.trim() || null,
           brand_primary_color_dark: brandColorDark.trim() || null,
           brand_subdomain: brandSubdomain.trim().toLowerCase() || null,
@@ -375,6 +397,70 @@ export function PerfilPublicoOrganizador() {
             placeholder="https://..."
           />
         </div>
+        <div className="rounded-lg border border-zinc-200 bg-white p-4" data-marketing-organizador>
+          <h3 className="text-sm font-semibold text-zinc-900">Marketing / anúncios</h3>
+          <p className="mt-1 text-xs text-zinc-600">
+            Seu Meta Pixel, Google Analytics 4 e Google Ads rodam só na sua vitrine (seu domínio ou subdomínio).
+            Visitas, início de compra e compras vão para as suas contas; as tags da EventosBR não rodam lá.
+          </p>
+          {marketingLiberado ? (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-zinc-800" htmlFor="marketing_meta_pixel_id">
+                  Meta Pixel ID
+                </label>
+                <input
+                  id="marketing_meta_pixel_id"
+                  value={metaPixelId}
+                  onChange={(e) => setMetaPixelId(e.target.value)}
+                  inputMode="numeric"
+                  className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm"
+                  placeholder="123456789012345"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-800" htmlFor="marketing_ga4_id">
+                  Google Analytics 4
+                </label>
+                <input
+                  id="marketing_ga4_id"
+                  value={ga4Id}
+                  onChange={(e) => setGa4Id(e.target.value.toUpperCase())}
+                  className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm"
+                  placeholder="G-XXXXXXXXXX"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-800" htmlFor="marketing_google_ads_id">
+                  Google Ads
+                </label>
+                <input
+                  id="marketing_google_ads_id"
+                  value={googleAdsId}
+                  onChange={(e) => setGoogleAdsId(e.target.value.toUpperCase())}
+                  className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm"
+                  placeholder="AW-123456789"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-800" htmlFor="marketing_google_ads_label">
+                  Rótulo de conversão do Google Ads
+                </label>
+                <input
+                  id="marketing_google_ads_label"
+                  value={googleAdsLabel}
+                  onChange={(e) => setGoogleAdsLabel(e.target.value.trim())}
+                  className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm"
+                  placeholder="AbC-dEfGhIjK"
+                />
+                <p className="mt-1 text-xs text-zinc-500">Opcional. Conta cada compra como conversão no Google Ads.</p>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-zinc-700">Pixel e Google próprios fazem parte do plano com mensalidade.</p>
+          )}
+        </div>
+
         {trocaSubdominio ? (
           <div role="alertdialog" aria-labelledby="troca-subdominio-titulo" className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             <p id="troca-subdominio-titulo" className="font-semibold">
