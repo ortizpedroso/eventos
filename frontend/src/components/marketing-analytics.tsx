@@ -3,31 +3,34 @@
 import Script from "next/script";
 
 import { usePlatformSettings } from "@/components/platform-settings-provider";
-import {
-  getGtmId,
-  getMetaPixelId,
-  gtmIdConfigurado,
-  metaPixelIdConfigurado,
-  setMarketingRuntimeIds,
-} from "@/lib/analytics";
+import { setMarketingRuntimeIds, setMarketingVitrineIds } from "@/lib/analytics";
+
+export type MarketingVitrine = { metaPixelId: string | null; gtmId: string | null };
 
 /**
- * Scripts de Meta Pixel e GTM — produção, com IDs do admin ou `.env`.
- * Montado no root layout; não bloqueia renderização da página.
+ * Scripts de Meta Pixel e GTM — produção. No site da plataforma: IDs do admin ou `.env`.
+ * Na vitrine do organizador (`vitrine` presente): só os IDs dele.
  */
-export function MarketingAnalytics() {
+export function MarketingAnalytics({ vitrine }: { vitrine?: MarketingVitrine }) {
   const settings = usePlatformSettings();
-  setMarketingRuntimeIds(settings.meta_pixel_id, settings.gtm_id);
+  const pixelId = vitrine
+    ? vitrine.metaPixelId?.trim() || ""
+    : settings.meta_pixel_id?.trim() || process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() || "";
+  const gtmId = vitrine
+    ? vitrine.gtmId?.trim() || ""
+    : settings.gtm_id?.trim() || process.env.NEXT_PUBLIC_GTM_ID?.trim() || "";
+
+  if (typeof window !== "undefined") {
+    if (vitrine) setMarketingVitrineIds(pixelId, gtmId);
+    else setMarketingRuntimeIds(settings.meta_pixel_id, settings.gtm_id);
+  }
 
   if (process.env.NODE_ENV !== "production") return null;
-
-  const pixelId = getMetaPixelId();
-  const gtmId = getGtmId();
   if (!pixelId && !gtmId) return null;
 
   return (
     <>
-      {gtmIdConfigurado() ? (
+      {gtmId ? (
         <>
           <Script id="gtm-init" strategy="afterInteractive">
             {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -47,7 +50,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           </noscript>
         </>
       ) : null}
-      {metaPixelIdConfigurado() ? (
+      {pixelId ? (
         <>
           <Script id="meta-pixel" strategy="afterInteractive">
             {`!function(f,b,e,v,n,t,s)
@@ -73,7 +76,7 @@ fbq('track', 'PageView');`}
           </noscript>
         </>
       ) : null}
-      {gtmIdConfigurado() && !metaPixelIdConfigurado() ? (
+      {gtmId && !pixelId ? (
         <Script id="data-layer-init" strategy="afterInteractive">
           {"window.dataLayer = window.dataLayer || [];"}
         </Script>

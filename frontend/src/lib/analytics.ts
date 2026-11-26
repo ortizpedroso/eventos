@@ -35,6 +35,7 @@ const ENV_GTM_ID = process.env.NEXT_PUBLIC_GTM_ID?.trim() ?? "";
 
 let runtimeMetaPixelId: string | null = null;
 let runtimeGtmId: string | null = null;
+let idsDaVitrine = false;
 
 /** Sincroniza IDs vindos de `/api/public/platform` (admin). */
 export function setMarketingRuntimeIds(
@@ -43,14 +44,25 @@ export function setMarketingRuntimeIds(
 ) {
   runtimeMetaPixelId = metaPixelId?.trim() || null;
   runtimeGtmId = gtmId?.trim() || null;
+  idsDaVitrine = false;
+}
+
+/** Na vitrine valem só as tags do organizador: sem elas, nenhuma tag (nem as da plataforma). */
+export function setMarketingVitrineIds(
+  metaPixelId: string | null | undefined,
+  gtmId: string | null | undefined,
+) {
+  runtimeMetaPixelId = metaPixelId?.trim() || null;
+  runtimeGtmId = gtmId?.trim() || null;
+  idsDaVitrine = true;
 }
 
 export function getMetaPixelId(): string {
-  return runtimeMetaPixelId || ENV_META_PIXEL_ID;
+  return runtimeMetaPixelId || (idsDaVitrine ? "" : ENV_META_PIXEL_ID);
 }
 
 export function getGtmId(): string {
-  return runtimeGtmId || ENV_GTM_ID;
+  return runtimeGtmId || (idsDaVitrine ? "" : ENV_GTM_ID);
 }
 
 export function metaPixelIdConfigurado(): boolean {

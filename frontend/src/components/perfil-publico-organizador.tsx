@@ -28,6 +28,8 @@ type PerfilPublico = {
   dominio_proprio_cadastrado?: string | null;
   brand_tema_vitrine: "claro" | "escuro" | null;
   brand_rodape_texto: string | null;
+  marketing_meta_pixel_id: string | null;
+  marketing_gtm_id: string | null;
   dominio_proprio_acesso?: AcessoDominio;
 };
 
@@ -51,10 +53,14 @@ export function PerfilPublicoOrganizador() {
   const [brandFaviconUrl, setBrandFaviconUrl] = useState("");
   const [temaVitrine, setTemaVitrine] = useState<"" | "claro" | "escuro">("");
   const [rodapeTexto, setRodapeTexto] = useState("");
+  const [metaPixelId, setMetaPixelId] = useState("");
+  const [gtmId, setGtmId] = useState("");
   const [brandColor, setBrandColor] = useState("");
   const [brandColorDark, setBrandColorDark] = useState("");
   const [brandSubdomain, setBrandSubdomain] = useState("");
   const [trocaSubdominio, setTrocaSubdominio] = useState<{ anterior: string; novo: string } | null>(null);
+
+  const marketingLiberado = perfil?.dominio_proprio_acesso?.liberado ?? false;
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -73,6 +79,8 @@ export function PerfilPublicoOrganizador() {
       setBrandFaviconUrl(p.brand_favicon_url ?? "");
       setTemaVitrine(p.brand_tema_vitrine ?? "");
       setRodapeTexto(p.brand_rodape_texto ?? "");
+      setMetaPixelId(p.marketing_meta_pixel_id ?? "");
+      setGtmId(p.marketing_gtm_id ?? "");
       setBrandColor(p.brand_primary_color ?? "");
       setBrandColorDark(p.brand_primary_color_dark ?? "");
       setBrandSubdomain(p.brand_subdomain ?? "");
@@ -119,6 +127,9 @@ export function PerfilPublicoOrganizador() {
           brand_favicon_url: brandFaviconUrl.trim() || null,
           brand_tema_vitrine: temaVitrine || null,
           brand_rodape_texto: rodapeTexto.trim() || null,
+          ...(marketingLiberado
+            ? { marketing_meta_pixel_id: metaPixelId.trim() || null, marketing_gtm_id: gtmId.trim() || null }
+            : {}),
           brand_primary_color: brandColor.trim() || null,
           brand_primary_color_dark: brandColorDark.trim() || null,
           brand_subdomain: brandSubdomain.trim().toLowerCase() || null,
@@ -375,6 +386,45 @@ export function PerfilPublicoOrganizador() {
             placeholder="https://..."
           />
         </div>
+        <div className="rounded-lg border border-zinc-200 bg-white p-4" data-marketing-organizador>
+          <h3 className="text-sm font-semibold text-zinc-900">Marketing / anúncios</h3>
+          <p className="mt-1 text-xs text-zinc-600">
+            Seu Meta Pixel e seu Google Tag Manager rodam só na sua vitrine (seu domínio ou subdomínio). Visitas,
+            início de compra e compras vão para as suas contas; as tags da EventosBR não rodam lá.
+          </p>
+          {marketingLiberado ? (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-zinc-800" htmlFor="marketing_meta_pixel_id">
+                  Meta Pixel ID
+                </label>
+                <input
+                  id="marketing_meta_pixel_id"
+                  value={metaPixelId}
+                  onChange={(e) => setMetaPixelId(e.target.value)}
+                  inputMode="numeric"
+                  className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm"
+                  placeholder="123456789012345"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-800" htmlFor="marketing_gtm_id">
+                  Google Tag Manager
+                </label>
+                <input
+                  id="marketing_gtm_id"
+                  value={gtmId}
+                  onChange={(e) => setGtmId(e.target.value.toUpperCase())}
+                  className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm"
+                  placeholder="GTM-XXXXXXX"
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-zinc-700">Pixel e GTM próprios fazem parte do plano com mensalidade.</p>
+          )}
+        </div>
+
         {trocaSubdominio ? (
           <div role="alertdialog" aria-labelledby="troca-subdominio-titulo" className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             <p id="troca-subdominio-titulo" className="font-semibold">

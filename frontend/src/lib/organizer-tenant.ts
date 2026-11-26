@@ -12,6 +12,9 @@ export type VitrineProdutor = {
   /** Nulo = padrão (topo claro, rodapé escuro). */
   brand_tema_vitrine: "claro" | "escuro" | null;
   brand_rodape_texto: string | null;
+  /** Só vêm preenchidos com white-label liberado. */
+  marketing_meta_pixel_id: string | null;
+  marketing_gtm_id: string | null;
   brand_primary_color: string | null;
   brand_primary_color_dark: string | null;
   social_instagram: string | null;

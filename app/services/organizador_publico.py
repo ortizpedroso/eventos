@@ -171,6 +171,15 @@ def _organizador_por_host(db: Session, host: str) -> Usuario | None:
     ).first()
 
 
+def _marketing_da_vitrine(org: Usuario) -> dict:
+    """Pixel e GTM do organizador só valem com white-label liberado; sem isso a vitrine fica sem tags."""
+    liberado = acesso_whitelabel(org).liberado
+    return {
+        "marketing_meta_pixel_id": org.marketing_meta_pixel_id if liberado else None,
+        "marketing_gtm_id": org.marketing_gtm_id if liberado else None,
+    }
+
+
 def resolver_tenant_por_host(db: Session, host: str | None) -> dict | None:
     """Organizador dono do endereço acessado: subdomínio da plataforma ou domínio próprio ativo."""
     h = normalizar_host(host)
@@ -191,6 +200,7 @@ def resolver_tenant_por_host(db: Session, host: str | None) -> dict | None:
         "brand_favicon_url": org.brand_favicon_url or org.foto_url,
         "brand_tema_vitrine": org.brand_tema_vitrine,
         "brand_rodape_texto": org.brand_rodape_texto,
+        **_marketing_da_vitrine(org),
         "brand_primary_color": org.brand_primary_color,
         "brand_primary_color_dark": org.brand_primary_color_dark,
         "social_instagram": org.social_instagram,

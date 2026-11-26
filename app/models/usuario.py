@@ -74,6 +74,8 @@ class Usuario(Base):
     brand_favicon_url = Column(Text, nullable=True)
     brand_tema_vitrine = Column(String(10), nullable=True)
     brand_rodape_texto = Column(String(500), nullable=True)
+    marketing_meta_pixel_id = Column(String(32), nullable=True)
+    marketing_gtm_id = Column(String(32), nullable=True)
     brand_primary_color = Column(String(7), nullable=True)
     brand_primary_color_dark = Column(String(7), nullable=True)
     brand_subdomain = Column(String(63), unique=True, index=True, nullable=True)
