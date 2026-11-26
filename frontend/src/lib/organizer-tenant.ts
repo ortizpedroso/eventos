@@ -14,7 +14,9 @@ export type VitrineProdutor = {
   brand_rodape_texto: string | null;
   /** Só vêm preenchidos com white-label liberado. */
   marketing_meta_pixel_id: string | null;
-  marketing_gtm_id: string | null;
+  marketing_ga4_id: string | null;
+  marketing_google_ads_id: string | null;
+  marketing_google_ads_label: string | null;
   brand_primary_color: string | null;
   brand_primary_color_dark: string | null;
   social_instagram: string | null;

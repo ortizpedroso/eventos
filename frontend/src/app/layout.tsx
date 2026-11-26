@@ -76,7 +76,12 @@ export default async function RootLayout({
           <MarketingAnalytics
             vitrine={
               vitrine
-                ? { metaPixelId: vitrine.marketing_meta_pixel_id, gtmId: vitrine.marketing_gtm_id }
+                ? {
+                    metaPixelId: vitrine.marketing_meta_pixel_id,
+                    ga4Id: vitrine.marketing_ga4_id,
+                    googleAdsId: vitrine.marketing_google_ads_id,
+                    googleAdsLabel: vitrine.marketing_google_ads_label,
+                  }
                 : undefined
             }
           />

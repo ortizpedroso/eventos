@@ -135,6 +135,38 @@ def normalizar_meta_pixel_id(v: object) -> str | None:
     return digits
 
 
+_GA4_RE = re.compile(r"^G-[A-Z0-9]{4,20}$")
+_GOOGLE_ADS_RE = re.compile(r"^AW-\d{6,15}$")
+_GOOGLE_ADS_LABEL_RE = re.compile(r"^[A-Za-z0-9_-]{4,40}$")
+
+
+def _id_fixo(v: object, regex: re.Pattern[str], erro: str, *, maiusculas: bool = True) -> str | None:
+    if v is None:
+        return None
+    if not isinstance(v, str):
+        raise ValueError(erro)
+    s = v.strip().upper() if maiusculas else v.strip()
+    if not s:
+        return None
+    if not regex.match(s):
+        raise ValueError(erro)
+    return s
+
+
+def normalizar_ga4_id(v: object) -> str | None:
+    return _id_fixo(v, _GA4_RE, "ID do Google Analytics 4 inválido. Use o formato G-XXXXXXXXXX.")
+
+
+def normalizar_google_ads_id(v: object) -> str | None:
+    return _id_fixo(v, _GOOGLE_ADS_RE, "ID do Google Ads inválido. Use o formato AW-123456789.")
+
+
+def normalizar_google_ads_label(v: object) -> str | None:
+    return _id_fixo(
+        v, _GOOGLE_ADS_LABEL_RE, "Rótulo de conversão inválido (letras, números, - e _).", maiusculas=False
+    )
+
+
 def normalizar_gtm_id(v: object) -> str | None:
     """Aceita container GTM-XXXXXXX."""
     if v is None:

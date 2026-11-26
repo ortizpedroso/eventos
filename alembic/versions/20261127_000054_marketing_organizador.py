@@ -1,4 +1,4 @@
-"""usuarios — Meta Pixel e GTM próprios do organizador, usados na vitrine dele."""
+"""usuarios — Meta Pixel e IDs do Google (GA4 e Ads) do organizador, usados na vitrine dele."""
 
 from alembic import op
 import sqlalchemy as sa
@@ -11,9 +11,13 @@ depends_on = None
 
 def upgrade() -> None:
     op.add_column("usuarios", sa.Column("marketing_meta_pixel_id", sa.String(32), nullable=True))
-    op.add_column("usuarios", sa.Column("marketing_gtm_id", sa.String(32), nullable=True))
+    op.add_column("usuarios", sa.Column("marketing_ga4_id", sa.String(32), nullable=True))
+    op.add_column("usuarios", sa.Column("marketing_google_ads_id", sa.String(32), nullable=True))
+    op.add_column("usuarios", sa.Column("marketing_google_ads_label", sa.String(64), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column("usuarios", "marketing_gtm_id")
+    op.drop_column("usuarios", "marketing_google_ads_label")
+    op.drop_column("usuarios", "marketing_google_ads_id")
+    op.drop_column("usuarios", "marketing_ga4_id")
     op.drop_column("usuarios", "marketing_meta_pixel_id")

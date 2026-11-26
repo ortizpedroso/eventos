@@ -172,12 +172,10 @@ def _organizador_por_host(db: Session, host: str) -> Usuario | None:
 
 
 def _marketing_da_vitrine(org: Usuario) -> dict:
-    """Pixel e GTM do organizador só valem com white-label liberado; sem isso a vitrine fica sem tags."""
+    """Pixel e IDs do Google do organizador só valem com white-label liberado; sem isso a vitrine fica sem tags."""
     liberado = acesso_whitelabel(org).liberado
-    return {
-        "marketing_meta_pixel_id": org.marketing_meta_pixel_id if liberado else None,
-        "marketing_gtm_id": org.marketing_gtm_id if liberado else None,
-    }
+    campos = ("marketing_meta_pixel_id", "marketing_ga4_id", "marketing_google_ads_id", "marketing_google_ads_label")
+    return {campo: getattr(org, campo) if liberado else None for campo in campos}
 
 
 def resolver_tenant_por_host(db: Session, host: str | None) -> dict | None:

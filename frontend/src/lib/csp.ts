@@ -6,6 +6,18 @@
  * desativa `'unsafe-inline'` — remover o gap quebraria a UI. Tags `<style>` críticos já
  * recebem nonce quando possível (SSR theme / EarlyScrollReset).
  */
+/** Para onde Meta Pixel, GA4 e Google Ads enviam as medições (fetch/sendBeacon). */
+const MEDICAO_ANUNCIOS_CONNECT = [
+  "https://www.facebook.com",
+  "https://connect.facebook.net",
+  "https://www.googletagmanager.com",
+  "https://*.google-analytics.com",
+  "https://*.analytics.google.com",
+  "https://www.google.com",
+  "https://googleads.g.doubleclick.net",
+  "https://www.googleadservices.com",
+];
+
 export function buildContentSecurityPolicy(nonce: string, dev: boolean): string {
   const connect = new Set([
     "'self'",
@@ -15,6 +27,7 @@ export function buildContentSecurityPolicy(nonce: string, dev: boolean): string 
     "https://api.asaas.com",
     "https://viacep.com.br",
     "https://challenges.cloudflare.com",
+    ...MEDICAO_ANUNCIOS_CONNECT,
   ]);
   // Localhost só em desenvolvimento — evita superfície desnecessária no CSP de produção.
   if (dev) {
@@ -52,6 +65,6 @@ export function buildContentSecurityPolicy(nonce: string, dev: boolean): string 
     "style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com",
     `script-src ${scriptSrc}`,
     `connect-src ${[...connect].join(" ")}`,
-    "frame-src https://accounts.google.com https://challenges.cloudflare.com https://www.google.com",
+    "frame-src https://accounts.google.com https://challenges.cloudflare.com https://www.google.com https://td.doubleclick.net https://www.googletagmanager.com",
   ].join("; ");
 }

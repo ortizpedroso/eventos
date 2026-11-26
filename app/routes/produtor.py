@@ -20,7 +20,12 @@ from app.services.organizador_publico import (
     validar_brand_subdomain,
 )
 from app.utils.imagem_url import validar_imagem_url
-from app.utils.url_publica import normalizar_gtm_id, normalizar_meta_pixel_id
+from app.utils.url_publica import (
+    normalizar_ga4_id,
+    normalizar_google_ads_id,
+    normalizar_google_ads_label,
+    normalizar_meta_pixel_id,
+)
 from app.utils.url_publica import (
     normalizar_url_instagram,
     normalizar_url_whatsapp,
@@ -30,6 +35,14 @@ from app.utils.url_publica import (
 router = APIRouter()
 
 _HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+CAMPOS_MARKETING = (
+    "marketing_meta_pixel_id",
+    "marketing_ga4_id",
+    "marketing_google_ads_id",
+    "marketing_google_ads_label",
+)
 
 
 class PerfilPublicoUpdate(BaseModel):
@@ -48,17 +61,29 @@ class PerfilPublicoUpdate(BaseModel):
     brand_tema_vitrine: Literal["claro", "escuro"] | None = None
     brand_rodape_texto: str | None = Field(default=None, max_length=500)
     marketing_meta_pixel_id: str | None = Field(default=None, max_length=32)
-    marketing_gtm_id: str | None = Field(default=None, max_length=32)
+    marketing_ga4_id: str | None = Field(default=None, max_length=32)
+    marketing_google_ads_id: str | None = Field(default=None, max_length=32)
+    marketing_google_ads_label: str | None = Field(default=None, max_length=64)
 
     @field_validator("marketing_meta_pixel_id", mode="before")
     @classmethod
     def _meta_pixel(cls, v: object) -> str | None:
         return normalizar_meta_pixel_id(v)
 
-    @field_validator("marketing_gtm_id", mode="before")
+    @field_validator("marketing_ga4_id", mode="before")
     @classmethod
-    def _gtm(cls, v: object) -> str | None:
-        return normalizar_gtm_id(v)
+    def _ga4(cls, v: object) -> str | None:
+        return normalizar_ga4_id(v)
+
+    @field_validator("marketing_google_ads_id", mode="before")
+    @classmethod
+    def _google_ads(cls, v: object) -> str | None:
+        return normalizar_google_ads_id(v)
+
+    @field_validator("marketing_google_ads_label", mode="before")
+    @classmethod
+    def _google_ads_label(cls, v: object) -> str | None:
+        return normalizar_google_ads_label(v)
 
     @field_validator("brand_rodape_texto", mode="before")
     @classmethod
@@ -120,7 +145,9 @@ def _perfil_response(usuario: Usuario, slug: str) -> dict:
         "brand_tema_vitrine": usuario.brand_tema_vitrine,
         "brand_rodape_texto": usuario.brand_rodape_texto,
         "marketing_meta_pixel_id": usuario.marketing_meta_pixel_id,
-        "marketing_gtm_id": usuario.marketing_gtm_id,
+        "marketing_ga4_id": usuario.marketing_ga4_id,
+        "marketing_google_ads_id": usuario.marketing_google_ads_id,
+        "marketing_google_ads_label": usuario.marketing_google_ads_label,
         "dominio_proprio": usuario.brand_custom_domain if usuario.brand_custom_domain_ativo_em else None,
         "dominio_proprio_cadastrado": usuario.brand_custom_domain,
         "dominio_proprio_acesso": acesso_whitelabel(usuario).para_json(),
@@ -180,9 +207,9 @@ async def atualizar_perfil_publico(
             else:
                 setattr(usuario_atual, field, val)
 
-    marketing = {"marketing_meta_pixel_id", "marketing_gtm_id"} & body.model_fields_set
+    marketing = set(CAMPOS_MARKETING) & body.model_fields_set
     if any(getattr(body, f) for f in marketing) and not acesso_whitelabel(usuario_atual).liberado:
-        raise HTTPException(status_code=409, detail="Pixel e GTM próprios fazem parte do plano com mensalidade.")
+        raise HTTPException(status_code=409, detail="Pixel e Google próprios fazem parte do plano com mensalidade.")
 
     for field in ("brand_cover_url", "brand_favicon_url", "brand_tema_vitrine", "brand_rodape_texto", *sorted(marketing)):
         if field in body.model_fields_set:
