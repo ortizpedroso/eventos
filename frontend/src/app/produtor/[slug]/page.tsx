@@ -50,14 +50,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProdutorPage({ params }: Props) {
   const { slug } = await params;
   try {
-    const initialPerfil = await getProdutorPublicoBySlug(slug);
+    const [initialPerfil, vitrine] = await Promise.all([getProdutorPublicoBySlug(slug), getVitrine()]);
     return (
       <>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: buildProdutorJsonLd(initialPerfil) }}
         />
-        <ProdutorPublicClient slug={slug} initialPerfil={initialPerfil} />
+        <ProdutorPublicClient slug={slug} initialPerfil={initialPerfil} vitrine={Boolean(vitrine)} />
       </>
     );
   } catch {

@@ -54,23 +54,27 @@ export default function PlanosPage() {
 
         <div className="mx-auto mt-16 max-w-4xl sm:mt-20">
           <h2 className="text-center text-2xl font-bold tracking-tight text-zinc-900">O que cada plano inclui</h2>
-          <div className="mt-6 overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
-            <table className="w-full min-w-[36rem] text-left text-sm" data-planos-comparativo>
+          <div className="mt-6 rounded-2xl border border-zinc-200 bg-white shadow-sm">
+            <table className="w-full table-fixed text-left text-xs sm:text-sm" data-planos-comparativo>
               <thead className="bg-zinc-50 text-zinc-700">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Recurso</th>
-                  <th className="px-4 py-3 text-center font-semibold">Eventos gratuitos</th>
-                  <th className="px-4 py-3 text-center font-semibold">Eventos pagos</th>
-                  <th className="px-4 py-3 text-center font-semibold">Assinatura mensal</th>
+                  <th className="w-[46%] px-3 py-3 font-semibold sm:w-1/2 sm:px-4">Recurso</th>
+                  <th className="px-1 py-3 text-center font-semibold sm:px-4">
+                    Gratuitos<span className="hidden sm:inline"> (eventos)</span>
+                  </th>
+                  <th className="px-1 py-3 text-center font-semibold sm:px-4">
+                    Pagos<span className="hidden sm:inline"> (eventos)</span>
+                  </th>
+                  <th className="px-1 py-3 text-center font-semibold sm:px-4">Assinatura</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 text-zinc-700">
                 {COMPARATIVO.map((linha) => (
                   <tr key={linha.recurso}>
-                    <td className="px-4 py-3">{linha.recurso}</td>
-                    <td className="px-4 py-3 text-center"><Marca ok={linha.gratuitos} /></td>
-                    <td className="px-4 py-3 text-center"><Marca ok={linha.pagos} /></td>
-                    <td className="px-4 py-3 text-center"><Marca ok={linha.assinatura} /></td>
+                    <td className="break-words px-3 py-3 sm:px-4">{linha.recurso}</td>
+                    <td className="px-1 py-3 text-center sm:px-4"><Marca ok={linha.gratuitos} /></td>
+                    <td className="px-1 py-3 text-center sm:px-4"><Marca ok={linha.pagos} /></td>
+                    <td className="px-1 py-3 text-center sm:px-4"><Marca ok={linha.assinatura} /></td>
                   </tr>
                 ))}
               </tbody>

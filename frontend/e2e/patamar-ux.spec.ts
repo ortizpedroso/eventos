@@ -609,7 +609,8 @@ test.describe("Perfil público do produtor", () => {
 
     await page.goto(`/produtor/${slug}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: new RegExp(nome, "i") })).toBeVisible({ timeout: 20_000 });
-    // Evita o logo SVG («Eventos» em <tspan> hidden); valida métrica do perfil.
-    await expect(page.getByText(/evento\(s\) publicado/i)).toBeVisible();
+    await expect(page.getByText("Produtor de testes E2E")).toBeVisible();
+    // Produtor novo, sem vendas: abaixo de 50 ingressos o contador não aparece (não exibe "0 ingressos").
+    await expect(page.locator("[data-produtor-metricas]")).toHaveCount(0);
   });
 });
