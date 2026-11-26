@@ -18,8 +18,8 @@ export const DEFAULT_OG_IMAGE = {
 /** Ícones da plataforma ficam em `public/`, não em `app/`: ícone em arquivo no `app/` vence o `icons` do metadata e a vitrine não conseguiria trocá-lo. */
 const PLATFORM_ICONS: Metadata["icons"] = {
   icon: [
-    { url: "/favicon.ico", sizes: "any" },
-    { url: "/icon.svg", type: "image/svg+xml" },
+    { url: "/favicon.ico", sizes: "32x32" },
+    { url: "/icon.svg", type: "image/svg+xml", sizes: "any" },
   ],
 };
 
