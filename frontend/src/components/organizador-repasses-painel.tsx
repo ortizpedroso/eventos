@@ -349,7 +349,7 @@ export function OrganizadorRepassesPainel() {
         body: JSON.stringify({
           wallet_id: walletId.trim(),
           sincronizar_eventos: true,
-          api_key: apiKeyOrganizador.trim() || undefined,
+          api_key: apiKeyOrganizador.trim(),
         }),
       });
       setMsg(r.mensagem);
@@ -715,7 +715,7 @@ export function OrganizadorRepassesPainel() {
           </p>
           <label className="grid gap-1 text-sm">
             <span className="text-xs text-zinc-600">
-              Chave de acesso (recomendado — busca o ID automaticamente)
+              Chave de acesso (obrigatória: comprova que a conta é sua e busca o ID automaticamente)
             </span>
             <div className="flex flex-wrap gap-2">
               <input
@@ -723,6 +723,7 @@ export function OrganizadorRepassesPainel() {
                 autoComplete="off"
                 className="min-w-0 flex-1 rounded-lg border px-3 py-2 font-mono text-sm"
                 placeholder="Chave de acesso..."
+                required
                 value={apiKeyOrganizador}
                 onChange={(e) => {
                   setApiKeyOrganizador(e.target.value);

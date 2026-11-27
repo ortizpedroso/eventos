@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.asaas_conta_fake import API_KEY_FAKE, conta_asaas_dona_da_carteira
 from config.database import Base
 from app.models import Evento, Ingresso, Usuario, get_db
 from sqlalchemy import create_engine
@@ -64,6 +65,7 @@ def _configurar_wallet_org(org_token: str) -> None:
     with (
         patch("app.routes.organizador.settings") as org_settings,
         patch("app.services.organizador_asaas.settings") as svc_settings,
+        conta_asaas_dona_da_carteira(WALLET_ORG),
     ):
         org_settings.payments_disabled = False
         org_settings.use_asaas = True
@@ -72,7 +74,7 @@ def _configurar_wallet_org(org_token: str) -> None:
         r = client.put(
             "/api/organizador/asaas/wallet",
             headers={"Authorization": f"Bearer {org_token}"},
-            json={"wallet_id": WALLET_ORG},
+            json={"wallet_id": WALLET_ORG, "api_key": API_KEY_FAKE},
         )
     assert r.status_code == 200, r.text
 

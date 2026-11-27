@@ -176,7 +176,7 @@ class AsaasWalletRequest(BaseModel):
     api_key: str | None = Field(
         default=None,
         max_length=512,
-        description="Opcional: chave API Asaas do organizador para validar que o walletId pertence à conta.",
+        description="Chave API Asaas do organizador; comprova que o walletId pertence à conta. Obrigatória fora do admin.",
     )
 
 

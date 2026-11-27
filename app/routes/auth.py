@@ -149,6 +149,11 @@ async def registrar(
 
     email = str(usuario_data.email).strip().lower()
 
+    from app.utils.email_descartavel import MOTIVO_EMAIL_DESCARTAVEL, email_descartavel
+
+    if email_descartavel(email):
+        raise HTTPException(status_code=400, detail=MOTIVO_EMAIL_DESCARTAVEL)
+
     # Verifica se email já existe
     usuario_existente = db.query(Usuario).filter(
         func.lower(Usuario.email) == email

@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models import Evento, Usuario, get_db
-from app.services.asaas_e2e_mock import mock_payment_create_payload, mock_reset
+from app.services.asaas_e2e_mock import MOCK_API_KEY_WALLET_PREFIX, mock_payment_create_payload, mock_reset
 from app.services.pagamento_asaas import split_para_evento
 from app.services.tarifas_plataforma import taxa_ingresso
 from config.database import Base
@@ -84,7 +84,11 @@ def test_fluxo_compra_split_organizador_distinto_plataforma():
         w = client.put(
             "/api/organizador/asaas/wallet",
             headers={"Authorization": f"Bearer {org}"},
-            json={"wallet_id": WALLET_ORG, "sincronizar_eventos": True},
+            json={
+                "wallet_id": WALLET_ORG,
+                "sincronizar_eventos": True,
+                "api_key": f"{MOCK_API_KEY_WALLET_PREFIX}{WALLET_ORG}",
+            },
         )
         assert w.status_code == 200, w.text
 

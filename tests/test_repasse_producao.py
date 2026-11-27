@@ -9,6 +9,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.asaas_conta_fake import API_KEY_FAKE, conta_asaas_dona_da_carteira
 from app.models import Usuario, get_db
 from config.database import Base
 from sqlalchemy import create_engine
@@ -82,6 +83,7 @@ def test_wallet_vinculo_linked_em_producao():
     with (
         patch("app.routes.organizador.settings") as route_settings,
         patch("app.services.organizador_asaas.settings") as svc_settings,
+        conta_asaas_dona_da_carteira(wallet),
     ):
         route_settings.payments_disabled = False
         route_settings.use_asaas = True
@@ -94,7 +96,7 @@ def test_wallet_vinculo_linked_em_producao():
         r = client.put(
             "/api/organizador/asaas/wallet",
             headers={"Authorization": f"Bearer {token}"},
-            json={"wallet_id": wallet},
+            json={"wallet_id": wallet, "api_key": API_KEY_FAKE},
         )
     assert r.status_code == 200, r.text
     assert r.json()["wallet_id"] == wallet

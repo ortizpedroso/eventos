@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.asaas_conta_fake import API_KEY_FAKE, conta_asaas_dona_da_carteira
 from config.database import Base
 from app.models import get_db
 from sqlalchemy import create_engine
@@ -148,12 +149,13 @@ class TestOrganizadorAsaas:
         assert r.status_code == 200, r.text
         assert r.json().get("verificado_api") is True
 
-    def test_definir_wallet(self):
+    def test_definir_wallet_exige_chave_que_comprova_a_posse(self):
         token = _registrar_organizador("wal")
         wallet = str(uuid.uuid4())
         with (
             patch("app.routes.organizador.settings") as route_settings,
             patch("app.services.organizador_asaas.settings") as mock_settings,
+            conta_asaas_dona_da_carteira(wallet),
         ):
             route_settings.payments_disabled = False
             route_settings.use_asaas = True
@@ -164,10 +166,16 @@ class TestOrganizadorAsaas:
             mock_settings.permite_vinculo_wallet_organizador.return_value = True
             mock_settings.asaas_allow_manual_wallet = False
             mock_settings.permite_subconta_baas.return_value = True
-            r = client.put(
+            sem_chave = client.put(
                 "/api/organizador/asaas/wallet",
                 headers={"Authorization": f"Bearer {token}"},
                 json={"wallet_id": wallet},
+            )
+            assert sem_chave.status_code == 400, sem_chave.text
+            r = client.put(
+                "/api/organizador/asaas/wallet",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"wallet_id": wallet, "api_key": API_KEY_FAKE},
             )
         assert r.status_code == 200, r.text
         assert r.json()["wallet_id"] == wallet

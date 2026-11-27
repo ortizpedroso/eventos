@@ -101,7 +101,10 @@ def mock_criar_transfer(payload: dict) -> dict[str, Any]:
     return transfer
 
 
-def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
+MOCK_API_KEY_WALLET_PREFIX = "e2e-wallet:"
+
+
+def mock_request(method: str, path: str, *, json: dict | None = None, api_key: str = "") -> Any:
     if method == "POST" and path == "/v3/customers":
         return mock_criar_customer(json or {})
     if method == "POST" and path == "/v3/payments":
@@ -129,9 +132,12 @@ def mock_request(method: str, path: str, *, json: dict | None = None) -> Any:
             "general": "APPROVED",
         }
     if method == "GET" and path == "/v3/myAccount":
+        wallet = "wallet_e2e_mock"
+        if api_key.startswith(MOCK_API_KEY_WALLET_PREFIX):
+            wallet = api_key[len(MOCK_API_KEY_WALLET_PREFIX):]
         return {
             "id": "acc_e2e_mock",
-            "walletId": "wallet_e2e_mock",
+            "walletId": wallet,
             "name": "Organizador E2E Mock",
         }
     if method == "POST" and path == "/v3/transfers":

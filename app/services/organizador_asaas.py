@@ -26,7 +26,10 @@ from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
-_WALLET_RE = re.compile(r"^[a-f0-9\-]{8,64}$", re.I)
+_WALLET_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
+MOTIVO_WALLET_SEM_API_KEY = (
+    "Informe a chave de API da sua conta de recebimento para comprovar que a conta é sua."
+)
 # Taxa ilustrativa antecipação automática (Asaas — uso interno)
 _TAXA_ANTECIPACAO_CARTAO_MES = 0.0125
 _TAXA_ANTECIPACAO_PARCELADO_MES = 0.0170
@@ -215,14 +218,17 @@ def validar_wallet_repasse(
     wallet_id: str,
     *,
     api_key_organizador: str | None = None,
+    exigir_api_key: bool = False,
 ) -> dict[str, Any]:
-    """Valida walletId antes de vincular conta (formato, ≠ plataforma, opcional API key)."""
+    """Valida walletId antes de vincular conta (formato, ≠ plataforma e posse via API key)."""
     wid = (wallet_id or "").strip()
     if not _WALLET_RE.match(wid):
         raise ValueError("Identificador de conta inválido. Verifique os dados e tente novamente.")
     _rejeitar_wallet_plataforma(wid)
     verificado_api = False
     key = (api_key_organizador or "").strip()
+    if exigir_api_key and not key:
+        raise ValueError(MOTIVO_WALLET_SEM_API_KEY)
     if key:
         org_client = AsaasClient(api_key=key)
         if not org_client.enabled:
@@ -363,7 +369,9 @@ def definir_wallet_organizador(
     admin_override: bool = False,
     api_key_organizador: str | None = None,
 ) -> dict[str, Any]:
-    validacao = validar_wallet_repasse(wallet_id, api_key_organizador=api_key_organizador)
+    validacao = validar_wallet_repasse(
+        wallet_id, api_key_organizador=api_key_organizador, exigir_api_key=not admin_override
+    )
     wid = validacao["wallet_id"]
     if not settings.use_asaas:
         raise ValueError("Pagamentos não estão ativos neste ambiente.")

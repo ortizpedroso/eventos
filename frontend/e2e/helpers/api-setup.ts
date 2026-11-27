@@ -124,7 +124,7 @@ export async function seedPublishedEventAsaas(): Promise<SeededEvent> {
   await api(
     "PUT",
     "/api/organizador/asaas/wallet",
-    { wallet_id: "aaaa1111-eeee-2222-cccc-333344445566", sincronizar_eventos: true },
+    { wallet_id: "aaaa1111-eeee-2222-cccc-333344445566", sincronizar_eventos: true, api_key: "e2e-wallet:aaaa1111-eeee-2222-cccc-333344445566" },
     orgToken,
   );
 
@@ -396,7 +396,7 @@ export async function seedParcelamentoEventAsaas(): Promise<SeededEvent> {
   await api(
     "PUT",
     "/api/organizador/asaas/wallet",
-    { wallet_id: "bbbb2222-ffff-3333-dddd-444455556677", sincronizar_eventos: true },
+    { wallet_id: "bbbb2222-ffff-3333-dddd-444455556677", sincronizar_eventos: true, api_key: "e2e-wallet:bbbb2222-ffff-3333-dddd-444455556677" },
     orgToken,
   );
 
