@@ -335,7 +335,7 @@ class TestEventos:
                 "data_inicio": "2025-07-15T09:00:00",
                 "data_fim": "2025-07-15T12:00:00",
                 "local": "Rio de Janeiro, RJ",
-                "imagem_url": None,
+                "imagem_url": "/uploads/eventos/capa-lista.webp",
                 "preco_ingresso": 10,
                 "categoria": "Outros",
                 "contato_telefone": "11987654321",

@@ -6,7 +6,9 @@ import { TurnstileWidget, turnstileSiteKeyConfigurada } from "@/components/turns
 import { apiFetch } from "@/lib/api";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 
-export function ContatoFormClient() {
+type Props = { assuntoInicial?: string; mensagemDica?: string };
+
+export function ContatoFormClient({ assuntoInicial, mensagemDica }: Props = {}) {
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -108,6 +110,7 @@ export function ContatoFormClient() {
           name="assunto"
           required
           maxLength={200}
+          defaultValue={assuntoInicial}
           placeholder="Ex.: Dúvida sobre reembolso"
           className="h-10 rounded-md border border-zinc-300 px-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
         />
@@ -124,6 +127,7 @@ export function ContatoFormClient() {
           minLength={10}
           maxLength={5000}
           rows={6}
+          placeholder={mensagemDica}
           className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
         />
       </div>

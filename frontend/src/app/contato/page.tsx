@@ -11,7 +11,15 @@ export const metadata: Metadata = {
   description: "Tem dúvidas sobre um evento, ingresso ou a plataforma? Fale com a nossa equipe.",
 };
 
-export default async function ContatoPage() {
+const SLUG_EVENTO = /^[a-z0-9-]{1,120}$/;
+
+export default async function ContatoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ denuncia?: string | string[] }>;
+}) {
+  const { denuncia } = await searchParams;
+  const slugDenunciado = typeof denuncia === "string" && SLUG_EVENTO.test(denuncia) ? denuncia : null;
   const platform = await fetchPlatformSettings();
   const whatsappHref = resolveWhatsappHref(platform);
 
@@ -25,7 +33,17 @@ export default async function ContatoPage() {
         formulário abaixo — respondemos por e-mail.
       </p>
       <ContatoWhatsappCta initialHref={whatsappHref} />
-      <ContatoFormClient />
+      {slugDenunciado ? (
+        <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950" data-contato-denuncia>
+          Você está denunciando o evento <strong>/eventos/{slugDenunciado}</strong>. Conte o que há de errado:
+          conteúdo ofensivo, golpe, informação falsa ou outro problema. A equipe da EventosBR analisa e pode
+          tirar o evento do ar.
+        </p>
+      ) : null}
+      <ContatoFormClient
+        assuntoInicial={slugDenunciado ? `Denúncia: evento ${slugDenunciado}` : undefined}
+        mensagemDica={slugDenunciado ? "Descreva o problema que você encontrou neste evento." : undefined}
+      />
     </div>
   );
 }

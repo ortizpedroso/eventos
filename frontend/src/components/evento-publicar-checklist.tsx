@@ -69,7 +69,7 @@ export function EventoPublicarChecklist(props: ChecklistInput) {
       },
       {
         id: "img",
-        label: "Imagem de capa (recomendado)",
+        label: "Imagem de capa (necessária para aparecer na vitrine da EventosBR)",
         ok: Boolean(props.imagemUrl.trim()),
         obrigatorio: false,
       },
