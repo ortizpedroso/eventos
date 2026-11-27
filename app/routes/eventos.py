@@ -29,7 +29,7 @@ from app.services.evento_portaria import (
     regenerar_checkin_token,
     url_portaria,
 )
-from app.services.evento_vitrine import evento_parece_teste
+from app.services.evento_vitrine import evento_parece_teste, filtrar_vitrine_plataforma
 from app.services.moderacao_evento import exigir_evento_nao_suspenso
 from app.services.registro_acesso import registrar_acesso
 from app.utils.evento_cidade import resolver_cidade
@@ -370,8 +370,8 @@ async def listar_cidades_eventos(
     from sqlalchemy import func
 
     rows = (
-        db.query(Evento.cidade, func.count(Evento.id))
-        .filter(Evento.publicado.is_(True), Evento.cidade.isnot(None), Evento.cidade != "")
+        filtrar_vitrine_plataforma(db.query(Evento.cidade, func.count(Evento.id)).select_from(Evento))
+        .filter(Evento.cidade.isnot(None), Evento.cidade != "")
         .group_by(Evento.cidade)
         .order_by(func.count(Evento.id).desc(), Evento.cidade.asc())
         .limit(limit)
@@ -393,10 +393,8 @@ async def listar_eventos(
 ):
     """Lista eventos publicados na vitrine."""
     try:
-        query = (
-            db.query(Evento)
-            .options(selectinload(Evento.ingresso_lotes), selectinload(Evento.organizador))
-            .filter(Evento.publicado.is_(True))
+        query = filtrar_vitrine_plataforma(
+            db.query(Evento).options(selectinload(Evento.ingresso_lotes), selectinload(Evento.organizador))
         )
         if q:
             termo = f"%{q.strip()}%"

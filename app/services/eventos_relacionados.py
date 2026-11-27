@@ -64,7 +64,9 @@ def listar_eventos_relacionados(
     categoria = (evento.categoria or "").strip()
     if cidade and categoria:
         restante = limite - len(resultados)
-        q = base.filter(Evento.cidade.ilike(cidade), Evento.categoria == categoria)
+        from app.services.evento_vitrine import filtrar_vitrine_plataforma
+
+        q = filtrar_vitrine_plataforma(base).filter(Evento.cidade.ilike(cidade), Evento.categoria == categoria)
         if vistos:
             q = q.filter(Evento.id.notin_(list(vistos)))
         outros = q.order_by(Evento.data_inicio.asc()).limit(restante).all()

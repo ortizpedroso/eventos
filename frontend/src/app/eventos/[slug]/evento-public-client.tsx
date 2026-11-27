@@ -20,6 +20,7 @@ import { trackAnalyticsEvent } from "@/lib/analytics";
 import { apiFetch, fetchSession, peekSessionCache } from "@/lib/api";
 import { resolveEventoImagemSrc } from "@/lib/evento-imagem-url";
 import { formatEventoDataHora } from "@/lib/eventos";
+import { urlPlataforma } from "@/lib/organizer-tenant";
 import { salvarRefPromoter } from "@/lib/promoter-ref";
 import type { Evento, Usuario } from "@/lib/types";
 
@@ -503,6 +504,15 @@ export function EventoPublicClient({
           ) : null}
           <CompraInfoConfianca />
           <EventoRelacionados slug={evento.slug} />
+          <p className="text-center text-xs text-zinc-500">
+            <a
+              href={urlPlataforma(`/contato?denuncia=${encodeURIComponent(evento.slug)}`)}
+              className="underline underline-offset-2 hover:text-zinc-700"
+              data-denunciar-evento
+            >
+              Denunciar este evento
+            </a>
+          </p>
         </div>
       ) : (
         <section
