@@ -51,7 +51,7 @@ class AsaasClient:
         if settings.asaas_e2e_mock:
             from app.services.asaas_e2e_mock import mock_request
 
-            return mock_request(method, path, json=json)
+            return mock_request(method, path, json=json, api_key=self.api_key)
         if not self.api_key:
             raise AsaasAPIError("Chave de acesso ao processador de pagamentos não configurada")
         url = f"{self.base_url}{path}"

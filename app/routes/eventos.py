@@ -237,8 +237,7 @@ async def atualizar_evento(
     from app.services.organizador_asaas import atualizar_status_repasse_organizador
 
     usuario_atual = atualizar_status_repasse_organizador(db, usuario_atual)
-    if body.publicado is not None:
-        validar_publicacao_evento_pago(db, usuario_atual, evento, body.publicado)
+    validar_publicacao_evento_pago(db, usuario_atual, evento, bool(evento.publicado))
 
     db.commit()
     db.refresh(evento)
