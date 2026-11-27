@@ -1,9 +1,27 @@
-# Proposta de cláusulas para os Termos de Uso: conteúdo, moderação e registros
+# Termos de Uso: base de pesquisa e pontos para revisão jurídica
 
-> **Status:** proposta para revisão jurídica. Não está publicada no site.
-> Os Termos atuais (`/termos`) continuam valendo até que um advogado revise e aprove este texto.
-> A redação abaixo descreve o que a plataforma já faz no sistema (suspensão com aviso por e-mail,
-> registro de acessos, comprovação da conta de recebimento e canal de denúncia).
+> **Status:** o texto dos Termos foi publicado em `/termos` (novembro de 2026), a pedido do dono da plataforma.
+> Ainda é recomendável que um advogado revise os pontos abaixo. A página é a fonte da verdade; este
+> documento registra por que cada cláusula existe.
+
+## O que a pesquisa mostrou
+
+- Grandes plataformas (Sympla, Eventbrite) se apresentam como intermediárias e jogam a responsabilidade
+  pelo evento e pelo reembolso para o organizador. Para o comprador, cláusulas que excluem ou atenuam a
+  responsabilidade do fornecedor são nulas (CDC, art. 51, I), e a responsabilidade do prestador é objetiva (art. 14).
+- O STJ já condenou vendedora de ingressos solidariamente com o organizador por cancelamento de evento,
+  com base na falha em informar o consumidor. A cadeia de fornecimento responde junta (CDC, arts. 7º, 25 e 34).
+- O Procon multou a Sympla por reter a taxa de serviço no cancelamento dentro do prazo de arrependimento.
+
+## Como os Termos aplicam isso
+
+- Não prometem ao comprador o que a lei não permite tirar. A seção 12 diz que nada afasta o CDC.
+- Protegem a plataforma onde a proteção vale: na relação empresarial com o organizador. Ali ficam
+  as garantias do organizador (seção 3), o reembolso e o direito de regresso (seções 4, 10 e 11) e o limite
+  de responsabilidade igual às taxas de 12 meses (seção 12).
+- Dão base contratual para o que o sistema já faz: moderação, suspensão com e-mail e recurso (seção 7),
+  critérios da vitrine (seção 8), denúncia (seção 9) e registros de acesso (seção 13).
+- Reforçam a informação ao comprador (seções 4 e 5), que foi o fundamento da condenação no STJ.
 
 ## Pontos para o advogado confirmar
 
@@ -19,7 +37,7 @@
 
 ---
 
-## Texto proposto
+## Texto da primeira proposta (substituído pela página `/termos`)
 
 ### X. Conteúdo proibido
 
