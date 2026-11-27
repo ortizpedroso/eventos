@@ -10,12 +10,13 @@ from typing import Literal
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session, joinedload
 
-from app.deps.platform_admin import require_platform_admin
+from app.deps.platform_admin import require_platform_admin, usuario_admin_da_sessao
+from app.services.moderacao_evento import MotivoSuspensao, reativar_evento, rotulo_motivo, suspender_evento
 from sqlalchemy import func
 
 from app.models import CampanhaMarketing, Evento, Usuario, get_db
@@ -224,10 +225,60 @@ async def listar_eventos_plataforma(
                 "data_inicio": e.data_inicio.isoformat() if e.data_inicio else None,
                 "organizador_nome": e.organizador.nome if e.organizador else None,
                 "organizador_email": e.organizador.email if e.organizador else None,
+                "suspenso_em": e.suspenso_em.isoformat() if e.suspenso_em else None,
+                "suspenso_motivo": rotulo_motivo(e.suspenso_motivo),
+                "suspenso_detalhe": e.suspenso_detalhe,
+                "suspenso_por": e.suspenso_por,
             }
             for e in rows
         ],
     }
+
+
+class SuspenderEventoRequest(BaseModel):
+    motivo: MotivoSuspensao
+    detalhe: str = Field(min_length=10, max_length=2000)
+
+
+def _admin_responsavel(request: Request, db: Session) -> str:
+    admin = usuario_admin_da_sessao(request, db)
+    return admin.email if admin else "chave de administrador"
+
+
+def _evento_ou_404(db: Session, evento_id: str) -> Evento:
+    evento = db.query(Evento).options(joinedload(Evento.organizador)).filter(Evento.id == evento_id).first()
+    if not evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+    return evento
+
+
+@router.post("/eventos/{evento_id}/suspender")
+async def suspender_evento_plataforma(
+    evento_id: str,
+    body: SuspenderEventoRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    evento = _evento_ou_404(db, evento_id)
+    if evento.suspenso_em is not None:
+        raise HTTPException(status_code=409, detail="Evento já está suspenso")
+    email_enviado = suspender_evento(
+        db, evento, motivo=body.motivo, detalhe=body.detalhe, por=_admin_responsavel(request, db)
+    )
+    return {"id": evento.id, "suspenso": True, "email_enviado": email_enviado}
+
+
+@router.post("/eventos/{evento_id}/reativar")
+async def reativar_evento_plataforma(
+    evento_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    evento = _evento_ou_404(db, evento_id)
+    if evento.suspenso_em is None:
+        raise HTTPException(status_code=409, detail="Evento não está suspenso")
+    email_enviado = reativar_evento(db, evento, por=_admin_responsavel(request, db))
+    return {"id": evento.id, "suspenso": False, "email_enviado": email_enviado}
 
 
 @router.patch("/eventos/{evento_id}/publicado")
@@ -239,6 +290,8 @@ async def atualizar_publicacao_evento(
     evento = db.query(Evento).filter(Evento.id == evento_id).first()
     if not evento:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
+    if body.publicado and evento.suspenso_em is not None:
+        raise HTTPException(status_code=409, detail="Evento suspenso: retire a suspensão antes de publicar")
     evento.publicado = body.publicado
     db.commit()
     db.refresh(evento)

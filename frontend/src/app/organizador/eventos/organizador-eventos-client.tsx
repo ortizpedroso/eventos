@@ -289,12 +289,14 @@ export function OrganizadorEventosClient() {
                     <h2 className="text-lg font-semibold leading-snug text-zinc-900">{e.nome}</h2>
                     <span
                       className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        e.publicado
-                          ? "bg-emerald-100 text-emerald-900"
-                          : "bg-zinc-200 text-zinc-700"
+                        e.suspenso_motivo
+                          ? "bg-red-100 text-red-900"
+                          : e.publicado
+                            ? "bg-emerald-100 text-emerald-900"
+                            : "bg-zinc-200 text-zinc-700"
                       }`}
                     >
-                      {e.publicado ? "Publicado" : "Pausado"}
+                      {e.suspenso_motivo ? "Suspenso" : e.publicado ? "Publicado" : "Pausado"}
                     </span>
                   </div>
                   <EventoCategoriaBadge categoria={e.categoria} variant="inline" className="mt-2" />
@@ -330,7 +332,15 @@ export function OrganizadorEventosClient() {
                       ) : null}
                     </div>
                   ) : null}
-                  {!e.publicado ? (
+                  {e.suspenso_motivo ? (
+                    <div
+                      className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-950"
+                      data-evento-suspenso
+                    >
+                      Suspenso pela EventosBR: {e.suspenso_motivo}. O evento não pode ser publicado nem vendido. Veja o
+                      e-mail que enviamos ou fale com a gente em Contato para contestar.
+                    </div>
+                  ) : !e.publicado ? (
                     <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950">
                       Fora da vitrine: visitantes não veem na lista de eventos e não podem comprar até você
                       publicar.

@@ -54,6 +54,7 @@ export type Evento = {
   organizador_id: string;
   organizador_nome?: string | null;
   organizador_pagina_url?: string | null;
+  suspenso_motivo?: string | null;
   organizador_brand_primary_color?: string | null;
   organizador_brand_primary_color_dark?: string | null;
   urgencia_modo?: string;

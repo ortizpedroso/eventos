@@ -30,6 +30,8 @@ from app.services.evento_portaria import (
     url_portaria,
 )
 from app.services.evento_vitrine import evento_parece_teste
+from app.services.moderacao_evento import exigir_evento_nao_suspenso
+from app.services.registro_acesso import registrar_acesso
 from app.utils.evento_cidade import resolver_cidade
 from app.utils.public_errors import LISTA_EVENTOS_CLIENTE
 
@@ -55,6 +57,7 @@ def _slug_unico(db: Session, nome: str) -> str:
 @router.post("/criar", response_model=EventoResponse)
 async def criar_evento(
     evento_data: CriarEventoRequest,
+    request: Request,
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db)
 ):
@@ -124,6 +127,9 @@ async def criar_evento(
     db.refresh(novo_evento)
 
     logger.info(f"Evento criado: {novo_evento.id} (slug: {novo_evento.slug})")
+    registrar_acesso(db, request, "evento_criado", usuario_id=usuario_atual.id, referencia=novo_evento.id)
+    if novo_evento.publicado:
+        registrar_acesso(db, request, "evento_publicado", usuario_id=usuario_atual.id, referencia=novo_evento.id)
 
     from app.services.ingresso_lotes import evento_tem_venda_aberta
     from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
@@ -143,6 +149,7 @@ async def criar_evento(
 async def atualizar_evento(
     evento_id: str,
     body: AtualizarEventoRequest,
+    request: Request,
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
 ):
@@ -187,6 +194,8 @@ async def atualizar_evento(
         evento.estacionamento = body.estacionamento
     if body.publicado is not None:
         evento.publicado = body.publicado
+    if evento.publicado:
+        exigir_evento_nao_suspenso(evento)
     if "limite_ingressos_por_cpf" in body.model_fields_set:
         evento.limite_ingressos_por_cpf = body.limite_ingressos_por_cpf
 
@@ -242,6 +251,8 @@ async def atualizar_evento(
     db.commit()
     db.refresh(evento)
     logger.info("Evento %s atualizado por %s", evento.id, usuario_atual.id)
+    if evento.publicado and not era_publicado:
+        registrar_acesso(db, request, "evento_publicado", usuario_id=usuario_atual.id, referencia=evento.id)
 
     from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
 
@@ -261,6 +272,7 @@ async def atualizar_evento(
 async def atualizar_publicacao_evento(
     evento_id: str,
     body: EventoPublicadoUpdate,
+    request: Request,
     usuario_atual: Usuario = Depends(get_usuario_atual),
     db: Session = Depends(get_db),
 ):
@@ -274,6 +286,8 @@ async def atualizar_publicacao_evento(
     if evento.organizador_id != usuario_atual.id:
         raise HTTPException(status_code=403, detail="Sem permissão para editar este evento")
 
+    if body.publicado:
+        exigir_evento_nao_suspenso(evento)
     era_publicado = evento.publicado
     from app.services.ingresso_lotes import evento_tem_venda_aberta
 
@@ -294,6 +308,8 @@ async def atualizar_publicacao_evento(
         body.publicado,
         usuario_atual.id,
     )
+    if evento.publicado and not era_publicado:
+        registrar_acesso(db, request, "evento_publicado", usuario_id=usuario_atual.id, referencia=evento.id)
 
     from app.services.lista_interesse import deve_notificar_abertura, notificar_abertura_vendas
 
@@ -939,6 +955,7 @@ async def duplicar_evento(
     )
     if not evento:
         raise HTTPException(status_code=404, detail="Evento não encontrado")
+    exigir_evento_nao_suspenso(evento)
     slug = _slug_unico(db, f"{evento.nome} copia")
     copia = Evento(
         nome=f"{evento.nome} (cópia)",

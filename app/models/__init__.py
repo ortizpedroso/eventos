@@ -17,6 +17,7 @@ from app.models.financeiro_saque import FinanceiroSaque
 from app.models.contato_site_mensagem import ContatoSiteMensagem
 from app.models.evento_promoter import EventoPromoter
 from app.models.evento_galeria_foto import EventoGaleriaFoto
+from app.models.registro_acesso import RegistroAcesso
 
 __all__ = [
     "Base",
@@ -38,5 +39,6 @@ __all__ = [
     "PlatformSettings",
     "ContatoSiteMensagem",
     "EventoPromoter",
+    "RegistroAcesso",
     "EventoGaleriaFoto",
 ]
