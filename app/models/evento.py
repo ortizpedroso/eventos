@@ -62,6 +62,12 @@ class Evento(Base):
     checkin_token = Column(String(64), nullable=True, unique=True, index=True)
     checkin_token_em = Column(DateTime, nullable=True)
 
+    # Moderação: evento suspenso pela plataforma não pode ser republicado pelo organizador.
+    suspenso_em = Column(DateTime, nullable=True)
+    suspenso_motivo = Column(String(20), nullable=True)
+    suspenso_detalhe = Column(Text, nullable=True)
+    suspenso_por = Column(String(255), nullable=True)
+
     # Notificação de interesse (idempotência)
     notificacao_interesse_enviada_em = Column(DateTime, nullable=True)
 

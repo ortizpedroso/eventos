@@ -73,9 +73,11 @@ from app.utils.auth_cookie import (
     set_trusted_device_cookie,
 )
 from app.utils.public_errors import PAGAMENTO_CLIENTE
+from app.services.registro_acesso import AcaoAcesso, registrar_acesso
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
+
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 oauth2_scheme_optional = OAuth2PasswordBearer(
@@ -225,6 +227,7 @@ async def registrar(
     db.refresh(novo_usuario)
 
     logger.info("Usuário criado: %s", novo_usuario.id)
+    registrar_acesso(db, request, "cadastro", usuario_id=novo_usuario.id)
 
     if usuario_data.tipo == "organizador":
         enviado = disparar_verificacao_organizador(db, novo_usuario)
@@ -267,6 +270,7 @@ async def registrar(
 @router.post("/compra-rapida", response_model=Token)
 async def compra_rapida(
     body: CompraRapidaRequest,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_register),
@@ -307,7 +311,7 @@ async def compra_rapida(
         if not existente.email_verificado and not existente.senha_hash:
             disparar_verificacao_compra_rapida(db, existente)
         logger.info("Compra rápida: sessão reutilizada para %s", email)
-        return _token_response(existente, response)
+        return _token_response(existente, response, request, db)
 
     asaas_customer_id: str | None = None
     if not settings.payments_disabled:
@@ -335,7 +339,7 @@ async def compra_rapida(
 
     disparar_verificacao_compra_rapida(db, novo_usuario)
     logger.info("Compra rápida: usuário criado %s", novo_usuario.id)
-    return _token_response(novo_usuario, response)
+    return _token_response(novo_usuario, response, request, db, "cadastro")
 
 
 @router.post("/login", response_model=Token | TotpChallengeResponse)
@@ -403,6 +407,7 @@ async def login(
         if trusted_cookie and decode_trusted_device_token(
             trusted_cookie, usuario.id, int(usuario.token_version or 0)
         ):
+            registrar_acesso(db, request, "login", usuario_id=usuario.id)
             access_token = _issue_token(usuario)
             set_auth_cookie(response, access_token)
             return {
@@ -412,6 +417,7 @@ async def login(
             }
         return TotpChallengeResponse(login_token=create_2fa_challenge_token(usuario.id))
 
+    registrar_acesso(db, request, "login", usuario_id=usuario.id)
     access_token = _issue_token(usuario)
     set_auth_cookie(response, access_token)
 
@@ -425,6 +431,7 @@ async def login(
 @router.post("/2fa/verificar-login", response_model=Token)
 async def verificar_login_2fa(
     body: TotpVerificarLoginRequest,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_login),
@@ -441,7 +448,7 @@ async def verificar_login_2fa(
     if not verificar_totp_ou_recovery(db, usuario, body.codigo):
         raise HTTPException(status_code=401, detail="Código inválido.")
 
-    resultado = _token_response(usuario, response)
+    resultado = _token_response(usuario, response, request, db)
     if body.lembrar_dispositivo:
         trusted_token = create_trusted_device_token(usuario.id, int(usuario.token_version or 0))
         set_trusted_device_cookie(response, trusted_token, TRUSTED_DEVICE_DIAS * 24 * 60 * 60)
@@ -521,6 +528,7 @@ async def redefinir_senha(
 @router.post("/verificar-email")
 async def verificar_email(
     body: VerificarEmailRequest,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
 ):
@@ -537,6 +545,7 @@ async def verificar_email(
         "tipo": usuario.tipo,
     }
     if usuario.senha_hash:
+        registrar_acesso(db, request, "login", usuario_id=usuario.id)
         access_token = _issue_token(usuario)
         set_auth_cookie(response, access_token)
         payload["access_token"] = access_token
@@ -561,7 +570,14 @@ def _token_from_request(request: Request, bearer: str | None) -> str | None:
     return None
 
 
-def _token_response(usuario: Usuario, response: Response) -> dict:
+def _token_response(
+    usuario: Usuario,
+    response: Response,
+    request: Request,
+    db: Session,
+    acao: AcaoAcesso = "login",
+) -> dict:
+    registrar_acesso(db, request, acao, usuario_id=usuario.id)
     access_token = _issue_token(usuario)
     set_auth_cookie(response, access_token)
     return {
@@ -607,6 +623,7 @@ def _nome_from_oauth_claims(payload: dict, fallback_email: str) -> str:
 @router.post("/google", response_model=Token)
 async def login_google(
     body: OAuthLoginRequest,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
     _rate: None = Depends(rate_limit_oauth),
@@ -634,7 +651,7 @@ async def login_google(
         aceita_comunicacao_whatsapp=body.aceita_comunicacao_whatsapp,
         telefone=tel,
     )
-    return _token_response(usuario, response)
+    return _token_response(usuario, response, request, db)
 
 
 async def get_usuario_atual(

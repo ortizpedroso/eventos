@@ -18,6 +18,17 @@
 (eventosbr_rotas) {
 	encode gzip zstd
 
+	# Registro de acessos (Marco Civil art. 15): fica no volume caddy_data, sobrevive aos deploys
+	# e é apagado após ~190 dias. Cookie e Authorization não são gravados (padrão do Caddy).
+	log {
+		output file /data/logs/eventosbr-acesso.log {
+			roll_size 50MiB
+			roll_keep 200
+			roll_keep_for 4560h
+		}
+		format json
+	}
+
 	# EventosBR autentica em /auth — /login é rota do SIGEP. Redireciona na borda
 	# (antes de qualquer reverse_proxy) para nunca servir HTML errado nesse caminho.
 	@legacy_login path /login /login/*

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminFetch, adminSessionInfo, clearAdminSession, validateAdminKey } from "@/lib/admin-api";
 import { fetchSession } from "@/lib/api";
 import { AdminEditUsuarioModal } from "./admin-edit-usuario-modal";
+import { AdminEventoModeracao } from "./admin-evento-moderacao";
 import { AdminPlatformSettingsPanel } from "./admin-platform-settings";
 
 type Contato = {
@@ -80,6 +81,10 @@ type EventoAdmin = {
   data_inicio: string | null;
   organizador_nome: string | null;
   organizador_email: string | null;
+  suspenso_em: string | null;
+  suspenso_motivo: string | null;
+  suspenso_detalhe: string | null;
+  suspenso_por: string | null;
 };
 
 export function AdminDashboardClient() {
@@ -616,21 +621,45 @@ export function AdminDashboardClient() {
                       {ev.organizador_email}
                     </td>
                     <td className="py-2 pr-2">
-                      {ev.publicado ? (
+                      {ev.suspenso_em ? (
+                        <span className="text-red-700" data-admin-evento-suspenso>
+                          Suspenso
+                          <br />
+                          <span className="text-zinc-500">{ev.suspenso_motivo}</span>
+                          <br />
+                          <span className="text-zinc-400">por {ev.suspenso_por}</span>
+                        </span>
+                      ) : ev.publicado ? (
                         <span className="text-emerald-700">Na vitrine</span>
                       ) : (
                         <span className="text-amber-700">Oculto</span>
                       )}
                     </td>
                     <td className="py-2">
-                      <button
-                        type="button"
-                        className="text-emerald-700 underline"
-                        disabled={busy}
-                        onClick={() => void alternarPublicacao(ev)}
-                      >
-                        {ev.publicado ? "Ocultar" : "Publicar"}
-                      </button>
+                      <div className="flex flex-wrap gap-3">
+                        {ev.suspenso_em ? null : (
+                          <button
+                            type="button"
+                            className="text-emerald-700 underline"
+                            disabled={busy}
+                            onClick={() => void alternarPublicacao(ev)}
+                          >
+                            {ev.publicado ? "Ocultar" : "Publicar"}
+                          </button>
+                        )}
+                        <AdminEventoModeracao
+                          eventoId={ev.id}
+                          eventoNome={ev.nome}
+                          suspenso={Boolean(ev.suspenso_em)}
+                          busy={busy}
+                          onConcluido={async (mensagem) => {
+                            setError(null);
+                            setMsg(mensagem);
+                            await carregarEventos();
+                          }}
+                          onErro={setError}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
